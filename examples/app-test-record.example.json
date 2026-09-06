@@ -1,0 +1,27 @@
+{
+  "schema_version": "0.1-draft",
+  "record_id": "example-only-001",
+  "synthetic": true,
+  "application": {
+    "id": "example-app-not-implemented",
+    "version": null,
+    "source_sha256": null
+  },
+  "execution_route": "undecided",
+  "runtime_id": null,
+  "hardware_profile_id": null,
+  "status": "not_tested",
+  "tested_at": null,
+  "mandatory_workflows": [
+    "install",
+    "launch",
+    "open-and-save",
+    "permissions",
+    "update-recovery",
+    "uninstall"
+  ],
+  "evidence": [],
+  "limitations": [
+    "Sintetički primer strukture. Ne postoji app build niti izvršen test."
+  ]
+}

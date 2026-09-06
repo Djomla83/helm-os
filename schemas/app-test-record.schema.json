@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HELM app test record — nacrt, nije dokaz istinitosti rezultata",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_id",
+    "synthetic",
+    "application",
+    "execution_route",
+    "runtime_id",
+    "hardware_profile_id",
+    "status",
+    "tested_at",
+    "mandatory_workflows",
+    "evidence",
+    "limitations"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.1-draft"
+    },
+    "record_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "synthetic": {
+      "type": "boolean"
+    },
+    "application": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "version",
+        "source_sha256"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "source_sha256": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          ]
+        }
+      }
+    },
+    "execution_route": {
+      "enum": [
+        "undecided",
+        "native",
+        "wine",
+        "steam-proton",
+        "windows-vm"
+      ]
+    },
+    "runtime_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "hardware_profile_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "status": {
+      "enum": [
+        "not_tested",
+        "blocked",
+        "failed",
+        "partial",
+        "verified",
+        "stale"
+      ]
+    },
+    "tested_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "mandatory_workflows": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "not_tested"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "tested_at": {
+            "type": "null"
+          },
+          "evidence": {
+            "maxItems": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "verified"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "synthetic": {
+            "const": false
+          },
+          "tested_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "runtime_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "hardware_profile_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "execution_route": {
+            "enum": [
+              "native",
+              "wine",
+              "steam-proton",
+              "windows-vm"
+            ]
+          },
+          "evidence": {
+            "minItems": 1
+          },
+          "application": {
+            "properties": {
+              "version": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

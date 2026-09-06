@@ -1,0 +1,91 @@
+{
+  "schema_version": "0.1-draft",
+  "cohort_id": "pilot-candidates-001",
+  "status": "draft-not-locked",
+  "description": "Kandidati za izbor i preciziranje; nije tvrdnja o trenutnoj podršci ili popularnosti.",
+  "compatibility_rate": null,
+  "applications": [
+    {
+      "app_id": "viber-candidate",
+      "display_name": "Viber",
+      "version": null,
+      "source_sha256": null,
+      "status": "not_tested",
+      "proposed_role": "Korisnički komunikacioni problem; prvo potvrditi distribuciju.",
+      "execution_route": "undecided",
+      "mandatory_workflows": [
+        "login",
+        "messages",
+        "audio-call",
+        "notifications",
+        "reconnect",
+        "suspend-resume"
+      ],
+      "hardware_profiles": []
+    },
+    {
+      "app_id": "notepad-plus-plus-candidate",
+      "display_name": "Notepad++",
+      "version": null,
+      "source_sha256": null,
+      "status": "not_tested",
+      "proposed_role": "Kandidat za editor i čuvanje datoteka.",
+      "execution_route": "wine",
+      "mandatory_workflows": [
+        "install",
+        "open-file",
+        "edit-save",
+        "unicode-path",
+        "uninstall"
+      ],
+      "hardware_profiles": []
+    },
+    {
+      "app_id": "sevenzip-candidate",
+      "display_name": "7-Zip Windows izdanje",
+      "version": null,
+      "source_sha256": null,
+      "status": "not_tested",
+      "proposed_role": "Kandidat za mali desktop/file workflow.",
+      "execution_route": "wine",
+      "mandatory_workflows": [
+        "install",
+        "compress",
+        "extract",
+        "integrity-check",
+        "uninstall"
+      ],
+      "hardware_profiles": []
+    },
+    {
+      "app_id": "portable-cmake-fixture",
+      "display_name": "Kontrolisani CMake test projekat",
+      "version": null,
+      "source_sha256": null,
+      "status": "not_tested",
+      "proposed_role": "Source SDK eksperiment; fixture još nije implementiran.",
+      "execution_route": "native",
+      "mandatory_workflows": [
+        "build",
+        "test",
+        "package"
+      ],
+      "hardware_profiles": []
+    },
+    {
+      "app_id": "controlled-permission-fixture",
+      "display_name": "Kontrolisani test dozvola",
+      "version": null,
+      "source_sha256": null,
+      "status": "not_tested",
+      "proposed_role": "Bezopasni negativni test; fixture još nije implementiran.",
+      "execution_route": "undecided",
+      "mandatory_workflows": [
+        "allowed-file",
+        "denied-file",
+        "handler-boundary"
+      ],
+      "hardware_profiles": []
+    }
+  ]
+}
