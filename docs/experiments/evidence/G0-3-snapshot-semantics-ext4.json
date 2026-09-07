@@ -1,0 +1,77 @@
+{
+  "checks": {
+    "Q1_hardlink_in_place_rewrite": {
+      "after": {
+        "live": "e52a0127fad899fb6200c55d08dc1deb0283af2781bc6cb193b0acd8ea55c7ff",
+        "nlink": 2,
+        "snapshot": "e52a0127fad899fb6200c55d08dc1deb0283af2781bc6cb193b0acd8ea55c7ff"
+      },
+      "before": {
+        "live": "9cbcaf5a0256fba8044394435430a56703210a01c759f15836dbca7f93f74e64",
+        "nlink": 2,
+        "snapshot": "9cbcaf5a0256fba8044394435430a56703210a01c759f15836dbca7f93f74e64"
+      },
+      "question": "Does an in-place rewrite of the live file change a hardlink 'snapshot'?",
+      "snapshot_changed": true,
+      "snapshot_tracks_live": true,
+      "verdict": "CONTAMINATED: the hardlink copy is not an independent snapshot"
+    },
+    "Q2_hardlink_atomic_replace": {
+      "after": {
+        "live": "e52a0127fad899fb6200c55d08dc1deb0283af2781bc6cb193b0acd8ea55c7ff",
+        "nlink": 1,
+        "snapshot": "9cbcaf5a0256fba8044394435430a56703210a01c759f15836dbca7f93f74e64"
+      },
+      "before": {
+        "live": "9cbcaf5a0256fba8044394435430a56703210a01c759f15836dbca7f93f74e64",
+        "nlink": 2,
+        "snapshot": "9cbcaf5a0256fba8044394435430a56703210a01c759f15836dbca7f93f74e64"
+      },
+      "question": "Does a write-temp-then-rename writer leave the hardlink snapshot intact?",
+      "snapshot_preserved": true,
+      "verdict": "snapshot preserved: rename breaks the link, the copy keeps the old inode"
+    },
+    "Q3_truncation_window": {
+      "observed_during_write": {
+        "observer_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "observer_size_bytes": 0
+      },
+      "question": "Is there a window in which the file is observably empty/partial, i.e. the window in which a crash would leave it damaged?",
+      "verdict_note": "This demonstrates only that the window EXISTS. It is not a demonstration of an actual corruption event, which additionally requires a crash, power loss or kill inside that window.",
+      "window_observed": true
+    },
+    "Q4_reflink_support": {
+      "note": "reflink unavailable on this filesystem; the proposed snapshot mechanism cannot be used here",
+      "returncode": 1,
+      "stderr": "cp: failed to clone '/home/<redacted>/helm-g0/helm-g0-3-u8opn8ci/reflink_dst.bin' from '/home/<redacted>/helm-g0/helm-g0-3-u8opn8ci/reflink_src.bin': Operation not supported",
+      "supported": false
+    }
+  },
+  "filesystem": {
+    "device": "/dev/sdd",
+    "fstype": "ext2/ext3",
+    "path": "/home/<redacted>/helm-g0/helm-g0-3-u8opn8ci"
+  },
+  "host": {
+    "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.39",
+    "python": "3.12.3"
+  },
+  "probe": "snapshot_semantics",
+  "probe_version": "1",
+  "scope_limits": [
+    "Synthetic writer. Wine was not installed or executed; this says nothing about which save path Wine's registry code actually takes.",
+    "Filesystem mechanics only. Results are specific to the filesystem reported above.",
+    "Q3 demonstrates the existence of a truncation window, not an observed corruption event."
+  ],
+  "publication_redaction": {
+    "redacted": true,
+    "rule_id": "G0-PATH-REDACTION-1",
+    "fields": [
+      "/checks/Q4_reflink_support/stderr",
+      "/filesystem/path"
+    ],
+    "replacement": "<redacted> replaces only the operator account component; remaining path components are unchanged.",
+    "raw_artifact_sha256": "c9b8c1d4fb9eb6ae2d29594d9a8dc84e3fb988a2f1cb5dac1c478f0b64fc5f48",
+    "raw_artifact_storage": "Private local archive outside the repository; not published."
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "capability_conclusions": [
+    "No Wine of any version is installed. Every Wine-dependent Gate 0 check is BLOCKED.",
+    "No compiler (gcc/make) is present, so probes requiring compilation are BLOCKED.",
+    "Kernel is 6.6; ntsync requires 6.14 or later, so ntsync behaviour cannot be exercised here even if Wine were installed.",
+    "No dpkg foreign architecture is enabled, so 32-bit Windows binaries could not be exercised without enabling i386.",
+    "WSLg provides a display, but there is no desktop environment, no portal backend and no StatusNotifierItem host, so no desktop-integration claim can be tested here.",
+    "The GPU is reachable only through the WSL2 driver path, which is not representative of a native Linux graphics stack, so no graphics or driver claim can be tested here.",
+    "Neither available filesystem supports reflink copies, so the reflink-based snapshot mechanism proposed in ADR-0017 cannot be exercised on this host."
+  ],
+  "host": {
+    "free_disk_c_gb": 138.0,
+    "gpu": "NVIDIA GeForce RTX 3080",
+    "gpu_driver": "32.0.16.1664 (Windows driver)",
+    "hypervisor_present": true,
+    "os": "Microsoft Windows 11 Pro 10.0.26200",
+    "shell_used": "MINGW64_NT-10.0-26200 (Git Bash) and PowerShell 7"
+  },
+  "linux_environment": {
+    "distro": "Ubuntu 24.04.4 LTS",
+    "foreign_architectures": [],
+    "graphical": {
+      "DISPLAY": ":0",
+      "WAYLAND_DISPLAY": "wayland-0",
+      "WSLg": true,
+      "desktop_environment": null,
+      "portal_backend": null
+    },
+    "kernel": "6.6.87.2-microsoft-standard-WSL2",
+    "kind": "WSL2"
+  },
+  "record": "gate0_environment",
+  "recorded_at": "2026-09-07",
+  "repo_revision_at_recording": "e09a52fa2ed95c759e3e9370d4b0f0e95ce1fa20",
+  "tools_absent": [
+    "wine",
+    "wine64",
+    "wineserver",
+    "winetricks",
+    "bwrap",
+    "flatpak",
+    "gcc",
+    "make",
+    "xdg-desktop-portal",
+    "gnome-shell",
+    "plasmashell",
+    "podman",
+    "docker",
+    "qemu-system-x86_64"
+  ],
+  "tools_present": {
+    "git": "2.53.0",
+    "python": "3.14.3 (Windows)",
+    "python3": "3.12.3 (WSL)"
+  },
+  "what_would_unblock": {
+    "graphics_checks": "Native Linux with a real Mesa or NVIDIA driver stack.",
+    "integration_checks": "A real desktop session (GNOME or KDE) with xdg-desktop-portal and a StatusNotifierItem host.",
+    "recovery_checks": "A filesystem with reflink support (btrfs or XFS) or an explicit decision to use full copies.",
+    "wine_dependent_checks": "An approved lab with Wine installed at a pinned version, ideally on a native Linux install rather than WSL2."
+  }
+}

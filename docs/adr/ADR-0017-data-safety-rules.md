@@ -100,6 +100,35 @@ The ten-minute falsification test for rule 3 is gate check G0-3 in
 whole decision. One material question is untested and must be answered before recovery is promised:
 whether restoring a snapshot consumes or invalidates a software licence activation.
 
+## Corrections required before acceptance (recorded 2026-09-07)
+
+Gate 0 produced execution evidence that contradicts two of the six rules. This ADR must be amended
+before it is taken to review; it is recorded here rather than silently edited.
+
+1. **Rule 3 mandates reflink copies, and reflink was unsupported on both filesystems tested** —
+   including the ext filesystem of a default Ubuntu install. See
+   [EXP-009 Gate 0 report, G0-3a](../experiments/EXP-009-GATE0-REPORT.md). The rule must add an
+   explicit filesystem precondition, a supported fallback (full copy, or a filesystem that provides
+   copy-on-write), and a startup check that refuses to promise recovery on a filesystem that cannot
+   deliver it.
+2. **Rule 1's quiesce step is not sufficient as written.** The documented command escalates to an
+   uncatchable kill after roughly ten seconds, which bypasses the shutdown flush entirely. The rule
+   must require *verification* that the hive was written, not the issuing of a command.
+
+Two clarifications that strengthen rather than weaken the ADR:
+
+3. **The hardlink prohibition is confirmed by execution and its justification is now stronger.**
+   Contamination — the copy silently tracking live data — is deterministic, permanent and requires
+   no crash. That alone disqualifies hardlink farms. Corruption of the live prefix is a separate
+   failure requiring an additional fault, and must not be claimed without inducing one.
+4. **One backup tool was wrongly listed as dangerous.** A hardlinking backup tool that links
+   between successive backups leaves the live file's link count at one and is not affected. The
+   general rule stands; that specific attribution is withdrawn.
+
+Also note that the upstream deferred-save timing cited in the Context does not hold for the Proton
+fork, which has no periodic save timer and performs the write client-side. The hardlink hazard is
+the same there; the timing is not.
+
 ## Revisiting
 
 An upstream mechanism appears that provides application-consistent per-application snapshots; or

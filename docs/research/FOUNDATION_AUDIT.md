@@ -3,9 +3,9 @@
 | Field | Value |
 |---|---|
 | Document | `docs/research/FOUNDATION_AUDIT.md` |
-| Status | **Draft for review.** No architectural decision is accepted by this document. |
+| Status | **Draft for review, revision 2.** No architectural decision is accepted by this document. |
 | Work package | HELM-003 / EXP-001 (prior-art review and reuse map) |
-| Research date | 2026-09-06 |
+| Research date | 2026-09-06; corrected 2026-09-07 (see [§13](#s13)) |
 | Method | Desk research against primary sources (upstream repositories, release notes, specifications, issue trackers), executed as a twelve-domain parallel review with two adversarial cross-checks. |
 | Application tests executed | **None.** No installer was run, no benchmark measured, no compatibility rate produced. |
 | Language | English, by explicit owner instruction, deviating from `CONTRIBUTING.md`. See [§11](#s11). |
@@ -31,6 +31,7 @@
 10. [Tensions with existing ADRs](#s10)
 11. [Known defects in this audit](#s11)
 12. [Sources](#s12)
+13. [Corrections log](#s13)
 
 ---
 
@@ -46,41 +47,107 @@ deprecates pure `WINEARCH=win32` prefixes; NTSync is used automatically when the
 the correct dependencies. Rebuilding any of them is the most obvious way for this project to waste
 its first year.
 
-**1.2. Four of HELM's five named pillars are already shipped by an incumbent.**
+**1.2. Components covering four of HELM's five named pillars already exist — as capabilities, not
+as an integrated, verified product.** *(Corrected in revision 2; see [§13](#s13) C-3.)*
 Bottles 67.2 (2026-09-03, GPL-3.0) ships per-application environments, a dependency and verb
 manager, per-bottle `bwrap` confinement, content-hashed snapshot and restore, desktop-entry
 generation, and — since release 61.0 on 2026-01-24 — **"Eagle"**, which performs `pefile` and YARA
 analysis of an executable, its neighbouring files and extracted installer or Electron payloads to
 derive a suggested environment, with a packaged ProtonDB- and winetricks-derived SQLite knowledge
 base added on 2026-07-31. That is "App Forge as analyzer and planner" as described in master plan
-chapter 13, shipped eight months ago, under a licence HELM can read. Separately,
-`umu-protonfixes` (BSD-2-Clause) carries several hundred per-application recipes over a
-roughly fifty-function vocabulary, and Valve operates the same idea privately at commercial scale.
+chapter 13, shipped eight months ago, under a licence HELM can read. Separately, `umu-protonfixes`
+(BSD-2-Clause) carries several hundred per-application recipes over a roughly fifty-function
+vocabulary, and Valve operates the same idea privately at commercial scale.
 
-**1.3. The fifth pillar is genuinely unoccupied, and it is the only defensible one.**
-No system anywhere produces **per-application, per-application-build, per-runtime-build,
-per-hardware, reproducible, expiring pass/fail evidence for third-party desktop software**. The
-near misses each fail on a specific, checkable axis. Wine's own conformance suite tests the Windows
-API, not applications. WineHQ AppDB has structured columns, but its entire hardware dimension is a
-five-value GPU-vendor enum, it has no machine interface, and its `robots.txt` disallows all
-crawlers. ProtonDB is openly exported but records no application build identifier at all, and the
-median age of an application's newest report is 736 days. Steam Deck Verified does per-application,
-per-build, per-hardware-class certification with automatic re-testing when a new Proton ships — but
-it is human-judged, games-only, closed, and runs on hardware Valve controls. And nobody runs a
-functional test over the several hundred existing per-application fixes to check whether any of
-them still work.
+What those components do **not** amount to is a solved product, and revision 1 blurred that.
+Read at commit `d111be2` (2026-09-07, VERIFIED_SOURCE): Eagle is a *static pre-flight analyzer*.
+It never executes the target to test a suggestion — the launch callback discards the outcome;
+community-derived suggestions are emitted with `apply: False` so their switches default to off;
+dependency suggestions are rendered as non-interactive rows and are never installed; there is no
+feedback channel, and the bundled intelligence database is opened read-only with a frozen
+generation timestamp. Its own results banner reads: *"Suggestions are based on technical analysis
+and do not guarantee compatibility."* Bottles' versioning is opt-in and, because the runner and
+DXVK directories are siblings of the bottle rather than children, a saved state captures prefix
+contents but not the runner or graphics components its own config names; restore reports success
+whenever the underlying call does not raise, without checking that the application still runs. Its
+per-bottle sandbox is opt-in, and on the main Wine path it inherits a default that binds the entire
+host filesystem read-only into the sandbox. Neither project claims otherwise: `umu-protonfixes`
+describes itself as *"a stopgap"*.
 
-**1.4. The motivating example does not support the proposed architecture.**
-The master plan is motivated by communication applications feeling unreliable. On the evidence that
-is not a Wine problem: every comparable vendor except WhatsApp ships a native Linux build, so
-nobody runs the Windows build, and WineHQ's tracker holds exactly one Viber bug — filed in 2013,
-untouched since 2015. Viber's Linux client is a Qt 6/QML application, not Electron, and its own
-shipped desktop entry declares an icon name that does not match the installed icon file and carries
-no `StartupWMClass`. The dominant documented failure class in August and September 2026 was a
-StatusNotifierItem regression that broke tray icons across GNOME, KDE, Cinnamon, XFCE and waybar
-simultaneously — from a specification that is still formally a draft at "Version 0.1, Publication
-Date: TBD", with no conformance suite anywhere. See [§6](#s06). This finding should change the
-project's first product decision, not be filed as a detail.
+So the accurate statement is: **the capabilities exist and are shipping; the verification loop that
+would turn them into a reliability guarantee does not exist in any of them.** That is a narrower
+claim than revision 1 made, and it is the one the evidence supports.
+
+**1.3. The fifth pillar is far more occupied than revision 1 claimed. Two genuine absences remain.**
+*(Corrected in revision 2; see [§13](#s13) C-4 and C-5.)*
+
+Revision 1 asserted that "no system anywhere" produces per-application, per-build, per-runtime,
+per-hardware, reproducible, expiring evidence. That was an unbounded negative, and the bound
+matters: **openQA already ships most of it**, and the audit had not compared against it. What
+openQA does today, verified against a live production instance and against source
+(VERIFIED_EXECUTION where a live job was fetched):
+
+- **Traceability.** Every job writes a `vars.json` holding its full resolved variable set — 64
+  variables on the sampled production job — including the test-code git URL and commit hash, the
+  needle repository and its commit hash, worker host, worker instance and worker class, and the
+  emulated CPU and memory. Secret-shaped keys are filtered at write time.
+- **Artifact collection.** Per job and per module: the autoinst and worker logs, serial output,
+  video with frame timings, an uploaded-logs tree, and a per-module detail file recording every
+  matched *and rejected* candidate, with similarity scores and coordinates. Screenshots are stored
+  content-addressed by digest.
+- **A closed result vocabulary.** Seven job states and twelve job results are defined as constants,
+  with a free-text reason column alongside — not an ad-hoc convention.
+- **Reproducible rerun.** Cloning is first-class, with an origin relation exposed through the API,
+  and `--reproduce` pins the test and needle repositories back to the original commits recorded in
+  the job's own `vars.json`.
+- **Non-pixel oracles.** Exit-code assertions, captured stdout, regexp or callback validation of
+  that output, and ingestion of JUnit/TAP output as first-class results. A digest check on a
+  produced file is expressible today.
+- **Attribution, narrowly.** An investigation view automatically diffs variables, worker and
+  system package manifests, and test and needle git history against the last good job; companion
+  tooling clones variants to separate test regression, product regression, infrastructure and
+  sporadic failure.
+
+Against that, HELM's remainder is two genuine absences and two schema-shape fixes:
+
+| Property | Status in openQA |
+|---|---|
+| A content hash identifying the exact artifact under test | **Absent.** The assets table declares a checksum column, but a census of production assets returned null for every one; digests exist for transfer integrity and screenshot storage, not for artifact identity. |
+| Mechanical expiry or re-validation of a finished verdict | **Absent.** Time-based machinery is garbage collection — a result is authoritative indefinitely or deleted. Carry-over propagates a previous failure's annotation forward. |
+| Immutable per-run hardware provenance | **Shape fix.** CPU model, flags, memory and worker class are recorded, but as mutable current state on the worker row, not as an immutable snapshot bound to the run. No GPU, driver or kernel version is representable. |
+| Application identity and version-scoped applicability | **Shape fix.** An application is code inside a test suite acting on an image, not a modelled entity; a history-isolation mechanism already exists as the natural hook for an application-build axis. |
+
+Everything else the evidence pillar treats as new — traceability, artifact collection,
+reproducible rerun, a machine-checkable result vocabulary, and last-good attribution — has shipped
+for years. What remains true, and unchanged, is that nobody runs a functional test over the
+existing per-application fix corpora to check whether any of them still work.
+
+**1.4. The motivating example's cause is unestablished — which is not the same as "it is not a Wine
+problem".** *(Corrected in revision 2; see [§13](#s13) C-1 and C-2.)*
+
+The master plan is motivated by communication applications feeling unreliable. Revision 1 concluded
+that this "is not a Wine problem", reasoning partly from a bug-tracker count. That reasoning was
+invalid and the count was also wrong: a WineHQ quicksearch returns five Viber bugs, not one, opened
+between 2013 and 2019. More importantly, **bug-report counts do not measure usage**, and their
+absence is not evidence of absence of use.
+
+What is established, by direct inspection of the published packages (VERIFIED_EXECUTION), is
+narrower and more useful:
+
+- The current Linux build is 27.3.0.2, and its bundled Qt reports 6.10.2 — so the client is Qt/QML,
+  not Electron, with a web engine bundled only for embedded content.
+- The vendor's own support page states the supported set as Linux Fedora and Ubuntu (64-bit) and
+  adds, verbatim, *"Regular updates and support are limited for Linux."*
+- The shipped desktop entry contains no `StartupWMClass` and declares an icon name whose case does
+  not match the installed icon file — a defect an independent packager works around explicitly.
+- Every shipped binary is stripped, with no separate debug information published. **Any crash
+  attribution will therefore resolve only exported dynamic symbols**, which is a hard constraint on
+  diagnosing the user's actual symptom.
+
+What is **not** established is the cause of the user's reported experience. No crash was reproduced,
+no diagnostic artifact was collected, and no layer was ruled in. The candidate layers — the
+application, the toolkit, the desktop, the graphics stack, packaging — all remain open.
+See [§6](#s06) for the corrected treatment and for what would actually settle it.
 
 **1.5. The real thesis under test is economic, not architectural.**
 Every technical gap identified here is closable. What is not obviously closable is the recurring
@@ -119,9 +186,16 @@ Evidence grades used in this document:
 
 | Grade | Meaning |
 |---|---|
-| **VERIFIED** | Stated in a primary source that was retrieved, with the URL recorded. |
+| **VERIFIED_SOURCE** | Stated in a primary source that was retrieved, with the URL and, where the source moves, the pinned revision recorded. It says what the source says — not that the behaviour was observed. |
+| **VERIFIED_EXECUTION** | Someone ran it and observed the result, with the command, environment and artifact recorded. |
 | **LIKELY** | Strong indirect evidence, a derived measurement, or a source that could not be re-fetched. |
 | **UNVERIFIED** | Reasoning or recollection. Must not be used as the basis for a decision. |
+
+Revision 1 of this document used a single **VERIFIED** grade that conflated the first two. That
+conflation is the root of several corrections in [§13](#s13): reading a declaration in source code
+is not the same as observing a program behave, and this audit repeatedly treated it as if it were.
+Every grade below has been re-stated in the split vocabulary; where a claim was only ever a source
+reading, it now says so.
 
 Two facts were additionally re-fetched by hand while writing this document and are first-hand
 VERIFIED: the Wine 11.0 release statements on WoW64 parity, the removed `wine64` loader, deprecated
@@ -247,15 +321,40 @@ icon" complaint is a missing desktop file or a launch-by-path, not a protocol ga
 
 ### 3.6. Testing and evidence
 
-The decisive technical fact for HELM's differentiator: **Wine implements no UI Automation control
-patterns.** `UiaGetPatternProvider` is a stub, and every pattern export — invoke, set value, toggle,
-select, scroll, and the whole text family — is a stub, while element discovery, navigation and
-property reads are implemented [A02]. The practical consequence is that the entire off-the-shelf
-Windows GUI-automation ecosystem (pywinauto's UIA backend, FlaUI, WinAppDriver and Appium) is dead
-on arrival under Wine, while *find a control and read its name, type and bounding rectangle* works.
-The viable pattern is therefore **find, then synthesise input at coordinates**. Wine also contains
-no AT-SPI integration at all, so every Linux-native GUI test tool is structurally blind to Wine
-windows.
+**Wine implements no UI Automation control patterns** (VERIFIED_SOURCE, at tag `wine-11.0`; `master`
+has already drifted). Of 98 declared exports, 36 are implemented and 62 are stubs, and 59 of those
+62 are control-pattern or text-range entry points — leaving only three non-pattern stubs. *(Scoped
+and corrected in revision 2; see [§13](#s13) C-6.)*
+
+Three corrections to how revision 1 used that fact:
+
+1. **It cites the wrong layer for most of the tools it names.** The `.spec` file is the *deprecated
+   flat C API*. That API is what the managed UIA2 clients bind, so the conclusion holds for those.
+   The tools revision 1 actually named — pywinauto's UIA backend, the UIA3 clients, WinAppDriver —
+   use the COM path, whose blocker is not visible in the spec at all: the COM client's
+   `GetCurrentPattern` family returns `E_NOTIMPL`, and the module defines no pattern interfaces.
+   Same conclusion, different evidence; revision 1 asserted it from a file that does not show it.
+2. **The COM client is thinner than revision 1 implied.** Revision 1 said "name, type and bounding
+   rectangle work". Those three do, along with tree search, the root element, element-from-handle
+   and tree walking — but the automation id, class name, enabled state, native window handle,
+   runtime id and `SetFocus` are also `E_NOTIMPL`. A spec entry says only whether an export has a
+   body, never whether it works for a given argument.
+3. **"Dead on arrival for the entire off-the-shelf ecosystem" is refuted by a shipping
+   counter-example.** winetricks drives GUI installers under Wine today with AutoHotkey, pinned by
+   hash, across roughly two dozen verbs using window-wait, control-click and send primitives.
+   Message- and input-level automation demonstrably works under Wine. It is *pattern-based*
+   automation that does not.
+
+The correctly scoped claim is therefore: **pattern-based UIA actuation cannot succeed against
+Wine's built-in implementation, on source evidence at a pinned tag; how each specific client fails
+— cleanly, silently, or by crashing — is unmeasured**, and at least one shipping consumer has
+already had to guard against a crash on an unimplemented UIA method. Any statement stronger than
+that requires naming the Wine build, the automation backend and the application, and running it.
+
+Corroborating prior art points the same way: Xalia's Windows backend was **migrated away from UIA**
+to Win32 and MSAA, uses no control patterns, and actuates controls with window messages. Wine also
+contains no AT-SPI integration, so Linux-native GUI test tools remain blind to Wine windows. The
+viable technique is **find, then synthesise input**, and that is what the working prior art does.
 
 The best prior art by a wide margin is **Xalia** (MIT, 0.4.9, commits through 2026-08-28), which
 unifies Win32 messages, MSAA, UIA and AT-SPI behind a single element model and is enabled *by
@@ -304,11 +403,37 @@ This is the least glamorous section and the one most likely to produce a catastr
   desktop automation layer has been dead since 2024. Only `snapd` and Chrome's own downgrade manager
   perform per-application data rollback, both from *inside* the vendor, and both with documented
   gaps — `snapd` explicitly does not revert its shared "common" tier.
-- **Wine's registry save falls back to a non-atomic in-place truncate whenever the target is a
-  symlink or has a link count above one.** Any hardlink-based snapshot scheme — `cp -al`,
-  `rsync --link-dest`, OSTree-style checkouts — therefore causes the next registry flush to corrupt
-  the live prefix *and* the snapshot together. Reflinks do not raise the link count and are safe.
-  Wine also defers registry saves for up to thirty seconds and never calls `fsync`.
+- **Wine's registry save takes a non-atomic in-place truncate path when the target is not a regular
+  file or has a link count above one** — and, a precondition revision 1 omitted, only when opening
+  the existing hive for writing succeeds; otherwise it falls through to the safe write-temp-then-
+  rename path (VERIFIED_SOURCE at the 11.17 release commit). Revision 1 then conflated two distinct
+  failures. *(Corrected in revision 2; see [§13](#s13) C-7.)*
+  - **Snapshot contamination** — deterministic, silent, permanent, and requiring no fault at all.
+    Writing through one hardlink writes the shared inode, so a `cp -al` "snapshot" tracks the live
+    registry from that moment on, and keeps doing so, because the extra link keeps the count above
+    one. A snapshot that tracks live data is neither a rollback target nor evidence of a prior
+    state. **This alone disqualifies hardlink farms as snapshots.** Confirmed by execution — see the
+    probe result below.
+  - **Corruption of the live prefix** — requires an additional fault. The truncate happens before
+    any new byte is written and there is no `fsync`, so a crash, kill or power loss inside that
+    window leaves a zero-length or partial hive. Two consequences worth recording: a mid-file
+    truncation *loads silently* and drops every key past the cut, while a zero-length hive fails
+    loudly; and because the truncate precedes the buffered-write setup, even a local failure there
+    can zero the hive with no external fault.
+  - **`rsync --link-dest` was wrongly listed.** It hardlinks between the previous backup and the new
+    one, leaving the live prefix's link count at one. Withdrawn.
+  - Revision 1 also stated the deferral as a general property. The thirty-second periodic save and
+    the absence of `fsync` hold upstream; **Proton diverges** — it has no periodic save timer and
+    moves the write client-side, carrying the same hardlink hazard but not the same timing.
+- **Executed here (VERIFIED_EXECUTION, 2026-09-07):** a synthetic writer on two filesystems
+  reproduced the mechanic. An in-place rewrite through a hardlink made the copy track the live file
+  exactly; a write-temp-then-rename writer left the copy intact and dropped the link count to one; a
+  zero-length window was observable mid-write. **Reflink copies — the mechanism ADR-0017 proposed —
+  were unsupported on both filesystems tested.** Artifacts:
+  [ext4](../experiments/evidence/G0-3-snapshot-semantics-ext4.json),
+  [drvfs](../experiments/evidence/G0-3-snapshot-semantics-drvfs.json). This tests filesystem
+  mechanics with a synthetic writer; **Wine was not installed and was not executed**, so it does not
+  show which path Wine's own code takes at runtime.
 - Windows share modes are enforced only inside `wineserver`'s per-inode table and are invisible to
   every native Linux process, and byte-range locks degrade to advisory `fcntl` locks that Wine
   silently abandons on filesystems that reject them. So HELM's *own* integration features —
@@ -513,29 +638,44 @@ The master plan is motivated by communication applications feeling unreliable, w
 named example, and it correctly warns against assuming Wine is the cause. The research resolves that
 warning against the Wine hypothesis.
 
-- **Wine is not in the causal path.** WineHQ's tracker holds exactly one Viber bug, opened
-  2013-08-23 and untouched since 2015-02-23. Searches for Signal, Slack, Teams, Discord and Zoom
-  return essentially nothing relevant, because every one of those vendors except WhatsApp ships a
-  native Linux build, so nobody runs the Windows build.
-- **For the one application that would need Wine, Wine cannot install it.** WhatsApp for Windows is
-  an MSIX/UWP package, and Wine cannot install such bundles. Windows communication applications are
-  trending toward Store and WinRT distribution — away from Wine, not toward it.
-- **The toolkit hypothesis also fails.** Viber's Linux client is Qt 6/QML with bundled Qt WebEngine
-  and portal support, not Electron. It is simultaneously the most portal-aware and the
-  worst-maintained client in the set. Zoom is also Qt and ships good integration metadata.
-  Integration quality tracks vendor investment, not toolkit.
-- **The observed failures are desktop-integration conformance failures.** In August and September
-  2026 a Chromium change to StatusNotifierItem routing broke tray icons across GNOME's indicator
-  extension, Cinnamon, XFCE and others; the fix then introduced a second regression. Users
-  experienced this as "the application is broken". The specification behind it is a freedesktop
-  draft at "Version 0.1, Publication Date: TBD" with no conformance suite. Telegram Desktop — the
-  control group, with a comparable open-issue backlog — has no open tray bugs, because it installs a
-  D-Bus service watcher and re-registers when the watcher comes and goes. That recovery loop is the
-  entire difference.
-- **Cheap, machine-checkable defects exist in shipped vendor packages.** Viber's desktop entry
-  declares an icon name that does not match the installed icon file, and it carries no
-  `StartupWMClass` — two defects that degrade launcher icon and dock association, in a native
-  package, with zero Wine involvement.
+**Method note.** Revision 1 of this section inferred a cause. Revision 2 separates three things that
+must not be merged: the **user's reported experience**, the **properties of the shipped artifact**,
+and the **cause**, which remains unestablished.
+
+*Observed by direct inspection of the published packages (VERIFIED_EXECUTION):*
+
+- The Linux build is 27.3.0.2, dated 2026-02-19 on the vendor CDN; its bundled Qt reports 6.10.2,
+  so the client is Qt/QML with a web engine bundled only for embedded content, not an Electron
+  application. The Windows and macOS artifacts on the same CDN are dated later, but they are small
+  downloader stubs, so that comparison bounds **artifact** freshness, not application version parity.
+- The vendor states: *"Regular updates and support are limited for Linux."*
+- The shipped desktop entry has no `StartupWMClass`, and its declared icon name differs in case from
+  the installed icon file. What the application actually advertises as its window class at runtime
+  is **not** determinable from the package and must be observed on a running system.
+- All shipped binaries are stripped with no published debug information.
+
+*Bounded, and stated as such:*
+
+- **The tray regression cannot be the mechanism behind a Viber symptom.** The August–September 2026
+  StatusNotifierItem breakage is a Chromium change inherited by Electron applications. Viber drives
+  its tray through Qt's own StatusNotifierItem adaptor, and its bundled web engine contains no
+  StatusNotifier code at all, so the affected code path is not present in the shipping product.
+- **That regression is not documented as causing crashes.** Across the tray-specific primary
+  sources, the symptom is uniformly a missing or unresponsive icon — one report states plainly that
+  the process is alive and everything works except the icon. Revision 1 implied this class of defect
+  explained the user's instability. It does not, and no such link was reproduced. (Scoped to the
+  defect, not the documents: the same release stream separately fixes unrelated Linux crashes.)
+- **The WineHQ bug count was wrong and is worthless either way.** A quicksearch returns five Viber
+  bugs, not one. Revision 1 used the count to infer that nobody runs the Windows build. Bug volume
+  does not measure usage in either direction, and that inference is withdrawn.
+- **What would actually settle attribution**, and has not been done: reproduce the symptom; collect
+  the crash artifact through the system crash handler with journal correlation; capture the
+  application's own logs and the compositor log for the same window; and only then attribute a
+  layer. The stripped-binary finding above sets the ceiling on how far that can go without vendor
+  debug symbols.
+- **A useful, cheap finding survives all of this:** shipped vendor packages contain machine-checkable
+  desktop-metadata defects, with zero Wine involvement. That is verifiable from the package alone,
+  and it is the part of Track B that needs no reproduction to be worth doing.
 
 **Consequence.** There are two candidate first products, and they are not the same project:
 
@@ -565,14 +705,24 @@ These are findings a design must obey. Each has a cheap confirming test.
 removed, `win32` prefixes are deprecated and fatal on wow64-only builds, and prefix architecture is
 immutable [A01].
 
-**C2. `wineserver -k -w` is a mandatory lifecycle step** around any Wine version switch and before
-any snapshot. Protocol mismatch is fatal, and registry saves are deferred up to thirty seconds and
-never flushed to disk with `fsync`.
+**C2. Quiescing before a snapshot is mandatory, but `wineserver -k` is not a guaranteed clean
+flush.** Protocol mismatch is fatal, so the server must be stopped around any version switch; and
+registry saves are deferred (upstream: a thirty-second periodic save, no `fsync`; Proton: no
+periodic timer, write moved client-side). But `-k` sends an interrupt, polls for roughly ten
+seconds, then sends an uncatchable kill — which bypasses the shutdown flush entirely. **A quiesce
+step must verify that the hive was actually written, not assume it.** *(Corrected in revision 2.)*
 
-**C3. Never hardlink a prefix.** Wine's registry save takes a non-atomic in-place truncate path
-whenever the link count exceeds one, corrupting the live prefix and the snapshot together. Use
-reflinks or full copies. *Ten-minute test: `cp -al` a prefix, launch the application, change a
-setting, wait forty seconds, then diff `system.reg` in both copies.*
+**C3. Never hardlink a prefix.** A hardlink farm is not a snapshot: an in-place rewrite through one
+link makes the copy track the live data permanently, with no fault required. Confirmed by execution
+on two filesystems ([§3.8](#s03)). Use full copies, or reflinks **where the filesystem supports
+them** — which neither filesystem available on the audit host did, so this is a precondition to
+check, not an assumption. *(Corrected in revision 2.)*
+
+> **Revision 1's proposed ten-minute test for this was invalid and is withdrawn.** It diffed two
+> hardlinks to the same inode, which are identical by construction whether contamination occurred
+> or not, and it diffed `system.reg` while an application setting change lands in `user.reg`. A
+> corrected procedure is specified as G0-3 in [EXP-009](../experiments/EXP-009.md): compare a
+> **content copy** taken before the write against the copy under test, and cover both hives.
 
 **C4. HELM's per-application state must live in `HKCU\Software\Wine` or outside the prefix.** A Wine
 upgrade re-runs `wine.inf` and overwrites a large fraction of registry values, while the
@@ -845,3 +995,52 @@ master document's own source register remains at
 
 [A01]: https://raw.githubusercontent.com/wine-mirror/wine/wine-11.0/ANNOUNCE.md
 [A02]: https://raw.githubusercontent.com/wine-mirror/wine/master/dlls/uiautomationcore/uiautomationcore.spec
+
+---
+
+<a id="s13"></a>
+
+## 13. Corrections log
+
+Revision 2, dated 2026-09-07. Every change is recorded here **before** any Gate 0 results were
+collected, so that no acceptance criterion can be adjusted after seeing an outcome. Revision 1's
+text is not deleted silently: each entry names what it said, why it was wrong, and what replaced it.
+
+The single systematic error behind most of these: revision 1 used one **VERIFIED** grade for both
+"I read this in a source" and "this was observed to behave this way". [§2](#s02) now splits that
+into VERIFIED_SOURCE and VERIFIED_EXECUTION.
+
+| ID | What revision 1 said | Why it was wrong | Revision 2 |
+|---|---|---|---|
+| **C-1** | "WineHQ's tracker holds exactly one Viber bug", used to conclude nobody runs the Windows build. | Two faults. The count is wrong — a quicksearch returns five. And the inference is invalid regardless: **bug-report volume does not measure usage**, in either direction. | Count corrected; the inference withdrawn entirely. [§1.4](#s01), [§6](#s06). |
+| **C-2** | Implied that the August–September 2026 StatusNotifierItem regression explained the user's Viber instability. | Never reproduced, and mechanically impossible: the regression is a Chromium code path, while Viber drives its tray through Qt's own adaptor and its bundled web engine contains no StatusNotifier code. The documented symptom in tray-specific sources is a missing or unresponsive icon, not a crash. | Link withdrawn; symptom scoped to the defect rather than to the sources; cause recorded as **unestablished**, with the diagnostic procedure that would settle it. [§6](#s06). |
+| **C-3** | "Four of HELM's five named pillars are already shipped by an incumbent." | Conflated *a component with capability X exists* with *the problem is solved as a product*. Read at a pinned commit, the analyzer never executes the target, its suggestions default to off, its dependency suggestions are never installed, it has no feedback channel, and its own banner disclaims any compatibility guarantee. | Restated: the capabilities exist and are shipping; **the verification loop does not exist in any of them**. [§1.2](#s01). |
+| **C-4** | "No system anywhere produces per-application, per-build, per-runtime, per-hardware, reproducible, expiring evidence." | An unbounded negative asserted without comparing against the obvious incumbent. **openQA already ships** per-job input recording with pinned test-code commits, per-module artifact collection, a closed result vocabulary, clone-and-reproduce rerun, non-pixel oracles, and last-good attribution. | Claim replaced with a per-property comparison table against openQA. [§1.3](#s01). |
+| **C-5** | Treated the whole evidence pillar as HELM's novel contribution. | Overstated by roughly half. | Narrowed to **two genuine absences** (artifact content-hash identity; mechanical verdict expiry) and **two schema-shape fixes** (immutable per-run hardware provenance; application identity and version-scoped applicability). Everything else is conceded to openQA. [§1.3](#s01), [§5.2](#s05). |
+| **C-6** | "Wine implements no UIA control patterns, therefore the entire off-the-shelf Windows GUI-automation ecosystem is dead on arrival under Wine." | The source observation is real but was cited from the *deprecated flat C API*, which is not the layer most of the named tools use; the COM blocker is elsewhere and not visible in that file. Revision 1 also overstated what does work, and the universal claim is refuted by a shipping counter-example — winetricks drives GUI installers under Wine with AutoHotkey today. | Scoped to a pinned tag and to pattern-based actuation specifically; the counter-example recorded; per-client failure modes marked **unmeasured**. [§3.6](#s03). |
+| **C-7** | "Hardlink snapshots corrupt the live prefix and the snapshot together." | Conflated two different failures with different likelihoods and different consequences. Also omitted a precondition in the source path, and wrongly listed `rsync --link-dest`, which does not raise the live file's link count. | Split into **contamination** (deterministic, silent, needs no fault — and disqualifying on its own) and **corruption** (needs an additional fault). `rsync --link-dest` withdrawn. Proton's divergent timing recorded. [§3.8](#s03), C3 in [§7](#s07). |
+| **C-8** | "`wineserver -k -w` is a mandatory lifecycle step", implying it guarantees a clean flush. | It escalates to an uncatchable kill after roughly ten seconds, bypassing the shutdown flush. | Quiesce must **verify** the hive was written rather than assume it. C2 in [§7](#s07). |
+| **C-9** | Revision 1's ten-minute test for the hardlink claim. | Invalid by construction: it diffed two hardlinks to the same inode — always identical — and inspected the wrong hive for the change it induced. | Withdrawn and replaced with a corrected G0-3 procedure in [EXP-009](../experiments/EXP-009.md). |
+| **C-10** | Reflink snapshots presented as the available safe mechanism. | **Refuted by execution on this host:** neither available filesystem supported reflink copies. | Reflink is now a *precondition to check*, not an assumption; ADR-0017 carries a correction note. [§3.8](#s03). |
+
+### 13.1. What is unchanged, and deliberately so
+
+Several revision 1 findings survived an explicit attempt to weaken them, and are restated rather
+than softened:
+
+- **Pattern-based UIA actuation is unusable under Wine.** The scoping in C-6 narrows the evidence,
+  not the conclusion.
+- **Hardlink farms must never be used as prefix snapshots.** C-7 makes the reason *stronger*:
+  contamination is deterministic and needs no crash, so the practice fails even on a machine that
+  never faults.
+- **No functional verification exists over the per-application fix corpora.** Unchanged.
+- **The economic thesis remains the project's central unevidenced claim.** Unchanged, and the
+  openQA finding sharpens it: if most of the evidence machinery already exists, the remaining
+  question is even more clearly about sustained curation cost than about engineering.
+
+### 13.2. Corrections still owed
+
+Recorded so they are not lost: revision 2 does not re-examine the master plan's remaining
+quantitative claims, the corpus counts flagged in [§11](#s11) are still unpinned, and the audit
+still contains no coverage of audio, printing, complex-script input, scaling, or licence
+activation under snapshot restore.

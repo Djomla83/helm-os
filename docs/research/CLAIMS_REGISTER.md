@@ -29,3 +29,18 @@ ne rezultat testa. Nazivi su na engleskom radi poklapanja sa audit-om.
 | H-11 | Business/productivity applications are a harder target than games, not an easier one | Radna hipoteza suprotna master planu | Klasifikovati 20 ciljanih aplikacija po toolkit-u, .NET meti, instaleru, licenciranju i servisima. |
 | C-03 | Communication-app unreliability on Linux is caused by the Windows compatibility layer | Nepotkrepljena tvrdnja | Dokazi ukazuju na suprotno; videti [audit, poglavlje 6](FOUNDATION_AUDIT.md#s06) i Gate 0 / G0-1. |
 | C-04 | Automated derivation of an application environment from its binary is HELM-ova novina | Odbačena kao novina | Postojeća implementacija objavljena 2026-01-24 kod druge alatke; proveriti praktično kroz G0-4. |
+
+## Ispravke posle Gate 0 (2026-09-07)
+
+Statusi ispod menjaju ranije unose iz istog paketa. Puno obrazlozenje je u
+[dnevniku ispravki](FOUNDATION_AUDIT.md#s13) i u
+[Gate 0 izvestaju](../experiments/EXP-009-GATE0-REPORT.md).
+
+| ID | Tvrdnja | Novi status | Napomena |
+|---|---|---|---|
+| C-03 | Nepouzdanost komunikacionih aplikacija uzrokovana je Windows compatibility slojem | I dalje nepotkrepljeno — **ali i suprotna tvrdnja je nepotkrepljena** | Uzrok je **neutvrdjen**. Broj bug prijava ne meri upotrebu; raniji zakljucak povucen. Simptom nije reprodukovan. |
+| C-05 | Tray regresija objasnjava korisnikova rusenja | Povuceno | Nikada nije reprodukovano, a zahvaceni kod nije prisutan u tom klijentu. Dokumentovani simptom je ikona, ne rusenje. |
+| H-12 | Evidence pillar je u celini nova vrednost | Znatno suzeno | openQA vec isporucuje traceability, prikupljanje artefakata, zatvoren recnik ishoda, ponovljivo pokretanje i atribuciju. Ostaju dva stvarna nedostatka i dve korekcije seme. |
+| H-13 | Hardlink kopija prefiksa je neupotrebljiva kao snapshot | **VERIFIED_EXECUTION** (mehanika, sinteticki pisac) | Kontaminacija je determinisiticka i ne zahteva pad. Korupcija zivog prefiksa je odvojena tvrdnja i zahteva dodatni kvar. |
+| H-14 | Reflink kopije su dostupan bezbedan mehanizam | **Opovrgnuto na testiranom hostu** | `cp --reflink` nije podrzan ni na jednom od dva testirana fajl sistema. ADR-0017 trazi izmenu. |
+| H-15 | Pattern-based UIA automatizacija ne radi pod Wine-om | **VERIFIED_SOURCE** na fiksiranom tagu | Vazi za pattern actuation. Nije "ceo ekosistem": winetricks danas vodi GUI instalere pod Wine-om preko AutoHotkey-a. Nacin otkaza po klijentu je neizmeren. |

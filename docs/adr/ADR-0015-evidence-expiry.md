@@ -93,6 +93,29 @@ The deciding measurement is pre-registered in [EXP-009](../experiments/EXP-009.m
 signal HELM would publish for exactly three applications and measure its false-pass rate by hand
 against injected breakages.
 
+## Corrections required before acceptance (recorded 2026-09-07)
+
+The novelty claim in this ADR is materially overstated and must be narrowed before review. A
+comparison against openQA — which the original audit did not perform — found that it already ships
+per-job input recording with pinned test-code commits, per-module artifact collection, a closed
+result vocabulary defined in code, clone-and-reproduce rerun, non-pixel oracles including exit-code
+and captured-output assertions, and automatic last-good attribution.
+
+The defensible remainder is narrower than this ADR implies:
+
+- **Two genuine absences:** a content hash identifying the exact artifact under test, and any
+  mechanism that expires or re-validates a finished verdict.
+- **Two schema-shape fixes:** hardware provenance exists but as mutable current state rather than an
+  immutable per-run record; and application identity exists only as an untyped setting, though a
+  history-isolation mechanism already provides the natural hook for it.
+
+The ADR should also record an option it never considered: **adopting openQA and adding the missing
+properties**, rather than building an evidence system. That option must be evaluated and either
+taken or explicitly rejected with reasons.
+
+See [audit §1.3](../research/FOUNDATION_AUDIT.md#s01) and corrections C-4 and C-5 in
+[audit §13](../research/FOUNDATION_AUDIT.md#s13).
+
 ## Revisiting
 
 The proof of concept measures a non-zero false-pass rate on the weakest signal, in which case this

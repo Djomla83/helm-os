@@ -31,5 +31,10 @@ tenzije sa postojećim odlukama navedene su u
 | ADR-0017 | [Recovery is tiered, quiesced and reflink-based](adr/ADR-0017-data-safety-rules.md) | Proposed |
 | ADR-0018 | [Integration via a Win32-to-portal bridge](adr/ADR-0018-win32-portal-bridge.md) | Proposed |
 | ADR-0019 | [Publish the unsupportable class; decide the first product with evidence](adr/ADR-0019-scope-boundary.md) | Proposed |
+| ADR-0020 | [Documentation language policy — proposed CONTRIBUTING.md amendment](adr/ADR-0020-documentation-language.md) | Proposed |
+
+Posle Gate 0 (2026-09-07) ADR-0015 i ADR-0017 nose zabelezene ispravke koje treba uneti pre
+prihvatanja; nijedan ADR nije prihvacen. Videti
+[Gate 0 izvestaj](experiments/EXP-009-GATE0-REPORT.md).
 
 Proces je u [master planu](../HELM_MASTER_PLAN.md#s31). Licencna odluka ostaje zaseban uslov javnog open-source izdanja.
