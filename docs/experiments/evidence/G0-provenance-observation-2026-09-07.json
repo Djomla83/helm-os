@@ -1,0 +1,111 @@
+{
+  "record": "gate0_read_only_provenance_observation",
+  "observed_at_utc": "2026-09-07T13:58:09.524895+00:00",
+  "lab_id": "helm-lab-g0",
+  "scope": "Read-only file and mount inspection; no probe execution and no configuration change.",
+  "commands": [
+    {
+      "argv": [
+        "wsl.exe",
+        "-d",
+        "helm-lab-g0",
+        "-u",
+        "helmlab",
+        "--exec",
+        "cat",
+        "/etc/wsl.conf"
+      ],
+      "returncode": 0,
+      "stdout": "[automount]\nenabled = false\n[interop]\nenabled = false\nappendWindowsPath = false\n[user]\ndefault = helmlab\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "wsl.exe",
+        "-d",
+        "helm-lab-g0",
+        "-u",
+        "helmlab",
+        "--exec",
+        "cat",
+        "/proc/sys/fs/binfmt_misc/WSLInterop"
+      ],
+      "returncode": 0,
+      "stdout": "enabled\ninterpreter /init\nflags: P\noffset 0\nmagic 4d5a\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "wsl.exe",
+        "-d",
+        "helm-lab-g0",
+        "-u",
+        "helmlab",
+        "--exec",
+        "test",
+        "-d",
+        "/mnt/c"
+      ],
+      "returncode": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "wsl.exe",
+        "-d",
+        "helm-lab-g0",
+        "-u",
+        "helmlab",
+        "--exec",
+        "mountpoint",
+        "-q",
+        "/mnt/c"
+      ],
+      "returncode": 32,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "wsl.exe",
+        "-d",
+        "helm-lab-g0",
+        "-u",
+        "helmlab",
+        "--exec",
+        "sha256sum",
+        "/home/helmlab/g0/dcomp_probe.c",
+        "/home/helmlab/g0/dcomp_probe.exe",
+        "/home/helmlab/g0/g0-2-result.json",
+        "/home/helmlab/g0/g0-3b-result.json"
+      ],
+      "returncode": 0,
+      "stdout": "70b1b1e86eae6f4d3977713d8c66956061a2ab69f9518dcb2d93dc74af2ce316  /home/helmlab/g0/dcomp_probe.c\nb74011c0c154e1e742b6a27c2de7259befce4e9e528cb946f9221fdd2f445ce4  /home/helmlab/g0/dcomp_probe.exe\n63252e36b25f84925fb323c83a2cd47a5fcbf5493039df5b25a7a090cee77908  /home/helmlab/g0/g0-2-result.json\n75ce39d5cf8d2f2c531fda2a04ade683b619023ae261e1306fb6142e7dcc03cc  /home/helmlab/g0/g0-3b-result.json\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "wsl.exe",
+        "-d",
+        "helm-lab-g0",
+        "-u",
+        "helmlab",
+        "--exec",
+        "cat",
+        "/home/helmlab/g0/dcomp_out.json"
+      ],
+      "returncode": 0,
+      "stdout": "{\"dcomp_dll_loaded\":true,\"entrypoint_found\":true,\"hresult\":\"0x80004001\",\"is_E_NOTIMPL\":true}\n",
+      "stderr": ""
+    }
+  ],
+  "assessment": {
+    "interop_configuration": "disabled in /etc/wsl.conf",
+    "WSLInterop_registration": "enabled",
+    "effective_windows_execution_blocking": "UNVERIFIED",
+    "direct_negative_execution_test": "NOT_RUN",
+    "windows_drive_directory": "exists; not a mountpoint",
+    "scope_limit": "Registration state and configuration do not establish effective execution blocking. No personal folders were read."
+  }
+}

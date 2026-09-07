@@ -1,0 +1,32 @@
+{
+  "record": "gate0_publication_redaction",
+  "rule_id": "G0-PATH-REDACTION-1",
+  "rule_defined_at_utc": "2026-09-07T13:57:04.458475+00:00",
+  "public_token": "<redacted>",
+  "rule": "Replace only the operator account component in absolute user-home paths; preserve the remaining path and technical lab identifiers.",
+  "raw_archive": "Private local archive outside the repository; never uploaded.",
+  "artifacts": [
+    {
+      "path": "docs/experiments/evidence/G0-3-snapshot-semantics-ext4.json",
+      "redacted_fields": [
+        "/checks/Q4_reflink_support/stderr",
+        "/filesystem/path"
+      ],
+      "raw_sha256": "c9b8c1d4fb9eb6ae2d29594d9a8dc84e3fb988a2f1cb5dac1c478f0b64fc5f48",
+      "publication_sha256": "0283a7069535087671a559c96f234e5a8daf1d66d86ef2f314b8b23ffdbb53ea",
+      "raw_bytes": 3054,
+      "publication_bytes": 3560
+    },
+    {
+      "path": "docs/experiments/evidence/G0-3-snapshot-semantics-drvfs.json",
+      "redacted_fields": [
+        "/checks/Q4_reflink_support/stderr",
+        "/filesystem/path"
+      ],
+      "raw_sha256": "85b2f81f9f3c6fdc7beb2902e3a45c9d83b304ab00a9ec45f09312a1818dd7e5",
+      "publication_sha256": "63d123f3613bb47969ed262303c2837344f8862396ecdcd1e8731b3422a94492",
+      "raw_bytes": 3123,
+      "publication_bytes": 3629
+    }
+  ]
+}

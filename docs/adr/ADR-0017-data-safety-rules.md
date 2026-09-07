@@ -111,6 +111,12 @@ user's documents alone.
 
 ## Evidence
 
+Publication annotation, 2026-09-07: G0-3a and G0-3b support only their separately recorded
+filesystem/recovery semantics. **Original G0-3 remains BLOCKED**; the read-only-hive case and an
+explicit machine-hive write are not evidenced by the later probe. No application recovery or
+corruption event was demonstrated. See the [current report](../experiments/EXP-009-GATE0-REPORT.md#current-assessment).
+This annotation does not accept or change the proposed architecture.
+
 Foundation audit [§3.8](../research/FOUNDATION_AUDIT.md#s03),
 [§4.5](../research/FOUNDATION_AUDIT.md#s04), constraints C2, C3 and C9 in
 [§7](../research/FOUNDATION_AUDIT.md#s07), and risk R-A7 in

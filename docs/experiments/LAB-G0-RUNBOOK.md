@@ -65,9 +65,9 @@ Configured in `/etc/wsl.conf` **of this distribution only**, before any test ran
 
 ```ini
 [automount]
-enabled = false          # Windows drives are not mounted; /mnt/c is absent
+enabled = false          # intended to disable Windows-drive automount
 [interop]
-enabled = false          # Windows executables cannot be launched from the lab
+enabled = false          # intended to disable Windows-process interoperability
 appendWindowsPath = false
 [user]
 default = helmlab
@@ -75,8 +75,23 @@ default = helmlab
 
 Applied with `wsl --terminate helm-lab-g0` — **never** a global `wsl --shutdown`.
 
-Also observed: no personal folder is mounted, no browser session or credential is reachable, and no
-Docker or SSH-agent socket is exposed.
+The original report claimed that no personal folder was mounted, no browser session or credential
+was reachable, and no Docker or SSH-agent socket was exposed. Those broad reachability statements
+are historical claims, not a verified containment boundary.
+
+<a id="interop-observation"></a>
+
+### 2.3. Read-only publication observation, 2026-09-07
+
+[Captured commands and output](evidence/G0-provenance-observation-2026-09-07.json) confirm that
+`/etc/wsl.conf` contains the configuration above, but
+`/proc/sys/fs/binfmt_misc/WSLInterop` reports `enabled` with interpreter `/init`. Effective blocking
+of Windows-process execution is **UNVERIFIED** until a direct negative execution test is performed.
+No such test was performed, and no configuration was changed during this publication task.
+
+`/mnt/c` exists as a directory and is not a mountpoint (`mountpoint -q /mnt/c` returned 32).
+The earlier assertion that the directory was absent was too strong. Configuration, registration
+state and mount observations are reported separately; none establishes general containment.
 
 ## 3. Reproduction
 
@@ -120,6 +135,10 @@ Binding on how results may be reported:
 - No installer, disk image, secret, credential or personal data is uploaded or committed.
 - This lab is never attached as a runner for untrusted pull requests.
 - The existing `Ubuntu` distribution is not modified in any way.
+
+Current publication boundary: no staging or Proton/UMU provisioning, G0-2 continuation, Hyper-V
+permission change, teardown, or larger PoC. Original G0-3 remains BLOCKED; G0-3b's recorded PASS is
+limited to its separate mechanics subtest. See the [current report](EXP-009-GATE0-REPORT.md#current-assessment).
 
 ## 6. Teardown
 

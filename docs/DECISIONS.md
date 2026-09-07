@@ -35,8 +35,9 @@ tenzije sa postojećim odlukama navedene su u
 | ADR-0019 | [Publish the unsupportable class; decide the first product with evidence](adr/ADR-0019-scope-boundary.md) | Proposed |
 | ADR-0020 | [Documentation language policy](adr/ADR-0020-documentation-language.md) | **Accepted 2026-09-07** |
 
-Posle Gate 0 (2026-09-07) ADR-0015 i ADR-0017 nose zabelezene ispravke koje treba uneti pre
-prihvatanja; nijedan ADR nije prihvacen. Videti
-[Gate 0 izvestaj](experiments/EXP-009-GATE0-REPORT.md).
+Current annotation, 2026-09-07: ADR-0017 was amended but remains Proposed; ADR-0015 still needs
+review of its recorded corrections. ADR-0020 alone is Accepted, for documentation language.
+The original G0-3 criterion remains BLOCKED; the separate mechanics subtest does not complete it.
+See the [current Gate 0 assessment](experiments/EXP-009-GATE0-REPORT.md#current-assessment).
 
 Proces je u [master planu](../HELM_MASTER_PLAN.md#s31). Licencna odluka ostaje zaseban uslov javnog open-source izdanja.

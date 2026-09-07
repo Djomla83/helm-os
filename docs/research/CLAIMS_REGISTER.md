@@ -1,5 +1,8 @@
 # Registar ključnih tvrdnji i hipoteza
 
+> Earlier tables are dated claim history. The [publication review](#publication-review) below
+> supplies the current Gate 0 assessment where it supersedes those entries.
+
 | ID | Tvrdnja | Status | Potrebna provera |
 |---|---|---|---|
 | H-01 | Profili smanjuju ručno podešavanje aplikacija | Hipoteza | Poređenje identičnog toka sa baseline manager-om. |
@@ -44,3 +47,21 @@ Statusi ispod menjaju ranije unose iz istog paketa. Puno obrazlozenje je u
 | H-13 | Hardlink kopija prefiksa je neupotrebljiva kao snapshot | **VERIFIED_EXECUTION** (mehanika, sinteticki pisac) | Kontaminacija je determinisiticka i ne zahteva pad. Korupcija zivog prefiksa je odvojena tvrdnja i zahteva dodatni kvar. |
 | H-14 | Reflink kopije su dostupan bezbedan mehanizam | **Opovrgnuto na testiranom hostu** | `cp --reflink` nije podrzan ni na jednom od dva testirana fajl sistema. ADR-0017 trazi izmenu. |
 | H-15 | Pattern-based UIA automatizacija ne radi pod Wine-om | **VERIFIED_SOURCE** na fiksiranom tagu | Vazi za pattern actuation. Nije "ceo ekosistem": winetricks danas vodi GUI instalere pod Wine-om preko AutoHotkey-a. Nacin otkaza po klijentu je neizmeren. |
+
+<a id="publication-review"></a>
+
+## Publication review — 2026-09-07
+
+Current status follows the [Gate 0 report](../experiments/EXP-009-GATE0-REPORT.md#current-assessment).
+This is an evidence assessment, not a new experiment or a change to acceptance criteria.
+
+| ID | Claim | Current assessment | Evidence and limit |
+|---|---|---|---|
+| H-13 | Mutable hardlink copies are not independent prefix snapshots | Recorded execution supports the narrow mechanics claim | G0-3a and G0-3b separately PASS for the recorded filesystem/recovery semantics. Original G0-3 remains BLOCKED; no corruption or successful application recovery was demonstrated. |
+| H-14 | Reflink copies are available on this lab filesystem | Refuted on the tested filesystems | Recorded copy errors are preserved; ADR-0017 was amended but remains Proposed. |
+| C-06 | The DirectComposition probe decides compatibility of an entire application class | Unsupported; historical inference withdrawn | Vanilla recorded `0x80004001` (`E_NOTIMPL`), but its arm is INCONCLUSIVE because required controls are not evidenced. Overall G0-2 is BLOCKED; staging and Proton/UMU are NOT_RUN. No rendering or application-class conclusion follows. |
+| C-07 | The configured lab blocks Windows-process execution | UNVERIFIED | Configuration requests disabled interoperability, while `WSLInterop` registration reads `enabled`. No direct negative execution test was performed. |
+
+The [publication manifest](../experiments/evidence/G0-publication-redaction-2026-09-07.json)
+distinguishes private raw hashes from tracked redacted hashes. Privacy redaction changes no
+experimental value outside the declared path fields.

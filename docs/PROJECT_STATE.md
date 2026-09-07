@@ -1,5 +1,10 @@
 # Stanje projekta
 
+> Current status: the [publication review below](#publication-review) supersedes earlier dated
+> snapshots, including their aggregate counts and publication/isolation claims. Historical text is
+> retained; the [Gate 0 report](experiments/EXP-009-GATE0-REPORT.md#current-assessment) is authoritative
+> for the current experiment assessment.
+
 **Datum:** 2026-09-06. **Faza:** G0, dokumentacija i priprema istraživanja.
 
 | Oblast | Stanje |
@@ -215,3 +220,35 @@ demonstrated rather than argued.
 Finish G0-2's remaining two runtime arms in a second disposable lab (about an hour), take amended
 ADR-0017 to review, and decide the environment for application-level work — a desktop session on
 real hardware, or the Hyper-V group approval recorded in the runbook.
+
+---
+
+<a id="publication-review"></a>
+
+## Update 2026-09-07 — publication/provenance review
+
+The owner authorised deterministic privacy redaction of exactly the three unpublished Gate 0
+commits. A private bundle and original evidence were archived outside the repository and verified
+before editing. Public base `e09a52fa2ed95c759e3e9370d4b0f0e95ce1fa20` is unchanged. The actual
+repository is [Djomla83/helm-os](https://github.com/Djomla83/helm-os); older statements that no remote
+exists are historical. The private publication receipt records the old/new SHAs and remote
+verification after a normal fast-forward push. No force-push is authorised.
+
+The two G0-3a evidence files now identify their redacted fields and raw hashes; their publication
+hashes are distinct. [Provenance and artifact identities](experiments/EXP-009-GATE0-REPORT.md#publication-provenance)
+are recorded without exposing the private archive or operator account component.
+
+Current Gate 0 status is defined in the [report](experiments/EXP-009-GATE0-REPORT.md#current-assessment):
+the original five checks remain BLOCKED. G0-3a and G0-3b separately retain PASS for their recorded
+filesystem/recovery mechanics; neither completes original G0-3. Vanilla G0-2 preserves
+`0x80004001` (`E_NOTIMPL`) but is INCONCLUSIVE because required controls are not evidenced. Staging
+and Proton/UMU remain NOT_RUN. No application-class compatibility inference follows.
+
+The lab configuration intends to disable interoperability, while the observed `WSLInterop`
+registration reports `enabled`. Effective execution blocking is UNVERIFIED; no direct negative
+execution test was run. See the [lab observation](experiments/LAB-G0-RUNBOOK.md#interop-observation).
+
+ADR-0020 remains Accepted for documentation language; ADR-0013 through ADR-0019 remain Proposed.
+No probe, lab package, global WSL setting or Hyper-V permission was changed. The authorised work
+stops at publication/provenance repair. Any further experiment or full desktop VM needs a separate
+owner decision; the Evidence Loop PoC remains unauthorised.

@@ -71,6 +71,11 @@ reading, this ADR must be rejected rather than quietly reinterpreted.
 
 ## Evidence
 
+Publication annotation, 2026-09-07: the [current G0-2 assessment](../experiments/EXP-009-GATE0-REPORT.md#current-assessment)
+is BLOCKED. Vanilla's `E_NOTIMPL` observation is preserved, but required controls are not evidenced;
+staging and Proton/UMU did not run. The probe does not establish an application-class dependency
+on staging, and does not by itself support accepting this ADR. Status remains Proposed.
+
 Foundation audit [§3.1](../research/FOUNDATION_AUDIT.md#s03), [§7](../research/FOUNDATION_AUDIT.md#s07)
 (constraints C1, C2, C4, C7), and the first-hand verified Wine 11.0 release announcement recorded in
 [§12](../research/FOUNDATION_AUDIT.md#s12). Remaining uncertainty: the `wine.inf` upgrade analysis is

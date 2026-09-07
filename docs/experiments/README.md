@@ -1,6 +1,7 @@
 # Planovi eksperimenata
 
-Nijedan eksperiment nije izvršen u ovom dokumentacionom paketu.
+The table began as a planning snapshot. EXP-001 desk research and Gate 0 mechanics evidence now
+exist; no application compatibility test has been completed.
 
 | ID | Plan | Status |
 |---|---|---|
@@ -19,6 +20,8 @@ Nije izvršen nijedan aplikacioni test. EXP-009 je predlog najmanjeg PoC-a koji 
 audit-a i objedinjuje delove EXP-003, EXP-004 i EXP-005 u jedan merljiv tok; njegov Gate 0 takođe
 prikuplja dokaze potrebne za EXP-002.
 
-Gate 0 je izvrsen 2026-09-07 u meri koju okruzenje dozvoljava: jedan PASS, cetiri BLOCKED.
-Rezultat je [EXP-009-GATE0-REPORT.md](EXP-009-GATE0-REPORT.md). PoC nije odobren.
+Current Gate 0 assessment: the original five checks remain BLOCKED. G0-3a and G0-3b separately
+PASS only for their recorded mechanics. Vanilla G0-2 is INCONCLUSIVE; staging and Proton/UMU are
+NOT_RUN. See [EXP-009-GATE0-REPORT.md](EXP-009-GATE0-REPORT.md#current-assessment). The current work
+ends at publication/provenance repair; the PoC is not authorised.
 Ostali eksperimenti prema preduslovima i [backlog-u](../../planning/BACKLOG.md).

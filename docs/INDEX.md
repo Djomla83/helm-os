@@ -8,7 +8,7 @@ i [otvorena pitanja](OPEN_QUESTIONS.md).
 
 ## Odluke i istraživanja
 
-[ADR indeks](DECISIONS.md) ima dvadeset predloženih odluka.
+[ADR indeks](DECISIONS.md): nineteen Proposed records and ADR-0020 Accepted for documentation language.
 [RFC-0001](rfc/RFC-0001-app-evidence-model.md) definiše nacrt testne evidencije;
 [RFC-0002](rfc/RFC-0002-threat-model.md) početni threat model.
 [Mapa eksperimenata](experiments/README.md) vodi do devet planova; nijedan aplikacioni

@@ -7,8 +7,8 @@
 | Executor | Development agent, unattended, on the maintainer's workstation |
 | Reviewer | **not assigned** — this report is not accepted |
 | Repository revision at execution | `e09a52f` |
-| Approved budget | none set; no spend incurred, no software installed |
-| Outcome summary | **Round 1** (no lab): 1 PASS, 5 BLOCKED. **Round 2** (lab provisioned): 3 PASS, 1 PARTIAL, 3 BLOCKED, 0 FAIL |
+| Approved budget | No new spend; Round 2 installed packages inside the disposable lab. |
+| Current outcome summary | **G0-1 through G0-5: BLOCKED.** Separate mechanics subtests G0-3a and G0-3b: PASS within their recorded scope. G0-2 vanilla arm: INCONCLUSIVE; staging and Proton/UMU: NOT_RUN. See [current assessment](#current-assessment). |
 
 > **This report contains no Windows application compatibility result.** Round 2 executed real Wine
 > 11.17 in a disposable lab, but only against synthetic probes — no Windows application was
@@ -16,7 +16,61 @@
 >
 > **Round 1** (2026-09-07, morning) ran with no lab available. **Round 2** (2026-09-07, afternoon)
 > ran after the maintainer authorised a bounded lab phase. Round 1's results are preserved
-> unchanged below; Round 2 is added in [§2A](#2a-round-2-results-after-the-lab-was-provisioned).
+> below as historical observations; Round 2 is in [§2A](#2a-round-2-results-after-the-lab-was-provisioned).
+> Publication corrections are explicitly dated below. They change status interpretation and redact
+> private paths; they do not change the observations or the registered acceptance criteria.
+
+<a id="current-assessment"></a>
+
+## Current assessment — publication review, 2026-09-07
+
+This section supersedes the earlier aggregate counts and status interpretations. The earlier
+Round 2 summary was "3 PASS, 1 PARTIAL, 3 BLOCKED, 0 FAIL"; it mixed questions, subtests and checks,
+and used `PARTIAL`, which is not in [EXP-009's outcome vocabulary](EXP-009.md#2-outcome-vocabulary).
+
+| Registered check or separate subtest | Current outcome | Basis and remaining limit |
+|---|---|---|
+| G0-1 | BLOCKED | Authorised accounts and a reproduction are absent. |
+| G0-2 overall | BLOCKED | Required runtime comparison is incomplete; the vanilla arm also lacks required control evidence. |
+| G0-3 as originally registered | BLOCKED | Neither mechanics subtest establishes completion of the original Wine-specific criterion. The invalid historical procedure was not executed as registered; the later probe also lacks the prescribed read-only-hive case and an explicit machine-hive write. |
+| G0-4 | BLOCKED | Application cohort and desktop session are absent. |
+| G0-5 | BLOCKED | Reviewed containment boundary is absent; no escape test was attempted. |
+| G0-3a, separately added filesystem subtest | PASS | Synthetic writer and two filesystems only. |
+| G0-3b, separately reported filesystem/recovery semantics with Wine | PASS | Recorded hardlink contamination, full-copy independence and post-copy synthetic-document absence after restoring the old copy. This is not satisfaction of original G0-3, a corruption test, or application recovery. |
+
+| G0-2 runtime arm | Outcome | Runtime identity and preserved observation |
+|---|---|---|
+| Vanilla | INCONCLUSIVE | `wine-11.17`; WineHQ `11.17~noble-1`; `DCompositionCreateDevice` returned `0x80004001` (`E_NOTIMPL`). |
+| Wine staging | NOT_RUN | No staging build was provisioned or pinned. |
+| Proton/UMU | NOT_RUN | No launcher, Proton build or Steam Linux Runtime was provisioned or pinned. |
+
+The [unchanged vanilla artifact](evidence/G0-2-dcomposition-vanilla-wine-11.17.json) retains its
+historical `PARTIAL` label and interpretation. Those fields are not the current assessment.
+[The probe source](../../tools/gate0/dcomp_probe.c) contains neither the prescribed known-good
+control call nor a deliberately broken control. Their execution is not evidenced. EXP-009 §5
+therefore does not permit a PASS. No numerical G0-2 repetition count is specified in the registered
+procedure; the report's claim of two observations is not backed by separate per-run records.
+
+Read-only inspection found one saved vanilla stdout record, and confirmed the source, executable,
+vanilla JSON and G0-3b JSON hashes against the retained lab files. Exact commands and output are in
+[the provenance observation](evidence/G0-provenance-observation-2026-09-07.json). This inspection
+did not execute or repeat a probe. Original probe stderr and repetition timing remain unavailable.
+
+**Interpretation correction:** historical language below and in the foundation audit says this
+probe decides the Chromium-embedding application class. That inference is withdrawn. This operation
+alone establishes neither compatibility nor incompatibility of Chromium, Electron, WebView2,
+embedded-browser applications or games. `S_OK` would not establish correct rendering; `E_NOTIMPL`
+records this runtime's response to the tested call only.
+
+**WSL interoperability:** `/etc/wsl.conf` requests disabled interoperability, but the observed
+`WSLInterop` registration reads `enabled`. Effective Windows-process execution blocking is
+**UNVERIFIED** until a direct negative execution test is performed. `/mnt/c` exists as a directory
+and is not a mountpoint. Neither observation is a containment audit; see the
+[lab runbook](LAB-G0-RUNBOOK.md#interop-observation).
+
+ADR-0020 remains Accepted for documentation language only. All architecture ADRs remain Proposed.
+The owner's current authorisation ends at publication/provenance repair: no staging or Proton/UMU
+provisioning, G0-2 continuation, Hyper-V change or larger PoC is authorised by this correction.
 
 ---
 
@@ -216,15 +270,20 @@ hypervisor install, Windows feature or reboot beyond that is needed.
 Runtime installed: **`wine-devel` pinned at `11.17~noble-1`** from `dl.winehq.org/wine-builds/ubuntu`
 noble/main — the exact release whose source the audit's registry findings were read from.
 
-### G0-3b — Wine registry save behaviour → **PASS** (the Round 1 blocker is cleared)
+### G0-3b — filesystem/recovery semantics with Wine → **PASS** (separate subtest)
 
 | Field | Value |
 |---|---|
-| Outcome | **PASS.** Both controls behaved correctly, so the comparison is trustworthy. |
+| Outcome | **PASS for the recorded mechanics subtest only.** Both recorded controls behaved as expected. Original G0-3 remains BLOCKED. |
 | Probe | [`tools/gate0/probe_wine_registry.py`](../../tools/gate0/probe_wine_registry.py), transferred into the lab and verified **byte-identical** (`4ec6d1f4…`) to the committed source |
 | Evidence | [`G0-3b-wine-registry-wsl2.json`](evidence/G0-3b-wine-registry-wsl2.json) (digest `75ce39d5…`, verified equal in-lab and in-repo) |
 
 Questions were fixed in the probe source before execution. Observed with **real Wine 11.17**:
+
+Publication correction: the earlier heading said "the Round 1 blocker is cleared". Wine's presence
+cleared a missing-tool precondition, not the original experiment criterion. The probe issues an
+HKCU write; changes in both hives are not evidence of an explicit HKLM write or the prescribed
+read-only-hive case. The latter is absent from the probe and evidence.
 
 | # | Question | Result |
 |---|---|---|
@@ -257,16 +316,18 @@ process check) confirmed the server had actually stopped. A design that trusted 
 status would have drawn the wrong conclusion in both directions. This is exactly why the amended
 rule requires *verification*, not issuance.
 
-### G0-2 — DirectComposition availability → **PARTIAL** (1 of 3 runtime arms)
+### G0-2 — DirectComposition comparison → **BLOCKED** (vanilla arm INCONCLUSIVE)
 
 | Field | Value |
 |---|---|
-| Outcome | **PARTIAL.** The vanilla arm ran; the comparison the check exists to make did not. |
+| Outcome | **BLOCKED overall; vanilla arm INCONCLUSIVE.** The vanilla observation is preserved, but required controls are not evidenced and the other arms did not run. |
 | Probe | [`tools/gate0/dcomp_probe.c`](../../tools/gate0/dcomp_probe.c), cross-compiled with `x86_64-w64-mingw32-gcc (GCC) 13-win32` |
 | Evidence | [`G0-2-dcomposition-vanilla-wine-11.17.json`](evidence/G0-2-dcomposition-vanilla-wine-11.17.json) (digest `63252e36…`) |
 
 Observed on **vanilla Wine 11.17**: `dcomp.dll` loads, the entry point resolves, and
-`DCompositionCreateDevice` returns **`0x80004001` (E_NOTIMPL)**. Reproduced twice.
+`DCompositionCreateDevice` returns **`0x80004001` (E_NOTIMPL)**. The earlier report stated
+"Reproduced twice"; separate repetition records were not found during publication review. This
+claim is retained as historical context, not upgraded into verified repetition evidence.
 
 **Arms not tested, and therefore not concluded:** wine-staging (its package conflicts with the
 installed `winehq-devel`) and Proton (needs `umu-launcher`, not installed). **The audit's claim is
@@ -300,7 +361,7 @@ reason no graphics conclusion is available.
 | Software installed on the **host** | None | **None.** All packages were installed inside the disposable lab only. |
 | Money spent | None | None |
 | Persistent host changes | None | One new directory and one new WSL distribution — enumerated in the [runbook §2.1](LAB-G0-RUNBOOK.md) |
-| Disk consumed | 0 | ~2.9 GB (free space went 138.0 → 135.5 GB before package installs; 16 GB sparse cap, 14 GB still free inside the lab) |
+| Disk consumed | 0 | **13.4 GB** on the host (free space 138.0 → 124.6 GB). The lab's `ext4.vhdx` is 11.0 GB against its 16 GB sparse cap; the remainder is package download cache. |
 | Manual human interventions during execution | 0 | **0** |
 | Machine time | ~1 min probe, a few min discovery | ~6 min provisioning and package installation, ~30 s of probe execution |
 | Model usage | Source reading and audit corrections | Same; **no probe required a model to execute** |
@@ -336,12 +397,17 @@ recommendations to the maintainer, based on what execution and corrected source 
 | [ADR-0018](../adr/ADR-0018-win32-portal-bridge.md) — Win32-to-portal bridge | **Hold.** Untested; the environment has no portal backend. | No new evidence. |
 | [ADR-0019](../adr/ADR-0019-scope-boundary.md) — publish the unsupportable class; decide the product with evidence | **Hold, and note that its deciding input is still missing.** G0-1 is BLOCKED, so the Track A / Track B decision has **not** acquired the evidence this ADR says should settle it. Do not settle it by argument in the meantime. | G0-1 BLOCKED. |
 
-A new [ADR-0020](../adr/ADR-0020-documentation-language.md) proposes the documentation-language
-amendment rather than continuing to override `CONTRIBUTING.md` silently.
+[ADR-0020](../adr/ADR-0020-documentation-language.md) was accepted by the owner for documentation
+language only. No architecture ADR was accepted.
 
 ---
 
 ## 5. Recommendation on proceeding to the PoC
+
+**Historical recommendations:** the paragraphs below retain the earlier engineering assessment.
+The [current assessment](#current-assessment) corrects the G0-3 scope and G0-2 application-class
+inference. The current owner instruction permits provenance repair only; none of these proposed
+next steps is authorisation to execute it.
 
 **Do not start the Evidence Loop PoC yet — but the reason has changed, and narrowed.**
 
@@ -393,5 +459,67 @@ than after implementation.
 - **Several upstream sources block automated access.** This bounds every negative search result in
   the supporting research, and it also means "documents consulted" is not comparable between a human
   arm and an automated arm.
-- **No application, benchmark, sandbox, graphics, integration or recovery result exists.** The
-  compatibility rate remains unknown.
+- **No application, benchmark, sandbox, graphics or integration result exists.** The compatibility
+  rate remains unknown. Round 2 produced *state-independence* results, which are not application
+  recovery results: nothing was shown to still work after a restore, only that state was or was not
+  independent.
+- **The lab was deliberately not torn down.** It is retained so the two missing G0-2 runtime arms
+  can be completed cheaply. Teardown instructions are in
+  [LAB-G0-RUNBOOK.md §6](LAB-G0-RUNBOOK.md#6-teardown); all evidence is already committed to the
+  repository, so teardown loses nothing. Current cost of retention: 11.0 GB.
+- **Publication status:** the results in this report are committed locally but, at the time of
+  writing, **are not present on the remote**. See the report's closing note in the project state.
+
+<a id="publication-provenance"></a>
+
+## 7. Publication redaction and private provenance — 2026-09-07
+
+The owner authorised one rewrite of the three local-only commits, solely for publication privacy
+and the status/reference corrections recorded here. Public base
+`e09a52fa2ed95c759e3e9370d4b0f0e95ce1fa20` and all its ancestors are preserved. The original local
+HEAD was `76c0337f6f6af45b6755cebcee4ea1b138db57cb`; the other original local commits were
+`0395c40a905a2fa11c18f4168cce74f252d43ebf` and `3b9da61e4ce6292464dddb282228d195909545d9`.
+These are private provenance identifiers, not public source links.
+
+The older `e09a52f` execution-revision references identify the recorded working base, not a commit
+containing the probe sources. Those sources first appear in original local commits `0395c40`
+(filesystem probe) and `3b9da61` (Wine probes), alongside their results. The available Git history
+does not independently establish an immutable pre-run source revision. Recorded source/artifact
+hashes and the historical registration caveat are preserved; rewriting does not improve that
+historical evidence retroactively.
+
+Before editing, a complete Git bundle was created outside the repository, hashed, marked read-only,
+verified with `git bundle verify`, restored to a separate bare repository, and checked with
+`git fsck --full`. The restored HEAD matched exactly. The bundle, raw artifacts, private redaction
+map and publication receipt are retained locally and must never be uploaded. The receipt records
+the old/new commit mapping and remote SHAs after publication; this document cannot contain its own
+final commit SHA without changing that SHA.
+
+Rule **G0-PATH-REDACTION-1** was defined before application. It replaces only the operator account
+component in `/home/<redacted>/...` and `/mnt/c/Users/<redacted>/...` with the literal token
+`<redacted>`. No replacement username is invented. Synthetic lab user `helmlab`, technical versions,
+filesystem/device identifiers, file suffixes and failure text are retained.
+
+In each affected JSON, only `/checks/Q4_reflink_support/stderr` and `/filesystem/path` have
+redacted values; `publication_redaction` records the transformation and original raw SHA-256.
+All other experimental values are unchanged. The two files each contained three path occurrences,
+repeated in all three unpublished commit trees. Their publication forms are **not byte-identical**
+to the raw artifacts. [The manifest](evidence/G0-publication-redaction-2026-09-07.json) records full
+raw and publication SHA-256 identities and byte lengths:
+
+| Artifact | Raw SHA-256 (private bytes) | Publication SHA-256 (tracked bytes) |
+|---|---|---|
+| [G0-3a ext4](evidence/G0-3-snapshot-semantics-ext4.json) | `c9b8c1d4fb9eb6ae2d29594d9a8dc84e3fb988a2f1cb5dac1c478f0b64fc5f48` | `0283a7069535087671a559c96f234e5a8daf1d66d86ef2f314b8b23ffdbb53ea` |
+| [G0-3a drvfs](evidence/G0-3-snapshot-semantics-drvfs.json) | `85b2f81f9f3c6fdc7beb2902e3a45c9d83b304ab00a9ec45f09312a1818dd7e5` | `63d123f3613bb47969ed262303c2837344f8862396ecdcd1e8731b3422a94492` |
+
+The unchanged vanilla and G0-3b JSON digests above retain their original meaning. No raw failing
+observation was deleted, no probe source changed, and no acceptance criterion was revised. This
+work involves one agent, no subagents, no new packages and no new experiment execution. It makes
+no automation-cost or application-compatibility claim.
+
+**Preserved publication tooling failure:** the first local rewrite reached its final cleanliness
+assertion and failed because the two newly generated metadata JSON files had Windows CRLF line
+endings, while Git compared normalized LF text. Only those new metadata files were normalized;
+the redacted experiment artifacts and their published SHA-256 values were unaffected. The failed
+local attempt and correction are retained in the private receipt. This was a repository tooling
+correction, not a retry of any experiment.

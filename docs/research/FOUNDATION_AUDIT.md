@@ -1,5 +1,12 @@
 # Foundation Audit — what already exists, and what HELM would actually be building
 
+> Publication annotation, 2026-09-07: historical G0-2 wording below treats a DirectComposition
+> probe as deciding an entire application class. That inference is withdrawn in the
+> [current Gate 0 assessment](../experiments/EXP-009-GATE0-REPORT.md#current-assessment).
+> G0-2 remains BLOCKED; vanilla's recorded `E_NOTIMPL` does not decide rendering or application
+> compatibility. Original G0-3 also remains BLOCKED; the separately recorded mechanics PASS results
+> do not satisfy its original criterion. Historical research text and criteria below are preserved.
+
 | Field | Value |
 |---|---|
 | Document | `docs/research/FOUNDATION_AUDIT.md` |

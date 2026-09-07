@@ -1,5 +1,21 @@
 # Istorija promena
 
+## 0.4.1 — 2026-09-07
+
+Owner-authorised publication/provenance repair of the three local-only Gate 0 commits; the public
+base and logical commit sequence are preserved. A verified private bundle and original raw
+artifacts were retained outside the repository before deterministic redaction of operator account
+components in two evidence files. Redacted fields, raw hashes and distinct publication hashes are
+recorded in the [Gate 0 report](docs/experiments/EXP-009-GATE0-REPORT.md#publication-provenance).
+
+Current statuses corrected without changing probe output or acceptance criteria: original G0-3
+remains BLOCKED; G0-3a/G0-3b PASS only as separate mechanics subtests. Vanilla G0-2 retains
+`0x80004001` but is INCONCLUSIVE without required control evidence; overall G0-2 is BLOCKED and
+staging/Proton arms are NOT_RUN. Historical application-class inference is withdrawn. Intended
+disabled WSL interoperability and observed enabled registration are recorded separately; effective
+execution blocking is UNVERIFIED. No new experiment or runtime provisioning was performed, and no
+architecture ADR was accepted. Older entries below retain the original reporting history.
+
 ## 0.4.0 — 2026-09-07
 
 Jezicka politika usvojena: ADR-0020 je **Accepted** uz imenovano odobrenje vlasnika i merodavan je
