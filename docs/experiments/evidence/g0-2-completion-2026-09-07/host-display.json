@@ -1,0 +1,11 @@
+{
+  "observed_utc": "2026-09-07T14:59:43.312264+00:00",
+  "host_monitors": 2,
+  "host_system_dpi": 96,
+  "host_system_scale": 1.0,
+  "host_pixels": [
+    3440,
+    1440
+  ],
+  "scope": "Windows system metrics; does not establish Wine/WSLg render scaling."
+}

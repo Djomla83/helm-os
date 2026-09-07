@@ -8,6 +8,11 @@
 | Kind | WSL2 distribution (**fallback** option — see [§1](#1-why-wsl-and-not-a-vm)) |
 | Disposable | Yes. Teardown in [§6](#6-teardown) removes it completely. |
 
+**Current boundary, 2026-09-07:** the owner-authorised G0-2 completion is finished. The original
+lab and two authorised clones are retained and stopped. The original provisioning account below
+is historical; [completion state](#completion-state) records the additions and measurements.
+No full desktop VM or application PoC has been started.
+
 ---
 
 ## 1. Why WSL and not a VM
@@ -201,14 +206,84 @@ Binding on how results may be reported:
 - This lab is never attached as a runner for untrusted pull requests.
 - The existing `Ubuntu` distribution is not modified in any way.
 
-Current publication boundary: no staging or Proton/UMU provisioning, G0-2 continuation, Hyper-V
-permission change, teardown, or larger PoC. Original G0-3 remains BLOCKED; G0-3b's recorded PASS is
-limited to its separate mechanics subtest. See the [current report](EXP-009-GATE0-REPORT.md#current-assessment).
+The previous publication-only boundary was superseded by explicit owner authorisation for G0-2
+completion and up to two disposable runtime clones. That work now stops at Gate 0 review. No
+further experiment, teardown, Hyper-V permission change or larger PoC is authorised by this
+report. Original G0-3 remains BLOCKED; G0-3b's recorded PASS is limited to its separate mechanics
+subtest. See the [current report](EXP-009-GATE0-REPORT.md#current-assessment).
+
+<a id="completion-state"></a>
+
+### 5.1. Retained G0-2 completion state
+
+| Distribution | Runtime used | Final VHD bytes | State |
+|---|---|---|---|
+| `helm-lab-g0` | WineHQ devel `11.17~noble-1` | 13,805,551,616 | Stopped, preserved |
+| `helm-lab-g0-staging` | WineHQ staging `11.16~noble-1` | 16,456,351,744 | Stopped, preserved |
+| `helm-lab-g0-proton` | UMU 1.4.4 / UMU-Proton-10.0-4 / sniper `3.0.20260805.254768` | 16,088,301,568 | Stopped, preserved |
+
+The [common export/import record](evidence/g0-2-completion-2026-09-07/clone-provisioning.json)
+retains the initial sharing-violation failure and the justified provisioning retry. The successful
+sequence used distribution-scoped termination, `wsl --export ... --format vhd`, two
+`wsl --import ... --vhd` operations and `wsl --manage helm-lab-g0-proton --resize 32GB`.
+The original distribution was preserved; no global WSL shutdown or configuration change occurred.
+The export occupies 11,825,840,128 bytes outside Git, at the planned private lab location.
+
+Each clone inherited the original config and was checked before package installation using the
+same Windows-executable negative test. The capture script's distro metadata was changed from the
+original constant to `WSL_DISTRO_NAME` before clone tests; its execution semantics were unchanged.
+All three attempts returned interop connection failure/exit 1 with no marker. This supersedes the
+earlier UNVERIFIED execution observation for that specific invocation only. It does not certify
+the lab as a sandbox.
+
+All work files are under `/home/helmlab/g0/completion-20260907` in each lab. Historical artifacts
+and prefixes remain under their original paths. The frozen target and control executables have
+identical hashes across runtimes. Control compilation and baseline dependencies are in the
+[build record](evidence/G0-2-build-baseline-2026-09-07.json). The
+[artifact index](evidence/g0-2-completion-2026-09-07/INDEX.md) links exact package commands, prefix
+setup, invocation specs and stdout/stderr. These scripts and specs describe this bounded experiment,
+not a general runtime-management interface.
+
+Staging installed explicitly pinned `winehq-staging`, `wine-staging`, `wine-staging-amd64` and
+`wine-staging-i386:i386`, all `11.16~noble-1`, from the existing WineHQ noble repository, with
+`--no-install-recommends`. The absolute loader path selected staging even though the baseline's
+devel runtime files remained in the clone. Package versions and hashes are in
+[runtime identities](evidence/g0-2-completion-2026-09-07/runtime-identities.json).
+
+Proton's launcher package and both runtime archives were pinned and SHA-256-checked before use.
+The Steam runtime was extracted manually from the versioned archive, verified with upstream
+`pv-verify`, then marked installed using UMU's helper. `UMU_RUNTIME_UPDATE=0` prevents replacement;
+`GAMEID=umu-default` and `PROTONFIXES_DISABLE=1` exclude application fixes. Logs confirm fix execution
+was skipped. Temporary locale generation, bundled Mono registration and other Proton defaults
+are recorded runtime differences. Do not interpret those defaults as a clean upstream-Wine build.
+
+The first Proton sequence lost console JSON and remains INCONCLUSIVE. The documented
+`proton-dos-path` repetition used a new `prefix-dos-path` and the same binaries through Wine's
+existing `Z:` mapping of the lab's Linux filesystem. This is not a Windows-drive mount or enabled
+Windows interoperability. It supplied correct control output and `E_NOTIMPL`; no further runtime
+repeat is planned. The complete comparison is in the [report](EXP-009-GATE0-REPORT.md#g0-2-completion).
+
+Final additional VHD allocation was 46,327,136,256 bytes. Host free space was 86,622,150,656 bytes,
+above the 40 GiB safety reserve. Staging's filesystem has only 732,360,704 bytes free; do not add
+software there without another storage review. The
+[final state record](evidence/g0-2-completion-2026-09-07/final-lab-state.json) confirms all three
+project labs and the normal Ubuntu distro stopped. Normal Ubuntu was never entered or modified.
+
+Original raw evidence with private host/account identifiers is archived outside the repository.
+The [publication manifest](evidence/g0-2-completion-2026-09-07/publication-redactions.json) maps raw
+and redacted identities. Images, runtime archives and executables are never committed. A narrow
+Git attribute preserves capture bytes, including CRLF stdout, without changing other file rules.
 
 ## 6. Teardown
 
-Evidence must be copied out **before** teardown; the report's evidence files are already committed
-to the repository, so teardown loses nothing.
+No teardown was executed or authorised in this completion task. The commands below are the
+original lab's teardown reference; do not apply them automatically to the retained comparison
+state. Preserve the private raw evidence and reviewed provenance before any later owner-approved
+removal. The two clone names and locations are listed above.
+
+The original runbook said the report's evidence was committed, "so teardown loses nothing".
+That statement covers only the publication files. It does not cover retained prefixes, runtime
+artifacts or private raw evidence. Copy and verify required state **before** any authorised teardown.
 
 ```powershell
 wsl.exe --terminate helm-lab-g0

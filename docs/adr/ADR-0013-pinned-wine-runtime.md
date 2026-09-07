@@ -71,9 +71,16 @@ reading, this ADR must be rejected rather than quietly reinterpreted.
 
 ## Evidence
 
-Publication annotation, 2026-09-07: the [current G0-2 assessment](../experiments/EXP-009-GATE0-REPORT.md#current-assessment)
-is BLOCKED. Vanilla's `E_NOTIMPL` observation is preserved, but required controls are not evidenced;
-staging and Proton/UMU did not run. The probe does not establish an application-class dependency
+Controlled G0-2 annotation, 2026-09-07: the [comparison](../experiments/EXP-009-GATE0-REPORT.md#g0-2-completion)
+now has correct controls for all three pinned runtime configurations. Vanilla 11.17 and
+UMU-Proton-10.0-4 returned `E_NOTIMPL`; WineHQ staging 11.16 returned `S_OK`. Historical vanilla and
+the first Proton attempt remain INCONCLUSIVE. This supports recording exact runtime identities;
+it establishes neither a general application-class dependency nor the need for HELM to build its
+own runtime. Versions and defaults differ. The ADR remains **Proposed**.
+
+Historical publication-stage annotation, 2026-09-07: G0-2 was BLOCKED. Vanilla's `E_NOTIMPL`
+observation was preserved, but required controls were not evidenced; staging and Proton/UMU did
+not run in that phase. The probe does not establish an application-class dependency
 on staging, and does not by itself support accepting this ADR. Status remains Proposed.
 
 Foundation audit [§3.1](../research/FOUNDATION_AUDIT.md#s03), [§7](../research/FOUNDATION_AUDIT.md#s07)

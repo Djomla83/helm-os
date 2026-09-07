@@ -1,6 +1,6 @@
 # Registar ključnih tvrdnji i hipoteza
 
-> Earlier tables are dated claim history. The [publication review](#publication-review) below
+> Earlier tables are dated claim history. The [G0-2 completion](#g0-2-completion) below
 > supplies the current Gate 0 assessment where it supersedes those entries.
 
 | ID | Tvrdnja | Status | Potrebna provera |
@@ -65,3 +65,22 @@ This is an evidence assessment, not a new experiment or a change to acceptance c
 The [publication manifest](../experiments/evidence/G0-publication-redaction-2026-09-07.json)
 distinguishes private raw hashes from tracked redacted hashes. Privacy redaction changes no
 experimental value outside the declared path fields.
+
+<a id="g0-2-completion"></a>
+
+## Controlled G0-2 completion — 2026-09-07
+
+The [controlled report](../experiments/EXP-009-GATE0-REPORT.md#current-assessment) supersedes the
+publication-stage G0-2 and interoperability assessments above. No architecture ADR is accepted.
+
+| ID | Claim | Assessment | Evidence and limit |
+|---|---|---|---|
+| C-06 | This probe decides an application's or application class's compatibility | Still unsupported | No rendering or real application workflow ran. `S_OK` is only a successful return from the tested operation. |
+| C-07 | Windows-process execution was unavailable in the tested lab invocation | VERIFIED_EXECUTION, limited to the three recorded negative attempts | Original lab and both clones returned interop connection failure/exit 1 without a marker. Configuration and enabled shared binfmt registration are separately recorded. This is not G0-5 or a sandbox certification. |
+| C-08 | The tested DirectComposition call returns different HRESULTs across the pinned configurations | VERIFIED_EXECUTION | Controlled Wine 11.17 and UMU-Proton-10.0-4 returned `E_NOTIMPL`; staging 11.16 returned `S_OK`. All final controls were correct. Overall G0-2 PASS means comparison completion. Versions, dependencies and Proton launch path differ; causal attribution to staging patches alone is not established. |
+| C-09 | Initial Proton exit codes 0/2/0 established the probe results | Unsupported; attempt retained INCONCLUSIVE | Console JSON was absent. A preregistered DOS-path repetition with unchanged probe/control bytes supplied the missing observations; it does not retroactively validate the first attempt. |
+
+Original G0-3 remains BLOCKED, independently of the separately reported G0-3a/G0-3b mechanics PASS.
+G0-1, G0-4 and G0-5 remain BLOCKED. Application compatibility and production readiness remain
+unmeasured. Resource accounting includes capture-method debugging and privacy handling separately
+from deterministic execution time.

@@ -78,6 +78,11 @@ otherwise tight policy.
 
 ## Evidence
 
+G0-2 prerequisite annotation, 2026-09-07: [direct negative attempts](../experiments/EXP-009-GATE0-REPORT.md#g0-2-completion)
+in the three disposable WSL labs failed to launch a Windows system executable with interoperability
+configured off. This checks only the recorded execution property. It is not a reviewed outer
+containment boundary, an escape matrix, or completion of G0-5. This ADR remains **Proposed**.
+
 Foundation audit [§3.4](../research/FOUNDATION_AUDIT.md#s03),
 [§4.3](../research/FOUNDATION_AUDIT.md#s04), constraint C5 in
 [§7](../research/FOUNDATION_AUDIT.md#s07), and risk R-A6 in

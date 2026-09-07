@@ -1,0 +1,53 @@
+{
+  "started_utc": "2026-09-07T15:11:15.178039+00:00",
+  "reason": "Quiesce only the three project labs at the Gate 0 review boundary and record final disk allocation; all distributions retained.",
+  "commands": [
+    {
+      "argv": [
+        "wsl.exe",
+        "--terminate",
+        "helm-lab-g0"
+      ],
+      "exit_code": 0,
+      "seconds": 0.03803099997458048,
+      "stdout": "The operation completed successfully. \r\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "wsl.exe",
+        "--terminate",
+        "helm-lab-g0-staging"
+      ],
+      "exit_code": 0,
+      "seconds": 0.04176539997570217,
+      "stdout": "The operation completed successfully. \r\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "wsl.exe",
+        "--terminate",
+        "helm-lab-g0-proton"
+      ],
+      "exit_code": 0,
+      "seconds": 0.045139099995139986,
+      "stdout": "The operation completed successfully. \r\n",
+      "stderr": ""
+    }
+  ],
+  "final_distro_list": {
+    "exit_code": 0,
+    "stdout": "  NAME                   STATE           VERSION\r\n* Ubuntu                 Stopped         2\r\n  helm-lab-g0-proton     Stopped         2\r\n  helm-lab-g0            Stopped         2\r\n  helm-lab-g0-staging    Stopped         2\r\n",
+    "stderr": ""
+  },
+  "disk_files": {
+    "g0": 13805551616,
+    "g0-staging": 16456351744,
+    "g0-proton": 16088301568
+  },
+  "baseline_export_bytes": 11825840128,
+  "host_free_bytes": 86622150656,
+  "ended_utc": "2026-09-07T15:11:15.341807+00:00",
+  "additional_vhd_bytes": 46327136256
+}

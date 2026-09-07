@@ -58,6 +58,76 @@
         "/commands/3/stderr"
       ],
       "metadata_changes": "Explicit original/publication digest identities for redacted stderr artifacts."
+    },
+    {
+      "file": "proton-dos-path-good-stderr.txt",
+      "raw_sha256": "95ddbe1e340f44500cc8487453caec9f229cbd6daef598b7d8166383813e7793",
+      "raw_bytes": 5510,
+      "publication_sha256": "80c5619725060c348452c4ff251b02d49912a04ebb11742f09fec7a09de6b323",
+      "publication_bytes": 5674,
+      "redacted_fields": [
+        "UMU diagnostic NAME environment variable"
+      ],
+      "raw_storage": "private local archive outside Git; never published"
+    },
+    {
+      "file": "proton-dos-path-target-stderr.txt",
+      "raw_sha256": "c2e18da1e22a9e4073fbff1e233116be84c6f7b34dfc131f4aebfec8babd194a",
+      "raw_bytes": 5493,
+      "publication_sha256": "c8ea670d894527010bb4c9b1f0595ed71e37b2a696728a036ed5495d88111fc5",
+      "publication_bytes": 5657,
+      "redacted_fields": [
+        "UMU diagnostic NAME environment variable"
+      ],
+      "raw_storage": "private local archive outside Git; never published"
+    },
+    {
+      "file": "proton-dos-path-broken-stderr.txt",
+      "raw_sha256": "8b12e6981efc26bd198ebb24271146ea95c4e807749c428f925e422fb2961027",
+      "raw_bytes": 5517,
+      "publication_sha256": "dda4aea93bb8633c05aaa75a10bec8b0ce0693844e21b7e3eb7d82593b7c278e",
+      "publication_bytes": 5681,
+      "redacted_fields": [
+        "UMU diagnostic NAME environment variable"
+      ],
+      "raw_storage": "private local archive outside Git; never published"
+    },
+    {
+      "file": "proton-dos-path-controlled.json",
+      "raw_sha256": "01bfc65d6c372bc9b24cf5e4cb15e86c2a622fb86a720eb25edef3b021db9d0e",
+      "raw_bytes": 22679,
+      "publication_sha256": "9ef7f919069e0990830317d1036302364da8f4620742be4a47f6bc347f0f88ab",
+      "publication_bytes": 23626,
+      "redacted_fields": [
+        "/runs/0/stderr/text",
+        "/runs/1/stderr/text",
+        "/runs/2/stderr/text"
+      ]
+    },
+    {
+      "file": "proton-dos-path-setup.json",
+      "raw_sha256": "8bd52b698c37bb6f763ba4a41903bd089837c047d4a1768b7a00fc4d02d6d154",
+      "raw_bytes": 9071,
+      "publication_sha256": "09621ca789858fc15174e3c89d80ab56ddad8911fa94648ce3b8d61f82ad39cc",
+      "publication_bytes": 9404,
+      "redacted_fields": [
+        "/commands/0/stderr"
+      ]
+    },
+    {
+      "file": "clone-provisioning.json",
+      "raw_sha256": "57eba3ad0bb36af49703ae25db2ee672a27a833bf9867fb839d9921b00a717cc",
+      "raw_bytes": 3501,
+      "publication_sha256": "1db530f539f0687b16e062d5580068714b525a87efea36839c7ff31354986393",
+      "publication_bytes": 4009,
+      "redacted_fields": [
+        "/commands/1/argv/3",
+        "/commands/2/argv/3",
+        "/commands/3/argv/3",
+        "/commands/3/argv/4",
+        "/commands/4/argv/3",
+        "/commands/4/argv/4"
+      ]
     }
   ]
 }

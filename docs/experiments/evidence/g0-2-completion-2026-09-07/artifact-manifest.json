@@ -1,0 +1,303 @@
+{
+  "scope": "Publication artifact bytes; raw identities for redacted evidence are in publication-redactions.json. This manifest and INDEX.md are excluded to avoid recursive hashes.",
+  "artifacts": [
+    {
+      "file": "clone-provisioning.json",
+      "sha256": "1db530f539f0687b16e062d5580068714b525a87efea36839c7ff31354986393",
+      "bytes": 4009
+    },
+    {
+      "file": "comparison.json",
+      "sha256": "716f58d7a66ae2413324169c1afbcb22bc8d24ab3f71843af612c85022d2246b",
+      "bytes": 1646
+    },
+    {
+      "file": "final-lab-state.json",
+      "sha256": "bc9c30998f5d0231c49f11144a1644cb0bc77c4e6ee94c541bc58613f15003aa",
+      "bytes": 1555
+    },
+    {
+      "file": "host-display.json",
+      "sha256": "9ad2b3d815f035492f303ced04e114410a257dbbae9d14257080edbf18a34ebc",
+      "bytes": 258
+    },
+    {
+      "file": "host-observation.json",
+      "sha256": "bca4756ee4c5702f40498a8a3c9e8d17308f9e7ef1f44785a49acac5e7583bc3",
+      "bytes": 987
+    },
+    {
+      "file": "proton-assembly.json",
+      "sha256": "d8646e27eb8fd1f6e63c69d9b99db58d677ab9bb1d424f675812b0cfcfdb79aa",
+      "bytes": 4541
+    },
+    {
+      "file": "proton-broken-stderr.txt",
+      "sha256": "61cfc0f5f802fe64a8d5ffcadd96309e0059a6886eb17bb0e385a9372ac58009",
+      "bytes": 5475
+    },
+    {
+      "file": "proton-broken-stdout.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "file": "proton-controlled.json",
+      "sha256": "aa1e26148792cbd02735f8ea6562abd297c7c4c3ce7e931f87a210d8308f240e",
+      "bytes": 21735
+    },
+    {
+      "file": "proton-dos-path-broken-stderr.txt",
+      "sha256": "dda4aea93bb8633c05aaa75a10bec8b0ce0693844e21b7e3eb7d82593b7c278e",
+      "bytes": 5681
+    },
+    {
+      "file": "proton-dos-path-broken-stdout.txt",
+      "sha256": "fc2965c434c9db6c144f2a53ac2abb1db68f0548083706a8d004ff53b0df7593",
+      "bytes": 86
+    },
+    {
+      "file": "proton-dos-path-controlled.json",
+      "sha256": "9ef7f919069e0990830317d1036302364da8f4620742be4a47f6bc347f0f88ab",
+      "bytes": 23626
+    },
+    {
+      "file": "proton-dos-path-good-stderr.txt",
+      "sha256": "80c5619725060c348452c4ff251b02d49912a04ebb11742f09fec7a09de6b323",
+      "bytes": 5674
+    },
+    {
+      "file": "proton-dos-path-good-stdout.txt",
+      "sha256": "2d83dff7fca1b40f68e6568d643a9564381afe383d82fb3e9be2ac31467953fb",
+      "bytes": 85
+    },
+    {
+      "file": "proton-dos-path-setup.json",
+      "sha256": "09621ca789858fc15174e3c89d80ab56ddad8911fa94648ce3b8d61f82ad39cc",
+      "bytes": 9404
+    },
+    {
+      "file": "proton-dos-path-spec.json",
+      "sha256": "679170e97d0674c75a70b17c2199cb8fc7ea530c6d52ffa4fe3d2109a5bb963d",
+      "bytes": 1217
+    },
+    {
+      "file": "proton-dos-path-target-stderr.txt",
+      "sha256": "c8ea670d894527010bb4c9b1f0595ed71e37b2a696728a036ed5495d88111fc5",
+      "bytes": 5657
+    },
+    {
+      "file": "proton-dos-path-target-stdout.txt",
+      "sha256": "3791677213f9084e8957fd414e2f6f1fc6fcb71922e2d588cdf787b655b545ab",
+      "bytes": 94
+    },
+    {
+      "file": "proton-good-stderr.txt",
+      "sha256": "1457c2c2143e16c4f55e4ea63dee45141b68d8be7cabf0abe7938904c18fadf3",
+      "bytes": 5473
+    },
+    {
+      "file": "proton-good-stdout.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "file": "proton-provision.json",
+      "sha256": "0641713c12b668f9c0a5729212c226cfc23ed09dac60d241ba25af2ae369f171",
+      "bytes": 77382
+    },
+    {
+      "file": "proton-runtime-inventory.json",
+      "sha256": "4e596bb9ec46de5222b68246edab86e4eecc7287e37bb211adc8112691637d84",
+      "bytes": 6174
+    },
+    {
+      "file": "proton-setup.json",
+      "sha256": "899a811a41c5156eeb765a7e5ea31f18cd4d89072ed996bbb934a51fab8dfb25",
+      "bytes": 8838
+    },
+    {
+      "file": "proton-spec.json",
+      "sha256": "70859bd51a1db27ac600c2ff3fbf7c3046d1d2405dfea6fe85d26b6d45b66fc4",
+      "bytes": 1036
+    },
+    {
+      "file": "proton-target-stderr.txt",
+      "sha256": "418e4a59146c286c45b351d811db4142acc8ca7254d4a49b1cdafdb67d8d0628",
+      "bytes": 5462
+    },
+    {
+      "file": "proton-target-stdout.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "file": "publication-redactions.json",
+      "sha256": "47458826f0622c57ed1dd0ddb449362c5d00742d6934c168c29a2f9979107992",
+      "bytes": 5356
+    },
+    {
+      "file": "resource-accounting.json",
+      "sha256": "5fdff66490c04f25d990e6dc615073ea6a065e43df1c39a56c71efb6710d5d45",
+      "bytes": 9641
+    },
+    {
+      "file": "runtime-identities.json",
+      "sha256": "59f67ac19e9b996180ef5745e6c1ce3f0d6fd79a7d09016c88601efec31ce093",
+      "bytes": 6994
+    },
+    {
+      "file": "staging-broken-stderr.txt",
+      "sha256": "9aa3ec7902258449381543d0e26370aea42618f407ec2b4c04769a7f3f91529f",
+      "bytes": 866
+    },
+    {
+      "file": "staging-broken-stdout.txt",
+      "sha256": "fc2965c434c9db6c144f2a53ac2abb1db68f0548083706a8d004ff53b0df7593",
+      "bytes": 86
+    },
+    {
+      "file": "staging-controlled.json",
+      "sha256": "7a869479f9291dd47d723ca36bb7b3f355a6a43923693f187b01da2ef50d07ec",
+      "bytes": 7700
+    },
+    {
+      "file": "staging-good-stderr.txt",
+      "sha256": "9aa3ec7902258449381543d0e26370aea42618f407ec2b4c04769a7f3f91529f",
+      "bytes": 866
+    },
+    {
+      "file": "staging-good-stdout.txt",
+      "sha256": "2d83dff7fca1b40f68e6568d643a9564381afe383d82fb3e9be2ac31467953fb",
+      "bytes": 85
+    },
+    {
+      "file": "staging-provision.json",
+      "sha256": "bcf708bff45c06025979752057b16b3361a3f2b5c0e9b9f3703222e295215694",
+      "bytes": 79691
+    },
+    {
+      "file": "staging-runtime-inventory.json",
+      "sha256": "7c384b798e3f8aee3066fdda8fa5c9c2ff5e3ffaae1fa147bf9166d288e6d095",
+      "bytes": 137955
+    },
+    {
+      "file": "staging-setup.json",
+      "sha256": "0d29a1f0a4ed6d12f09569a9f9491fc62c0aafb00766551f18555ab2b30c0ed4",
+      "bytes": 8013
+    },
+    {
+      "file": "staging-spec.json",
+      "sha256": "be029cad3934f481f644e54737247337d73441ce8e18531af6b46be77667834b",
+      "bytes": 548
+    },
+    {
+      "file": "staging-target-stderr.txt",
+      "sha256": "7b20ddef4eb1dbce7d1d12451589d7f9091a1555962568ef842bdae2e064f366",
+      "bytes": 1000
+    },
+    {
+      "file": "staging-target-stdout.txt",
+      "sha256": "13bce9b6868602f35b5d417cad45e9c8245c9438178c3ac75b0501d53ef7de26",
+      "bytes": 95
+    },
+    {
+      "file": "vanilla-broken-stderr.txt",
+      "sha256": "d9e6c7be3c212bd7c77d6c7c31f1b2981d6e650d49d8f18210be75c2a6e6c3ba",
+      "bytes": 236
+    },
+    {
+      "file": "vanilla-broken-stdout.txt",
+      "sha256": "fc2965c434c9db6c144f2a53ac2abb1db68f0548083706a8d004ff53b0df7593",
+      "bytes": 86
+    },
+    {
+      "file": "vanilla-controlled.json",
+      "sha256": "f2dfef91a9f07712650d9ae2f5e73328c3a7f1ea4143afdb956ef04de04e0f4d",
+      "bytes": 5759
+    },
+    {
+      "file": "vanilla-good-stderr.txt",
+      "sha256": "d9e6c7be3c212bd7c77d6c7c31f1b2981d6e650d49d8f18210be75c2a6e6c3ba",
+      "bytes": 236
+    },
+    {
+      "file": "vanilla-good-stdout.txt",
+      "sha256": "2d83dff7fca1b40f68e6568d643a9564381afe383d82fb3e9be2ac31467953fb",
+      "bytes": 85
+    },
+    {
+      "file": "vanilla-runtime-inventory.json",
+      "sha256": "714e6826616d23c24adbc20431d9ecff8875f38abf1047b349c9d04b76746c38",
+      "bytes": 132852
+    },
+    {
+      "file": "vanilla-setup.json",
+      "sha256": "efd785b14b41c800b99b4c3679a28dc8b925f6e79a4dcf4fe0aaccd1e10400f0",
+      "bytes": 7058
+    },
+    {
+      "file": "vanilla-spec.json",
+      "sha256": "95056d4d899164bc618baecd355003bfaa366f10640145169509981bdee097b0",
+      "bytes": 546
+    },
+    {
+      "file": "vanilla-target-stderr.txt",
+      "sha256": "7ea49ed27b0fabbfaab1f14fe552aa6c0434a0d685ef94e730492800bb8888cd",
+      "bytes": 354
+    },
+    {
+      "file": "vanilla-target-stdout.txt",
+      "sha256": "3791677213f9084e8957fd414e2f6f1fc6fcb71922e2d588cdf787b655b545ab",
+      "bytes": 94
+    }
+  ],
+  "git_line_ending_provenance": {
+    "checkpoint": "273509d4bc551666e66902e47e535d3c2444de96",
+    "correction": "Six checkpoint stdout blobs had CRLF converted to LF. The final commit restores the retained captured CRLF bytes through a directory-scoped git add --renormalize. Capture JSON hashes always identify the original raw bytes; no process output was regenerated or changed beyond restoring line endings. The checkpoint remains in history, with this discrepancy explicitly recorded.",
+    "files": [
+      {
+        "file": "staging-broken-stdout.txt",
+        "checkpoint_bytes": 85,
+        "checkpoint_sha256": "7ed38f1698d2a7d22f57f3f645918659dd2a329c1e4807667391b04c71188ebe",
+        "captured_and_final_publication_bytes": 86,
+        "captured_and_final_publication_sha256": "fc2965c434c9db6c144f2a53ac2abb1db68f0548083706a8d004ff53b0df7593"
+      },
+      {
+        "file": "staging-good-stdout.txt",
+        "checkpoint_bytes": 84,
+        "checkpoint_sha256": "e1491966e39a7815809390a0fc352a8e5ae74155af7e9173128e7503ed04d092",
+        "captured_and_final_publication_bytes": 85,
+        "captured_and_final_publication_sha256": "2d83dff7fca1b40f68e6568d643a9564381afe383d82fb3e9be2ac31467953fb"
+      },
+      {
+        "file": "staging-target-stdout.txt",
+        "checkpoint_bytes": 94,
+        "checkpoint_sha256": "02b8a6b4b943c4e519fdcdbac09ef7fbfb6b2828e52ec2875070f48f01369120",
+        "captured_and_final_publication_bytes": 95,
+        "captured_and_final_publication_sha256": "13bce9b6868602f35b5d417cad45e9c8245c9438178c3ac75b0501d53ef7de26"
+      },
+      {
+        "file": "vanilla-broken-stdout.txt",
+        "checkpoint_bytes": 85,
+        "checkpoint_sha256": "7ed38f1698d2a7d22f57f3f645918659dd2a329c1e4807667391b04c71188ebe",
+        "captured_and_final_publication_bytes": 86,
+        "captured_and_final_publication_sha256": "fc2965c434c9db6c144f2a53ac2abb1db68f0548083706a8d004ff53b0df7593"
+      },
+      {
+        "file": "vanilla-good-stdout.txt",
+        "checkpoint_bytes": 84,
+        "checkpoint_sha256": "e1491966e39a7815809390a0fc352a8e5ae74155af7e9173128e7503ed04d092",
+        "captured_and_final_publication_bytes": 85,
+        "captured_and_final_publication_sha256": "2d83dff7fca1b40f68e6568d643a9564381afe383d82fb3e9be2ac31467953fb"
+      },
+      {
+        "file": "vanilla-target-stdout.txt",
+        "checkpoint_bytes": 93,
+        "checkpoint_sha256": "4513e508da6f8061617d441a150552ab8431e1b9774de64e6cda3167aee5e0fc",
+        "captured_and_final_publication_bytes": 94,
+        "captured_and_final_publication_sha256": "3791677213f9084e8957fd414e2f6f1fc6fcb71922e2d588cdf787b655b545ab"
+      }
+    ]
+  }
+}

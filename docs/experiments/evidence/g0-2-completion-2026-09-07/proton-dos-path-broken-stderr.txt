@@ -1,0 +1,79 @@
+[Publication-redacted artifact: NAME host identifier -> <redacted-host>; original raw SHA-256 8b12e6981efc26bd198ebb24271146ea95c4e807749c428f925e422fb2961027]
+{"g0_2_path_adapter_argv": ["/usr/bin/umu-run", "Z:\\home\\helmlab\\g0\\completion-20260907\\g0_2_control.exe", "broken"]}
+[umu.__main__:78] DEBUG: HOSTTYPE=x86_64
+[umu.__main__:78] DEBUG: LANG=C.UTF-8
+[umu.__main__:78] DEBUG: PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib
+[umu.__main__:78] DEBUG: TERM=xterm-256color
+[umu.__main__:78] DEBUG: XDG_RUNTIME_DIR=/mnt/wslg/runtime-dir
+[umu.__main__:78] DEBUG: DISPLAY=:0
+[umu.__main__:78] DEBUG: WAYLAND_DISPLAY=wayland-0
+[umu.__main__:78] DEBUG: PULSE_SERVER=unix:/mnt/wslg/PulseServer
+[umu.__main__:78] DEBUG: WSL2_GUI_APPS_ENABLED=1
+[umu.__main__:78] DEBUG: WSLENV=
+[umu.__main__:78] DEBUG: NAME=<redacted-host>
+[umu.__main__:78] DEBUG: WSL_DISTRO_NAME=helm-lab-g0-proton
+[umu.__main__:78] DEBUG: HOME=/home/helmlab
+[umu.__main__:78] DEBUG: USER=helmlab
+[umu.__main__:78] DEBUG: LOGNAME=helmlab
+[umu.__main__:78] DEBUG: SHELL=/bin/bash
+[umu.__main__:78] DEBUG: WINEPREFIX=/home/helmlab/g0/completion-20260907/prefix-dos-path
+[umu.__main__:78] DEBUG: WINEARCH=win64
+[umu.__main__:78] DEBUG: WINEDLLOVERRIDES=mscoree,mshtml=
+[umu.__main__:78] DEBUG: PROTONPATH=/home/helmlab/g0/completion-20260907/runtimes/UMU-Proton-10.0-4
+[umu.__main__:78] DEBUG: GAMEID=umu-default
+[umu.__main__:78] DEBUG: PROTONFIXES_DISABLE=1
+[umu.__main__:78] DEBUG: UMU_RUNTIME_UPDATE=0
+[umu.__main__:78] DEBUG: UMU_FOLDERS_PATH=/home/helmlab/g0/completion-20260907/umu-data
+[umu.__main__:78] DEBUG: UMU_LOG=debug
+[umu.__main__:78] DEBUG: PROTON_VERB=waitforexitandrun
+[umu.umu_run:864] INFO: umu-launcher version 1.4.4 (3.12.3 (main, Jan 22 2026, 20:57:42) [GCC 13.3.0])
+[umu.umu_run:791] DEBUG: PROTONPATH set, resolving its required runtime
+[umu.umu_run:969] DEBUG: Connecting to '1.1.1.1'...
+[umu.umu_runtime:266] DEBUG: Local: /home/helmlab/g0/completion-20260907/umu-data/umu/steamrt3
+[umu.umu_runtime:279] DEBUG: Sending request to 'https://repo.steampowered.com/steamrt3/images/latest-public-beta.txt' for 'latest-public-beta.txt'...
+[umu.umu_runtime:303] INFO: steamrt3 updates disabled, skipping
+[umu.umu_run:264] WARNING: Executable not found: Z:\home\helmlab\g0\completion-20260907\g0_2_control.exe
+[umu.umu_run:1036] DEBUG: WINEPREFIX=/home/helmlab/g0/completion-20260907/prefix-dos-path
+[umu.umu_run:1036] DEBUG: GAMEID=umu-default
+[umu.umu_run:1036] DEBUG: PROTON_CRASH_REPORT_DIR=/tmp/umu_crashreports
+[umu.umu_run:1036] DEBUG: PROTONPATH=/home/helmlab/g0/completion-20260907/runtimes/UMU-Proton-10.0-4
+[umu.umu_run:1036] DEBUG: STEAM_COMPAT_APP_ID=8dc40801e31ff859746611e2f0389f9c
+[umu.umu_run:1036] DEBUG: STEAM_COMPAT_TOOL_PATHS=/home/helmlab/g0/completion-20260907/runtimes/UMU-Proton-10.0-4:/home/helmlab/g0/completion-20260907/umu-data/umu/steamrt3
+[umu.umu_run:1036] DEBUG: STEAM_COMPAT_LIBRARY_PATHS=
+[umu.umu_run:1036] DEBUG: STEAM_COMPAT_MOUNTS=/home/helmlab/g0/completion-20260907/runtimes/UMU-Proton-10.0-4:/home/helmlab/g0/completion-20260907/umu-data/umu/steamrt3
+[umu.umu_run:1036] DEBUG: STEAM_COMPAT_INSTALL_PATH=
+[umu.umu_run:1036] DEBUG: STEAM_COMPAT_CLIENT_INSTALL_PATH=
+[umu.umu_run:1036] DEBUG: STEAM_COMPAT_DATA_PATH=/home/helmlab/g0/completion-20260907/prefix-dos-path
+[umu.umu_run:1036] DEBUG: STEAM_COMPAT_SHADER_PATH=/home/helmlab/g0/completion-20260907/prefix-dos-path/shadercache
+[umu.umu_run:1036] DEBUG: STEAM_COMPAT_LAUNCHER_SERVICE=
+[umu.umu_run:1036] DEBUG: FONTCONFIG_PATH=
+[umu.umu_run:1036] DEBUG: EXE=Z:\home\helmlab\g0\completion-20260907\g0_2_control.exe
+[umu.umu_run:1036] DEBUG: SteamAppId=default
+[umu.umu_run:1036] DEBUG: SteamGameId=default
+[umu.umu_run:1036] DEBUG: STEAM_RUNTIME_LIBRARY_PATH=/usr/lib/i386-linux-gnu:/usr/lib/x86_64-linux-gnu:/usr/lib/wsl/lib:/usr/lib
+[umu.umu_run:1036] DEBUG: STORE=
+[umu.umu_run:1036] DEBUG: PROTON_VERB=waitforexitandrun
+[umu.umu_run:1036] DEBUG: UMU_ID=umu-default
+[umu.umu_run:1036] DEBUG: UMU_ZENITY=
+[umu.umu_run:1036] DEBUG: UMU_NO_RUNTIME=
+[umu.umu_run:1036] DEBUG: UMU_RUNTIME_UPDATE=0
+[umu.umu_run:1036] DEBUG: UMU_NO_PROTON=
+[umu.umu_run:1036] DEBUG: UMU_CONTAINER_NSENTER=
+[umu.umu_run:1036] DEBUG: RUNTIMEPATH=/home/helmlab/g0/completion-20260907/umu-data/umu/steamrt3
+[umu.umu_run:1036] DEBUG: UMU_STEAM_GAME_ID=
+[umu.umu_run:1036] DEBUG: UMU_INVOCATION_ID=a3d44dfba4f8105b6a51f09bb44d15a3
+[umu.umu_runtime:657] INFO: Running 'UMU-Proton-10.0-4' using runtime 'sniper'
+[umu.umu_runtime:657] INFO: Running 'steamrt3' using runtime 'host'
+[umu.umu_run:1047] DEBUG: ('/home/helmlab/g0/completion-20260907/umu-data/umu/steamrt3/umu', '--verb=waitforexitandrun', '--', '/home/helmlab/g0/completion-20260907/umu-data/umu/umu-shim', '/home/helmlab/g0/completion-20260907/runtimes/UMU-Proton-10.0-4/proton', 'waitforexitandrun', 'Z:\\home\\helmlab\\g0\\completion-20260907\\g0_2_control.exe', 'broken')
+[umu.umu_run:736] DEBUG: prctl exited with status: 0
+setlocale "en_US.UTF-8": No such file or directory
+pv-locale-gen: Missing locale en_US.UTF-8
+pv-locale-gen: Generating locale en_US.UTF-8...
+pv-locale-gen: Generated locale en_US.UTF-8 successfully
+pv-adverb[1045]: W: Container startup will be faster if missing locales are created at OS level
+ProtonFixes[1086] WARN: Skipping fix execution. We are probably running a unit test.
+ProtonFixes[1086] WARN: Skipping fix execution. We are probably running a unit test.
+Proton: Z:\home\helmlab\g0\completion-20260907\g0_2_control.exe
+Proton: Executable is inside wine prefix, launching normally.
+fsync: up and running.
+[umu.umu_run:744] DEBUG: Child 999 exited with wait status: 2

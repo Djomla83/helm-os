@@ -1,0 +1,51 @@
+{
+  "kind": "Derived assessment under the preregistered narrow comparison rules",
+  "criterion_commit": "78422f7cc4f4867ed922150ffedd5646ebcabe0a",
+  "overall_g0_2": "PASS",
+  "meaning": "Three controlled HRESULT observations; not device-creation success, rendering or application compatibility.",
+  "arms": [
+    {
+      "runtime": "vanilla",
+      "verdict": "PASS",
+      "sequence": "vanilla",
+      "target_hresult": "0x80004001",
+      "target_exit_code": 0,
+      "device_creation_returned_s_ok": false,
+      "controls_correct": true,
+      "raw_capture_record": "vanilla-controlled.json",
+      "target_stdout_artifact": "vanilla-target-stdout.txt"
+    },
+    {
+      "runtime": "staging",
+      "verdict": "PASS",
+      "sequence": "staging",
+      "target_hresult": "0x00000000",
+      "target_exit_code": 0,
+      "device_creation_returned_s_ok": true,
+      "controls_correct": true,
+      "raw_capture_record": "staging-controlled.json",
+      "target_stdout_artifact": "staging-target-stdout.txt"
+    },
+    {
+      "runtime": "proton",
+      "verdict": "PASS",
+      "sequence": "proton-dos-path",
+      "target_hresult": "0x80004001",
+      "target_exit_code": 0,
+      "device_creation_returned_s_ok": false,
+      "controls_correct": true,
+      "raw_capture_record": "proton-dos-path-controlled.json",
+      "target_stdout_artifact": "proton-dos-path-target-stdout.txt"
+    }
+  ],
+  "retained_inconclusive_attempts": [
+    "historical vanilla: missing controls",
+    "proton: no console JSON"
+  ],
+  "other_registered_checks": {
+    "G0-1": "BLOCKED",
+    "G0-3": "BLOCKED",
+    "G0-4": "BLOCKED",
+    "G0-5": "BLOCKED"
+  }
+}

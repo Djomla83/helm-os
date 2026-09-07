@@ -1,10 +1,11 @@
 # Foundation Audit — what already exists, and what HELM would actually be building
 
-> Publication annotation, 2026-09-07: historical G0-2 wording below treats a DirectComposition
+> Evidence annotation, 2026-09-07: historical G0-2 wording below treats a DirectComposition
 > probe as deciding an entire application class. That inference is withdrawn in the
 > [current Gate 0 assessment](../experiments/EXP-009-GATE0-REPORT.md#current-assessment).
-> G0-2 remains BLOCKED; vanilla's recorded `E_NOTIMPL` does not decide rendering or application
-> compatibility. Original G0-3 also remains BLOCKED; the separately recorded mechanics PASS results
+> Controlled G0-2 now completes the narrow comparison: staging 11.16 returned `S_OK`, while vanilla
+> 11.17 and UMU-Proton-10.0-4 returned `E_NOTIMPL`, with required controls. These codes do not decide
+> rendering or application compatibility. Original G0-3 also remains BLOCKED; the separately recorded mechanics PASS results
 > do not satisfy its original criterion. Historical research text and criteria below are preserved.
 
 | Field | Value |

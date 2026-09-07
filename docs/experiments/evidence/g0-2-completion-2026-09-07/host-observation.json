@@ -1,0 +1,34 @@
+{
+  "observed_utc": "2026-09-07T14:57:50.9084813Z",
+  "host_id": "gate0-workstation-20260907",
+  "cpu": {
+    "Name": "AMD Ryzen 9 5950X 16-Core Processor            ",
+    "NumberOfCores": 16,
+    "NumberOfLogicalProcessors": 32
+  },
+  "os": {
+    "Caption": "Microsoft Windows 11 Pro",
+    "Version": "10.0.26200",
+    "BuildNumber": "26200",
+    "TotalVisibleMemorySize": 67020520
+  },
+  "gpu": {
+    "Name": "NVIDIA GeForce RTX 3080",
+    "DriverVersion": "32.0.16.1664",
+    "CurrentHorizontalResolution": 2560,
+    "CurrentVerticalResolution": 1440,
+    "CurrentBitsPerPixel": 32
+  },
+  "disk": {
+    "DriveLetter": "C",
+    "SizeRemaining": 88029339648,
+    "Size": 498991685632
+  },
+  "cmd_source": {
+    "system_path": "C:\\Windows\\System32\\cmd.exe",
+    "bytes": 344064,
+    "version": "10.0.26100.8875 (WinBuild.160101.0800)",
+    "sha256": "8DD1EBB0B969370C70A5EE7F7EE347949AA7046AA5E1A33FCD7B1E9415B21FC3",
+    "signature": "Valid"
+  }
+}

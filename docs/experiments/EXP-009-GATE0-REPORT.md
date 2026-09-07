@@ -6,9 +6,9 @@
 | Date | 2026-09-07 |
 | Executor | Development agent, unattended, on the maintainer's workstation |
 | Reviewer | **not assigned** — this report is not accepted |
-| Repository revision at execution | `e09a52f` |
+| Repository revision at execution | Historical rounds: `e09a52f`; completion baseline: `ca0aa5ae26a1d3b630f63eda8f87626d125248d1`; frozen controls: `78422f7cc4f4867ed922150ffedd5646ebcabe0a` |
 | Approved budget | No new spend; Round 2 installed packages inside the disposable lab. |
-| Current outcome summary | **G0-1 through G0-5: BLOCKED.** Separate mechanics subtests G0-3a and G0-3b: PASS within their recorded scope. G0-2 vanilla arm: INCONCLUSIVE; staging and Proton/UMU: NOT_RUN. See [current assessment](#current-assessment). |
+| Current outcome summary | **G0-2: PASS for the narrow controlled HRESULT comparison.** G0-1, original G0-3, G0-4 and G0-5: BLOCKED. Separate G0-3a/G0-3b mechanics results unchanged. Historical vanilla and the first Proton completion attempt remain INCONCLUSIVE. See [current assessment](#current-assessment). |
 
 > **This report contains no Windows application compatibility result.** Round 2 executed real Wine
 > 11.17 in a disposable lab, but only against synthetic probes — no Windows application was
@@ -22,7 +22,216 @@
 
 <a id="current-assessment"></a>
 
-## Current assessment — publication review, 2026-09-07
+## Current assessment — bounded G0-2 completion, 2026-09-07
+
+The owner authorised only G0-2 completion after publication/provenance repair. Fetch verified
+`main == origin/main == ca0aa5ae26a1d3b630f63eda8f87626d125248d1`, with a clean working tree.
+Documentation validation and all 20 validator tests passed before changes. Work used the dedicated
+`experiment/g0-2-completion` branch. The earlier observations and failed attempts below remain
+historical evidence; this section supplies the current assessment.
+
+| Runtime arm / separately retained attempt | Verdict | Target HRESULT | Good control | Deliberately broken control |
+|---|---|---|---|---|
+| Historical vanilla 11.17 | INCONCLUSIVE | `0x80004001` (`E_NOTIMPL`) | Not evidenced | Not evidenced |
+| Vanilla 11.17 controlled completion | PASS | `0x80004001` (`E_NOTIMPL`) | Expected JSON; exit 0 | Missing export; Win32 error 127; exit 2 |
+| Wine staging 11.16 controlled completion | PASS | `0x00000000` (`S_OK`) | Expected JSON; exit 0 | Missing export; Win32 error 127; exit 2 |
+| Proton initial completion attempt, Unix-path invocation | INCONCLUSIVE | Not captured | Exit 0, no probe JSON | Exit 2, no probe JSON |
+| Proton controlled methodological repetition, DOS-path invocation | PASS | `0x80004001` (`E_NOTIMPL`) | Expected JSON; exit 0 | Missing export; Win32 error 127; exit 2 |
+
+**Overall G0-2: PASS for completion of the registered, narrowly interpreted status-code comparison.**
+The [interpretation and controls](EXP-009.md#g0-2-completion-definition) were fixed before new arm
+execution. PASS denotes an interpretable controlled measurement; it does not mean that device
+creation succeeded. Only staging returned `S_OK`. The registered comparison requires returned
+status codes, not a preferred distribution of them. Each final runtime arm has exactly one verdict;
+historical and inconclusive attempts remain separately identified.
+
+G0-1, original G0-3, G0-4 and G0-5 remain **BLOCKED** and were not attempted in this task.
+G0-3a and G0-3b separately retain their earlier mechanics PASS; neither completes original G0-3.
+All architecture ADRs, including ADR-0013 through ADR-0019, remain Proposed. ADR-0020 remains
+Accepted for documentation language only. The Evidence Loop PoC remains unauthorised.
+
+<a id="g0-2-completion"></a>
+
+### Isolation prerequisite and lab provenance
+
+The direct negative test used a SHA-256-verified copy of the existing, validly signed Windows
+system `cmd.exe`, version `10.0.26100.8875`, transferred through stdin. It was executed directly
+from Linux as uid 1000, without Wine, Windows-drive mounts or an interop override:
+
+```text
+/home/helmlab/g0/interop-negative-20260907/cmd.exe /d /c echo HELM_G0_INTEROP_NEGATIVE_TEST
+```
+
+The [original lab](evidence/G0-2-wsl-interop-negative-2026-09-07.json),
+[staging clone](evidence/G0-2-staging-interop-negative-2026-09-07.json) and
+[Proton clone](evidence/G0-2-proton-interop-negative-2026-09-07.json) each returned exit 1, empty
+stdout and `UtilAcceptVsock:271: accept4 failed 110`, after about 10.012 seconds. None printed the
+marker. `/etc/wsl.conf` still requested disabled automount and interoperability; the binfmt
+`WSLInterop` registration still read `enabled`, with interpreter `/init`. `WSL_INTEROP` was unset
+and `/mnt/c` was not a mountpoint. The attempted Windows launch was unavailable because interop
+connection failed. This verifies only that observed execution property, not hostile containment.
+[WSL's implementation documentation](https://wsl.dev/technical-documentation/interop/) distinguishes
+the shared WSL2 binfmt registration from the interop connection used to launch a Windows process.
+
+The original lab was retained. Two owner-authorised clones were derived from its quiesced VHD
+export: `helm-lab-g0-staging` and `helm-lab-g0-proton`. Their plans, disk locations, budget and
+[provisioning commands](evidence/g0-2-completion-2026-09-07/clone-provisioning.json) are recorded in
+the [runbook](LAB-G0-RUNBOOK.md). The export hash is
+`a80963721374c764cf5adca1577061a32fe74acf18cab23e76c64b6e5473c05f`; its 11,825,840,128 bytes stay
+private and outside Git. All three project distributions were stopped at review; the normal
+`Ubuntu` distribution remained stopped and untouched. No global WSL configuration, Windows feature,
+Hyper-V permission or group membership was changed.
+
+### Runtime and probe identities
+
+| Component | Exact identity |
+|---|---|
+| Vanilla | WineHQ noble `winehq-devel`, `wine-devel`, `wine-devel-amd64`, `wine-devel-i386:i386`: `11.17~noble-1`; `wine-11.17` |
+| Staging | WineHQ noble `winehq-staging`, `wine-staging`, `wine-staging-amd64`, `wine-staging-i386:i386`: `11.16~noble-1`; `wine-11.16 (Staging)` |
+| umu-launcher | Ubuntu noble package `python3-umu-launcher 1.4.4-1`; upstream commit `cf3d1b107147480c447ffbfb3f789dc74335074c` |
+| Proton | `UMU-Proton-10.0-4`; version file `1774856027 UMU-Proton-10.0-4`; included Wine reports `wine-10.0` |
+| Steam Linux Runtime | sniper depot/platform `3.0.20260805.254768`; pressure-vessel/scripts `0.20260805.0`; appid `1628350` |
+| Controls and original capture harness | Commit `78422f7cc4f4867ed922150ffedd5646ebcabe0a`; MinGW `13-win32`, package `13.2.0-6ubuntu1+26.1` |
+| Proton path adapter and repetition definition | Commit `273509d4bc551666e66902e47e535d3c2444de96` |
+
+The unchanged DirectComposition source SHA-256 is
+`70b1b1e86eae6f4d3977713d8c66956061a2ab69f9518dcb2d93dc74af2ce316`; its executable is
+`b74011c0c154e1e742b6a27c2de7259befce4e9e528cb946f9221fdd2f445ce4`.
+The separate control executable is
+`b28f3528e158e60fdc536e400e02763a186133eb1922560d92456d6e3bc5c50e`.
+[Build commands and the full baseline package inventory](evidence/G0-2-build-baseline-2026-09-07.json)
+are retained. Every runtime used these same executable bytes; the target source was not edited.
+
+[Runtime identities](evidence/g0-2-completion-2026-09-07/runtime-identities.json) give all four
+staging package hashes, installed dependency differences and the pinned download hashes:
+
+| Artifact | SHA-256 |
+|---|---|
+| UMU noble package | `86b7a234f77fbcd13699654656192a12ed3852ec2bcc721506ae4f91436b3793` |
+| UMU-Proton archive | `62e99e029a18fa313e6fa63d42390918101730a940e3491c54d9d58cab887c69` |
+| Steam Linux Runtime archive | `e264f0639ab775338311036f207b35cebe99bc417b016b53931ebca8b30b3d94` |
+
+Staging used unchanged WineHQ package defaults, with no operator patch selection or `STAGING_*`
+override; a patch-by-patch build inventory was not separately extracted. It replaced only the
+`winehq-devel` meta-package in its clone and added the four staging packages; the other baseline
+packages stayed at their recorded versions. The explicit `/opt/wine-staging/bin/wine` path selected
+the staging runtime. Proton's seven package additions and package-install diagnostics are recorded.
+Version differences are intentional recorded configuration differences; this is not an isolated
+measurement of the causal effect of staging patches.
+
+### Prefixes, commands and controls
+
+All completion prefixes were fresh, 64-bit, and subsequently recorded Windows 10 Pro/build 19045
+and 96 DPI registry values. Common environment: `WINEARCH=win64` and
+`WINEDLLOVERRIDES=mscoree,mshtml=`. Vanilla and staging used
+`/home/helmlab/g0/completion-20260907/prefix` in their respective distributions. Historical prefixes
+were preserved. No application-specific winetricks verbs were applied.
+
+For Proton, `PROTONPATH=/home/helmlab/g0/completion-20260907/runtimes/UMU-Proton-10.0-4`,
+`GAMEID=umu-default`, `PROTONFIXES_DISABLE=1`, `UMU_RUNTIME_UPDATE=0`,
+`UMU_FOLDERS_PATH=/home/helmlab/g0/completion-20260907/umu-data`, `UMU_LOG=debug` and
+`PROTON_VERB=waitforexitandrun`. The repetition used `WINEPREFIX` ending in `prefix-dos-path`.
+Exact arguments and inherited environment are in each spec and capture record.
+
+The Steam runtime was downloaded from its explicit version URL, hash-checked, extracted and
+successfully verified with upstream `pv-verify` before writing its installation marker.
+UMU still queried moving update *metadata*, but logs explicitly say updates were disabled; no
+runtime artifact was selected from a moving alias. The installed `VERSIONS.txt` hash stayed
+`4e8836063360de4ff0b2f334af6cd45fcb0b8847ef847cf1493f4c14ddf520b1` across execution.
+All Proton logs say fix execution was skipped; the pinned protonfixes source checks the disable
+variable. Generic runtime behaviour remains: Proton DLL defaults, bundled Mono registration,
+fsync and temporary locale generation. These are not application-specific fixes or HELM additions.
+
+The good control loaded `kernel32.dll`, resolved `GetCurrentProcessId` and reported a nonzero result.
+The broken control requested the deliberately missing symbol and reported Win32 error 127 with
+exit 2. These operations do not return HRESULTs. The target loaded `dcomp.dll` and called the
+unchanged `DCompositionCreateDevice(NULL, IID_IDCompositionDevice, &dev)` operation.
+Only one conclusive sequence was run per configuration; no stability or false-pass-rate estimate
+is claimed.
+
+### Raw evidence, failures and methodological deviations
+
+The [artifact index](evidence/g0-2-completion-2026-09-07/INDEX.md) links every capture and its digest.
+Primary records are [vanilla](evidence/g0-2-completion-2026-09-07/vanilla-controlled.json),
+[staging](evidence/g0-2-completion-2026-09-07/staging-controlled.json),
+[initial Proton](evidence/g0-2-completion-2026-09-07/proton-controlled.json), and the
+[Proton repetition](evidence/g0-2-completion-2026-09-07/proton-dos-path-controlled.json).
+Separate stdout/stderr files preserve process bytes, including Windows CRLF stdout.
+Final index verification found that checkpoint `273509d4bc551666e66902e47e535d3c2444de96` had
+normalized six vanilla/staging stdout files to LF. The final commit restores the retained raw
+CRLF bytes. The digest manifest records both identities; the capture JSON hashes retain their
+original raw-byte meaning. No probe was rerun or output regenerated for this correction.
+
+- The first VHD export failed with `ERROR_SHARING_VIOLATION` immediately after termination. One
+  documented provisioning retry, after observing the stopped state and using `--format vhd`,
+  succeeded. Both results remain recorded.
+- Vanilla/staging emitted Wine Bluetooth-driver/service and prefix-setup diagnostics. Staging's
+  `S_OK` run also emitted EGL/DRI3 warnings. No rendering was inspected or claimed.
+- UMU package installation returned zero but reported that systemd was not PID 1 and its bus was
+  unavailable. No service or host permission was changed to suppress that output.
+- `umu-run createprefix` deliberately has no application to run and returned 1 with file-not-found
+  output, as described by the pinned launcher source. Prefix files were present. These setup
+  results are preserved separately from control and target runs.
+- Initial Proton runs returned 0/2/0 but no JSON. They remain INCONCLUSIVE. Before repeating, the
+  capture-method change was documented and committed. A DOS-path adapter used the same frozen
+  executable bytes and pinned UMU/Proton/runtime through a fresh prefix. The repetition captured
+  both controls and the target. This supports a launch-path explanation for lost output, but does
+  not identify the internal root cause in `umu.exe`.
+- WMI reported 2560×1440; a separate Win32 system-metrics query reported a 3440×1440 primary display,
+  two monitors and 96 system DPI. Both observations are retained; Wine/WSLg rendering scale was not
+  validated. Host hardware/display metadata was captured during the task, not atomically with each
+  operation. The report does not claim that the API test covers graphics presentation.
+- Privacy scanning found the host `NAME` value in UMU logs. A local checkpoint erroneously ran
+  after that failed scan. It was never pushed, was bundled and verified privately, and was repaired
+  before publication. Raw artifacts remain private; deterministic `<redacted-host>` publication
+  copies have distinct hashes. Clone-command account paths use `<redacted>`. The
+  [redaction manifest](evidence/g0-2-completion-2026-09-07/publication-redactions.json) identifies
+  every affected field and raw/publication identity. No observation or failure was deleted.
+
+### Resource and review boundary
+
+[Resource accounting](evidence/g0-2-completion-2026-09-07/resource-accounting.json) distinguishes
+execution from engineering work. Common clone/export/resize commands used 104.63 seconds, with a
+187-second provisioning interval including inspection and hashing. Staging package setup used
+16.50 seconds; UMU downloads/package setup 23.29 seconds and extraction/verification 21.77 seconds.
+Prefix creation used about 23.37 seconds vanilla, 26.20 staging, and 5.93/6.11 Proton per attempt.
+
+| Sequence | Good / broken / target runtime | Total probe runtime |
+|---|---|---|
+| Vanilla controlled | 4.153 / 4.102 / 4.096 s | 12.350 s |
+| Staging controlled | 4.152 / 4.098 / 4.957 s | 13.207 s |
+| Proton initial, inconclusive | 4.951 / 4.348 / 4.357 s | 13.657 s |
+| Proton methodological repetition | 3.356 / 3.304 / 3.300 s | 9.961 s |
+
+Staging packages downloaded 307,316,416 bytes. The three pinned UMU/Proton/runtime artifacts total
+685,004,748 bytes; additional Ubuntu packages and two index refreshes contributed approximately
+13.2 MB. Existing clone dependencies were warm; new runtime artifacts were cold downloads. This
+is not a controlled performance or network-cost comparison.
+
+Additional retained VHD allocation, including the common export and original-lab growth, was
+46,327,136,256 bytes (43.15 GiB). Host free space was 86,622,150,656 bytes (80.67 GiB), above the
+40 GiB reserve. Staging's filesystem had only 732,360,704 bytes free after its run, so further
+provisioning there requires another storage review. Runtime archives, system executable and images
+remain outside Git. All labs are retained, stopped; no teardown was performed.
+
+One primary engineering agent performed preparation, deterministic execution, log/source analysis,
+privacy handling and documentation; no subagents or agent-driven application interaction were
+used. No additional human intervention was requested after owner authorisation. The task's wall
+time is not human labour; model billing/token cost and exact attended engineering minutes were not
+available. Capture-method debugging and publication repair are engineering costs, separate from
+the roughly 49 seconds of probe execution across all four sequences.
+
+**Proves:** the tested operation returned different codes across these explicitly pinned WSL2
+runtime configurations, with required controls evidenced. **Does not prove:** correct rendering,
+Chromium/Electron/WebView2/embedded-browser/game compatibility, a general staging dependency,
+production readiness, or sandbox containment. No application PoC was started.
+
+**Recommended next owner decision:** review this narrow result, then authorise a separately scoped
+full Linux desktop VM environment before any rendering or application work. WSLg and these API
+returns cannot substitute for desktop evidence. Any required host permission is a separate owner
+decision; no such permission was changed here. Stop at the Gate 0 review boundary.
+
+## Publication review — historical assessment, 2026-09-07
 
 This section supersedes the earlier aggregate counts and status interpretations. The earlier
 Round 2 summary was "3 PASS, 1 PARTIAL, 3 BLOCKED, 0 FAIL"; it mixed questions, subtests and checks,

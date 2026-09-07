@@ -20,8 +20,10 @@ Nije izvršen nijedan aplikacioni test. EXP-009 je predlog najmanjeg PoC-a koji 
 audit-a i objedinjuje delove EXP-003, EXP-004 i EXP-005 u jedan merljiv tok; njegov Gate 0 takođe
 prikuplja dokaze potrebne za EXP-002.
 
-Current Gate 0 assessment: the original five checks remain BLOCKED. G0-3a and G0-3b separately
-PASS only for their recorded mechanics. Vanilla G0-2 is INCONCLUSIVE; staging and Proton/UMU are
-NOT_RUN. See [EXP-009-GATE0-REPORT.md](EXP-009-GATE0-REPORT.md#current-assessment). The current work
-ends at publication/provenance repair; the PoC is not authorised.
+Current Gate 0 assessment: G0-2 PASS for the controlled, narrow HRESULT comparison across pinned
+vanilla, staging and Proton configurations. Historical vanilla and the initial Proton attempt
+remain INCONCLUSIVE. G0-1, original G0-3, G0-4 and G0-5 remain BLOCKED. G0-3a and G0-3b separately
+PASS only for their recorded mechanics. See
+[EXP-009-GATE0-REPORT.md](EXP-009-GATE0-REPORT.md#current-assessment). Work stops at the Gate 0 review
+boundary; the PoC is not authorised.
 Ostali eksperimenti prema preduslovima i [backlog-u](../../planning/BACKLOG.md).

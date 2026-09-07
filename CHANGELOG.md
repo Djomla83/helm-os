@@ -1,5 +1,25 @@
 # Istorija promena
 
+## 0.4.2 — 2026-09-07
+
+Completed the owner-authorised G0-2 HRESULT comparison from public baseline `ca0aa5ae26a1d3b630f63eda8f87626d125248d1`.
+Direct negative Windows-execution tests supported blocking for the specific invocation in all
+three disposable WSL labs. Frozen controls accompanied the unchanged DirectComposition probe:
+WineHQ vanilla 11.17 and UMU-Proton-10.0-4 returned `E_NOTIMPL`; staging 11.16 returned `S_OK`.
+G0-2 PASS denotes a valid controlled comparison, not rendering or application compatibility.
+
+Preserved historical vanilla INCONCLUSIVE and an initial Proton INCONCLUSIVE capture. One
+documented, preregistered DOS-path repetition recovered console observations without changing
+probe semantics, controls, runtime pins or verdict criteria. Recorded exact artifacts, dependency
+differences, stdout/stderr, warnings, provisioning failure, disk growth and engineering effort.
+Redacted host-name diagnostics and local account paths with distinct raw/publication hashes;
+repaired an unpublished local checkpoint before publication. Evidence byte preservation is scoped
+in Git attributes. No public history was rewritten.
+
+Updated the [report](docs/experiments/EXP-009-GATE0-REPORT.md#current-assessment), claims, project
+state and lab runbook. Original G0-3 and G0-1/G0-4/G0-5 remain BLOCKED. All architecture ADRs remain
+Proposed. Labs are retained and stopped. Work ends at Gate 0 review; no larger PoC was started.
+
 ## 0.4.1 — 2026-09-07
 
 Owner-authorised publication/provenance repair of the three local-only Gate 0 commits; the public

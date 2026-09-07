@@ -1,0 +1,176 @@
+{
+  "observed_utc": "2026-09-07T15:11:14.169473+00:00",
+  "commands": [
+    {
+      "argv": [
+        "/home/helmlab/g0/completion-20260907/runtimes/UMU-Proton-10.0-4/files/bin/wine",
+        "--version"
+      ],
+      "exit_code": 0,
+      "stdout": "wine-10.0\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "du",
+        "-sB1",
+        "/home/helmlab/g0/completion-20260907"
+      ],
+      "exit_code": 0,
+      "stdout": "4329259008\t/home/helmlab/g0/completion-20260907\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "df",
+        "-B1",
+        "/home/helmlab/g0/completion-20260907"
+      ],
+      "exit_code": 0,
+      "stdout": "Filesystem       1B-blocks        Used   Available Use% Mounted on\n/dev/sde       33636073472 15550353408 16350957568  49% /\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "pgrep",
+        "-a",
+        "-u",
+        "1000",
+        "wine|wineserver"
+      ],
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cat",
+        "/etc/wsl.conf"
+      ],
+      "exit_code": 0,
+      "stdout": "[automount]\nenabled = false\n[interop]\nenabled = false\nappendWindowsPath = false\n[user]\ndefault = helmlab\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cat",
+        "/proc/sys/fs/binfmt_misc/WSLInterop"
+      ],
+      "exit_code": 0,
+      "stdout": "enabled\ninterpreter /init\nflags: PF\noffset 0\nmagic 4d5a\n",
+      "stderr": ""
+    }
+  ],
+  "files": {
+    "runtimes/UMU-Proton-10.0-4/version": {
+      "sha256": "41eb5c5f0cc1da74f1ee4565306484c26cedf9e21b251d5220b295dc6aed28ad",
+      "bytes": 29
+    },
+    "umu-data/umu/steamrt3/VERSIONS.txt": {
+      "sha256": "4e8836063360de4ff0b2f334af6cd45fcb0b8847ef847cf1493f4c14ddf520b1",
+      "bytes": 313
+    },
+    "umu-data/umu/steamrt3/pressure-vessel/bin/pv-verify": {
+      "sha256": "0e635130c7aed7e8b6130dbf5c040ce9a789e84ff0f631746b353532d8be4ed9",
+      "bytes": 197880
+    },
+    "runtimes/UMU-Proton-10.0-4/protonfixes/__init__.py": {
+      "sha256": "1fcb1a41a72acb2132f4a84d99a85dc7b8815d8c517661f3daf0e1fbb6e6f93d",
+      "bytes": 3316
+    },
+    "runtimes/UMU-Proton-10.0-4/proton": {
+      "sha256": "da9bfb62b0326536c4dfdb2a145993d31e987cd46b8acf341ce05160b8775a25",
+      "bytes": 98285
+    },
+    "runtimes/UMU-Proton-10.0-4/files/share/default_pfx/drive_c/windows/syswow64/dcomp.dll": {
+      "sha256": "c35430cf77229c1f46b7ff598e6b879301306338ad68a415cf88a4b20e6aba63",
+      "bytes": 61206
+    },
+    "runtimes/UMU-Proton-10.0-4/files/share/default_pfx/drive_c/windows/system32/dcomp.dll": {
+      "sha256": "16208e93d62946b3b89f14aef317598189952e1105daa84374e9e7fcbec47968",
+      "bytes": 72024
+    },
+    "runtimes/UMU-Proton-10.0-4/files/lib/wine/x86_64-windows/dcomp.dll": {
+      "sha256": "16208e93d62946b3b89f14aef317598189952e1105daa84374e9e7fcbec47968",
+      "bytes": 72024
+    },
+    "runtimes/UMU-Proton-10.0-4/files/lib/wine/i386-windows/dcomp.dll": {
+      "sha256": "c35430cf77229c1f46b7ff598e6b879301306338ad68a415cf88a4b20e6aba63",
+      "bytes": 61206
+    }
+  },
+  "registry": {
+    "prefix": {
+      "system_reg_sha256": "a99804e8cf454c9c9deb1d936f2b5f082d47307a5df7c5b5efaa709595f83b36",
+      "architecture": [
+        "#arch=win64"
+      ],
+      "windows_version_fields": [
+        "\"ProductName\"=\"Wine Mono Windows Support\"",
+        "\"CurrentBuild\"=\"19045\"",
+        "\"CurrentBuildNumber\"=\"19045\"",
+        "\"CurrentVersion\"=\"6.3\"",
+        "\"ProductName\"=\"Windows 10 Pro\"",
+        "\"CurrentBuild\"=\"19045\"",
+        "\"CurrentBuildNumber\"=\"19045\"",
+        "\"CurrentVersion\"=\"6.3\"",
+        "\"ProductName\"=\"Windows 10 Pro\"",
+        "\"LogPixels\"=dword:00000060"
+      ]
+    },
+    "prefix-dos-path": {
+      "system_reg_sha256": "b1ba0191d50ef044bcd39923b9facf65be4c44da19fc6379c2fc6756327799cc",
+      "architecture": [
+        "#arch=win64"
+      ],
+      "windows_version_fields": [
+        "\"ProductName\"=\"Wine Mono Windows Support\"",
+        "\"CurrentBuild\"=\"19045\"",
+        "\"CurrentBuildNumber\"=\"19045\"",
+        "\"CurrentVersion\"=\"6.3\"",
+        "\"ProductName\"=\"Windows 10 Pro\"",
+        "\"CurrentBuild\"=\"19045\"",
+        "\"CurrentBuildNumber\"=\"19045\"",
+        "\"CurrentVersion\"=\"6.3\"",
+        "\"ProductName\"=\"Windows 10 Pro\"",
+        "\"LogPixels\"=dword:00000060"
+      ]
+    }
+  },
+  "proton_default_overrides_source": [
+    "        self.log_file = None",
+    "        self.env = dict(os.environ)",
+    "        self.dlloverrides = {",
+    "                \"steam.exe\": \"b\", #always use our special built-in steam.exe",
+    "                \"dotnetfx35.exe\": \"b\", #replace the broken installer, as does Windows",
+    "                \"dotnetfx35setup.exe\": \"b\",",
+    "                \"beclient.dll\": \"b,n\",",
+    "                \"beclient_x64.dll\": \"b,n\",",
+    "                \"winebth.sys\": \"d\", #disable winebth.sys as it crashes winedevice.exe",
+    "        }",
+    "",
+    "        # CW Bug 21737. Locoland executable happens to be steam.exe.",
+    "        if os.environ.get(\"SteamGameId\", 0) == \"352130\":",
+    "            del self.dlloverrides[\"steam.exe\"]",
+    "",
+    "        if os.environ.get(\"SteamGameId\", 0) not in [\"2767030\", \"2274200\"]:",
+    "            self.dlloverrides[\"opencl\"] = \"n,d\"",
+    "",
+    "        self.compat_config = default_compat_config()",
+    "        self.cmdlineappend = []",
+    "",
+    "        if \"STEAM_COMPAT_CONFIG\" in os.environ:",
+    "            config = os.environ[\"STEAM_COMPAT_CONFIG\"]",
+    "",
+    "            while config:",
+    "                (cur, _, config) = config.partition(',')",
+    "                if cur.startswith(\"cmdlineappend:\"):",
+    "                    while comma_escaped(cur):",
+    "                        (a, _, c) = config.partition(',')",
+    "                        cur = cur[:-1] + ',' + a",
+    "                        config = c",
+    "                    self.cmdlineappend.append(cur[14:].replace('\\\\\\\\','\\\\'))",
+    "                else:"
+  ],
+  "runtime_version_file_matches_before": true
+}

@@ -1,0 +1,120 @@
+{
+  "started_utc": "2026-09-07T14:46:24.970960+00:00",
+  "free_before_bytes": 132696219648,
+  "commands": [
+    {
+      "argv": [
+        "wsl.exe",
+        "--terminate",
+        "helm-lab-g0"
+      ],
+      "started_utc": "2026-09-07T14:46:24.971083+00:00",
+      "ended_utc": "2026-09-07T14:46:25.013908+00:00",
+      "seconds": 0.04283719998784363,
+      "exit_code": 0,
+      "stdout": "The operation completed successfully. \r\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "wsl.exe",
+        "--export",
+        "helm-lab-g0",
+        "C:\\Users\\<redacted>\\helm-lab\\g0-completion\\baseline.vhdx",
+        "--vhd"
+      ],
+      "started_utc": "2026-09-07T14:46:25.021733+00:00",
+      "ended_utc": "2026-09-07T14:46:25.182264+00:00",
+      "seconds": 0.16054400001303293,
+      "exit_code": 4294967295,
+      "stdout": "The process cannot access the file because it is being used by another process. \r\nError code: Wsl/Service/ERROR_SHARING_VIOLATION\r\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "wsl.exe",
+        "--export",
+        "helm-lab-g0",
+        "C:\\Users\\<redacted>\\helm-lab\\g0-completion\\baseline.vhdx",
+        "--format",
+        "vhd"
+      ],
+      "started_utc": "2026-09-07T14:47:40.205607+00:00",
+      "ended_utc": "2026-09-07T14:47:59.694220+00:00",
+      "seconds": 19.488404100004118,
+      "exit_code": 0,
+      "stdout": "The operation completed successfully. \r\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "wsl.exe",
+        "--import",
+        "helm-lab-g0-staging",
+        "C:\\Users\\<redacted>\\helm-lab\\g0-staging",
+        "C:\\Users\\<redacted>\\helm-lab\\g0-completion\\baseline.vhdx",
+        "--vhd"
+      ],
+      "started_utc": "2026-09-07T14:48:07.028469+00:00",
+      "ended_utc": "2026-09-07T14:48:29.133113+00:00",
+      "seconds": 22.10441170001286,
+      "exit_code": 0,
+      "stdout": "The operation completed successfully. \r\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "wsl.exe",
+        "--import",
+        "helm-lab-g0-proton",
+        "C:\\Users\\<redacted>\\helm-lab\\g0-proton",
+        "C:\\Users\\<redacted>\\helm-lab\\g0-completion\\baseline.vhdx",
+        "--vhd"
+      ],
+      "started_utc": "2026-09-07T14:48:29.133864+00:00",
+      "ended_utc": "2026-09-07T14:49:22.599998+00:00",
+      "seconds": 53.465532000001986,
+      "exit_code": 0,
+      "stdout": "The operation completed successfully. \r\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "wsl.exe",
+        "--manage",
+        "helm-lab-g0-proton",
+        "--resize",
+        "32GB"
+      ],
+      "started_utc": "2026-09-07T14:49:22.600502+00:00",
+      "ended_utc": "2026-09-07T14:49:31.967385+00:00",
+      "seconds": 9.36679230001755,
+      "exit_code": 0,
+      "stdout": "The operation completed successfully. \r\n",
+      "stderr": "e2fsck 1.46.5 (30-Dec-2021)\nPass 1: Checking inodes, blocks, and sizes\nresize2fs 1.46.5 (30-Dec-2021)\n"
+    }
+  ],
+  "reserved_bytes": 64424509440,
+  "safety_reserve_bytes": 42949672960,
+  "retry_reason": "First VHD export failed immediately after termination with ERROR_SHARING_VIOLATION; subsequent list confirms Stopped and no output image exists. Retry once after observing stopped state, using documented --format vhd syntax. No runtime probe has run.",
+  "baseline": {
+    "sha256": "a80963721374c764cf5adca1577061a32fe74acf18cab23e76c64b6e5473c05f",
+    "bytes": 11825840128
+  },
+  "free_after_bytes": 97774784512,
+  "ended_utc": "2026-09-07T14:49:31.968720+00:00",
+  "publication": {
+    "redacted": true,
+    "rule": "Windows account path component -> <redacted>; original retained privately outside Git.",
+    "redacted_json_fields": [
+      "/commands/1/argv/3",
+      "/commands/2/argv/3",
+      "/commands/3/argv/3",
+      "/commands/3/argv/4",
+      "/commands/4/argv/3",
+      "/commands/4/argv/4"
+    ],
+    "original_raw_sha256": "57eba3ad0bb36af49703ae25db2ee672a27a833bf9867fb839d9921b00a717cc",
+    "original_raw_bytes": 3501
+  }
+}

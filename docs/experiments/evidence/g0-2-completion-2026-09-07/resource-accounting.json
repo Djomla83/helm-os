@@ -1,0 +1,205 @@
+{
+  "kind": "Derived accounting, linked to captured commands; not a performance benchmark",
+  "baseline_commit": "ca0aa5ae26a1d3b630f63eda8f87626d125248d1",
+  "task_started_utc": "2026-09-07T14:28:36+00:00",
+  "lab_execution_ended_utc": "2026-09-07T15:11:15.341807+00:00",
+  "wall_seconds_through_lab_stop": 2559.341807,
+  "wall_time_scope": "Includes agent reasoning, research, provisioning waits, debugging and privacy work. Documentation/validation/publication continued after this timestamp. Not human labour time.",
+  "human_interventions_requested_after_initial_owner_authorisation": 0,
+  "human_attended_minutes": "not measured; no manual host action was requested",
+  "agent_involvement": {
+    "primary_agents": 1,
+    "subagents": 0,
+    "application_driving_agents": 0,
+    "role": "engineering, deterministic command execution, manual review of logs/source, privacy redaction, documentation",
+    "model_variant_tokens_and_billing": "not available"
+  },
+  "automation": {
+    "clone_export_import_resize_command_seconds": 104.62852130003739,
+    "clone_interval_seconds": 186.99776,
+    "staging_provision_command_seconds": 16.501296441999955,
+    "proton_provision_command_seconds": 23.286858571000153,
+    "proton_assembly_verify_command_seconds": 21.765896991999966,
+    "sequences": {
+      "vanilla": {
+        "start_utc": "2026-09-07T14:53:19.365676+00:00",
+        "end_utc": "2026-09-07T14:53:31.719189+00:00",
+        "total_probe_seconds": 12.350487299999998,
+        "operations": {
+          "good": {
+            "seconds": 4.153258179999995,
+            "exit_code": 0,
+            "stdout_raw_bytes": 85,
+            "stderr_raw_bytes": 236
+          },
+          "broken": {
+            "seconds": 4.101528836,
+            "exit_code": 2,
+            "stdout_raw_bytes": 86,
+            "stderr_raw_bytes": 236
+          },
+          "target": {
+            "seconds": 4.095700284000003,
+            "exit_code": 0,
+            "stdout_raw_bytes": 94,
+            "stderr_raw_bytes": 354
+          }
+        }
+      },
+      "staging": {
+        "start_utc": "2026-09-07T14:55:21.104837+00:00",
+        "end_utc": "2026-09-07T14:55:34.314932+00:00",
+        "total_probe_seconds": 13.207064746999947,
+        "operations": {
+          "good": {
+            "seconds": 4.15234491199999,
+            "exit_code": 0,
+            "stdout_raw_bytes": 85,
+            "stderr_raw_bytes": 866
+          },
+          "broken": {
+            "seconds": 4.097689711999976,
+            "exit_code": 2,
+            "stdout_raw_bytes": 86,
+            "stderr_raw_bytes": 866
+          },
+          "target": {
+            "seconds": 4.957030122999981,
+            "exit_code": 0,
+            "stdout_raw_bytes": 95,
+            "stderr_raw_bytes": 1000
+          }
+        }
+      },
+      "proton": {
+        "start_utc": "2026-09-07T14:59:33.184205+00:00",
+        "end_utc": "2026-09-07T14:59:46.848549+00:00",
+        "total_probe_seconds": 13.657090405999952,
+        "operations": {
+          "good": {
+            "seconds": 4.951400341999943,
+            "exit_code": 0,
+            "stdout_raw_bytes": 0,
+            "stderr_raw_bytes": 5309
+          },
+          "broken": {
+            "seconds": 4.3484566390000055,
+            "exit_code": 2,
+            "stdout_raw_bytes": 0,
+            "stderr_raw_bytes": 5311
+          },
+          "target": {
+            "seconds": 4.357233425000004,
+            "exit_code": 0,
+            "stdout_raw_bytes": 0,
+            "stderr_raw_bytes": 5298
+          }
+        }
+      },
+      "proton-dos-path": {
+        "start_utc": "2026-09-07T15:08:07.959667+00:00",
+        "end_utc": "2026-09-07T15:08:17.923762+00:00",
+        "total_probe_seconds": 9.960878932000014,
+        "operations": {
+          "good": {
+            "seconds": 3.356450456999937,
+            "exit_code": 0,
+            "stdout_raw_bytes": 85,
+            "stderr_raw_bytes": 5510
+          },
+          "broken": {
+            "seconds": 3.3040013699999236,
+            "exit_code": 2,
+            "stdout_raw_bytes": 86,
+            "stderr_raw_bytes": 5517
+          },
+          "target": {
+            "seconds": 3.3004271050001535,
+            "exit_code": 0,
+            "stdout_raw_bytes": 94,
+            "stderr_raw_bytes": 5493
+          }
+        }
+      }
+    },
+    "all_probe_seconds": 49.17552138499991,
+    "warning": "Nested command timings and parallel intervals must not be blindly summed as elapsed task time."
+  },
+  "downloads": {
+    "staging_packages_bytes": 307316416,
+    "umu_proton_steamrt_artifacts_bytes": 685004748,
+    "ubuntu_extra_packages_approx_bytes": 492000,
+    "apt_index_refreshes_approx_bytes": 12662000,
+    "other_downloads": "Small upstream research/API metadata; not fully metered. No new paid purchase.",
+    "cache_state": "Warm cloned baseline dependencies, cold newly installed runtime artifacts."
+  },
+  "storage": {
+    "started_utc": "2026-09-07T15:11:15.178039+00:00",
+    "reason": "Quiesce only the three project labs at the Gate 0 review boundary and record final disk allocation; all distributions retained.",
+    "commands": [
+      {
+        "argv": [
+          "wsl.exe",
+          "--terminate",
+          "helm-lab-g0"
+        ],
+        "exit_code": 0,
+        "seconds": 0.03803099997458048,
+        "stdout": "The operation completed successfully. \r\n",
+        "stderr": ""
+      },
+      {
+        "argv": [
+          "wsl.exe",
+          "--terminate",
+          "helm-lab-g0-staging"
+        ],
+        "exit_code": 0,
+        "seconds": 0.04176539997570217,
+        "stdout": "The operation completed successfully. \r\n",
+        "stderr": ""
+      },
+      {
+        "argv": [
+          "wsl.exe",
+          "--terminate",
+          "helm-lab-g0-proton"
+        ],
+        "exit_code": 0,
+        "seconds": 0.045139099995139986,
+        "stdout": "The operation completed successfully. \r\n",
+        "stderr": ""
+      }
+    ],
+    "final_distro_list": {
+      "exit_code": 0,
+      "stdout": "  NAME                   STATE           VERSION\r\n* Ubuntu                 Stopped         2\r\n  helm-lab-g0-proton     Stopped         2\r\n  helm-lab-g0            Stopped         2\r\n  helm-lab-g0-staging    Stopped         2\r\n",
+      "stderr": ""
+    },
+    "disk_files": {
+      "g0": 13805551616,
+      "g0-staging": 16456351744,
+      "g0-proton": 16088301568
+    },
+    "baseline_export_bytes": 11825840128,
+    "host_free_bytes": 86622150656,
+    "ended_utc": "2026-09-07T15:11:15.341807+00:00",
+    "additional_vhd_bytes": 46327136256
+  },
+  "engineering_notes": [
+    "Initial VHD export sharing violation retained; one retry after observed stopped state and documented format syntax succeeded.",
+    "WSL --help returned 4294967295 despite providing help. An early check_output call treated this as a fatal read-only tooling error; subsequent capture preserved its exit code and useful output.",
+    "An upstream-runtime directory regex omitted the leading 3. in 3.0.20260805.254768; the resulting metadata request returned HTTP 404. The actual directory link was then inspected and pinned before downloading or executing that runtime.",
+    "Windows Python warned about a malformed certificate in the local certificate store during upstream reads; TLS verification was not disabled. Downloads used verified artifact hashes.",
+    "An early nested PowerShell metadata query produced no displayed record; a direct read-only query subsequently captured system cmd file version, hash and valid signature.",
+    "A documentation patch failed to match its context; no files changed in that failed operation.",
+    "Initial Proton stdout was absent for all three operations. Pinned launcher source distinguished Unix helper and DOS direct paths. One preregistered capture-method repetition used unchanged probes and a fresh prefix; initial sequence remains INCONCLUSIVE.",
+    "UMU package setup reported systemd/bus unavailable despite exit 0. Proton createprefix intentionally returned 1 for its empty executable; all setup diagnostics are retained.",
+    "A private-hostname scan failed before an own local checkpoint, but a subsequent successful git diff masked the shell exit status and the checkpoint proceeded. It was never pushed. A private verified bundle preceded deterministic redaction and repair of that unpublished checkpoint. Validation commands now propagate failures explicitly.",
+    "Git attempted to normalise Win32 CRLF stdout. A directory-scoped -text attribute now preserves capture bytes; all original global attributes were retained after correcting an intermediate local attribute-file replacement.",
+    "A registry metadata filter captured many generic Version fields in addition to Windows identity. The overbroad evidence is retained; it is not treated as extra capability testing.",
+    "Host display APIs reported different resolutions. Both records are retained; Wine/WSLg presentation scaling was not validated.",
+    "Final staged-byte validation detected six vanilla/staging stdout blobs still normalized to LF in checkpoint 273509d4bc551666e66902e47e535d3c2444de96. Their retained working bytes matched the original CRLF capture hashes. A scoped git add --renormalize restored those bytes; artifact-manifest.json records both checkpoint and raw/final identities. No experiment was rerun and the checkpoint remains in history."
+  ],
+  "manual_analysis_required": "Agent inspected raw stdout/stderr, control semantics, UMU/Proton source routing, source/artifact hashes, package differences, privacy fields and final reports. Independent owner review remains outstanding."
+}

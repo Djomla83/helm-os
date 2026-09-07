@@ -1,6 +1,6 @@
 # Stanje projekta
 
-> Current status: the [publication review below](#publication-review) supersedes earlier dated
+> Current status: the [G0-2 completion below](#g0-2-completion) supersedes earlier dated
 > snapshots, including their aggregate counts and publication/isolation claims. Historical text is
 > retained; the [Gate 0 report](experiments/EXP-009-GATE0-REPORT.md#current-assessment) is authoritative
 > for the current experiment assessment.
@@ -252,3 +252,45 @@ ADR-0020 remains Accepted for documentation language; ADR-0013 through ADR-0019 
 No probe, lab package, global WSL setting or Hyper-V permission was changed. The authorised work
 stops at publication/provenance repair. Any further experiment or full desktop VM needs a separate
 owner decision; the Evidence Loop PoC remains unauthorised.
+
+<a id="g0-2-completion"></a>
+
+## Update 2026-09-07 — bounded G0-2 completion
+
+Starting public baseline `ca0aa5ae26a1d3b630f63eda8f87626d125248d1` matched local main and
+origin/main after fetching, with a clean tree and passing validation. The owner authorised only
+G0-2 completion. Controls were committed before execution; the target source and executable
+remained unchanged. Full [results and evidence](experiments/EXP-009-GATE0-REPORT.md#current-assessment)
+are authoritative.
+
+| Runtime | Controlled observation | Arm verdict |
+|---|---|---|
+| Vanilla WineHQ `11.17~noble-1` | `0x80004001` (`E_NOTIMPL`); both controls correct | PASS, valid measurement |
+| WineHQ staging `11.16~noble-1` | `0x00000000` (`S_OK`); both controls correct | PASS, valid measurement |
+| UMU 1.4.4 / UMU-Proton-10.0-4 / sniper `3.0.20260805.254768` | `0x80004001`; both controls correct in the documented DOS-path repetition | PASS, valid measurement |
+
+Overall G0-2 is **PASS for the narrow comparison**, not application compatibility or rendering.
+Historical vanilla stays INCONCLUSIVE. The first Proton sequence also stays INCONCLUSIVE because
+console JSON was absent; its failed capture and the preregistered methodological repetition are
+both retained. No result was retried merely because its HRESULT was undesirable.
+
+Direct Windows-executable launch attempts in the original lab and both authorised clones failed
+with interop connection error/exit 1 and no marker. Configuration stayed disabled despite the
+shared binfmt registration reading enabled. This is a specific execution observation, not a
+containment certification. `helm-lab-g0`, `helm-lab-g0-staging` and `helm-lab-g0-proton` are retained
+and stopped. Normal Ubuntu, global WSL configuration and Hyper-V permissions were unchanged.
+
+The original G0-3 remains BLOCKED; its separate mechanics subtests remain narrowly PASS.
+G0-1/G0-4/G0-5 remain BLOCKED and were not attempted. ADR-0013 through ADR-0019 remain Proposed;
+ADR-0020 remains Accepted for documentation language only. No OS, desktop, application catalogue,
+SDK, language, App Forge or Evidence Loop PoC development was started.
+
+Retained VHD allocation grew by 46.33 GB, including the common private baseline export. Probe
+execution totalled about 49 seconds across four sequences; engineering/debugging and publication
+work are accounted separately. Public copies redact UMU's host-name diagnostic and local account
+paths, preserving private originals and separate digests. A local privacy-checkpoint mistake was
+repaired before publication; no public commit was rewritten.
+
+Recommended owner decision: review G0-2, then separately authorise a full Linux desktop VM
+environment. Rendering and application experiments require their own bounded approval and
+preregistration. Work stops at the Gate 0 review boundary.
