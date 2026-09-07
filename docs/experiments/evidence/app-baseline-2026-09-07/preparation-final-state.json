@@ -1,0 +1,24 @@
+{
+  "observed_utc": "2026-09-07T17:43:49.2816332Z",
+  "commands": [
+    "wsl.exe --list --verbose",
+    "Get-LocalGroupMember -SID S-1-5-32-578; compare current account SID",
+    "Get-PSDrive C,D; sum private task file lengths; Test-Path proposed D: project directory"
+  ],
+  "wsl": {
+    "exit_code": 0,
+    "output": "  NAME                   STATE           VERSION\n\n* Ubuntu                 Stopped         2\n\n  helm-lab-g0-proton     Stopped         2\n\n  helm-lab-g0            Stopped         2\n\n  helm-lab-g0-staging    Stopped         2\n\n"
+  },
+  "hyperv_current_account_member": false,
+  "hyperv_admin_sid_in_token": false,
+  "host_free_bytes": {
+    "D": 573119229952,
+    "C": 86521118720
+  },
+  "private_task_file_bytes": 2328377,
+  "proposed_vm_directory_exists": false,
+  "vm_disk_bytes_created": 0,
+  "iso_bytes_downloaded": 0,
+  "wine_package_bytes_downloaded": 0,
+  "source": "Read-only preparation inventory; private_task_file_bytes is file length, not filesystem allocation or total model cost."
+}

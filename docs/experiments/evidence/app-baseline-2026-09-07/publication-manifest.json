@@ -15,6 +15,24 @@
         "observations[4].error host name",
         "observations[5].error host name"
       ]
+    },
+    {
+      "file": "harness-controls.json",
+      "raw_sha256": "511eaa7bdd0193ae131c9164424abb8dace8e8e3e2a83c6a4f719a639bfced4b",
+      "raw_bytes": 13557,
+      "publication_sha256": "cb6dc48ab925cdef05efc34fa33566ff2c316cb2eda5ccf7d4be73e07068f965",
+      "publication_bytes": 14267,
+      "redacted_fields": [
+        "commands[0].argv[3]",
+        "commands[0].argv[4]",
+        "commands[0].cwd",
+        "commands[1].argv[3]",
+        "commands[1].argv[4]",
+        "commands[1].cwd",
+        "commands[2].argv[3]",
+        "commands[2].argv[4]",
+        "commands[2].cwd"
+      ]
     }
   ],
   "artifacts": [
@@ -24,14 +42,49 @@
       "sha256": "8e4bec9e920cc685e9ca80da191214bcd53dc2fc2eba4d743a0a307e99223268"
     },
     {
+      "file": "fixture-record.json",
+      "bytes": 716,
+      "sha256": "2b58a4e9865722c813b691528bd914b3c9e29a353a515477459057f896963015"
+    },
+    {
+      "file": "harness-controls.json",
+      "bytes": 14267,
+      "sha256": "cb6dc48ab925cdef05efc34fa33566ff2c316cb2eda5ccf7d4be73e07068f965"
+    },
+    {
       "file": "hyperv-preflight.json",
       "bytes": 5645,
       "sha256": "3c51923e78e01fd188f15064626654070bdc83bb5ab6c1cf6fe27d5b6d585f28"
     },
     {
+      "file": "oracle-corrupted.json",
+      "bytes": 1447,
+      "sha256": "dbd7a43dde66458dad703ffd16b19d91b8b440a2dad85e7c4a799344d93ff72b"
+    },
+    {
+      "file": "oracle-good.json",
+      "bytes": 1380,
+      "sha256": "8ac5c3c8601b34b29a8313ef5e3e7a514a1579d0e9af4a412cab7d5bc5999102"
+    },
+    {
+      "file": "preparation-final-state.json",
+      "bytes": 1050,
+      "sha256": "56186d9c2f12e6b72cbe2f3dc7b07a2bde7c794490ec012bb39e8bd17aa5c2b9"
+    },
+    {
+      "file": "resource-accounting.json",
+      "bytes": 4295,
+      "sha256": "b1e1caf081918b7e003b1f8e8f7dc616d5a4ceae0458ba92b56bd710c88baba1"
+    },
+    {
       "file": "storage-observation.json",
       "bytes": 934,
       "sha256": "0a5f9b93b1b0bb4b2fdaaea43334aed6f78e488a224a5c20fd25ceeddef2922f"
+    },
+    {
+      "file": "validation.json",
+      "bytes": 5710,
+      "sha256": "1d1cc534dee4fd097fdc26d8086e164e37e95957bff70ebc84d28a704fd52af1"
     }
   ],
   "scope": "Digests identify publication-file bytes; this manifest is excluded to avoid a recursive hash."

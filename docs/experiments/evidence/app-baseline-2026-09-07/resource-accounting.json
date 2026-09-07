@@ -1,0 +1,81 @@
+{
+  "scope": "Non-invasive preparation accounting; no VM or application execution",
+  "observed_interval_start_utc": "2026-09-07T17:16:05+00:00",
+  "observed_interval_end_utc": "2026-09-07T17:43:49.2816332Z",
+  "observed_interval_seconds": 1664.281633,
+  "interval_limit": "Begins after initial mandatory reading/Git inspection; includes reasoning, research, coding, command waits and documentation. Final validation/publication continued afterwards. Not human labour time.",
+  "engineering_effort": "One primary agent; active reasoning time and model billing/tokens not separately measured. No delegated agent or application-driving agent.",
+  "human_interventions_observed_since_authorisation": 0,
+  "human_attended_minutes": null,
+  "pending_human_prerequisite": "Owner review/execution of exact Hyper-V membership command, followed by token refresh; no completed action is claimed.",
+  "intervention_reporting_for_future_run": "Record host permission/token refresh, guest setup, planned GUI assistance and unexpected interventions separately, with actions and attended minutes.",
+  "artifact_request_seconds": 14.26783940003952,
+  "downloaded_response_body_bytes": 2249348,
+  "unmetered_reads": "Small browser/source queries and one WineHQ Release inspection; no full ISO/runtime package body.",
+  "host_harness_command_seconds": 0.28002169998944737,
+  "host_harness_commands": [
+    {
+      "label": "prepare",
+      "seconds": 0.09885089998715557,
+      "exit_code": 0,
+      "expected_exit_code": 0
+    },
+    {
+      "label": "known-good",
+      "seconds": 0.09096810000482947,
+      "exit_code": 0,
+      "expected_exit_code": 0
+    },
+    {
+      "label": "deliberately-corrupted",
+      "seconds": 0.09020269999746233,
+      "exit_code": 1,
+      "expected_exit_code": 1
+    }
+  ],
+  "private_task_file_bytes_at_observation": 2328377,
+  "private_size_caveat": "Sum of file lengths, not filesystem allocation; includes installer/metadata/scripts/fixture ZIPs/private records. Later receipts add a small amount.",
+  "vm_vhd_bytes_created": 0,
+  "iso_bytes_downloaded": 0,
+  "wine_package_body_bytes_downloaded": 0,
+  "vm_storage_plan": {
+    "path": "D:\\helm-lab\\exp009-a0-7zip",
+    "reserved_budget_bytes": 53687091200,
+    "dynamic_vhd_cap_bytes": 34359738368,
+    "ram_and_conservative_runtime_state_allowance_bytes": 8589934592,
+    "iso_expected_bytes": 6655619072,
+    "host_reserve_bytes_each_volume": 42949672960
+  },
+  "final_state": {
+    "observed_utc": "2026-09-07T17:43:49.2816332Z",
+    "commands": [
+      "wsl.exe --list --verbose",
+      "Get-LocalGroupMember -SID S-1-5-32-578; compare current account SID",
+      "Get-PSDrive C,D; sum private task file lengths; Test-Path proposed D: project directory"
+    ],
+    "wsl": {
+      "exit_code": 0,
+      "output": "  NAME                   STATE           VERSION\n\n* Ubuntu                 Stopped         2\n\n  helm-lab-g0-proton     Stopped         2\n\n  helm-lab-g0            Stopped         2\n\n  helm-lab-g0-staging    Stopped         2\n\n"
+    },
+    "hyperv_current_account_member": false,
+    "hyperv_admin_sid_in_token": false,
+    "host_free_bytes": {
+      "D": 573119229952,
+      "C": 86521118720
+    },
+    "private_task_file_bytes": 2328377,
+    "proposed_vm_directory_exists": false,
+    "vm_disk_bytes_created": 0,
+    "iso_bytes_downloaded": 0,
+    "wine_package_bytes_downloaded": 0,
+    "source": "Read-only preparation inventory; private_task_file_bytes is file length, not filesystem allocation or total model cost."
+  },
+  "failures_and_corrections": [
+    "Hyper-V VM and switch enumeration denied; no elevation or fallback attempted.",
+    "WineHQ Packages.xz metadata guess returned 404. Inspected Release, used its Packages.gz URLs and checked their hashes. Successful prior downloads were reused.",
+    "Windows Python emitted malformed-certificate-store warnings; TLS verification and the host store were not modified.",
+    "Runbook patch context mismatch changed no files; retried against observed text.",
+    "C:-only storage estimate omitted runtime-state allowance. Chose the existing spacious D: volume before provisioning; created no directory there.",
+    "A draft report used Python 3.14.0; checked the actual capture and corrected it to 3.14.3 before publication."
+  ]
+}

@@ -6,7 +6,7 @@
 | Executor | One primary engineering agent; no delegated agents |
 | Owner authorisation | One existing-Hyper-V Ubuntu desktop VM and one Windows x64 7-Zip baseline, separately from Gate 0 and the larger PoC |
 | Reviewed public starting point | `3f947888067243ba3cedcc3f77916344d9d10a25`; fetch confirmed HEAD/main/origin/main equal, clean tree; no newer work was present |
-| Definition | [EXP-009 §13](EXP-009.md#application-baseline); to be committed before application installation |
+| Definition | [EXP-009 §13](EXP-009.md#application-baseline), committed with the helper/pins as `5a83f8cb2fbb5a3597ddff6b5cae9cb813f1c5ae` before any application installation |
 | Overall A0-7ZIP | **BLOCKED — Hyper-V permission is unavailable** |
 | Application hypothesis | **inconclusive**: no application or guest desktop was executed |
 | Owner result review | Pending for this baseline; G0-2 alone was accepted in its controlled HRESULT-comparison scope |
@@ -59,7 +59,7 @@ digests do not mean a package was installed. Installed 7-Zip executable identiti
 | Dimension / scenario | Result | Evidence boundary |
 |---|---|---|
 | Host helper unit checks | PASS | Synthetic verifier/capture checks; no Wine, VM or application coverage |
-| Host known-good / corrupted oracle execution | NOT_RUN at this definition checkpoint | A labelled host preparation run follows the committed definition; it cannot substitute for guest controls |
+| Host known-good / corrupted oracle execution | PASS for host harness validity | Good ZIP accepted (exit 0); seeded corruption rejected (exit 1). This cannot substitute for guest controls |
 | Guest harness controls H0 | NOT_RUN | No guest exists |
 | Install A1 / installed identities A2 | NOT_RUN | No installer execution |
 | GUI launch and first workflow W1 | NOT_RUN | No desktop session; 0 of 2 planned GUI workflows |
@@ -74,6 +74,18 @@ the deliberate payload corruption even when ZIP CRCs are internally valid. It do
 archive-controlled paths. The tests also cover an independently encoded ZIP, Deflate, duplicate
 members, missing/extra paths, CRC corruption, truncation, bounded size and preserved capture bytes.
 These are tests of the helper, not hostile VM probes or a certification of its security.
+
+The [labelled host control execution](evidence/app-baseline-2026-09-07/harness-controls.json)
+ran after definition commit `5a83f8cb2fbb5a3597ddff6b5cae9cb813f1c5ae`, using Windows Python 3.14.3.
+Fixture preparation and the two verifications took 0.280 seconds in total. The
+[good record](evidence/app-baseline-2026-09-07/oracle-good.json) is PASS; the
+[corrupted record](evidence/app-baseline-2026-09-07/oracle-corrupted.json) is FAIL specifically for
+the binary payload's decompressed content. Their ZIP digests and sizes are in the
+[fixture record](evidence/app-baseline-2026-09-07/fixture-record.json); synthetic ZIP bodies remain
+outside Git. Public captures redact only declared private path/identity fields, with separate
+raw/public hashes in the [publication manifest](evidence/app-baseline-2026-09-07/publication-manifest.json).
+The earlier definition checkpoint's NOT_RUN control row was its state before this labelled run;
+the current row supersedes it without implying that guest controls ran.
 
 ## Failures, effort and interpretation
 
@@ -94,6 +106,20 @@ installer, downloaded metadata, private preflight and prepared owner command rem
 Model engineering includes source reading, capacity planning, fixture/oracle implementation,
 privacy handling and documentation. One agent was used; model tokens/billing and human attended
 minutes are unavailable. No owner-side action has been observed during preparation.
+
+[Resource accounting](evidence/app-baseline-2026-09-07/resource-accounting.json) records the
+measured preparation interval and command times separately. At 17:43 UTC, private task files
+totalled 2,328,377 bytes by file length, including the installer and synthetic archives; this is
+not a filesystem-allocation measurement. The
+[final preparation inventory](evidence/app-baseline-2026-09-07/preparation-final-state.json)
+still found absent Hyper-V membership, stopped WSL distributions and no proposed D: VM directory.
+Actual host changes are repository files/Git commits plus this private preparation/archive area.
+No VM, VHD, ISO, installed runtime, group, service, firewall, driver or global WSL change was made.
+
+[Validation output](evidence/app-baseline-2026-09-07/validation.json) records passing documentation
+checks, all 20 validator tests and all 15 helper tests. Evidence-link, digest, privacy and Git-index
+checks accompany publication. Installers, archives, private raw records and the owner-specific
+administrator command are excluded from Git. These checks do not change the BLOCKED baseline.
 
 **Correctness:** helper tests support the bounded output oracle only. **Automation feasibility:**
 Hyper-V access is blocked; GUI actuation is untested. **User experience:** unmeasured. **Economics:**

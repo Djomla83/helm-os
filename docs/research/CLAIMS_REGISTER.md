@@ -84,3 +84,16 @@ Original G0-3 remains BLOCKED, independently of the separately reported G0-3a/G0
 G0-1, G0-4 and G0-5 remain BLOCKED. Application compatibility and production readiness remain
 unmeasured. Resource accounting includes capture-method debugging and privacy handling separately
 from deterministic execution time.
+
+## A0-7ZIP baseline preparation — 2026-09-07
+
+The owner accepted G0-2 only for its controlled HRESULT-comparison scope at
+`3f947888067243ba3cedcc3f77916344d9d10a25`. The separately authorised
+[desktop application baseline](../experiments/EXP-009-APP-BASELINE-REPORT.md) is BLOCKED on
+Hyper-V permissions. This changes no architecture decision or other Gate 0 status.
+
+| ID | Claim | Assessment | Evidence and limit |
+|---|---|---|---|
+| C-10 | The prepared ZIP verifier distinguishes the defined correct output from seeded content corruption | VERIFIED_EXECUTION, host helper only | Fifteen helper tests and a labelled post-commit host control run; valid-CRC corrupted content is rejected. No guest or application result follows. |
+| C-11 | Windows x64 7-Zip 26.03 completes two GUI workflows across a guest restart under vanilla Wine 11.17 | NOT_RUN; application baseline BLOCKED | Installer downloaded/hashed but never executed; no VM, desktop session, application ZIP or guest restart exists for this task. |
+| C-12 | This baseline shows HELM improves compatibility or reduces maintenance cost | Unsupported | No HELM comparison or application workflow ran; even a completed existing-component baseline alone would not establish added value. |

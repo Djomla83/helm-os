@@ -2,8 +2,8 @@
 
 > Current status: the [application-baseline preparation below](#application-baseline) supersedes earlier dated
 > snapshots, including their aggregate counts and publication/isolation claims. Historical text is
-> retained; the [Gate 0 report](experiments/EXP-009-GATE0-REPORT.md#current-assessment) is authoritative
-> for the current experiment assessment.
+> retained; the [Gate 0 report](experiments/EXP-009-GATE0-REPORT.md#current-assessment) governs Gate 0,
+> and the [application report](experiments/EXP-009-APP-BASELINE-REPORT.md) governs A0-7ZIP.
 
 **Datum:** 2026-09-06. **Faza:** G0, dokumentacija i priprema istraživanja.
 
@@ -320,3 +320,8 @@ The host helper's checks do not count as guest application results. Installation
 output correctness and post-restart operation remain unevidenced. G0-1, original G0-3, G0-4 and
 G0-5 remain BLOCKED and were not attempted. All architecture ADRs remain Proposed; ADR-0020 stays
 Accepted for documentation language. Stop at non-invasive preparation pending actual VM access.
+
+Definition/helper commit `5a83f8cb2fbb5a3597ddff6b5cae9cb813f1c5ae` precedes the labelled host oracle
+run: known-good accepted, corrupted payload rejected. No application workflow has been executed;
+the planned coverage remains 0 of 2 GUI executions. The verifier and all 20 documentation-validator
+tests pass, with 15 additional helper tests. These structural/helper checks do not unblock Hyper-V.

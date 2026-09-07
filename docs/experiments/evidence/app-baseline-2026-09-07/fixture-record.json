@@ -1,0 +1,20 @@
+{
+  "scope": "Synthetic harness fixtures, not application output",
+  "created_utc": "2026-09-07T17:40:08.136373+00:00",
+  "fixture_manifest_sha256": "75d78bc6bc0f539df5ca8d54df34f406e44f2aa5ceb8a07bf3d856ce72747c8f",
+  "controls": [
+    {
+      "file": "oracle-good.zip",
+      "bytes": 5632,
+      "sha256": "2bd1a021bafe1f93dc88cfaa19539e4cf3b26b777c8df0c976250c8a93b0a029",
+      "expected_verifier_verdict": "PASS"
+    },
+    {
+      "file": "oracle-corrupted.zip",
+      "bytes": 5632,
+      "sha256": "808c761fe9f9f1e88bfe6f1434bde3a8846b65ffe7857736d364d4350661b209",
+      "expected_verifier_verdict": "FAIL"
+    }
+  ],
+  "corruption": "Flip bit 0 of the first binary payload byte; ZIP CRC remains valid."
+}

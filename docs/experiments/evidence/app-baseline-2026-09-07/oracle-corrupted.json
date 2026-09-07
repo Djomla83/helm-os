@@ -1,0 +1,44 @@
+{
+  "scope": "ZIP output-content verification only",
+  "started_utc": "2026-09-07T17:40:08.317247+00:00",
+  "verdict": "FAIL",
+  "errors": [
+    "Decompressed content mismatch: fixture/binary/payload.bin"
+  ],
+  "files": [
+    {
+      "path": "fixture/binary/payload.bin",
+      "bytes": 4096,
+      "sha256": "c97d70a8de38fabd3e21103326562309b0616f4e43215e07cd4c6cf87e4b616c"
+    },
+    {
+      "path": "fixture/empty.dat",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "fixture/names/caf\u00e9-\u6f22\u5b57.txt",
+      "bytes": 28,
+      "sha256": "13dec9090e2dfca096b4d6099af64e9c4d54ed6eb9cc475a31ce989dbf93d21e"
+    },
+    {
+      "path": "fixture/names/with spaces.txt",
+      "bytes": 21,
+      "sha256": "9734ad530d20b6929a694abf4e22e1c269666fe6ac1ec0d966e0a08bfea4a9b4"
+    },
+    {
+      "path": "fixture/nested/deeper/data.txt",
+      "bytes": 15,
+      "sha256": "54e274cfb7517422ccec200034fd3ac33bde683bb9ae7c729872226f921ae1f2"
+    },
+    {
+      "path": "fixture/plain.txt",
+      "bytes": 44,
+      "sha256": "5008ae037ff3d64a4f21184c68f1a89c8e0927d2f4c6e1c6a1a83a054762dc2a"
+    }
+  ],
+  "archive_sha256": "808c761fe9f9f1e88bfe6f1434bde3a8846b65ffe7857736d364d4350661b209",
+  "archive_bytes": 5632,
+  "ended_utc": "2026-09-07T17:40:08.318356+00:00",
+  "fixture_manifest_sha256": "75d78bc6bc0f539df5ca8d54df34f406e44f2aa5ceb8a07bf3d856ce72747c8f"
+}

@@ -1,0 +1,52 @@
+{
+  "scope": "Repository and host helper validation, not application/VM validation",
+  "source_definition_commit": "5a83f8cb2fbb5a3597ddff6b5cae9cb813f1c5ae",
+  "started_utc": "2026-09-07T17:46:52.820347+00:00",
+  "commands": [
+    {
+      "argv": [
+        "python",
+        "tools/validate_docs.py"
+      ],
+      "exit_code": 0,
+      "seconds": 0.6774748000025284,
+      "stdout": "{\"json_files\": 52, \"link_targets\": 592, \"markdown_files\": 79}\r\nPASS: lokalna struktura dokumentacije i osnovne JSON invarijante.\r\nNisu provereni web URL dostupnost, istinitost dokaza, OS, aplikacije ili sandbox.\r\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools/tests",
+        "-v"
+      ],
+      "exit_code": 0,
+      "seconds": 0.5274940999806859,
+      "stdout": "",
+      "stderr": "test_archive_size_limit_is_enforced (test_app_baseline.ArchiveVerifierTests.test_archive_size_limit_is_enforced) ... ok\r\ntest_capture_preserves_bytes_and_nonzero_process_status (test_app_baseline.ArchiveVerifierTests.test_capture_preserves_bytes_and_nonzero_process_status) ... ok\r\ntest_crc_corruption_is_rejected (test_app_baseline.ArchiveVerifierTests.test_crc_corruption_is_rejected) ... ok\r\ntest_deflate_and_implicit_ancestor_directories_are_valid (test_app_baseline.ArchiveVerifierTests.test_deflate_and_implicit_ancestor_directories_are_valid) ... ok\r\ntest_duplicate_member_is_rejected (test_app_baseline.ArchiveVerifierTests.test_duplicate_member_is_rejected) ... ok\r\ntest_existing_fixtures_and_records_are_preserved (test_app_baseline.ArchiveVerifierTests.test_existing_fixtures_and_records_are_preserved) ... ok\r\ntest_extra_and_traversal_path_rejected_without_extraction (test_app_baseline.ArchiveVerifierTests.test_extra_and_traversal_path_rejected_without_extraction) ... ok\r\ntest_good_control_covers_all_literal_files (test_app_baseline.ArchiveVerifierTests.test_good_control_covers_all_literal_files) ... ok\r\ntest_independently_encoded_stored_zip (test_app_baseline.ArchiveVerifierTests.test_independently_encoded_stored_zip) ... ok\r\ntest_missing_empty_directory_is_rejected (test_app_baseline.ArchiveVerifierTests.test_missing_empty_directory_is_rejected) ... ok\r\ntest_missing_empty_file_is_rejected (test_app_baseline.ArchiveVerifierTests.test_missing_empty_file_is_rejected) ... ok\r\ntest_same_size_wrong_text_is_rejected (test_app_baseline.ArchiveVerifierTests.test_same_size_wrong_text_is_rejected) ... ok\r\ntest_symlink_entry_is_rejected (test_app_baseline.ArchiveVerifierTests.test_symlink_entry_is_rejected) ... ok\r\ntest_truncated_archive_is_rejected (test_app_baseline.ArchiveVerifierTests.test_truncated_archive_is_rejected) ... ok\r\ntest_valid_zip_with_corrupted_payload_is_rejected (test_app_baseline.ArchiveVerifierTests.test_valid_zip_with_corrupted_payload_is_rejected) ... ok\r\ntest_code_links_ignored (test_validate_docs.MarkdownTests.test_code_links_ignored) ... ok\r\ntest_existing_link_and_explicit_anchor (test_validate_docs.MarkdownTests.test_existing_link_and_explicit_anchor) ... ok\r\ntest_external_url_not_fetched (test_validate_docs.MarkdownTests.test_external_url_not_fetched) ... ok\r\ntest_json_syntax_error_reported (test_validate_docs.MarkdownTests.test_json_syntax_error_reported) ... ok\r\ntest_missing_anchor (test_validate_docs.MarkdownTests.test_missing_anchor) ... ok\r\ntest_missing_target (test_validate_docs.MarkdownTests.test_missing_target) ... ok\r\ntest_reference_definition_required (test_validate_docs.MarkdownTests.test_reference_definition_required) ... ok\r\ntest_repo_escape_rejected (test_validate_docs.MarkdownTests.test_repo_escape_rejected) ... ok\r\ntest_unclosed_fence (test_validate_docs.MarkdownTests.test_unclosed_fence) ... ok\r\ntest_bad_workflow_element_does_not_crash (test_validate_docs.RecordTests.test_bad_workflow_element_does_not_crash) ... ok\r\ntest_draft_cohort_cannot_claim_rate (test_validate_docs.RecordTests.test_draft_cohort_cannot_claim_rate) ... ok\r\ntest_duplicate_cohort_identifier (test_validate_docs.RecordTests.test_duplicate_cohort_identifier) ... ok\r\ntest_fake_verified_rejected (test_validate_docs.RecordTests.test_fake_verified_rejected) ... ok\r\ntest_invalid_hash_rejected (test_validate_docs.RecordTests.test_invalid_hash_rejected) ... ok\r\ntest_non_object_rejected (test_validate_docs.RecordTests.test_non_object_rejected) ... ok\r\ntest_timestamp_requires_timezone (test_validate_docs.RecordTests.test_timestamp_requires_timezone) ... ok\r\ntest_unknown_field_rejected (test_validate_docs.RecordTests.test_unknown_field_rejected) ... ok\r\ntest_untested_example (test_validate_docs.RecordTests.test_untested_example) ... ok\r\ntest_untested_with_date_rejected (test_validate_docs.RecordTests.test_untested_with_date_rejected) ... ok\r\ntest_untested_with_evidence_rejected (test_validate_docs.RecordTests.test_untested_with_evidence_rejected) ... ok\r\n\r\n----------------------------------------------------------------------\r\nRan 35 tests in 0.368s\r\n\r\nOK\r\n"
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "seconds": 0.03247689999989234,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "ended_utc": "2026-09-07T17:46:54.059398+00:00",
+  "results": {
+    "documentation_validation": "PASS",
+    "validator_tests": 20,
+    "helper_tests": 15,
+    "total_tests": 35,
+    "application_workflows_executed": 0
+  },
+  "scope_note": "This capture precedes addition of itself and the final manifest to the tree. Final link/hash/privacy/index checks are recorded separately in the private publication receipt."
+}
