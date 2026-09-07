@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmsetup@<lab-guest-ip>",
+    "find /var/log/installer -maxdepth 2 -type f -printf \"%P %s bytes\\n\"; ls -l ssh-install.typescript; find /var/log/unattended-upgrades -maxdepth 1 -type f -printf \"%f %s bytes\\n\""
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T20:37:40.994234+00:00",
+  "exit_code": 0,
+  "stdout_base64": "YmxvY2svZGlzY292ZXIubG9nIDE0ODY1IGJ5dGVzCmJsb2NrL3Byb2JlLWRhdGEuanNvbiAzMDM0MSBieXRlcwpjYXNwZXItbWQ1Y2hlY2suanNvbiA1MiBieXRlcwpzdWJpcXVpdHktc2VydmVyLWRlYnVnLmxvZy4zMDc3IDE2NjE2NiBieXRlcwphdXRvaW5zdGFsbC11c2VyLWRhdGEgMjU1NiBieXRlcwpkZXZpY2UtbWFwLmpzb24gODAgYnl0ZXMKbWVkaWEtaW5mbyA2MCBieXRlcwpjdXJ0aW4taW5zdGFsbC5sb2cgMTE2NzAxIGJ5dGVzCnRlbGVtZXRyeSA1ODIgYnl0ZXMKY3VydGluLWluc3RhbGwvc3ViaXF1aXR5LWV4dHJhY3QuY29uZiAyNDI1IGJ5dGVzCmN1cnRpbi1pbnN0YWxsL3N1YmlxdWl0eS1wYXJ0aXRpb25pbmcuY29uZiAxMzU2IGJ5dGVzCmN1cnRpbi1pbnN0YWxsL3N1YmlxdWl0eS1pbml0aWFsLmNvbmYgMzQwIGJ5dGVzCmN1cnRpbi1pbnN0YWxsL3N1YmlxdWl0eS1jdXJ0aG9va3MuY29uZiAyNDI1IGJ5dGVzCmN1cnRpbi1pbnN0YWxsL3N1YmlxdWl0eS1jdXJ0aW4tYXB0LmNvbmYgNDcyIGJ5dGVzCmluc3RhbGxlci1qb3VybmFsLnR4dCA5NzcyOTIgYnl0ZXMKdWJ1bnR1X2Jvb3RzdHJhcC5sb2cuMzI5MiAzMTgwNSBieXRlcwpjbG91ZC1pbml0LmxvZyA0OTI3MyBieXRlcwpjbG91ZC1pbml0LW91dHB1dC5sb2cgNDA5NiBieXRlcwpzdWJpcXVpdHktc2VydmVyLWluZm8ubG9nLjMwNzcgODI0MyBieXRlcwotcnctcnctci0tIDEgaGVsbXNldHVwIGhlbG1zZXR1cCA0MDg1IFNlcCAgNyAyMDozMCBzc2gtaW5zdGFsbC50eXBlc2NyaXB0CnVuYXR0ZW5kZWQtdXBncmFkZXMtZHBrZy5sb2cgNzcxMjggYnl0ZXMKdW5hdHRlbmRlZC11cGdyYWRlcy1zaHV0ZG93bi5sb2cgMCBieXRlcwp1bmF0dGVuZGVkLXVwZ3JhZGVzLmxvZyA1MzkyIGJ5dGVzCg==",
+  "stderr_base64": "",
+  "stdout": "block/discover.log 14865 bytes\nblock/probe-data.json 30341 bytes\ncasper-md5check.json 52 bytes\nsubiquity-server-debug.log.3077 166166 bytes\nautoinstall-user-data 2556 bytes\ndevice-map.json 80 bytes\nmedia-info 60 bytes\ncurtin-install.log 116701 bytes\ntelemetry 582 bytes\ncurtin-install/subiquity-extract.conf 2425 bytes\ncurtin-install/subiquity-partitioning.conf 1356 bytes\ncurtin-install/subiquity-initial.conf 340 bytes\ncurtin-install/subiquity-curthooks.conf 2425 bytes\ncurtin-install/subiquity-curtin-apt.conf 472 bytes\ninstaller-journal.txt 977292 bytes\nubuntu_bootstrap.log.3292 31805 bytes\ncloud-init.log 49273 bytes\ncloud-init-output.log 4096 bytes\nsubiquity-server-info.log.3077 8243 bytes\n-rw-rw-r-- 1 helmsetup helmsetup 4085 Sep  7 20:30 ssh-install.typescript\nunattended-upgrades-dpkg.log 77128 bytes\nunattended-upgrades-shutdown.log 0 bytes\nunattended-upgrades.log 5392 bytes\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:37:41.248772+00:00",
+  "duration_seconds": 0.2545296000316739,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "7272c9320e9a08fa80704d9cad8936fe5d3b303da9507451edccb4c3408f04a9",
+    "raw_bytes": 3352,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

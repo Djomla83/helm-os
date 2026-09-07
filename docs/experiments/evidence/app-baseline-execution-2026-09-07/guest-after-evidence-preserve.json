@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmlab@<lab-guest-ip>",
+    "cd /home/helmlab/exp009-a0-7zip && test ! -e /home/helmlab/a0-after-evidence.tar.gz && tar -czf /home/helmlab/a0-after-evidence.tar.gz records controls fixture-record.json inputs outputs && sha256sum /home/helmlab/a0-after-evidence.tar.gz"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T21:04:13.690119+00:00",
+  "exit_code": 0,
+  "stdout_base64": "OTVlY2Q3YTk0ZTQ2ZmI0OGUxZjAwY2VkZTVhNGMzNWEwNzkzNDgyYjdhN2JlOTRhY2YyY2M4ZGI0YzZiZmY3YyAgL2hvbWUvaGVsbWxhYi9hMC1hZnRlci1ldmlkZW5jZS50YXIuZ3oK",
+  "stderr_base64": "",
+  "stdout": "95ecd7a94e46fb48e1f00cede5a4c35a0793482b7a7be94acf2cc8db4c6bff7c  /home/helmlab/a0-after-evidence.tar.gz\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T21:04:14.027757+00:00",
+  "duration_seconds": 0.337634600000456,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "97648b58471766f45a6fdf65deaeff0829554681258666678a7605b3382d96f7",
+    "raw_bytes": 1551,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

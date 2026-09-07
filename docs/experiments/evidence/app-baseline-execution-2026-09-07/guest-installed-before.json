@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmlab@<lab-guest-ip>",
+    "cd /home/helmlab/exp009-a0-7zip && python3 observe-guest.py installed records/installed-before.json"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T20:50:55.912479+00:00",
+  "exit_code": 0,
+  "stdout_base64": "eyJtb2RlIjogImluc3RhbGxlZCIsICJ1aWQiOiAxMDAxLCAiZ3JvdXBzIjogWzEwMDFdLCAic291cmNlX2NvbW1pdCI6ICI1YTgzZjhjYjJmYmI1YTM1OTdkZGZmNmI1Y2FlOWNiODEzZjFjNWFlIiwgIm9ic2VydmF0aW9uX3NjcmlwdF9zaGEyNTYiOiAiZjAxMjQzNmJjNjg2ODMzNGNhYmRmZTMxODE4ZmQzYWU2NzEyNmQ5NzM3Y2I5YTgwMDg0ZDJhZTY5Y2JmYjFhZSIsICJib290X2lkIjogIjJkNjRjODIyLTIwNWQtNGJmYy1iZGFhLWYyMWU1MGNkMzhiYyIsICJlbnZpcm9ubWVudCI6IHsiRElTUExBWSI6IG51bGwsICJXQVlMQU5EX0RJU1BMQVkiOiBudWxsLCAiWERHX1NFU1NJT05fVFlQRSI6ICJ0dHkiLCAiWERHX1JVTlRJTUVfRElSIjogIi9ydW4vdXNlci8xMDAxIiwgIlhBVVRIT1JJVFkiOiBudWxsLCAiREJVU19TRVNTSU9OX0JVU19BRERSRVNTIjogInVuaXg6cGF0aD0vcnVuL3VzZXIvMTAwMS9idXMiLCAiV0lORVBSRUZJWCI6IG51bGwsICJXSU5FQVJDSCI6IG51bGwsICJXSU5FRExMT1ZFUlJJREVTIjogbnVsbCwgIldJTkVERUJVRyI6IG51bGwsICJTU0hfQVVUSF9TT0NLIjogbnVsbCwgIkRPQ0tFUl9IT1NUIjogbnVsbH0sICJmaWxlcyI6IFt7InBhdGgiOiAicHJlZml4L2RyaXZlX2MvUHJvZ3JhbSBGaWxlcy83LVppcC83ekZNLmV4ZSIsICJieXRlcyI6IDEwMDM1MjAsICJzaGEyNTYiOiAiN2Y3MDY3YjIyNjRmYmY4Y2JkMTM0OGNmN2Y0MWEwZTM1YzkyOGRlNzUwZDUzNTMzYzk2M2ViZTMzNGRiZDYxMiIsICJwZV9tYWNoaW5lIjogIjB4ODY2NCIsICJ2ZXJzaW9ucyI6IHsiQ29tcGFueU5hbWUiOiAiSWdvciBQYXZsb3YiLCAiRmlsZURlc2NyaXB0aW9uIjogIjctWmlwIEZpbGUgTWFuYWdlciIsICJGaWxlVmVyc2lvbiI6ICIyNi4wMyIsICJJbnRlcm5hbE5hbWUiOiAiN3pGTSIsICJMZWdhbENvcHlyaWdodCI6ICJDb3B5cmlnaHQgKGMpIDE5OTktMjAyNiBJZ29yIFBhdmxvdiIsICJPcmlnaW5hbEZpbGVuYW1lIjogIjd6Rk0uZXhlIiwgIlByb2R1Y3ROYW1lIjogIjctWmlwIiwgIlByb2R1Y3RWZXJzaW9uIjogIjI2LjAzIn19LCB7InBhdGgiOiAicHJlZml4L2RyaXZlX2MvUHJvZ3JhbSBGaWxlcy83LVppcC83ei5leGUiLCAiYnl0ZXMiOiA1Nzc1MzYsICJzaGEyNTYiOiAiNmVlM2MwZWQwYjI3NjYzYzFiOTQ4YWU4NWE3YzBiYjA3M2FlZDE0OTg5ODMxODJmM2YwZGYxZjZhOGMzMGIyZiIsICJwZV9tYWNoaW5lIjogIjB4ODY2NCIsICJ2ZXJzaW9ucyI6IHsiQ29tcGFueU5hbWUiOiAiSWdvciBQYXZsb3YiLCAiRmlsZURlc2NyaXB0aW9uIjogIjctWmlwIENvbnNvbGUiLCAiRmlsZVZlcnNpb24iOiAiMjYuMDMiLCAiSW50ZXJuYWxOYW1lIjogIjd6IiwgIkxlZ2FsQ29weXJpZ2h0IjogIkNvcHlyaWdodCAoYykgMTk5OS0yMDI2IElnb3IgUGF2bG92IiwgIk9yaWdpbmFsRmlsZW5hbWUiOiAiN3ouZXhlIiwgIlByb2R1Y3ROYW1lIjogIjctWmlwIiwgIlByb2R1Y3RWZXJzaW9uIjogIjI2LjAzIn19LCB7InBhdGgiOiAicHJlZml4L2RyaXZlX2MvUHJvZ3JhbSBGaWxlcy83LVppcC83ei5kbGwiLCAiYnl0ZXMiOiAxOTA2Njg4LCAic2hhMjU2IjogIjY1ZTRjMWY4NTVmOWVmNmU4ZjBmNWRmOGUzZjI3ZDllYjVmMDczMTE0MDg2MzlkYTBhMWNhMGI4ZjQ4NzFiMGQiLCAicGVfbWFjaGluZSI6ICIweDg2NjQiLCAidmVyc2lvbnMiOiB7IkNvbXBhbnlOYW1lIjogIklnb3IgUGF2bG92IiwgIkZpbGVEZXNjcmlwdGlvbiI6ICI3eiBQbHVnaW4iLCAiRmlsZVZlcnNpb24iOiAiMjYuMDMiLCAiSW50ZXJuYWxOYW1lIjogIjd6IiwgIkxlZ2FsQ29weXJpZ2h0IjogIkNvcHlyaWdodCAoYykgMTk5OS0yMDI2IElnb3IgUGF2bG92IiwgIk9yaWdpbmFsRmlsZW5hbWUiOiAiN3ouZGxsIiwgIlByb2R1Y3ROYW1lIjogIjctWmlwIiwgIlByb2R1Y3RWZXJzaW9uIjogIjI2LjAzIn19XSwgImFsbF94NjQiOiB0cnVlLCAic2NvcGUiOiAiSW5zdGFsbGVkIGZpbGUgaWRlbnRpdHk7IEdVSSBvcGVyYXRpb24gYW5kIG91dHB1dCBjb250ZW50IGFyZSBzZXBhcmF0ZSBjaGVja3MifQo=",
+  "stderr_base64": "",
+  "stdout": "{\"mode\": \"installed\", \"uid\": 1001, \"groups\": [1001], \"source_commit\": \"5a83f8cb2fbb5a3597ddff6b5cae9cb813f1c5ae\", \"observation_script_sha256\": \"f012436bc6868334cabdfe31818fd3ae67126d9737cb9a80084d2ae69cbfb1ae\", \"boot_id\": \"2d64c822-205d-4bfc-bdaa-f21e50cd38bc\", \"environment\": {\"DISPLAY\": null, \"WAYLAND_DISPLAY\": null, \"XDG_SESSION_TYPE\": \"tty\", \"XDG_RUNTIME_DIR\": \"/run/user/1001\", \"XAUTHORITY\": null, \"DBUS_SESSION_BUS_ADDRESS\": \"unix:path=/run/user/1001/bus\", \"WINEPREFIX\": null, \"WINEARCH\": null, \"WINEDLLOVERRIDES\": null, \"WINEDEBUG\": null, \"SSH_AUTH_SOCK\": null, \"DOCKER_HOST\": null}, \"files\": [{\"path\": \"prefix/drive_c/Program Files/7-Zip/7zFM.exe\", \"bytes\": 1003520, \"sha256\": \"7f7067b2264fbf8cbd1348cf7f41a0e35c928de750d53533c963ebe334dbd612\", \"pe_machine\": \"0x8664\", \"versions\": {\"CompanyName\": \"Igor Pavlov\", \"FileDescription\": \"7-Zip File Manager\", \"FileVersion\": \"26.03\", \"InternalName\": \"7zFM\", \"LegalCopyright\": \"Copyright (c) 1999-2026 Igor Pavlov\", \"OriginalFilename\": \"7zFM.exe\", \"ProductName\": \"7-Zip\", \"ProductVersion\": \"26.03\"}}, {\"path\": \"prefix/drive_c/Program Files/7-Zip/7z.exe\", \"bytes\": 577536, \"sha256\": \"6ee3c0ed0b27663c1b948ae85a7c0bb073aed1498983182f3f0df1f6a8c30b2f\", \"pe_machine\": \"0x8664\", \"versions\": {\"CompanyName\": \"Igor Pavlov\", \"FileDescription\": \"7-Zip Console\", \"FileVersion\": \"26.03\", \"InternalName\": \"7z\", \"LegalCopyright\": \"Copyright (c) 1999-2026 Igor Pavlov\", \"OriginalFilename\": \"7z.exe\", \"ProductName\": \"7-Zip\", \"ProductVersion\": \"26.03\"}}, {\"path\": \"prefix/drive_c/Program Files/7-Zip/7z.dll\", \"bytes\": 1906688, \"sha256\": \"65e4c1f855f9ef6e8f0f5df8e3f27d9eb5f07311408639da0a1ca0b8f4871b0d\", \"pe_machine\": \"0x8664\", \"versions\": {\"CompanyName\": \"Igor Pavlov\", \"FileDescription\": \"7z Plugin\", \"FileVersion\": \"26.03\", \"InternalName\": \"7z\", \"LegalCopyright\": \"Copyright (c) 1999-2026 Igor Pavlov\", \"OriginalFilename\": \"7z.dll\", \"ProductName\": \"7-Zip\", \"ProductVersion\": \"26.03\"}}], \"all_x64\": true, \"scope\": \"Installed file identity; GUI operation and output content are separate checks\"}\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:50:56.852535+00:00",
+  "duration_seconds": 0.9400414999690838,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "213ae9cfb3506b8a913a5088a02cf34c9f39c92dc2e6423ee57aad0e734d2052",
+    "raw_bytes": 6117,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

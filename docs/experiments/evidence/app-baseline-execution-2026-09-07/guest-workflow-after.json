@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmlab@<lab-guest-ip>",
+    "cd /home/helmlab/exp009-a0-7zip && test ! -e outputs/after-restart/workflow.zip && python3 tools/app_baseline.py capture --cwd /home/helmlab/exp009-a0-7zip --timeout 600 records/workflow-after.json -- env DISPLAY=:0 WAYLAND_DISPLAY=wayland-0 XAUTHORITY=/run/user/1001/.mutter-Xwaylandauth.ERERU3 XDG_SESSION_TYPE=wayland XDG_RUNTIME_DIR=/run/user/1001 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1001/bus WINEPREFIX=/home/helmlab/exp009-a0-7zip/prefix WINEARCH=win64 WINEDLLOVERRIDES=mscoree,mshtml= /opt/wine-devel/bin/wine \"prefix/drive_c/Program Files/7-Zip/7zFM.exe\""
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T20:59:23.577393+00:00",
+  "exit_code": 0,
+  "stdout_base64": "eyJhcmd2IjogWyJlbnYiLCAiRElTUExBWT06MCIsICJXQVlMQU5EX0RJU1BMQVk9d2F5bGFuZC0wIiwgIlhBVVRIT1JJVFk9L3J1bi91c2VyLzEwMDEvLm11dHRlci1Yd2F5bGFuZGF1dGguRVJFUlUzIiwgIlhER19TRVNTSU9OX1RZUEU9d2F5bGFuZCIsICJYREdfUlVOVElNRV9ESVI9L3J1bi91c2VyLzEwMDEiLCAiREJVU19TRVNTSU9OX0JVU19BRERSRVNTPXVuaXg6cGF0aD0vcnVuL3VzZXIvMTAwMS9idXMiLCAiV0lORVBSRUZJWD0vaG9tZS9oZWxtbGFiL2V4cDAwOS1hMC03emlwL3ByZWZpeCIsICJXSU5FQVJDSD13aW42NCIsICJXSU5FRExMT1ZFUlJJREVTPW1zY29yZWUsbXNodG1sPSIsICIvb3B0L3dpbmUtZGV2ZWwvYmluL3dpbmUiLCAicHJlZml4L2RyaXZlX2MvUHJvZ3JhbSBGaWxlcy83LVppcC83ekZNLmV4ZSJdLCAiY3dkIjogIi9ob21lL2hlbG1sYWIvZXhwMDA5LWEwLTd6aXAiLCAic3RhcnRlZF91dGMiOiAiMjAyNi0wOS0wN1QyMDo1OToyMy44MjE1MzgrMDA6MDAiLCAiZXhpdF9jb2RlIjogMCwgInN0ZG91dF9iYXNlNjQiOiAiIiwgInN0ZGVycl9iYXNlNjQiOiAiTURCbE1EcG1hWGh0WlRwdWRHUnNiRHBPZEZGMVpYSjVVM2x6ZEdWdFNXNW1iM0p0WVhScGIyNGdhVzVtYjE5amJHRnpjeUJUV1ZOVVJVMWZVRVZTUms5U1RVRk9RMFZmU1U1R1QxSk5RVlJKVDA0S2JHbGlSVWRNSUhkaGNtNXBibWM2SUVSU1NUTWdaWEp5YjNJNklFTnZkV3hrSUc1dmRDQm5aWFFnUkZKSk15QmtaWFpwWTJVS2JHbGlSVWRNSUhkaGNtNXBibWM2SUVWdWMzVnlaU0I1YjNWeUlGZ2djMlZ5ZG1WeUlITjFjSEJ2Y25SeklFUlNTVE1nZEc4Z1oyVjBJR0ZqWTJWc1pYSmhkR1ZrSUhKbGJtUmxjbWx1Wndvd01HVXdPbVpwZUcxbE9tRmtkbUZ3YVRwTWMyRkJaR1JCWTJOdmRXNTBVbWxuYUhSeklDZ3dNREF3TURBd01EQXdNREJEUVVaRkxEQXdNREEzUmtaR1JrVkdNalUzTURBc01EQXdNRGRHUmtaR1JUa3dSamxHTUN3d2VEQXdNREF3TURBeEtTQnpkSFZpQ2pBeE1tTTZabWw0YldVNmJuUmtiR3c2VG5SUmRXVnllVk41YzNSbGJVbHVabTl5YldGMGFXOXVJR2x1Wm05ZlkyeGhjM01nVTFsVFZFVk5YMUJGVWtaUFVrMUJUa05GWDBsT1JrOVNUVUZVU1U5T0NqQXhNbU02Wm1sNGJXVTZaWGh3Ykc5eVpYSm1jbUZ0WlRwMFlYTnJZbUZ5WDJ4cGMzUmZVMlYwVUhKdlozSmxjM05UZEdGMFpTQnBabUZqWlNBd01EQXdOMFpHUmtaRlJqTkVOalF3TENCb2QyNWtJREF3TURBd01EQXdNREF3TWpBd1F6UXNJR1pzWVdkeklESWdjM1IxWWlFS01ERXlZenBtYVhodFpUcGxlSEJzYjNKbGNtWnlZVzFsT25SaGMydGlZWEpmYkdsemRGOVRaWFJRY205bmNtVnpjMVpoYkhWbElHbG1ZV05sSURBd01EQTNSa1pHUmtWR00wUTJOREFzSUdoM2JtUWdNREF3TURBd01EQXdNREF5TURCRE5Dd2dkV3hzUTI5dGNHeGxkR1ZrSURFelptUXNJSFZzYkZSdmRHRnNJREV6Wm1RZ2MzUjFZaUVLIiwgInN0ZG91dCI6ICIiLCAic3RkZXJyIjogIjAwZTA6Zml4bWU6bnRkbGw6TnRRdWVyeVN5c3RlbUluZm9ybWF0aW9uIGluZm9fY2xhc3MgU1lTVEVNX1BFUkZPUk1BTkNFX0lORk9STUFUSU9OXG5saWJFR0wgd2FybmluZzogRFJJMyBlcnJvcjogQ291bGQgbm90IGdldCBEUkkzIGRldmljZVxubGliRUdMIHdhcm5pbmc6IEVuc3VyZSB5b3VyIFggc2VydmVyIHN1cHBvcnRzIERSSTMgdG8gZ2V0IGFjY2VsZXJhdGVkIHJlbmRlcmluZ1xuMDBlMDpmaXhtZTphZHZhcGk6THNhQWRkQWNjb3VudFJpZ2h0cyAoMDAwMDAwMDAwMDAwQ0FGRSwwMDAwN0ZGRkZFRjI1NzAwLDAwMDA3RkZGRkU5MEY5RjAsMHgwMDAwMDAwMSkgc3R1YlxuMDEyYzpmaXhtZTpudGRsbDpOdFF1ZXJ5U3lzdGVtSW5mb3JtYXRpb24gaW5mb19jbGFzcyBTWVNURU1fUEVSRk9STUFOQ0VfSU5GT1JNQVRJT05cbjAxMmM6Zml4bWU6ZXhwbG9yZXJmcmFtZTp0YXNrYmFyX2xpc3RfU2V0UHJvZ3Jlc3NTdGF0ZSBpZmFjZSAwMDAwN0ZGRkZFRjNENjQwLCBod25kIDAwMDAwMDAwMDAwMjAwQzQsIGZsYWdzIDIgc3R1YiFcbjAxMmM6Zml4bWU6ZXhwbG9yZXJmcmFtZTp0YXNrYmFyX2xpc3RfU2V0UHJvZ3Jlc3NWYWx1ZSBpZmFjZSAwMDAwN0ZGRkZFRjNENjQwLCBod25kIDAwMDAwMDAwMDAwMjAwQzQsIHVsbENvbXBsZXRlZCAxM2ZkLCB1bGxUb3RhbCAxM2ZkIHN0dWIhXG4iLCAiZW5kZWRfdXRjIjogIjIwMjYtMDktMDdUMjE6MDI6MzUuMTIzNDg0KzAwOjAwIiwgImR1cmF0aW9uX3NlY29uZHMiOiAxOTEuMzAxOTU1Mzk1LCAic2NvcGUiOiAiQ29tbWFuZCBjYXB0dXJlIG9ubHk7IGV4aXQgc3RhdHVzIGlzIG5vdCBhIHdvcmtmbG93IHZlcmRpY3QifQo=",
+  "stderr_base64": "",
+  "stdout": "{\"argv\": [\"env\", \"DISPLAY=:0\", \"WAYLAND_DISPLAY=wayland-0\", \"XAUTHORITY=/run/user/1001/.mutter-Xwaylandauth.ERERU3\", \"XDG_SESSION_TYPE=wayland\", \"XDG_RUNTIME_DIR=/run/user/1001\", \"DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1001/bus\", \"WINEPREFIX=/home/helmlab/exp009-a0-7zip/prefix\", \"WINEARCH=win64\", \"WINEDLLOVERRIDES=mscoree,mshtml=\", \"/opt/wine-devel/bin/wine\", \"prefix/drive_c/Program Files/7-Zip/7zFM.exe\"], \"cwd\": \"/home/helmlab/exp009-a0-7zip\", \"started_utc\": \"2026-09-07T20:59:23.821538+00:00\", \"exit_code\": 0, \"stdout_base64\": \"\", \"stderr_base64\": \"MDBlMDpmaXhtZTpudGRsbDpOdFF1ZXJ5U3lzdGVtSW5mb3JtYXRpb24gaW5mb19jbGFzcyBTWVNURU1fUEVSRk9STUFOQ0VfSU5GT1JNQVRJT04KbGliRUdMIHdhcm5pbmc6IERSSTMgZXJyb3I6IENvdWxkIG5vdCBnZXQgRFJJMyBkZXZpY2UKbGliRUdMIHdhcm5pbmc6IEVuc3VyZSB5b3VyIFggc2VydmVyIHN1cHBvcnRzIERSSTMgdG8gZ2V0IGFjY2VsZXJhdGVkIHJlbmRlcmluZwowMGUwOmZpeG1lOmFkdmFwaTpMc2FBZGRBY2NvdW50UmlnaHRzICgwMDAwMDAwMDAwMDBDQUZFLDAwMDA3RkZGRkVGMjU3MDAsMDAwMDdGRkZGRTkwRjlGMCwweDAwMDAwMDAxKSBzdHViCjAxMmM6Zml4bWU6bnRkbGw6TnRRdWVyeVN5c3RlbUluZm9ybWF0aW9uIGluZm9fY2xhc3MgU1lTVEVNX1BFUkZPUk1BTkNFX0lORk9STUFUSU9OCjAxMmM6Zml4bWU6ZXhwbG9yZXJmcmFtZTp0YXNrYmFyX2xpc3RfU2V0UHJvZ3Jlc3NTdGF0ZSBpZmFjZSAwMDAwN0ZGRkZFRjNENjQwLCBod25kIDAwMDAwMDAwMDAwMjAwQzQsIGZsYWdzIDIgc3R1YiEKMDEyYzpmaXhtZTpleHBsb3JlcmZyYW1lOnRhc2tiYXJfbGlzdF9TZXRQcm9ncmVzc1ZhbHVlIGlmYWNlIDAwMDA3RkZGRkVGM0Q2NDAsIGh3bmQgMDAwMDAwMDAwMDAyMDBDNCwgdWxsQ29tcGxldGVkIDEzZmQsIHVsbFRvdGFsIDEzZmQgc3R1YiEK\", \"stdout\": \"\", \"stderr\": \"00e0:fixme:ntdll:NtQuerySystemInformation info_class SYSTEM_PERFORMANCE_INFORMATION\\nlibEGL warning: DRI3 error: Could not get DRI3 device\\nlibEGL warning: Ensure your X server supports DRI3 to get accelerated rendering\\n00e0:fixme:advapi:LsaAddAccountRights (000000000000CAFE,00007FFFFEF25700,00007FFFFE90F9F0,0x00000001) stub\\n012c:fixme:ntdll:NtQuerySystemInformation info_class SYSTEM_PERFORMANCE_INFORMATION\\n012c:fixme:explorerframe:taskbar_list_SetProgressState iface 00007FFFFEF3D640, hwnd 00000000000200C4, flags 2 stub!\\n012c:fixme:explorerframe:taskbar_list_SetProgressValue iface 00007FFFFEF3D640, hwnd 00000000000200C4, ullCompleted 13fd, ullTotal 13fd stub!\\n\", \"ended_utc\": \"2026-09-07T21:02:35.123484+00:00\", \"duration_seconds\": 191.301955395, \"scope\": \"Command capture only; exit status is not a workflow verdict\"}\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T21:02:35.113652+00:00",
+  "duration_seconds": 191.53273839998292,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "f0fe8134f770e69678684066c504e0e7fb6e55af6e35b1c40ef8cdb45fb413d2",
+    "raw_bytes": 7100,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

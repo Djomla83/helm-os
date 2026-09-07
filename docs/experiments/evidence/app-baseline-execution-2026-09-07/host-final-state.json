@@ -1,0 +1,147 @@
+{
+  "time_utc": "2026-09-07T21:08:37.6805063Z",
+  "host_os": {
+    "build": "26200",
+    "last_boot_utc": "2026-09-04T19:19:06.7259650Z",
+    "version": "10.0.26200",
+    "caption": "Microsoft Windows 11 Pro"
+  },
+  "agent_elevated": false,
+  "hyperv_role_effective": true,
+  "vm": {
+    "generation": 2,
+    "version": "12.0",
+    "ram_startup_bytes": 8589934592,
+    "state": "Off",
+    "automatic_stop": "ShutDown",
+    "checkpoints": 0,
+    "integration": [
+      {
+        "enabled": false,
+        "name": "Guest Service Interface"
+      },
+      {
+        "enabled": true,
+        "name": "Heartbeat"
+      },
+      {
+        "enabled": true,
+        "name": "Key-Value Pair Exchange"
+      },
+      {
+        "enabled": true,
+        "name": "Shutdown"
+      },
+      {
+        "enabled": true,
+        "name": "Time Synchronization"
+      },
+      {
+        "enabled": true,
+        "name": "VSS"
+      }
+    ],
+    "secure_boot": "On",
+    "id": "bd39f424-5b26-479d-846f-2f28f6639637",
+    "vhd": {
+      "type": "Dynamic",
+      "path": "D:\\helm-lab\\exp009-a0-7zip\\vm\\os.vhdx",
+      "file_bytes": 15003025408,
+      "cap_bytes": 34359738368
+    },
+    "secure_boot_template": "MicrosoftUEFICertificateAuthority",
+    "cpus": 4,
+    "dynamic_memory": false,
+    "checkpoint_type": "Disabled",
+    "dvd": [
+      {
+        "path": null
+      }
+    ],
+    "automatic_start": "Nothing",
+    "switches": [
+      "Default Switch"
+    ],
+    "automatic_checkpoints": false,
+    "name": "helm-lab-desktop-7zip"
+  },
+  "volumes": [
+    {
+      "size_bytes": 498991685632,
+      "free_bytes": 85890379776,
+      "drive": "C"
+    },
+    {
+      "size_bytes": 1000068870144,
+      "free_bytes": 551817273344,
+      "drive": "D"
+    }
+  ],
+  "existing_switches": [
+    {
+      "type": "Internal",
+      "name": "Default Switch"
+    },
+    {
+      "type": "Internal",
+      "name": "WSL (Hyper-V firewall)"
+    }
+  ],
+  "wsl_state": [
+    "  NAME                   STATE           VERSION",
+    "",
+    "* Ubuntu                 Stopped         2",
+    "",
+    "  helm-lab-g0-proton     Stopped         2",
+    "",
+    "  helm-lab-g0            Stopped         2",
+    "",
+    "  helm-lab-g0-staging    Stopped         2",
+    "",
+    ""
+  ],
+  "project_files": [
+    {
+      "path": "D:\\helm-lab\\exp009-a0-7zip\\downloads\\ubuntu-24.04.4-desktop-amd64.iso",
+      "bytes": 6655619072
+    },
+    {
+      "path": "D:\\helm-lab\\exp009-a0-7zip\\transfer\\observe-guest.py",
+      "bytes": 4002
+    },
+    {
+      "path": "D:\\helm-lab\\exp009-a0-7zip\\transfer\\prepare-baseline.sh",
+      "bytes": 1704
+    },
+    {
+      "path": "D:\\helm-lab\\exp009-a0-7zip\\transfer\\provision-wine.sh",
+      "bytes": 3698
+    },
+    {
+      "path": "D:\\helm-lab\\exp009-a0-7zip\\transfer\\source-5a83f8c.tar",
+      "bytes": 30720
+    },
+    {
+      "path": "D:\\helm-lab\\exp009-a0-7zip\\transfer\\__pycache__\\observe-guest.cpython-314.pyc",
+      "bytes": 6719
+    },
+    {
+      "path": "D:\\helm-lab\\exp009-a0-7zip\\vm\\os.vhdx",
+      "bytes": 15003025408
+    },
+    {
+      "path": "D:\\helm-lab\\exp009-a0-7zip\\vm\\helm-lab-desktop-7zip\\Virtual Machines\\BD39F424-5B26-479D-846F-2F28F6639637.vmcx",
+      "bytes": 73728
+    },
+    {
+      "path": "D:\\helm-lab\\exp009-a0-7zip\\vm\\helm-lab-desktop-7zip\\Virtual Machines\\BD39F424-5B26-479D-846F-2F28F6639637.vmgs",
+      "bytes": 4194816
+    },
+    {
+      "path": "D:\\helm-lab\\exp009-a0-7zip\\vm\\helm-lab-desktop-7zip\\Virtual Machines\\BD39F424-5B26-479D-846F-2F28F6639637.VMRS",
+      "bytes": 49152
+    }
+  ],
+  "project_file_length_sum": 21663009019.0,
+  "measurement_limit": "File lengths and Get-VHD FileSize, plus host volume free-space observations. NTFS allocation/metadata overhead not separately measured; host volume changes are not exclusively attributable to this task."
+}

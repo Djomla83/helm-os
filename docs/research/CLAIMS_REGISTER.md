@@ -2,6 +2,7 @@
 
 > Earlier tables are dated claim history. The [G0-2 completion](#g0-2-completion) below
 > supplies the current Gate 0 assessment where it supersedes those entries.
+> The [A0 execution assessment](#a0-execution) supersedes the application-preparation rows.
 
 | ID | Tvrdnja | Status | Potrebna provera |
 |---|---|---|---|
@@ -97,3 +98,21 @@ Hyper-V permissions. This changes no architecture decision or other Gate 0 statu
 | C-10 | The prepared ZIP verifier distinguishes the defined correct output from seeded content corruption | VERIFIED_EXECUTION, host helper only | Fifteen helper tests and a labelled post-commit host control run; valid-CRC corrupted content is rejected. No guest or application result follows. |
 | C-11 | Windows x64 7-Zip 26.03 completes two GUI workflows across a guest restart under vanilla Wine 11.17 | NOT_RUN; application baseline BLOCKED | Installer downloaded/hashed but never executed; no VM, desktop session, application ZIP or guest restart exists for this task. |
 | C-12 | This baseline shows HELM improves compatibility or reduces maintenance cost | Unsupported | No HELM comparison or application workflow ran; even a completed existing-component baseline alone would not establish added value. |
+
+<a id="a0-execution"></a>
+
+## A0-7ZIP execution — 2026-09-07
+
+The [application report](../experiments/EXP-009-APP-BASELINE-REPORT.md#current-assessment) records
+two planned attempts, valid guest controls and overall protocol FAIL. No failure was retried.
+
+| ID | Claim | Assessment | Evidence and limit |
+|---|---|---|---|
+| C-10 | The bounded ZIP verifier distinguishes defined good output from seeded corruption | VERIFIED_EXECUTION in the guest as well as the historical host preparation | Fifteen guest helper tests pass; both pre/post-restart good controls accepted and corrupted controls rejected. This validates the output oracle, not GUI actuation. |
+| C-11 | This execution satisfies the registered two-workflow 7-Zip baseline | Refuted for this execution; overall FAIL | W1 produced a content-correct ZIP at the wrong destination because of agent input. Required V1 failed for the absent file. W2/V2 passed after restart. This is not a demonstrated 7-Zip compatibility defect. |
+| C-12 | This baseline proves HELM improves compatibility or lowers maintenance cost | Still unsupported | Only existing Ubuntu/Wine components and small experimental helpers were used; no HELM comparison or economic advantage was measured. |
+| C-13 | The pinned Windows x64 7-Zip 26.03 installed and completed the observed post-restart GUI ZIP workflow under Wine vanilla 11.17 | VERIFIED_EXECUTION, narrowly | Exact installed identities survived R1; W2 used inspected ZIP/Deflate/Normal settings and its fresh output passed path/content verification. Local GNOME Wayland console, Wine X11/XWayland and software llvmpipe; no native Wine Wayland, rendering, reliability-rate or general compatibility claim. |
+
+The first accidental ZIP and second intended ZIP both matched expected decompressed content.
+Correct content alone did not satisfy the first workflow's required destination. That separation
+is evidence for reporting discipline, not implementation or acceptance of an architecture ADR.

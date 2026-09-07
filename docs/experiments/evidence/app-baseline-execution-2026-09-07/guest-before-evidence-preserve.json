@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmlab@<lab-guest-ip>",
+    "cd /home/helmlab/exp009-a0-7zip && test ! -e /home/helmlab/a0-before-evidence.tar.gz && tar -czf /home/helmlab/a0-before-evidence.tar.gz records controls fixture-record.json inputs && sha256sum /home/helmlab/a0-before-evidence.tar.gz && cat /proc/sys/kernel/random/boot_id"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T20:54:59.795636+00:00",
+  "exit_code": 0,
+  "stdout_base64": "YWE2ZmUyMGZhOWI0ODBmYzI1Nzk0YzljNTBhMTM2NjU4MmJhZDE4ZWRmZTE2YTYzNTdmZDgzODQ5MGY3NzRhZSAgL2hvbWUvaGVsbWxhYi9hMC1iZWZvcmUtZXZpZGVuY2UudGFyLmd6CjJkNjRjODIyLTIwNWQtNGJmYy1iZGFhLWYyMWU1MGNkMzhiYwo=",
+  "stderr_base64": "",
+  "stdout": "aa6fe20fa9b480fc25794c9c50a1366582bad18edfe16a6357fd838490f774ae  /home/helmlab/a0-before-evidence.tar.gz\n2d64c822-205d-4bfc-bdaa-f21e50cd38bc\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:54:59.988139+00:00",
+  "duration_seconds": 0.19250270002521574,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "bbd7ef6dbd8732b66972bbdd36585e8a5731e1cfaf0b13a95770ae0d103e7abd",
+    "raw_bytes": 1678,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

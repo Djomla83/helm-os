@@ -1,0 +1,53 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmsetup@<lab-guest-ip>",
+    "sudo -S -p '' -- sh -c 'du -B1 -s /var/cache/apt/archives; journalctl --list-boots --no-pager; apt-mark showhold'"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T21:04:11.323325+00:00",
+  "stdin": "Private guest credential supplied on stdin; not retained in this record",
+  "exit_code": 0,
+  "stdout": "419524608\t/var/cache/apt/archives\nIDX BOOT ID                          FIRST ENTRY                 LAST ENTRY\n -1 2d64c822205d4bfcbdaaf21e50cd38bc Mon 2026-09-07 20:00:52 UTC Mon 2026-09-07 20:55:57 UTC\n  0 77fc6b8fd5c24fecba14d3c680d2e0cb Mon 2026-09-07 20:56:07 UTC Mon 2026-09-07 21:04:12 UTC\nwine-devel\nwine-devel-amd64\nwine-devel-i386:i386\nwinehq-devel\n",
+  "stderr": "",
+  "stdout_base64": "NDE5NTI0NjA4CS92YXIvY2FjaGUvYXB0L2FyY2hpdmVzCklEWCBCT09UIElEICAgICAgICAgICAgICAgICAgICAgICAgICBGSVJTVCBFTlRSWSAgICAgICAgICAgICAgICAgTEFTVCBFTlRSWQogLTEgMmQ2NGM4MjIyMDVkNGJmY2JkYWFmMjFlNTBjZDM4YmMgTW9uIDIwMjYtMDktMDcgMjA6MDA6NTIgVVRDIE1vbiAyMDI2LTA5LTA3IDIwOjU1OjU3IFVUQwogIDAgNzdmYzZiOGZkNWMyNGZlY2JhMTRkM2M2ODBkMmUwY2IgTW9uIDIwMjYtMDktMDcgMjA6NTY6MDcgVVRDIE1vbiAyMDI2LTA5LTA3IDIxOjA0OjEyIFVUQwp3aW5lLWRldmVsCndpbmUtZGV2ZWwtYW1kNjQKd2luZS1kZXZlbC1pMzg2OmkzODYKd2luZWhxLWRldmVsCg==",
+  "stderr_base64": "",
+  "ended_utc": "2026-09-07T21:04:13.579284+00:00",
+  "duration_seconds": 2.255918000009842,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "2ffba5d64d31350e091da41955d17f0db61c5fdb92f7a3bb0c64f40c28d39c73",
+    "raw_bytes": 2115,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

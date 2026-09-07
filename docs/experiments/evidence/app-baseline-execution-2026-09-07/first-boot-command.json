@@ -1,0 +1,28 @@
+{
+  "argv": [
+    "pwsh.exe",
+    "-NoProfile",
+    "-File",
+    "first-boot.ps1"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z",
+  "started_utc": "2026-09-07T19:12:10.565569+00:00",
+  "exit_code": 0,
+  "stdout_base64": "ew0KICAiTmFtZSI6ICJoZWxtLWxhYi1kZXNrdG9wLTd6aXAiLA0KICAiSWQiOiAiYmQzOWY0MjQtNWIyNi00NzlkLTg0NmYtMmYyOGY2NjM5NjM3IiwNCiAgIlN0YXRlIjogIlJ1bm5pbmciLA0KICAiTWVtb3J5QXNzaWduZWQiOiA4NTg5OTM0NTkyLA0KICAiVXB0aW1lIjogew0KICAgICJUaWNrcyI6IDEyODAwMDAsDQogICAgIkRheXMiOiAwLA0KICAgICJIb3VycyI6IDAsDQogICAgIk1pbGxpc2Vjb25kcyI6IDEyOCwNCiAgICAiTWljcm9zZWNvbmRzIjogMCwNCiAgICAiTmFub3NlY29uZHMiOiAwLA0KICAgICJNaW51dGVzIjogMCwNCiAgICAiU2Vjb25kcyI6IDAsDQogICAgIlRvdGFsRGF5cyI6IDEuNDgxNDgxNDgxNDgxNDgxNUUtMDYsDQogICAgIlRvdGFsSG91cnMiOiAzLjU1NTU1NTU1NTU1NTU1NUUtMDUsDQogICAgIlRvdGFsTWlsbGlzZWNvbmRzIjogMTI4LjAsDQogICAgIlRvdGFsTWljcm9zZWNvbmRzIjogMTI4MDAwLjAsDQogICAgIlRvdGFsTmFub3NlY29uZHMiOiAxMjgwMDAwMDAuMCwNCiAgICAiVG90YWxNaW51dGVzIjogMC4wMDIxMzMzMzMzMzMzMzMzMzM0LA0KICAgICJUb3RhbFNlY29uZHMiOiAwLjEyOA0KICB9DQp9DQo=",
+  "stderr_base64": "",
+  "stdout": "{\r\n  \"Name\": \"helm-lab-desktop-7zip\",\r\n  \"Id\": \"bd39f424-5b26-479d-846f-2f28f6639637\",\r\n  \"State\": \"Running\",\r\n  \"MemoryAssigned\": 8589934592,\r\n  \"Uptime\": {\r\n    \"Ticks\": 1280000,\r\n    \"Days\": 0,\r\n    \"Hours\": 0,\r\n    \"Milliseconds\": 128,\r\n    \"Microseconds\": 0,\r\n    \"Nanoseconds\": 0,\r\n    \"Minutes\": 0,\r\n    \"Seconds\": 0,\r\n    \"TotalDays\": 1.4814814814814815E-06,\r\n    \"TotalHours\": 3.555555555555555E-05,\r\n    \"TotalMilliseconds\": 128.0,\r\n    \"TotalMicroseconds\": 128000.0,\r\n    \"TotalNanoseconds\": 128000000.0,\r\n    \"TotalMinutes\": 0.0021333333333333334,\r\n    \"TotalSeconds\": 0.128\r\n  }\r\n}\r\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T19:12:15.340571+00:00",
+  "duration_seconds": 4.774952900013886,
+  "scope": "Command capture only; exit status is not a workflow verdict",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "50e371768702cb6f20785737bdbd18433adc79da0979fae4422b372baa6e6d4f",
+    "raw_bytes": 1979,
+    "redacted_fields": [
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

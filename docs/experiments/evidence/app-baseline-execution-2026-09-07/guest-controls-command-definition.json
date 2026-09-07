@@ -1,0 +1,7 @@
+{
+  "scope": "Unchanged registered helper, expected good exit 0 and corrupted exit 1; no application invocation.",
+  "script": "prepare-baseline.sh",
+  "status": "DEFINED_BEFORE_GUEST_CONTROLS",
+  "time_utc": "2026-09-07T20:39:06.0997295Z",
+  "sha256": "2d93f0b9150cc55c46be72da710a25ecd53b1ee145422980705bfa802bc33682"
+}

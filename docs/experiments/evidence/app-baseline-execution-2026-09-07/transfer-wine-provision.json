@@ -1,0 +1,45 @@
+{
+  "argv": [
+    "scp.exe",
+    "-F",
+    "NUL",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "provision-wine.sh",
+    "helmsetup@<lab-guest-ip>:/home/helmsetup/provision-wine.sh"
+  ],
+  "cwd": "D:\\helm-lab\\exp009-a0-7zip\\transfer",
+  "started_utc": "2026-09-07T20:33:14.810468+00:00",
+  "exit_code": 0,
+  "stdout_base64": "",
+  "stderr_base64": "",
+  "stdout": "",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:33:15.029692+00:00",
+  "duration_seconds": 0.21921710000606254,
+  "scope": "Command capture only; exit status is not a workflow verdict",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "56046891650df583c8f8d8f2cf6b886645c3dab3758d9f8e21448fd264f789c0",
+    "raw_bytes": 940,
+    "redacted_fields": [
+      "argv[14]",
+      "argv[16]",
+      "argv[18]"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

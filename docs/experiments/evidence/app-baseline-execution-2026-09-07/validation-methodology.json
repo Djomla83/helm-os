@@ -1,0 +1,12 @@
+{
+  "time_utc": "2026-09-07T21:29:33.4305676Z",
+  "initial_audit_result": "ABORTED before result emission",
+  "observed_exception": "UnicodeDecodeError: 'charmap' codec can't decode byte 0x8d in position 15: character maps to <undefined>",
+  "cause": "One-off audit used platform-default cp1252 when reading a UTF-8 ADR",
+  "methodological_correction": "Read repository Markdown as explicit UTF-8; no evidence, secrets, acceptance criteria or application behavior changed",
+  "failed_private_script": "audit-a0-before-encoding-fix.py",
+  "failed_script_sha256": "1dcf96e432ad7899c245ce74f27f44b00a1f152e36785992927786c942840689",
+  "corrected_script_sha256": "0ec2b1ab1d75db7c3b605605f32cbc2af218793edefbc5c4c833759bd0dcde2a",
+  "corrected_result": "publication-audit-working.json",
+  "capture_limit": "Exception is an observed tool-report excerpt, not a claim of a separately byte-captured raw stderr file."
+}

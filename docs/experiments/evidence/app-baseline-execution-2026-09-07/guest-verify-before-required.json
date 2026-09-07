@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmlab@<lab-guest-ip>",
+    "cd /home/helmlab/exp009-a0-7zip && python3 tools/app_baseline.py capture --cwd /home/helmlab/exp009-a0-7zip --timeout 60 records/verify-before-required-command.json -- python3 tools/app_baseline.py verify outputs/before-restart/workflow.zip records/verify-before-required.json"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T20:53:52.531096+00:00",
+  "exit_code": 1,
+  "stdout_base64": "eyJhcmd2IjogWyJweXRob24zIiwgInRvb2xzL2FwcF9iYXNlbGluZS5weSIsICJ2ZXJpZnkiLCAib3V0cHV0cy9iZWZvcmUtcmVzdGFydC93b3JrZmxvdy56aXAiLCAicmVjb3Jkcy92ZXJpZnktYmVmb3JlLXJlcXVpcmVkLmpzb24iXSwgImN3ZCI6ICIvaG9tZS9oZWxtbGFiL2V4cDAwOS1hMC03emlwIiwgInN0YXJ0ZWRfdXRjIjogIjIwMjYtMDktMDdUMjA6NTM6NTIuNzQ5OTUxKzAwOjAwIiwgImV4aXRfY29kZSI6IDEsICJzdGRvdXRfYmFzZTY0IjogImV5SnpZMjl3WlNJNklDSmFTVkFnYjNWMGNIVjBMV052Ym5SbGJuUWdkbVZ5YVdacFkyRjBhVzl1SUc5dWJIa2lMQ0FpYzNSaGNuUmxaRjkxZEdNaU9pQWlNakF5Tmkwd09TMHdOMVF5TURvMU16bzFNaTQzTnpZeU5EWXJNREE2TURBaUxDQWlkbVZ5WkdsamRDSTZJQ0pHUVVsTUlpd2dJbVZ5Y205eWN5STZJRnNpUm1sc1pVNXZkRVp2ZFc1a1JYSnliM0k2SUZ0RmNuSnVieUF5WFNCT2J5QnpkV05vSUdacGJHVWdiM0lnWkdseVpXTjBiM0o1T2lBbmIzVjBjSFYwY3k5aVpXWnZjbVV0Y21WemRHRnlkQzkzYjNKclpteHZkeTU2YVhBbklsMHNJQ0ptYVd4bGN5STZJRnRkTENBaVpXNWtaV1JmZFhSaklqb2dJakl3TWpZdE1Ea3RNRGRVTWpBNk5UTTZOVEl1TnpjMk1qY3dLekF3T2pBd0lpd2dJbVpwZUhSMWNtVmZiV0Z1YVdabGMzUmZjMmhoTWpVMklqb2dJamMxWkRjNFltTTJZbU13WmpVek9XUm1OV05oT0dRMU5HUm1NelJtTkRBMlpUUTBaakpoWVRWalpXSTRZVEEzWW1ZelpEZzFObU5sTnpJM05EZGpPR1lpZlFvPSIsICJzdGRlcnJfYmFzZTY0IjogIiIsICJzdGRvdXQiOiAie1wic2NvcGVcIjogXCJaSVAgb3V0cHV0LWNvbnRlbnQgdmVyaWZpY2F0aW9uIG9ubHlcIiwgXCJzdGFydGVkX3V0Y1wiOiBcIjIwMjYtMDktMDdUMjA6NTM6NTIuNzc2MjQ2KzAwOjAwXCIsIFwidmVyZGljdFwiOiBcIkZBSUxcIiwgXCJlcnJvcnNcIjogW1wiRmlsZU5vdEZvdW5kRXJyb3I6IFtFcnJubyAyXSBObyBzdWNoIGZpbGUgb3IgZGlyZWN0b3J5OiAnb3V0cHV0cy9iZWZvcmUtcmVzdGFydC93b3JrZmxvdy56aXAnXCJdLCBcImZpbGVzXCI6IFtdLCBcImVuZGVkX3V0Y1wiOiBcIjIwMjYtMDktMDdUMjA6NTM6NTIuNzc2MjcwKzAwOjAwXCIsIFwiZml4dHVyZV9tYW5pZmVzdF9zaGEyNTZcIjogXCI3NWQ3OGJjNmJjMGY1MzlkZjVjYThkNTRkZjM0ZjQwNmU0NGYyYWE1Y2ViOGEwN2JmM2Q4NTZjZTcyNzQ3YzhmXCJ9XG4iLCAic3RkZXJyIjogIiIsICJlbmRlZF91dGMiOiAiMjAyNi0wOS0wN1QyMDo1Mzo1Mi43ODAxNTQrMDA6MDAiLCAiZHVyYXRpb25fc2Vjb25kcyI6IDAuMDMwMjAzNzczOTk5ODAxMzQyLCAic2NvcGUiOiAiQ29tbWFuZCBjYXB0dXJlIG9ubHk7IGV4aXQgc3RhdHVzIGlzIG5vdCBhIHdvcmtmbG93IHZlcmRpY3QifQo=",
+  "stderr_base64": "",
+  "stdout": "{\"argv\": [\"python3\", \"tools/app_baseline.py\", \"verify\", \"outputs/before-restart/workflow.zip\", \"records/verify-before-required.json\"], \"cwd\": \"/home/helmlab/exp009-a0-7zip\", \"started_utc\": \"2026-09-07T20:53:52.749951+00:00\", \"exit_code\": 1, \"stdout_base64\": \"eyJzY29wZSI6ICJaSVAgb3V0cHV0LWNvbnRlbnQgdmVyaWZpY2F0aW9uIG9ubHkiLCAic3RhcnRlZF91dGMiOiAiMjAyNi0wOS0wN1QyMDo1Mzo1Mi43NzYyNDYrMDA6MDAiLCAidmVyZGljdCI6ICJGQUlMIiwgImVycm9ycyI6IFsiRmlsZU5vdEZvdW5kRXJyb3I6IFtFcnJubyAyXSBObyBzdWNoIGZpbGUgb3IgZGlyZWN0b3J5OiAnb3V0cHV0cy9iZWZvcmUtcmVzdGFydC93b3JrZmxvdy56aXAnIl0sICJmaWxlcyI6IFtdLCAiZW5kZWRfdXRjIjogIjIwMjYtMDktMDdUMjA6NTM6NTIuNzc2MjcwKzAwOjAwIiwgImZpeHR1cmVfbWFuaWZlc3Rfc2hhMjU2IjogIjc1ZDc4YmM2YmMwZjUzOWRmNWNhOGQ1NGRmMzRmNDA2ZTQ0ZjJhYTVjZWI4YTA3YmYzZDg1NmNlNzI3NDdjOGYifQo=\", \"stderr_base64\": \"\", \"stdout\": \"{\\\"scope\\\": \\\"ZIP output-content verification only\\\", \\\"started_utc\\\": \\\"2026-09-07T20:53:52.776246+00:00\\\", \\\"verdict\\\": \\\"FAIL\\\", \\\"errors\\\": [\\\"FileNotFoundError: [Errno 2] No such file or directory: 'outputs/before-restart/workflow.zip'\\\"], \\\"files\\\": [], \\\"ended_utc\\\": \\\"2026-09-07T20:53:52.776270+00:00\\\", \\\"fixture_manifest_sha256\\\": \\\"75d78bc6bc0f539df5ca8d54df34f406e44f2aa5ceb8a07bf3d856ce72747c8f\\\"}\\n\", \"stderr\": \"\", \"ended_utc\": \"2026-09-07T20:53:52.780154+00:00\", \"duration_seconds\": 0.030203773999801342, \"scope\": \"Command capture only; exit status is not a workflow verdict\"}\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:53:52.765061+00:00",
+  "duration_seconds": 0.23396300000604242,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "3ff20df39d8c4473ad75e8d2a6801ea543750d0d6bf3b8436889b5b270480ad2",
+    "raw_bytes": 4722,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

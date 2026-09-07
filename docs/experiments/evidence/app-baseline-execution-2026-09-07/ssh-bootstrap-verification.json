@@ -1,0 +1,9 @@
+{
+  "time_utc": "2026-09-07T20:33:03.1738575Z",
+  "fingerprint": "SHA256:6LqOPd6UsLsXEEB8Q+tmN9isGLeh8BoDX1uMIf59Cnc",
+  "console_capture": "ubuntu-120-guest-network-key.png",
+  "keyscan_capture": "ssh-keyscan-git.json",
+  "match": true,
+  "failure": "Windows OpenSSH 9.5p2 ssh-keyscan exited 1: unsupported KEX sntrup761x25519-sha512@openssh.com. Preserved stderr; used existing Git OpenSSH 10.2p1 keyscan without modifying server/client security settings.",
+  "note": "mkdir .ssh reported already exists; public-key write then completed. Initial directory mode/ownership and key restriction will be inspected over the verified connection."
+}

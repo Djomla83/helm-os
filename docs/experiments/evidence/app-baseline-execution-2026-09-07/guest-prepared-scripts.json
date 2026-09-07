@@ -1,0 +1,17 @@
+{
+  "captured_utc": "2026-09-07T19:47:34.9283358Z",
+  "artifacts": [
+    {
+      "bytes": 3698,
+      "sha256": "06e0b0d818930499be155e266ece5b0d6b2569e91689d4214770cc176d23b37e",
+      "file": "provision-wine.sh",
+      "execution_status": "NOT_RUN at capture"
+    },
+    {
+      "bytes": 4002,
+      "sha256": "f012436bc6868334cabdfe31818fd3ae67126d9737cb9a80084d2ae69cbfb1ae",
+      "file": "observe-guest.py",
+      "execution_status": "NOT_RUN at capture"
+    }
+  ]
+}

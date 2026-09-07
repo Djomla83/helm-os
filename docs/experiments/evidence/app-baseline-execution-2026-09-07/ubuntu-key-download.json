@@ -1,0 +1,32 @@
+{
+  "argv": [
+    "curl.exe",
+    "--fail",
+    "--location",
+    "--show-error",
+    "--silent",
+    "--output",
+    "ubuntu-cd-signing-key.asc",
+    "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x843938DF228D22F7B3742BC0D94AA3F0EFE21092"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z",
+  "started_utc": "2026-09-07T19:07:43.432265+00:00",
+  "exit_code": 0,
+  "stdout_base64": "",
+  "stderr_base64": "",
+  "stdout": "",
+  "stderr": "",
+  "ended_utc": "2026-09-07T19:07:43.757106+00:00",
+  "duration_seconds": 0.3248359000135679,
+  "scope": "Command capture only; exit status is not a workflow verdict",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "ed579ac5879676523172263843863e8d9ca350ba5236eadd9c327fe436f1f047",
+    "raw_bytes": 664,
+    "redacted_fields": [
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

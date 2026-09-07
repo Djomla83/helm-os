@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmlab@<lab-guest-ip>",
+    "cat /proc/sys/kernel/random/boot_id; loginctl list-sessions --no-legend; systemctl --user show-environment | python3 -c 'import sys,json; keys={\"DISPLAY\",\"WAYLAND_DISPLAY\",\"XDG_SESSION_TYPE\",\"XDG_RUNTIME_DIR\",\"XAUTHORITY\",\"DBUS_SESSION_BUS_ADDRESS\"}; e=dict(line.rstrip(\"\\n\").split(\"=\",1) for line in sys.stdin if \"=\" in line); print(json.dumps({k:v for k,v in e.items() if k in keys}))'"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T20:58:23.178857+00:00",
+  "exit_code": 0,
+  "stdout_base64": "NzdmYzZiOGYtZDVjMi00ZmVjLWJhMTQtZDNjNjgwZDJlMGNiCjIgMTAwMSBoZWxtbGFiIHNlYXQwIHR0eTIgYWN0aXZlIG5vIC0KNCAxMDAxIGhlbG1sYWIgLSAgICAgLSAgICBhY3RpdmUgbm8gLQp7IlhER19SVU5USU1FX0RJUiI6ICIvcnVuL3VzZXIvMTAwMSIsICJEQlVTX1NFU1NJT05fQlVTX0FERFJFU1MiOiAidW5peDpwYXRoPS9ydW4vdXNlci8xMDAxL2J1cyIsICJESVNQTEFZIjogIjowIiwgIldBWUxBTkRfRElTUExBWSI6ICJ3YXlsYW5kLTAiLCAiWEFVVEhPUklUWSI6ICIvcnVuL3VzZXIvMTAwMS8ubXV0dGVyLVh3YXlsYW5kYXV0aC5FUkVSVTMiLCAiWERHX1NFU1NJT05fVFlQRSI6ICJ3YXlsYW5kIn0K",
+  "stderr_base64": "",
+  "stdout": "77fc6b8f-d5c2-4fec-ba14-d3c680d2e0cb\n2 1001 helmlab seat0 tty2 active no -\n4 1001 helmlab -     -    active no -\n{\"XDG_RUNTIME_DIR\": \"/run/user/1001\", \"DBUS_SESSION_BUS_ADDRESS\": \"unix:path=/run/user/1001/bus\", \"DISPLAY\": \":0\", \"WAYLAND_DISPLAY\": \"wayland-0\", \"XAUTHORITY\": \"/run/user/1001/.mutter-Xwaylandauth.ERERU3\", \"XDG_SESSION_TYPE\": \"wayland\"}\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:58:24.117163+00:00",
+  "duration_seconds": 0.9382890000124462,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "27815ff03b3acb782da7d68c868642a2da35585b2b1a169dedc8ac7ac87165d3",
+    "raw_bytes": 2321,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

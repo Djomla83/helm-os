@@ -1,0 +1,6 @@
+{
+  "created_utc": "2026-09-07T19:32:09.5969296Z",
+  "command": "git archive --format=tar -o D:\\helm-lab\\exp009-a0-7zip\\transfer\\source-5a83f8c.tar 5a83f8cb2fbb5a3597ddff6b5cae9cb813f1c5ae tools/app_baseline.py tools/fixtures/exp009-7zip.json tools/gate0/probe_wsl_interop.py tools/tests/test_app_baseline.py",
+  "sha256": "f2d8f84716f2989a9898c0fe11529f3ec6ea9780637545814277a5d3461e1b8e",
+  "bytes": 30720
+}

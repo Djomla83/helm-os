@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmsetup@<lab-guest-ip>",
+    "tail -7 /home/helmsetup/a0-provision/stdout.log"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T20:41:26.305576+00:00",
+  "exit_code": 0,
+  "stdout_base64": "VW5wYWNraW5nIHdpbmVocS1kZXZlbCAoMTEuMTd+bm9ibGUtMSkgLi4uDQpTZXR0aW5nIHVwIGxpYmdtZTA6YW1kNjQgKDAuNi4zLTdidWlsZDEpIC4uLg0KU2V0dGluZyB1cCBsaWJjaHJvbWFwcmludDE6YW1kNjQgKDEuNS4xLTUpIC4uLg0KU2V0dGluZyB1cCBsaWJod3kxdDY0OmFtZDY0ICgxLjAuNy04LjFidWlsZDEpIC4uLg0KU2V0dGluZyB1cCBsaWJ1ZGZyZWFkMDphbWQ2NCAoMS4xLjItMWJ1aWxkMSkgLi4uDQpTZXR0aW5nIHVwIGxpYm5vcm0xdDY0OmFtZDY0ICgxLjUuOStkZnNnLTMuMWJ1aWxkMSkgLi4uDQpTZXR0aW5nIHVwIGxpYnJhYmJpdG1xNDphbWQ2NCAoMC4xMS4wLTF1YnVudHUwLjIpIC4uLg0K",
+  "stderr_base64": "",
+  "stdout": "Unpacking winehq-devel (11.17~noble-1) ...\r\nSetting up libgme0:amd64 (0.6.3-7build1) ...\r\nSetting up libchromaprint1:amd64 (1.5.1-5) ...\r\nSetting up libhwy1t64:amd64 (1.0.7-8.1build1) ...\r\nSetting up libudfread0:amd64 (1.1.2-1build1) ...\r\nSetting up libnorm1t64:amd64 (1.5.9+dfsg-3.1build1) ...\r\nSetting up librabbitmq4:amd64 (0.11.0-1ubuntu0.2) ...\r\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:41:26.660596+00:00",
+  "duration_seconds": 0.35501190001377836,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "554296657b6bf22c2d60960ca8557a44f5dd6733e43a35d04829bb7fcb657813",
+    "raw_bytes": 1951,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

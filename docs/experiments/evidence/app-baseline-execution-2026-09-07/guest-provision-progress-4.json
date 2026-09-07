@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmsetup@<lab-guest-ip>",
+    "tail -6 /home/helmsetup/a0-provision/stdout.log"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T20:38:21.740400+00:00",
+  "exit_code": 0,
+  "stdout_base64": "U2VsZWN0aW5nIHByZXZpb3VzbHkgdW5zZWxlY3RlZCBwYWNrYWdlIGxpYmdwaG90bzItcG9ydDEydDY0OmkzODYuDQpQcmVwYXJpbmcgdG8gdW5wYWNrIC4uLi8xNDctbGliZ3Bob3RvMi1wb3J0MTJ0NjRfMi41LjMxLTIuMXVidW50dTEuMV9pMzg2LmRlYiAuLi4NClVucGFja2luZyBsaWJncGhvdG8yLXBvcnQxMnQ2NDppMzg2ICgyLjUuMzEtMi4xdWJ1bnR1MS4xKSAuLi4NClNlbGVjdGluZyBwcmV2aW91c2x5IHVuc2VsZWN0ZWQgcGFja2FnZSBsaWJncGhvdG8yLTZ0NjQ6aTM4Ni4NClByZXBhcmluZyB0byB1bnBhY2sgLi4uLzE0OC1saWJncGhvdG8yLTZ0NjRfMi41LjMxLTIuMXVidW50dTEuMV9pMzg2LmRlYiAuLi4NClVucGFja2luZyBsaWJncGhvdG8yLTZ0NjQ6aTM4NiAoMi41LjMxLTIuMXVidW50dTEuMSkgLi4uDQo=",
+  "stderr_base64": "",
+  "stdout": "Selecting previously unselected package libgphoto2-port12t64:i386.\r\nPreparing to unpack .../147-libgphoto2-port12t64_2.5.31-2.1ubuntu1.1_i386.deb ...\r\nUnpacking libgphoto2-port12t64:i386 (2.5.31-2.1ubuntu1.1) ...\r\nSelecting previously unselected package libgphoto2-6t64:i386.\r\nPreparing to unpack .../148-libgphoto2-6t64_2.5.31-2.1ubuntu1.1_i386.deb ...\r\nUnpacking libgphoto2-6t64:i386 (2.5.31-2.1ubuntu1.1) ...\r\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:38:21.920413+00:00",
+  "duration_seconds": 0.1800084999995306,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "79eab608fdd0851e4b5f92c861f0418164f368b29c54695c305078a9051e8795",
+    "raw_bytes": 2094,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

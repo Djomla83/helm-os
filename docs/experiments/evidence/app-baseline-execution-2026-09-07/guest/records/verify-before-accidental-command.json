@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "python3",
+    "tools/app_baseline.py",
+    "verify",
+    "inputs/fixture.zip",
+    "records/verify-before-accidental.json"
+  ],
+  "cwd": "/home/helmlab/exp009-a0-7zip",
+  "started_utc": "2026-09-07T20:54:08.747287+00:00",
+  "exit_code": 0,
+  "stdout_base64": "eyJzY29wZSI6ICJaSVAgb3V0cHV0LWNvbnRlbnQgdmVyaWZpY2F0aW9uIG9ubHkiLCAic3RhcnRlZF91dGMiOiAiMjAyNi0wOS0wN1QyMDo1NDowOC43NzMwMTErMDA6MDAiLCAidmVyZGljdCI6ICJQQVNTIiwgImVycm9ycyI6IFtdLCAiZmlsZXMiOiBbeyJwYXRoIjogImZpeHR1cmUvYmluYXJ5L3BheWxvYWQuYmluIiwgImJ5dGVzIjogNDA5NiwgInNoYTI1NiI6ICJjOGY1ZDAzNDFkNTRkOTUxYTcxYjEzNmU2ZTJhZmNiMTRkMTFlZDg0ODlhN2FlMTI2YThmZWUwZGY2ZWNmMTkzIn0sIHsicGF0aCI6ICJmaXh0dXJlL2VtcHR5LmRhdCIsICJieXRlcyI6IDAsICJzaGEyNTYiOiAiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9LCB7InBhdGgiOiAiZml4dHVyZS9uYW1lcy9jYWZcdTAwZTktXHU2ZjIyXHU1YjU3LnR4dCIsICJieXRlcyI6IDI4LCAic2hhMjU2IjogIjEzZGVjOTA5MGUyZGZjYTA5NmI0ZDYwOTlhZjY0ZTljNGQ1NGVkNmViOWNjNDc1YTMxY2U5ODlkYmY5M2QyMWUifSwgeyJwYXRoIjogImZpeHR1cmUvbmFtZXMvd2l0aCBzcGFjZXMudHh0IiwgImJ5dGVzIjogMjEsICJzaGEyNTYiOiAiOTczNGFkNTMwZDIwYjY5MjlhNjk0YWJmNGUyMmUxYzI2OTY2NmZlNmFjMWVjMGQ5NjZlMGEwOGJmZWE0YTliNCJ9LCB7InBhdGgiOiAiZml4dHVyZS9uZXN0ZWQvZGVlcGVyL2RhdGEudHh0IiwgImJ5dGVzIjogMTUsICJzaGEyNTYiOiAiNTRlMjc0Y2ZiNzUxNzQyMmNjZWMyMDAwMzRmZDNhYzMzYmRlNjgzYmI5YWU3YzcyOTg3MjIyNmY5MjFhZTFmMiJ9LCB7InBhdGgiOiAiZml4dHVyZS9wbGFpbi50eHQiLCAiYnl0ZXMiOiA0NCwgInNoYTI1NiI6ICI1MDA4YWUwMzdmZjNkNjRhNGYyMTE4NGM2OGYxYTg5YzhlMDkyN2QyZjRjNmUxYzZhMWE4M2EwNTQ3NjJkYzJhIn1dLCAiYXJjaGl2ZV9zaGEyNTYiOiAiOGY3YjcxOTI4MDhiMDMyNzUyMzk3ODViYzU2MTEyN2U0YTFlM2NlZTVlZGI4NDcxYmZmZjFkMzM3MDMzNTZlOSIsICJhcmNoaXZlX2J5dGVzIjogMjI4MiwgImVuZGVkX3V0YyI6ICIyMDI2LTA5LTA3VDIwOjU0OjA4Ljc3MzQ5MyswMDowMCIsICJmaXh0dXJlX21hbmlmZXN0X3NoYTI1NiI6ICI3NWQ3OGJjNmJjMGY1MzlkZjVjYThkNTRkZjM0ZjQwNmU0NGYyYWE1Y2ViOGEwN2JmM2Q4NTZjZTcyNzQ3YzhmIn0K",
+  "stderr_base64": "",
+  "stdout": "{\"scope\": \"ZIP output-content verification only\", \"started_utc\": \"2026-09-07T20:54:08.773011+00:00\", \"verdict\": \"PASS\", \"errors\": [], \"files\": [{\"path\": \"fixture/binary/payload.bin\", \"bytes\": 4096, \"sha256\": \"c8f5d0341d54d951a71b136e6e2afcb14d11ed8489a7ae126a8fee0df6ecf193\"}, {\"path\": \"fixture/empty.dat\", \"bytes\": 0, \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"}, {\"path\": \"fixture/names/caf\\u00e9-\\u6f22\\u5b57.txt\", \"bytes\": 28, \"sha256\": \"13dec9090e2dfca096b4d6099af64e9c4d54ed6eb9cc475a31ce989dbf93d21e\"}, {\"path\": \"fixture/names/with spaces.txt\", \"bytes\": 21, \"sha256\": \"9734ad530d20b6929a694abf4e22e1c269666fe6ac1ec0d966e0a08bfea4a9b4\"}, {\"path\": \"fixture/nested/deeper/data.txt\", \"bytes\": 15, \"sha256\": \"54e274cfb7517422ccec200034fd3ac33bde683bb9ae7c729872226f921ae1f2\"}, {\"path\": \"fixture/plain.txt\", \"bytes\": 44, \"sha256\": \"5008ae037ff3d64a4f21184c68f1a89c8e0927d2f4c6e1c6a1a83a054762dc2a\"}], \"archive_sha256\": \"8f7b7192808b03275239785bc561127e4a1e3cee5edb8471bfff1d33703356e9\", \"archive_bytes\": 2282, \"ended_utc\": \"2026-09-07T20:54:08.773493+00:00\", \"fixture_manifest_sha256\": \"75d78bc6bc0f539df5ca8d54df34f406e44f2aa5ceb8a07bf3d856ce72747c8f\"}\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:54:08.778113+00:00",
+  "duration_seconds": 0.03082523199964271,
+  "scope": "Command capture only; exit status is not a workflow verdict"
+}

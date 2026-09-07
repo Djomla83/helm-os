@@ -1,0 +1,76 @@
+{
+  "task": "EXP-009/A0-7ZIP permission resumption preflight",
+  "started_utc": "2026-09-07T19:05:09.9195847Z",
+  "repository_baseline": "7b9ec6f91d33d44578179da467cb01f4da55ea2c",
+  "private_identity": {
+    "account": "<redacted-account>",
+    "sid": "<redacted-account-sid>",
+    "host": "<redacted-host>",
+    "home": "C:\\Users\\<redacted>"
+  },
+  "process_id": 48028,
+  "powershell_version": "7.6.5",
+  "is_elevated_administrator": false,
+  "hyperv_sid_present_in_token": true,
+  "hyperv_role_effective": true,
+  "group_query": {
+    "command": "Get-LocalGroupMember -SID 'S-1-5-32-578' -ErrorAction Stop",
+    "started_utc": "2026-09-07T19:05:10.0098137Z",
+    "success": true,
+    "output": [
+      {
+        "Name": "<redacted-account>",
+        "SID": "<redacted-account-sid>",
+        "PrincipalSource": 4
+      }
+    ],
+    "error": null,
+    "duration_seconds": 0.1239165,
+    "ended_utc": "2026-09-07T19:05:10.1368311Z"
+  },
+  "vm_query": {
+    "command": "Get-VM -ErrorAction Stop",
+    "started_utc": "2026-09-07T19:05:10.1395396Z",
+    "success": true,
+    "output": [],
+    "error": null,
+    "duration_seconds": 0.2574094,
+    "ended_utc": "2026-09-07T19:05:10.3969706Z"
+  },
+  "switch_query": {
+    "command": "Get-VMSwitch -ErrorAction Stop",
+    "started_utc": "2026-09-07T19:05:10.3969902Z",
+    "success": true,
+    "output": [
+      {
+        "Name": "Default Switch",
+        "SwitchType": 1,
+        "NetAdapterInterfaceDescription": null
+      },
+      {
+        "Name": "WSL (Hyper-V firewall)",
+        "SwitchType": 1,
+        "NetAdapterInterfaceDescription": null
+      }
+    ],
+    "error": null,
+    "duration_seconds": 0.5443689,
+    "ended_utc": "2026-09-07T19:05:10.9413801Z"
+  },
+  "account_is_group_member": true,
+  "precondition_passed": true,
+  "ended_utc": "2026-09-07T19:05:10.9606446Z",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "15d3fa2f86fdd00ce92545b9857add2e0989c54de3748770c2b3ea3b6b5e48f6",
+    "raw_bytes": 1934,
+    "fields": [
+      "private_identity",
+      "group_query.output.Name",
+      "group_query.output.SID",
+      "query error messages if they contain the private host name"
+    ],
+    "raw_location": "Private project provenance archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

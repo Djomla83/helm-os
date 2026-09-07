@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmlab@<lab-guest-ip>",
+    "set -e\ncd /home/helmlab/exp009-a0-7zip\npython3 --version\ndate --utc --iso-8601=ns\ncat /proc/sys/kernel/random/boot_id\nid\n/opt/wine-devel/bin/wine --version\nsha256sum /opt/wine-devel/bin/wine /opt/wine-devel/bin/wineserver\ndf -B1 /\ndu -B1 -s /home/helmlab/exp009-a0-7zip /home/helmlab/exp009-a0-7zip/prefix /var/cache/apt/archives\ndu -sb /home/helmlab/exp009-a0-7zip /home/helmlab/exp009-a0-7zip/prefix\nfind outputs -type f -printf '%p %s bytes\\n'\ntest ! -e outputs/before-restart/workflow.zip\nsha256sum inputs/fixture.zip outputs/after-restart/workflow.zip\npython3 tools/app_baseline.py capture --cwd \"$PWD\" --timeout 30 records/display-scale-after.json -- env DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1001/bus gdbus call --session --dest org.gnome.Mutter.DisplayConfig --object-path /org/gnome/Mutter/DisplayConfig --method org.gnome.Mutter.DisplayConfig.GetCurrentState"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T21:03:17.236473+00:00",
+  "exit_code": 1,
+  "stdout_base64": "UHl0aG9uIDMuMTIuMwoyMDI2LTA5LTA3VDIxOjAzOjE3LDQ0NzY5NzkyNCswMDowMAo3N2ZjNmI4Zi1kNWMyLTRmZWMtYmExNC1kM2M2ODBkMmUwY2IKdWlkPTEwMDEoaGVsbWxhYikgZ2lkPTEwMDEoaGVsbWxhYikgZ3JvdXBzPTEwMDEoaGVsbWxhYikKd2luZS0xMS4xNwpkOTY0NzJjOGM1ZTY1NjdiYjlkODAwYjFjMjI2MWM3NjRhMTU4OGQ3OTEzZDUwZWYzNDc0MzU3ZTVmNTQ5ZjMzICAvb3B0L3dpbmUtZGV2ZWwvYmluL3dpbmUKYTFiZTU2ODAzZTI4YTUzMTA4ZTUxYmFkMTQwMDZjMDViYWMyMjA5NjFiZjUyYWExNDYyMTY2MTU4NjgwZDA3OSAgL29wdC93aW5lLWRldmVsL2Jpbi93aW5lc2VydmVyCkZpbGVzeXN0ZW0gICAgICAgMUItYmxvY2tzICAgICAgICBVc2VkICAgQXZhaWxhYmxlIFVzZSUgTW91bnRlZCBvbgovZGV2L3NkYTIgICAgICAzMjUyMzUwMTU2OCAxNDgxMDU2MjU2MCAxNjAzNDY0Mzk2OCAgNDklIC8KMTczODczMTUyMAkvaG9tZS9oZWxtbGFiL2V4cDAwOS1hMC03emlwCjQxOTUyNDYwOAkvdmFyL2NhY2hlL2FwdC9hcmNoaXZlcwo=",
+  "stderr_base64": "ZHU6IGNhbm5vdCByZWFkIGRpcmVjdG9yeSAnL3Zhci9jYWNoZS9hcHQvYXJjaGl2ZXMvcGFydGlhbCc6IFBlcm1pc3Npb24gZGVuaWVkCg==",
+  "stdout": "Python 3.12.3\n2026-09-07T21:03:17,447697924+00:00\n77fc6b8f-d5c2-4fec-ba14-d3c680d2e0cb\nuid=1001(helmlab) gid=1001(helmlab) groups=1001(helmlab)\nwine-11.17\nd96472c8c5e6567bb9d800b1c2261c764a1588d7913d50ef3474357e5f549f33  /opt/wine-devel/bin/wine\na1be56803e28a53108e51bad14006c05bac220961bf52aa1462166158680d079  /opt/wine-devel/bin/wineserver\nFilesystem       1B-blocks        Used   Available Use% Mounted on\n/dev/sda2      32523501568 14810562560 16034643968  49% /\n1738731520\t/home/helmlab/exp009-a0-7zip\n419524608\t/var/cache/apt/archives\n",
+  "stderr": "du: cannot read directory '/var/cache/apt/archives/partial': Permission denied\n",
+  "ended_utc": "2026-09-07T21:03:17.633923+00:00",
+  "duration_seconds": 0.3974455000134185,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "5b072b5018c3a2e4ff74f107cb0e95a8bfba73c59cc5d567ba28a02410a9c66a",
+    "raw_bytes": 3427,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

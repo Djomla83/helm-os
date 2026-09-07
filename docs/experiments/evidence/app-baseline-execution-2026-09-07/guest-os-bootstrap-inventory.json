@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmsetup@<lab-guest-ip>",
+    "cat /etc/os-release; uname -a; mokutil --sb-state; timedatectl; du -sb /home/helmsetup; df -B1 /; cat /var/log/installer/media-info; cat /etc/apt/sources.list.d/ubuntu.sources"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T20:35:47.677794+00:00",
+  "exit_code": 0,
+  "stdout_base64": "UFJFVFRZX05BTUU9IlVidW50dSAyNC4wNC40IExUUyIKTkFNRT0iVWJ1bnR1IgpWRVJTSU9OX0lEPSIyNC4wNCIKVkVSU0lPTj0iMjQuMDQuNCBMVFMgKE5vYmxlIE51bWJhdCkiClZFUlNJT05fQ09ERU5BTUU9bm9ibGUKSUQ9dWJ1bnR1CklEX0xJS0U9ZGViaWFuCkhPTUVfVVJMPSJodHRwczovL3d3dy51YnVudHUuY29tLyIKU1VQUE9SVF9VUkw9Imh0dHBzOi8vaGVscC51YnVudHUuY29tLyIKQlVHX1JFUE9SVF9VUkw9Imh0dHBzOi8vYnVncy5sYXVuY2hwYWQubmV0L3VidW50dS8iClBSSVZBQ1lfUE9MSUNZX1VSTD0iaHR0cHM6Ly93d3cudWJ1bnR1LmNvbS9sZWdhbC90ZXJtcy1hbmQtcG9saWNpZXMvcHJpdmFjeS1wb2xpY3kiClVCVU5UVV9DT0RFTkFNRT1ub2JsZQpMT0dPPXVidW50dS1sb2dvCkxpbnV4IGhlbG0tYTAtN3ppcCA3LjAuMC0zMS1nZW5lcmljICMzMX4yNC4wNC4xLVVidW50dSBTTVAgUFJFRU1QVF9EWU5BTUlDIE1vbiBBdWcgMTAgMDk6Mzg6MDIgVVRDIDIgeDg2XzY0IHg4Nl82NCB4ODZfNjQgR05VL0xpbnV4ClNlY3VyZUJvb3QgZW5hYmxlZAogICAgICAgICAgICAgICBMb2NhbCB0aW1lOiBNb24gMjAyNi0wOS0wNyAyMDozNTo0OCBHTVQKICAgICAgICAgICBVbml2ZXJzYWwgdGltZTogTW9uIDIwMjYtMDktMDcgMjA6MzU6NDggVVRDCiAgICAgICAgICAgICAgICAgUlRDIHRpbWU6IE1vbiAyMDI2LTA5LTA3IDIwOjM1OjQ3CiAgICAgICAgICAgICAgICBUaW1lIHpvbmU6IEF0bGFudGljL1JleWtqYXZpayAoR01ULCArMDAwMCkKU3lzdGVtIGNsb2NrIHN5bmNocm9uaXplZDogeWVzCiAgICAgICAgICAgICAgTlRQIHNlcnZpY2U6IGFjdGl2ZQogICAgICAgICAgUlRDIGluIGxvY2FsIFRaOiBubwoxNTYwMDA3NQkvaG9tZS9oZWxtc2V0dXAKRmlsZXN5c3RlbSAgICAgICAxQi1ibG9ja3MgICAgICAgIFVzZWQgICBBdmFpbGFibGUgVXNlJSBNb3VudGVkIG9uCi9kZXYvc2RhMiAgICAgIDMyNTIzNTAxNTY4IDEwOTAyMzE5MTA0IDE5OTQyODg3NDI0ICAzNiUgLwpVYnVudHUgMjQuMDQuNCBMVFMgIk5vYmxlIE51bWJhdCIgLSBSZWxlYXNlIGFtZDY0ICgyMDI2MDIxMClUeXBlczogZGViClVSSXM6IGh0dHA6Ly9ycy5hcmNoaXZlLnVidW50dS5jb20vdWJ1bnR1LwpTdWl0ZXM6IG5vYmxlIG5vYmxlLXVwZGF0ZXMgbm9ibGUtYmFja3BvcnRzCkNvbXBvbmVudHM6IG1haW4gcmVzdHJpY3RlZCB1bml2ZXJzZSBtdWx0aXZlcnNlClNpZ25lZC1CeTogL3Vzci9zaGFyZS9rZXlyaW5ncy91YnVudHUtYXJjaGl2ZS1rZXlyaW5nLmdwZwoKVHlwZXM6IGRlYgpVUklzOiBodHRwOi8vc2VjdXJpdHkudWJ1bnR1LmNvbS91YnVudHUvClN1aXRlczogbm9ibGUtc2VjdXJpdHkKQ29tcG9uZW50czogbWFpbiByZXN0cmljdGVkIHVuaXZlcnNlIG11bHRpdmVyc2UKU2lnbmVkLUJ5OiAvdXNyL3NoYXJlL2tleXJpbmdzL3VidW50dS1hcmNoaXZlLWtleXJpbmcuZ3BnCg==",
+  "stderr_base64": "",
+  "stdout": "PRETTY_NAME=\"Ubuntu 24.04.4 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"24.04\"\nVERSION=\"24.04.4 LTS (Noble Numbat)\"\nVERSION_CODENAME=noble\nID=ubuntu\nID_LIKE=debian\nHOME_URL=\"https://www.ubuntu.com/\"\nSUPPORT_URL=\"https://help.ubuntu.com/\"\nBUG_REPORT_URL=\"https://bugs.launchpad.net/ubuntu/\"\nPRIVACY_POLICY_URL=\"https://www.ubuntu.com/legal/terms-and-policies/privacy-policy\"\nUBUNTU_CODENAME=noble\nLOGO=ubuntu-logo\nLinux helm-a0-7zip 7.0.0-31-generic #31~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Mon Aug 10 09:38:02 UTC 2 x86_64 x86_64 x86_64 GNU/Linux\nSecureBoot enabled\n               Local time: Mon 2026-09-07 20:35:48 GMT\n           Universal time: Mon 2026-09-07 20:35:48 UTC\n                 RTC time: Mon 2026-09-07 20:35:47\n                Time zone: Atlantic/Reykjavik (GMT, +0000)\nSystem clock synchronized: yes\n              NTP service: active\n          RTC in local TZ: no\n15600075\t/home/helmsetup\nFilesystem       1B-blocks        Used   Available Use% Mounted on\n/dev/sda2      32523501568 10902319104 19942887424  36% /\nUbuntu 24.04.4 LTS \"Noble Numbat\" - Release amd64 (20260210)Types: deb\nURIs: http://rs.archive.ubuntu.com/ubuntu/\nSuites: noble noble-updates noble-backports\nComponents: main restricted universe multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n\nTypes: deb\nURIs: http://security.ubuntu.com/ubuntu/\nSuites: noble-security\nComponents: main restricted universe multiverse\nSigned-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:35:48.492322+00:00",
+  "duration_seconds": 0.8145074999774806,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "f3ae26e3695c14c62fe6dcf99f47c31dc3ad6adaf381729bf6bb2c1098ccdaee",
+    "raw_bytes": 4714,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

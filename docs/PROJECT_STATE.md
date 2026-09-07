@@ -1,6 +1,6 @@
 # Stanje projekta
 
-> Current status: the [application-baseline preparation below](#application-baseline) supersedes earlier dated
+> Current status: the [application-baseline execution below](#application-baseline) supersedes earlier dated
 > snapshots, including their aggregate counts and publication/isolation claims. Historical text is
 > retained; the [Gate 0 report](experiments/EXP-009-GATE0-REPORT.md#current-assessment) governs Gate 0,
 > and the [application report](experiments/EXP-009-APP-BASELINE-REPORT.md) governs A0-7ZIP.
@@ -295,7 +295,7 @@ Recommended owner decision: review G0-2, then separately authorise a full Linux 
 environment. Rendering and application experiments require their own bounded approval and
 preregistration. Work stops at the Gate 0 review boundary.
 
-<a id="application-baseline"></a>
+<a id="application-baseline-preparation"></a>
 
 ## Update 2026-09-07 — G0-2 accepted narrowly; application baseline prepared
 
@@ -325,3 +325,39 @@ Definition/helper commit `5a83f8cb2fbb5a3597ddff6b5cae9cb813f1c5ae` precedes the
 run: known-good accepted, corrupted payload rejected. No application workflow has been executed;
 the planned coverage remains 0 of 2 GUI executions. The verifier and all 20 documentation-validator
 tests pass, with 15 additional helper tests. These structural/helper checks do not unblock Hyper-V.
+
+<a id="application-baseline"></a>
+
+## Update 2026-09-07 — A0-7ZIP desktop execution completed for review
+
+The owner performed the previously prepared Hyper-V group action. Resumption fetched and verified
+clean local main/origin/main at `7b9ec6f91d33d44578179da467cb01f4da55ea2c`, preserving the published
+definition at `5a83f8cb2fbb5a3597ddff6b5cae9cb813f1c5ae`. Effective membership and read-only VM/switch
+queries passed in the non-elevated session. The agent changed no host permissions.
+
+**Current A0-7ZIP result: FAIL against the registered two-workflow protocol.** In W1 the agent
+prematurely submitted the GUI Add dialog and created a correct ZIP in `inputs/fixture.zip`, leaving
+the required before-restart destination absent. That failure was preserved and not retried or
+relabelled. The originally planned W2, after a normal guest restart, passed at its fresh destination.
+Both actual ZIP contents matched the frozen synthetic tree, and good/corrupted guest controls
+behaved correctly before and after restart. This does not establish application incompatibility;
+it leaves the complete two-workflow compatibility claim inconclusive because of the actuation error.
+
+One Ubuntu 24.04.4 Generation 2 VM was created: 4 vCPUs, fixed 8 GiB RAM, dynamic 32 GiB VHDX,
+Secure Boot enabled and the existing Default Switch. Verified WineHQ vanilla `11.17~noble-1` and
+official Windows x64 7-Zip 26.03 were used under unprivileged `helmlab`. Installed executable hashes
+were unchanged after restart. Actual GUI coverage was GNOME 46 Wayland console with Wine's X11
+driver through XWayland, llvmpipe software rendering, 1024×768 and scale 1.0.
+
+The [current report](experiments/EXP-009-APP-BASELINE-REPORT.md#current-assessment) and
+[execution evidence](experiments/evidence/app-baseline-execution-2026-09-07/INDEX.md) preserve all
+failures, raw/public hashes, package inventories and measured effort. The VM is stopped and retained;
+all three old project WSL labs and normal Ubuntu remain stopped. D: project file lengths total
+20.175 GiB; C:/D: retain 79.992/513.920 GiB free. No checkpoint, disk-cap increase, new switch,
+host sharing, security downgrade, runtime fallback or host restart was performed.
+
+G0-1, original G0-3, G0-4 and G0-5 remain BLOCKED; G0-2 remains accepted only for the controlled
+HRESULT comparison. Architecture ADRs remain Proposed; ADR-0020 remains Accepted for documentation
+language. No product module or larger PoC was implemented. Stop at A0 review. A proposed next bounded
+module is a read-only evidence-bundle completeness verifier for this exact workflow; owner
+authorisation is still required before implementing it.

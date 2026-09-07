@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmsetup@<lab-guest-ip>",
+    "tail -8 /home/helmsetup/a0-provision/stdout.log; tail -3 /home/helmsetup/a0-provision/stderr.log"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T20:35:21.346992+00:00",
+  "exit_code": 0,
+  "stdout_base64": "UHJlcGFyaW5nIHRvIHVucGFjayAuLi4vMDM3LWxpYmJsa2lkMV8yLjM5LjMtOXVidW50dTYuNl9pMzg2LmRlYiAuLi4NClVucGFja2luZyBsaWJibGtpZDE6aTM4NiAoMi4zOS4zLTl1YnVudHU2LjYpIC4uLg0KU2VsZWN0aW5nIHByZXZpb3VzbHkgdW5zZWxlY3RlZCBwYWNrYWdlIGxpYnBjcmUyLTgtMDppMzg2Lg0KUHJlcGFyaW5nIHRvIHVucGFjayAuLi4vMDM4LWxpYnBjcmUyLTgtMF8xMC40Mi00dWJ1bnR1Mi4xX2kzODYuZGViIC4uLg0KVW5wYWNraW5nIGxpYnBjcmUyLTgtMDppMzg2ICgxMC40Mi00dWJ1bnR1Mi4xKSAuLi4NClNlbGVjdGluZyBwcmV2aW91c2x5IHVuc2VsZWN0ZWQgcGFja2FnZSBsaWJzZWxpbnV4MTppMzg2Lg0KUHJlcGFyaW5nIHRvIHVucGFjayAuLi4vMDM5LWxpYnNlbGludXgxXzMuNS0ydWJ1bnR1Mi4xX2kzODYuZGViIC4uLg0KVW5wYWNraW5nIGxpYnNlbGludXgxOmkzODYgKDMuNS0ydWJ1bnR1Mi4xKSAuLi4NCiAgU2lnbmVkLUJ5OiBGNkVDQjM3NjI0NzRFREE5RDIxQjcwMjI4NzE5MjBEMTk5MUJDOTNDIQogIE5PREFUQTogbm8KYXB0LWtleSBzdWNjZWVkZWQK",
+  "stderr_base64": "",
+  "stdout": "Preparing to unpack .../037-libblkid1_2.39.3-9ubuntu6.6_i386.deb ...\r\nUnpacking libblkid1:i386 (2.39.3-9ubuntu6.6) ...\r\nSelecting previously unselected package libpcre2-8-0:i386.\r\nPreparing to unpack .../038-libpcre2-8-0_10.42-4ubuntu2.1_i386.deb ...\r\nUnpacking libpcre2-8-0:i386 (10.42-4ubuntu2.1) ...\r\nSelecting previously unselected package libselinux1:i386.\r\nPreparing to unpack .../039-libselinux1_3.5-2ubuntu2.1_i386.deb ...\r\nUnpacking libselinux1:i386 (3.5-2ubuntu2.1) ...\r\n  Signed-By: F6ECB3762474EDA9D21B7022871920D1991BC93C!\n  NODATA: no\napt-key succeeded\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:35:21.528137+00:00",
+  "duration_seconds": 0.1811576000181958,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "910370a33c4d4b01ec4b43554090405551e4b0d0745385dbdf9ee200e7bd8fcb",
+    "raw_bytes": 2508,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

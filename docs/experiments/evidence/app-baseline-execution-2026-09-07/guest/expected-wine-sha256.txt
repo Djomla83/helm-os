@@ -1,0 +1,4 @@
+eb42cc830c0e0582ecb1c5cf94cbfefe5d0a0235caae771035077b5e7b8ddd8f  wine-devel_11.17~noble-1_amd64.deb
+9184a81f0848003460526f30a66bd470a997fa0bd43c0d59efcacce0a12adb63  wine-devel-amd64_11.17~noble-1_amd64.deb
+62873c6d7c5b05710064bc5fa3d9e2be0595edd77bc94c2ed3ea7896fdcb7869  winehq-devel_11.17~noble-1_amd64.deb
+599a34d04fd3443a55f5700c3a919f177cdc4ab77b5ee7d6ebcfb87de03cc966  wine-devel-i386_11.17~noble-1_i386.deb

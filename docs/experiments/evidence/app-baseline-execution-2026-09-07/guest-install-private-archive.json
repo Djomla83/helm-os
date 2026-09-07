@@ -1,0 +1,53 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmsetup@<lab-guest-ip>",
+    "sudo -S -p '' -- sh -c 'umask 077; test ! -e /home/helmsetup/ubuntu-install-private.tar.gz && tar -czf /home/helmsetup/ubuntu-install-private.tar.gz -C / var/log/installer var/log/unattended-upgrades && chown helmsetup:helmsetup /home/helmsetup/ubuntu-install-private.tar.gz && sha256sum /home/helmsetup/ubuntu-install-private.tar.gz'"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T20:37:57.141505+00:00",
+  "stdin": "Private guest credential supplied on stdin; not retained in this record",
+  "exit_code": 0,
+  "stdout": "cad09ff65af1b799accdfd627d748cbad387fff1fb365291b4185881e4ba8522  /home/helmsetup/ubuntu-install-private.tar.gz\n",
+  "stderr": "",
+  "stdout_base64": "Y2FkMDlmZjY1YWYxYjc5OWFjY2RmZDYyN2Q3NDhjYmFkMzg3ZmZmMWZiMzY1MjkxYjQxODU4ODFlNGJhODUyMiAgL2hvbWUvaGVsbXNldHVwL3VidW50dS1pbnN0YWxsLXByaXZhdGUudGFyLmd6Cg==",
+  "stderr_base64": "",
+  "ended_utc": "2026-09-07T20:37:58.450148+00:00",
+  "duration_seconds": 1.3086047999677248,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "37a5e38c39987c163724954ba72f10ecd019a4945bc5aa3e171ed05f403755ac",
+    "raw_bytes": 1755,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

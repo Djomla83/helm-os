@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmlab@<lab-guest-ip>",
+    "loginctl list-sessions --no-legend; pgrep -a -u helmlab gnome-shell"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T20:46:58.659963+00:00",
+  "exit_code": 0,
+  "stdout_base64": "NDIgMTAwMSBoZWxtbGFiIHNlYXQwIHR0eTIgYWN0aXZlIG5vIC0KNDQgMTAwMSBoZWxtbGFiIC0gICAgIC0gICAgYWN0aXZlIG5vIC0KMTI1NTUgL3Vzci9iaW4vZ25vbWUtc2hlbGwKMTI2MjIgL3Vzci9saWJleGVjL2dub21lLXNoZWxsLWNhbGVuZGFyLXNlcnZlcgo=",
+  "stderr_base64": "",
+  "stdout": "42 1001 helmlab seat0 tty2 active no -\n44 1001 helmlab -     -    active no -\n12555 /usr/bin/gnome-shell\n12622 /usr/libexec/gnome-shell-calendar-server\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:46:58.864355+00:00",
+  "duration_seconds": 0.20438909996300936,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "eb170eb5a083e5ef17936b036334096c865aa15df8bc0f2531a11b2faf904719",
+    "raw_bytes": 1496,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

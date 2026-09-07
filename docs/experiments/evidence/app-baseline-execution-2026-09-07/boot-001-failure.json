@@ -1,0 +1,14 @@
+{
+  "recorded_utc": "2026-09-07T19:13:48.4035077Z",
+  "label": "boot-001 capture failure",
+  "actual_command": "guest-console.ps1 -Action capture -Label boot-001",
+  "tool_exec_exit_code": -1073741819,
+  "observed_error": "Fatal error. Internal CLR error. (0x80131506), System.Buffer.MemmoveInternal, System.Runtime.InteropServices.Marshal.Copy",
+  "raw_framebuffer_file": "boot-001.rgb565",
+  "raw_framebuffer_bytes": 1572868,
+  "raw_framebuffer_sha256": "dca8f087fecf2317a6621ced06a1502cb0ed8118515c5b4b06fd0fea44f84045",
+  "diagnosis": "The returned byte array is 4 bytes longer than 1024*768*2. The initial native copy incorrectly used the whole array length instead of the bitmap buffer bound.",
+  "corrective_plan": "Preserve the original data and failing script. Use a bounded managed conversion of exactly width*height*2 RGB565 bytes; retain and record any extra trailing bytes. Inspect the result before GUI actuation.",
+  "application_attempted": false,
+  "vm_restarted": false
+}

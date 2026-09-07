@@ -1,0 +1,32 @@
+{
+  "argv": [
+    "C:\\Program Files\\Git\\usr\\bin\\gpg.exe",
+    "--no-options",
+    "--homedir",
+    "./gnupg",
+    "--batch",
+    "--with-colons",
+    "--show-keys",
+    "winehq.key"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z",
+  "started_utc": "2026-09-07T19:34:31.318227+00:00",
+  "exit_code": 0,
+  "stdout_base64": "cHViOi06MzA3MjoxOjc2RjFBMjBGRjk4NzY3MkY6MTU0NDQ2MDk4NDo6Oi06OjpzY0VTQzo6Ojo6OjIzOjowOgpmcHI6Ojo6Ojo6OjpENDNGNjQwMTQ1MzY5QzUxRDc4NkRERUE3NkYxQTIwRkY5ODc2NzJGOgp1aWQ6LTo6OjoxNTQ0NDYxMDkzOjo4Q0FFRDc3QkM2NzYyMDk5QTQ3MTE0NzMzMkUwNzY2MUI3NTQzRERBOjpXaW5lSFEgcGFja2FnZXMgPHdpbmUtZGV2ZWxAd2luZWhxLm9yZz46Ojo6Ojo6Ojo6MDoKc3ViOi06MzA3MjoxOkREQjI1QjNCRTg5NzY3RDY6MTU0NDQ2MDk4NDo6Ojo6OmU6Ojo6OjoyMzoKZnByOjo6Ojo6Ojo6OUNERDRCQjdFRDhDMzdDOTVGRkYzNEYxRERCMjVCM0JFODk3NjdENjoK",
+  "stderr_base64": "",
+  "stdout": "pub:-:3072:1:76F1A20FF987672F:1544460984:::-:::scESC::::::23::0:\nfpr:::::::::D43F640145369C51D786DDEA76F1A20FF987672F:\nuid:-::::1544461093::8CAED77BC6762099A471147332E07661B7543DDA::WineHQ packages <wine-devel@winehq.org>::::::::::0:\nsub:-:3072:1:DDB25B3BE89767D6:1544460984::::::e::::::23:\nfpr:::::::::9CDD4BB7ED8C37C95FFF34F1DDB25B3BE89767D6:\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T19:34:31.437395+00:00",
+  "duration_seconds": 0.11916450000717305,
+  "scope": "Command capture only; exit status is not a workflow verdict",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "18dc45b3e8c0baf039798959800e67acfbfec563599efc141608fff31667ffaa",
+    "raw_bytes": 1412,
+    "redacted_fields": [
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

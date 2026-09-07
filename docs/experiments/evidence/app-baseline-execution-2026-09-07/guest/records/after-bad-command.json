@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "python3",
+    "tools/app_baseline.py",
+    "verify",
+    "inputs/oracle-corrupted.zip",
+    "controls/after-bad.json"
+  ],
+  "cwd": "/home/helmlab/exp009-a0-7zip",
+  "started_utc": "2026-09-07T20:58:48.223801+00:00",
+  "exit_code": 1,
+  "stdout_base64": "eyJzY29wZSI6ICJaSVAgb3V0cHV0LWNvbnRlbnQgdmVyaWZpY2F0aW9uIG9ubHkiLCAic3RhcnRlZF91dGMiOiAiMjAyNi0wOS0wN1QyMDo1ODo0OC4yNDk3ODErMDA6MDAiLCAidmVyZGljdCI6ICJGQUlMIiwgImVycm9ycyI6IFsiRGVjb21wcmVzc2VkIGNvbnRlbnQgbWlzbWF0Y2g6IGZpeHR1cmUvYmluYXJ5L3BheWxvYWQuYmluIl0sICJmaWxlcyI6IFt7InBhdGgiOiAiZml4dHVyZS9iaW5hcnkvcGF5bG9hZC5iaW4iLCAiYnl0ZXMiOiA0MDk2LCAic2hhMjU2IjogImM5N2Q3MGE4ZGUzOGZhYmQzZTIxMTAzMzI2NTYyMzA5YjA2MTZmNGU0MzIxNWUwN2NkNGM2Y2Y4N2U0YjYxNmMifSwgeyJwYXRoIjogImZpeHR1cmUvZW1wdHkuZGF0IiwgImJ5dGVzIjogMCwgInNoYTI1NiI6ICJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0sIHsicGF0aCI6ICJmaXh0dXJlL25hbWVzL2NhZlx1MDBlOS1cdTZmMjJcdTViNTcudHh0IiwgImJ5dGVzIjogMjgsICJzaGEyNTYiOiAiMTNkZWM5MDkwZTJkZmNhMDk2YjRkNjA5OWFmNjRlOWM0ZDU0ZWQ2ZWI5Y2M0NzVhMzFjZTk4OWRiZjkzZDIxZSJ9LCB7InBhdGgiOiAiZml4dHVyZS9uYW1lcy93aXRoIHNwYWNlcy50eHQiLCAiYnl0ZXMiOiAyMSwgInNoYTI1NiI6ICI5NzM0YWQ1MzBkMjBiNjkyOWE2OTRhYmY0ZTIyZTFjMjY5NjY2ZmU2YWMxZWMwZDk2NmUwYTA4YmZlYTRhOWI0In0sIHsicGF0aCI6ICJmaXh0dXJlL25lc3RlZC9kZWVwZXIvZGF0YS50eHQiLCAiYnl0ZXMiOiAxNSwgInNoYTI1NiI6ICI1NGUyNzRjZmI3NTE3NDIyY2NlYzIwMDAzNGZkM2FjMzNiZGU2ODNiYjlhZTdjNzI5ODcyMjI2ZjkyMWFlMWYyIn0sIHsicGF0aCI6ICJmaXh0dXJlL3BsYWluLnR4dCIsICJieXRlcyI6IDQ0LCAic2hhMjU2IjogIjUwMDhhZTAzN2ZmM2Q2NGE0ZjIxMTg0YzY4ZjFhODljOGUwOTI3ZDJmNGM2ZTFjNmExYTgzYTA1NDc2MmRjMmEifV0sICJhcmNoaXZlX3NoYTI1NiI6ICI1ODM0ZThhNWE4YWQzYzUwYjg3NDhmN2MwMTkzMmMyNjlkZTAzZmU2ZjBlNWE1M2E4MDc5MjMwYzZlMTUxMzc2IiwgImFyY2hpdmVfYnl0ZXMiOiA1NjMyLCAiZW5kZWRfdXRjIjogIjIwMjYtMDktMDdUMjA6NTg6NDguMjUwNTI2KzAwOjAwIiwgImZpeHR1cmVfbWFuaWZlc3Rfc2hhMjU2IjogIjc1ZDc4YmM2YmMwZjUzOWRmNWNhOGQ1NGRmMzRmNDA2ZTQ0ZjJhYTVjZWI4YTA3YmYzZDg1NmNlNzI3NDdjOGYifQo=",
+  "stderr_base64": "",
+  "stdout": "{\"scope\": \"ZIP output-content verification only\", \"started_utc\": \"2026-09-07T20:58:48.249781+00:00\", \"verdict\": \"FAIL\", \"errors\": [\"Decompressed content mismatch: fixture/binary/payload.bin\"], \"files\": [{\"path\": \"fixture/binary/payload.bin\", \"bytes\": 4096, \"sha256\": \"c97d70a8de38fabd3e21103326562309b0616f4e43215e07cd4c6cf87e4b616c\"}, {\"path\": \"fixture/empty.dat\", \"bytes\": 0, \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"}, {\"path\": \"fixture/names/caf\\u00e9-\\u6f22\\u5b57.txt\", \"bytes\": 28, \"sha256\": \"13dec9090e2dfca096b4d6099af64e9c4d54ed6eb9cc475a31ce989dbf93d21e\"}, {\"path\": \"fixture/names/with spaces.txt\", \"bytes\": 21, \"sha256\": \"9734ad530d20b6929a694abf4e22e1c269666fe6ac1ec0d966e0a08bfea4a9b4\"}, {\"path\": \"fixture/nested/deeper/data.txt\", \"bytes\": 15, \"sha256\": \"54e274cfb7517422ccec200034fd3ac33bde683bb9ae7c729872226f921ae1f2\"}, {\"path\": \"fixture/plain.txt\", \"bytes\": 44, \"sha256\": \"5008ae037ff3d64a4f21184c68f1a89c8e0927d2f4c6e1c6a1a83a054762dc2a\"}], \"archive_sha256\": \"5834e8a5a8ad3c50b8748f7c01932c269de03fe6f0e5a53a8079230c6e151376\", \"archive_bytes\": 5632, \"ended_utc\": \"2026-09-07T20:58:48.250526+00:00\", \"fixture_manifest_sha256\": \"75d78bc6bc0f539df5ca8d54df34f406e44f2aa5ceb8a07bf3d856ce72747c8f\"}\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:58:48.254851+00:00",
+  "duration_seconds": 0.03105030199998282,
+  "scope": "Command capture only; exit status is not a workflow verdict"
+}

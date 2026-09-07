@@ -1,0 +1,17 @@
+{
+  "utc": "2026-09-07T21:27:54.546997+00:00",
+  "mode": "working",
+  "status": "PASS",
+  "files_scanned": 318,
+  "reachable_blobs_scanned": 226,
+  "decoded_base64_streams_scanned": 502,
+  "public_artifact_hashes_checked": 147,
+  "private_raw_hashes_checked": 592,
+  "exact_index_files_checked": 0,
+  "before_evidence_preserved": true,
+  "registered_helper_fixture_tests_unchanged": true,
+  "ADR_statuses_unchanged": true,
+  "issues": [],
+  "script_sha256": "0ec2b1ab1d75db7c3b605605f32cbc2af218793edefbc5c4c833759bd0dcde2a",
+  "limits": "Text/decoded-stream checks use observed private identifiers and current guest secrets. Fourteen selected PNGs were visually reviewed and match captured image hashes; screenshots are not OCR-certified. History scan covers objects reachable from the branch, not private backup refs."
+}

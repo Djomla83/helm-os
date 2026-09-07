@@ -1,0 +1,35 @@
+{
+  "argv": [
+    "C:\\Program Files\\Git\\usr\\bin\\gpg.exe",
+    "--no-options",
+    "--homedir",
+    "./gnupg",
+    "--batch",
+    "--no-auto-key-retrieve",
+    "--status-fd",
+    "1",
+    "--verify",
+    "ubuntu-SHA256SUMS.gpg",
+    "ubuntu-SHA256SUMS"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z",
+  "started_utc": "2026-09-07T19:08:21.853463+00:00",
+  "exit_code": 0,
+  "stdout_base64": "W0dOVVBHOl0gTkVXU0lHCltHTlVQRzpdIEtFWV9DT05TSURFUkVEIDg0MzkzOERGMjI4RDIyRjdCMzc0MkJDMEQ5NEFBM0YwRUZFMjEwOTIgMApbR05VUEc6XSBTSUdfSUQgeEhPT0wvc1J4b3pTMldkNng0Z1ZmY0lhczEwIDIwMjYtMDItMTIgMTc3MDkwNzU4MgpbR05VUEc6XSBHT09EU0lHIEQ5NEFBM0YwRUZFMjEwOTIgVWJ1bnR1IENEIEltYWdlIEF1dG9tYXRpYyBTaWduaW5nIEtleSAoMjAxMikgPGNkaW1hZ2VAdWJ1bnR1LmNvbT4KW0dOVVBHOl0gVkFMSURTSUcgODQzOTM4REYyMjhEMjJGN0IzNzQyQkMwRDk0QUEzRjBFRkUyMTA5MiAyMDI2LTAyLTEyIDE3NzA5MDc1ODIgMCA0IDAgMSAxMCAwMCA4NDM5MzhERjIyOEQyMkY3QjM3NDJCQzBEOTRBQTNGMEVGRTIxMDkyCltHTlVQRzpdIFRSVVNUX1VOREVGSU5FRCAwIHBncAo=",
+  "stderr_base64": "Z3BnOiBTaWduYXR1cmUgbWFkZSBUaHUgRmViIDEyIDE1OjQ2OjIyIDIwMjYgQ0VTVApncGc6ICAgICAgICAgICAgICAgIHVzaW5nIFJTQSBrZXkgODQzOTM4REYyMjhEMjJGN0IzNzQyQkMwRDk0QUEzRjBFRkUyMTA5MgpncGc6IEdvb2Qgc2lnbmF0dXJlIGZyb20gIlVidW50dSBDRCBJbWFnZSBBdXRvbWF0aWMgU2lnbmluZyBLZXkgKDIwMTIpIDxjZGltYWdlQHVidW50dS5jb20+IiBbdW5rbm93bl0KZ3BnOiBXQVJOSU5HOiBUaGlzIGtleSBpcyBub3QgY2VydGlmaWVkIHdpdGggYSB0cnVzdGVkIHNpZ25hdHVyZSEKZ3BnOiAgICAgICAgICBUaGVyZSBpcyBubyBpbmRpY2F0aW9uIHRoYXQgdGhlIHNpZ25hdHVyZSBiZWxvbmdzIHRvIHRoZSBvd25lci4KUHJpbWFyeSBrZXkgZmluZ2VycHJpbnQ6IDg0MzkgMzhERiAyMjhEIDIyRjcgQjM3NCAgMkJDMCBEOTRBIEEzRjAgRUZFMiAxMDkyCg==",
+  "stdout": "[GNUPG:] NEWSIG\n[GNUPG:] KEY_CONSIDERED 843938DF228D22F7B3742BC0D94AA3F0EFE21092 0\n[GNUPG:] SIG_ID xHOOL/sRxozS2Wd6x4gVfcIas10 2026-02-12 1770907582\n[GNUPG:] GOODSIG D94AA3F0EFE21092 Ubuntu CD Image Automatic Signing Key (2012) <cdimage@ubuntu.com>\n[GNUPG:] VALIDSIG 843938DF228D22F7B3742BC0D94AA3F0EFE21092 2026-02-12 1770907582 0 4 0 1 10 00 843938DF228D22F7B3742BC0D94AA3F0EFE21092\n[GNUPG:] TRUST_UNDEFINED 0 pgp\n",
+  "stderr": "gpg: Signature made Thu Feb 12 15:46:22 2026 CEST\ngpg:                using RSA key 843938DF228D22F7B3742BC0D94AA3F0EFE21092\ngpg: Good signature from \"Ubuntu CD Image Automatic Signing Key (2012) <cdimage@ubuntu.com>\" [unknown]\ngpg: WARNING: This key is not certified with a trusted signature!\ngpg:          There is no indication that the signature belongs to the owner.\nPrimary key fingerprint: 8439 38DF 228D 22F7 B374  2BC0 D94A A3F0 EFE2 1092\n",
+  "ended_utc": "2026-09-07T19:08:21.887604+00:00",
+  "duration_seconds": 0.03413879999425262,
+  "scope": "Command capture only; exit status is not a workflow verdict",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "5e549d2f5702d82cc5b09009f513e1160abc8cbfa8068e6eca2e6d9092c75a32",
+    "raw_bytes": 2706,
+    "redacted_fields": [
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

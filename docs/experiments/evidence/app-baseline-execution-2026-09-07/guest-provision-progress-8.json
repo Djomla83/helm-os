@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmsetup@<lab-guest-ip>",
+    "tail -6 /home/helmsetup/a0-provision/stdout.log"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T20:42:38.694392+00:00",
+  "exit_code": 0,
+  "stdout_base64": "U2V0dGluZyB1cCBsaWJ4dmlkY29yZTQ6YW1kNjQgKDI6MS4zLjctMWJ1aWxkMSkgLi4uDQpTZXR0aW5nIHVwIGxpYnJhdjFlMDphbWQ2NCAoMC43LjEtMikgLi4uDQpTZXR0aW5nIHVwIGxpYnNuYXBweTF2NTphbWQ2NCAoMS4xLjEwLTFidWlsZDEpIC4uLg0KU2V0dGluZyB1cCBsaWJrcmI1c3VwcG9ydDA6YW1kNjQgKDEuMjAuMS02dWJ1bnR1Mi44KSAuLi4NClNldHRpbmcgdXAgbGlicmlzdDQ6YW1kNjQgKDAuMi4xMCtkZnNnLTIpIC4uLg0KU2V0dGluZyB1cCBhcHBhcm1vciAoNC4wLjFyZWFsbHk0LjAuMS0wdWJ1bnR1MC4yNC4wNC43KSAuLi4NCg==",
+  "stderr_base64": "",
+  "stdout": "Setting up libxvidcore4:amd64 (2:1.3.7-1build1) ...\r\nSetting up librav1e0:amd64 (0.7.1-2) ...\r\nSetting up libsnappy1v5:amd64 (1.1.10-1build1) ...\r\nSetting up libkrb5support0:amd64 (1.20.1-6ubuntu2.8) ...\r\nSetting up librist4:amd64 (0.2.10+dfsg-2) ...\r\nSetting up apparmor (4.0.1really4.0.1-0ubuntu0.24.04.7) ...\r\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:42:38.877526+00:00",
+  "duration_seconds": 0.1831304000224918,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "5752adea0c76b7c98200b7ff8071d8a781da7b4aeae3e70030252584406e114c",
+    "raw_bytes": 1862,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

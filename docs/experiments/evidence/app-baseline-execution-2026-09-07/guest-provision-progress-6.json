@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmsetup@<lab-guest-ip>",
+    "tail -8 /home/helmsetup/a0-provision/stdout.log"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T20:40:13.757184+00:00",
+  "exit_code": 0,
+  "stdout_base64": "UHJlcGFyaW5nIHRvIHVucGFjayAuLi4vMjA4LWxpYmp4bDAuN18wLjcuMC0xMC4ydWJ1bnR1Ni4xX2FtZDY0LmRlYiAuLi4NClVucGFja2luZyBsaWJqeGwwLjc6YW1kNjQgKDAuNy4wLTEwLjJ1YnVudHU2LjEpIC4uLg0KU2VsZWN0aW5nIHByZXZpb3VzbHkgdW5zZWxlY3RlZCBwYWNrYWdlIGxpYnJhdjFlMDphbWQ2NC4NClByZXBhcmluZyB0byB1bnBhY2sgLi4uLzIwOS1saWJyYXYxZTBfMC43LjEtMl9hbWQ2NC5kZWIgLi4uDQpVbnBhY2tpbmcgbGlicmF2MWUwOmFtZDY0ICgwLjcuMS0yKSAuLi4NClNlbGVjdGluZyBwcmV2aW91c2x5IHVuc2VsZWN0ZWQgcGFja2FnZSBsaWJzaGluZTM6YW1kNjQuDQpQcmVwYXJpbmcgdG8gdW5wYWNrIC4uLi8yMTAtbGlic2hpbmUzXzMuMS4xLTJidWlsZDFfYW1kNjQuZGViIC4uLg0KVW5wYWNraW5nIGxpYnNoaW5lMzphbWQ2NCAoMy4xLjEtMmJ1aWxkMSkgLi4uDQo=",
+  "stderr_base64": "",
+  "stdout": "Preparing to unpack .../208-libjxl0.7_0.7.0-10.2ubuntu6.1_amd64.deb ...\r\nUnpacking libjxl0.7:amd64 (0.7.0-10.2ubuntu6.1) ...\r\nSelecting previously unselected package librav1e0:amd64.\r\nPreparing to unpack .../209-librav1e0_0.7.1-2_amd64.deb ...\r\nUnpacking librav1e0:amd64 (0.7.1-2) ...\r\nSelecting previously unselected package libshine3:amd64.\r\nPreparing to unpack .../210-libshine3_3.1.1-2build1_amd64.deb ...\r\nUnpacking libshine3:amd64 (3.1.1-2build1) ...\r\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:40:13.932352+00:00",
+  "duration_seconds": 0.17516889999387786,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "34e3353482c19eb9c358171898b22c34eb3e4d0ee05cb9b461eb67618c9833db",
+    "raw_bytes": 2204,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmlab@<lab-guest-ip>",
+    "id; sha256sum /home/helmlab/exp009-a0-7zip/prepare-baseline.sh"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T20:45:26.292394+00:00",
+  "exit_code": 0,
+  "stdout_base64": "dWlkPTEwMDEoaGVsbWxhYikgZ2lkPTEwMDEoaGVsbWxhYikgZ3JvdXBzPTEwMDEoaGVsbWxhYikKMmQ5M2YwYjkxNTBjYzU1YzQ2YmU3MmRhNzEwYTI1ZWNkNTNiMWVlMTQ1NDIyOTgwNzA1YmZhODAyYmMzMzY4MiAgL2hvbWUvaGVsbWxhYi9leHAwMDktYTAtN3ppcC9wcmVwYXJlLWJhc2VsaW5lLnNoCg==",
+  "stderr_base64": "",
+  "stdout": "uid=1001(helmlab) gid=1001(helmlab) groups=1001(helmlab)\n2d93f0b9150cc55c46be72da710a25ecd53b1ee145422980705bfa802bc33682  /home/helmlab/exp009-a0-7zip/prepare-baseline.sh\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:45:26.633775+00:00",
+  "duration_seconds": 0.34137670003110543,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "86e992d79ed0538ca76b000492f347cd13cd067c5c984470e986accefbbf5396",
+    "raw_bytes": 1537,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmsetup@<lab-guest-ip>",
+    "sha256sum /home/helmsetup/provision-wine.sh; df -B1 /"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T20:33:26.388506+00:00",
+  "exit_code": 0,
+  "stdout_base64": "MDZlMGIwZDgxODkzMDQ5OWJlMTU1ZTI2NmVjZTViMGQ2YjI1NjllOTE2ODlkNDIxNDc3MGNjMTc2ZDIzYjM3ZSAgL2hvbWUvaGVsbXNldHVwL3Byb3Zpc2lvbi13aW5lLnNoCkZpbGVzeXN0ZW0gICAgICAgMUItYmxvY2tzICAgICAgICBVc2VkICAgQXZhaWxhYmxlIFVzZSUgTW91bnRlZCBvbgovZGV2L3NkYTIgICAgICAzMjUyMzUwMTU2OCAxMDMzMjc5MDc4NCAyMDUxMjQxNTc0NCAgMzQlIC8K",
+  "stderr_base64": "",
+  "stdout": "06e0b0d818930499be155e266ece5b0d6b2569e91689d4214770cc176d23b37e  /home/helmsetup/provision-wine.sh\nFilesystem       1B-blocks        Used   Available Use% Mounted on\n/dev/sda2      32523501568 10332790784 20512415744  34% /\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:33:26.610129+00:00",
+  "duration_seconds": 0.22161990002496168,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "f380a51cb53ea23b88f385bfc86a79df507893c96c17822bc482525aab979cf0",
+    "raw_bytes": 1652,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

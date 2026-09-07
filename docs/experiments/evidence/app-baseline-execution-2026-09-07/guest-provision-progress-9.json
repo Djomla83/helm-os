@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmsetup@<lab-guest-ip>",
+    "tail -7 /home/helmsetup/a0-provision/stdout.log; tail -3 /home/helmsetup/a0-provision/stderr.log"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T20:44:51.844285+00:00",
+  "exit_code": 0,
+  "stdout_base64": "U2V0dGluZyB1cCBsaWJwYW5nb2Z0Mi0xLjAtMDppMzg2ICgxLjUyLjErZHMtMWJ1aWxkMSkgLi4uDQpTZXR0aW5nIHVwIGxpYnBhbmdvY2Fpcm8tMS4wLTA6aTM4NiAoMS41Mi4xK2RzLTFidWlsZDEpIC4uLg0KU2V0dGluZyB1cCBsaWJzYW5lMTppMzg2ICgxLjIuMS03YnVpbGQ0KSAuLi4NCk5vIGRpdmVyc2lvbiAnZGl2ZXJzaW9uIG9mIC9saWIvdWRldi9od2RiLmQvMjAtc2FuZS5od2RiIHRvIC9saWIvdWRldi9od2RiLmQvMjAtc2FuZS5od2RiLnVzci1pcy1tZXJnZWQgYnkgdXNyLWlzLW1lcmdlZCcsIG5vbmUgcmVtb3ZlZC4NCk5vIGRpdmVyc2lvbiAnZGl2ZXJzaW9uIG9mIC9saWIvdWRldi9ydWxlcy5kLzYwLWxpYnNhbmUxLnJ1bGVzIHRvIC9saWIvdWRldi9ydWxlcy5kLzYwLWxpYnNhbmUxLnJ1bGVzLnVzci1pcy1tZXJnZWQgYnkgdXNyLWlzLW1lcmdlZCcsIG5vbmUgcmVtb3ZlZC4NCk5vIGRpdmVyc2lvbiAnZGl2ZXJzaW9uIG9mIC9saWIvdWRldi9ydWxlcy5kLzk5LWxpYnNhbmUxLnJ1bGVzIHRvIC9saWIvdWRldi9ydWxlcy5kLzk5LWxpYnNhbmUxLnJ1bGVzLnVzci1pcy1tZXJnZWQgYnkgdXNyLWlzLW1lcmdlZCcsIG5vbmUgcmVtb3ZlZC4NClNldHRpbmcgdXAgbGlicnN2ZzItMjppMzg2ICgyLjU4LjArZGZzZy0xYnVpbGQxKSAuLi4NCiAgU2lnbmVkLUJ5OiBGNkVDQjM3NjI0NzRFREE5RDIxQjcwMjI4NzE5MjBEMTk5MUJDOTNDIQogIE5PREFUQTogbm8KYXB0LWtleSBzdWNjZWVkZWQK",
+  "stderr_base64": "",
+  "stdout": "Setting up libpangoft2-1.0-0:i386 (1.52.1+ds-1build1) ...\r\nSetting up libpangocairo-1.0-0:i386 (1.52.1+ds-1build1) ...\r\nSetting up libsane1:i386 (1.2.1-7build4) ...\r\nNo diversion 'diversion of /lib/udev/hwdb.d/20-sane.hwdb to /lib/udev/hwdb.d/20-sane.hwdb.usr-is-merged by usr-is-merged', none removed.\r\nNo diversion 'diversion of /lib/udev/rules.d/60-libsane1.rules to /lib/udev/rules.d/60-libsane1.rules.usr-is-merged by usr-is-merged', none removed.\r\nNo diversion 'diversion of /lib/udev/rules.d/99-libsane1.rules to /lib/udev/rules.d/99-libsane1.rules.usr-is-merged by usr-is-merged', none removed.\r\nSetting up librsvg2-2:i386 (2.58.0+dfsg-1build1) ...\r\n  Signed-By: F6ECB3762474EDA9D21B7022871920D1991BC93C!\n  NODATA: no\napt-key succeeded\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:44:52.020872+00:00",
+  "duration_seconds": 0.17658600001595914,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "9829d45781b397808104c4f256738907ad3d803d99e266641af3e3ec5dabd1c7",
+    "raw_bytes": 2920,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

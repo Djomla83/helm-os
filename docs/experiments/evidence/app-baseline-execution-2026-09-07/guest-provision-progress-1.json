@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmsetup@<lab-guest-ip>",
+    "tail -6 /home/helmsetup/a0-provision/stdout.log; tail -4 /home/helmsetup/a0-provision/stderr.log"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T20:34:36.898053+00:00",
+  "exit_code": 0,
+  "stdout_base64": "U2VsZWN0aW5nIHByZXZpb3VzbHkgdW5zZWxlY3RlZCBwYWNrYWdlIGxpYngxMS14Y2IxOmkzODYuDQpQcmVwYXJpbmcgdG8gdW5wYWNrIC4uLi8wMTQtbGlieDExLXhjYjFfMiUzYTEuOC43LTFidWlsZDFfaTM4Ni5kZWIgLi4uDQpVbnBhY2tpbmcgbGlieDExLXhjYjE6aTM4NiAoMjoxLjguNy0xYnVpbGQxKSAuLi4NClNlbGVjdGluZyBwcmV2aW91c2x5IHVuc2VsZWN0ZWQgcGFja2FnZSBsaWJ4Y2ItZHJpMy0wOmkzODYuDQpQcmVwYXJpbmcgdG8gdW5wYWNrIC4uLi8wMTUtbGlieGNiLWRyaTMtMF8xLjE1LTF1YnVudHUyX2kzODYuZGViIC4uLg0KVW5wYWNraW5nIGxpYnhjYi1kcmkzLTA6aTM4NiAoMS4xNS0xdWJ1bnR1MikgLi4uDQogIE5vUHViS2V5OiAKICBTaWduZWQtQnk6IEY2RUNCMzc2MjQ3NEVEQTlEMjFCNzAyMjg3MTkyMEQxOTkxQkM5M0MhCiAgTk9EQVRBOiBubwphcHQta2V5IHN1Y2NlZWRlZAo=",
+  "stderr_base64": "",
+  "stdout": "Selecting previously unselected package libx11-xcb1:i386.\r\nPreparing to unpack .../014-libx11-xcb1_2%3a1.8.7-1build1_i386.deb ...\r\nUnpacking libx11-xcb1:i386 (2:1.8.7-1build1) ...\r\nSelecting previously unselected package libxcb-dri3-0:i386.\r\nPreparing to unpack .../015-libxcb-dri3-0_1.15-1ubuntu2_i386.deb ...\r\nUnpacking libxcb-dri3-0:i386 (1.15-1ubuntu2) ...\r\n  NoPubKey: \n  Signed-By: F6ECB3762474EDA9D21B7022871920D1991BC93C!\n  NODATA: no\napt-key succeeded\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:34:37.232140+00:00",
+  "duration_seconds": 0.33407420001458377,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "7fa5cbace7cab1c1549ce7de5bab3918906a7c6931c123fbe0edca6a8e874601",
+    "raw_bytes": 2260,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

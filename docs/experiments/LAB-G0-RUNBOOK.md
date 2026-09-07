@@ -296,19 +296,25 @@ Verify with `wsl.exe --list --verbose` that only the original distributions rema
 
 <a id="desktop-baseline"></a>
 
-## 7. Separately authorised A0-7ZIP desktop VM — preparation only
+## 7. Separately authorised A0-7ZIP desktop VM
 
 The owner accepted G0-2 only as the controlled HRESULT comparison and authorised one Ubuntu
 24.04 desktop VM / Windows x64 7-Zip baseline. The [definition](EXP-009.md#application-baseline)
 and [application report](EXP-009-APP-BASELINE-REPORT.md) govern this separate subtask. None of the
 other Gate 0 checks, architecture acceptance or the larger PoC is authorised.
 
-### 7.1. Actual permission blocker and owner-only action
+**Current state:** the owner-performed permission action became effective and the single VM was
+provisioned and tested. [Section 7.4](#a0-executed-lab) records the actual retained state; the
+preparation observations in 7.1/7.2 below are historical. Overall A0-7ZIP is FAIL because W1's
+required destination was missed by agent input, while planned W2 passed. No repeat is authorised
+by this runbook alone.
+
+### 7.1. Historical permission blocker and owner-only action
 
 The [preflight](evidence/app-baseline-2026-09-07/hyperv-preflight.json) observed the Hyper-V
 module `2.0.0.0` and running `vmms`, but an unelevated token without group SID `S-1-5-32-578`.
 The local Hyper-V Administrators group was empty. Both `Get-VM` and `Get-VMSwitch` returned
-permission errors. The known blocker remains; no VM creation was attempted.
+permission errors. At that preparation checkpoint the blocker remained and no VM creation was attempted.
 
 A private `owner-hyperv-action.ps1` outside Git contains the exact current local account SID,
 resolved with `Get-LocalUser` while preparing the action. The engineering agent has **not** run it.
@@ -333,7 +339,7 @@ security-policy change or feature installation is part of the action. Recheck ef
 membership, `Get-VM` and `Get-VMSwitch` before provisioning. Permission is not inferred from an
 owner message, membership alone, or elapsed time. If unavailable, stop at preparation.
 
-### 7.2. Proposed configuration and capacity — not provisioned
+### 7.2. Preregistered configuration and capacity — preparation snapshot
 
 | Property | Fixed plan |
 |---|---|
@@ -364,7 +370,7 @@ Keep VM configuration/runtime-state locations on D:, not their default location 
 The initial C:-only estimate omitted runtime-state allowance and was corrected before provisioning.
 [Microsoft documents RAM-sized runtime-state files for Hyper-V 2016](https://support.microsoft.com/en-us/servicing/os/windows-server/2017/12/hyper-v-vss-backs-up-a-large-vmrs-file-when-you-back-up-a-virtual-machine).
 An 8 GiB allowance here is conservative planning, not a measurement of this uncreated Windows 11 VM.
-Current allocation is **zero**. Do not shrink allocations, enlarge disks, delete prior labs/evidence,
+Allocation at preparation was **zero**. Do not shrink allocations, enlarge disks, delete prior labs/evidence,
 or alter host paging to make a plan fit. Stop and report if measured growth invalidates the reserve.
 
 ### 7.3. Guest setup, transfer and evidence collection
@@ -403,3 +409,53 @@ both workflow destinations and all failed attempts. Archive verification decompr
 memory against the frozen manifest; screenshots and zero process exit codes are insufficient.
 Use the existing scoped byte-preserving Git attributes and distinguish redacted public artifacts
 from private raw identities. Finish at the application-baseline review; no teardown or larger PoC.
+
+<a id="a0-executed-lab"></a>
+
+### 7.4. Executed lab manifest and review boundary — 2026-09-07
+
+The resumed baseline was clean, fetched main/origin/main `7b9ec6f91d33d44578179da467cb01f4da55ea2c`.
+The [effective access capture](evidence/app-baseline-execution-2026-09-07/hyperv-access.json) confirms
+membership in the current non-elevated token and successful VM/switch queries before provisioning.
+The agent performed no membership/elevation action. That group gives general Hyper-V access;
+membership is not VM-specific.
+
+| Property | Actual state |
+|---|---|
+| VM | `helm-lab-desktop-7zip`, ID `bd39f424-5b26-479d-846f-2f28f6639637`, Generation 2/configuration 12.0 |
+| Allocation | 4 vCPUs, fixed 8 GiB, one dynamic 32 GiB-cap VHDX; no cap change |
+| Disk/configuration | `D:\helm-lab\exp009-a0-7zip\vm\os.vhdx`; VM configuration under `vm\helm-lab-desktop-7zip` |
+| Installation media | Official Ubuntu 24.04.4 desktop amd64, build 20260210; full SHA-256 and Ubuntu checksum signature verified before boot |
+| Firmware/network | Secure Boot On, `MicrosoftUEFICertificateAuthority`; existing Default Switch; no new switch/forwarding |
+| Guest | Ubuntu 24.04.4, kernel `7.0.0-31-generic` after ordinary installer updates; root ext4, EFI FAT32; lab timezone Etc/UTC |
+| Runtime/application | WineHQ vanilla four packages `11.17~noble-1`, held; official Windows x64 7-Zip 26.03 in the registered fresh prefix |
+| Accounts | `helmsetup` performs guest administrative setup; `helmlab` UID/GID 1001, no supplementary groups, performs application work |
+| Display | GNOME 46 local Wayland console, one 1024×768 monitor, scale 1.0; Wine X11 driver through XWayland; Mesa llvmpipe, no GPU acceleration |
+| Input/capture | Scoped Hyper-V WMI/CIM keyboard/mouse and thumbnail APIs; four-character scancode batches; bounded RGB565 conversion. No VMConnect/enhanced-session or clipboard/device/drive redirection |
+| Transfer | New project-only SSH key with `restrict` authorization; explicit identity, isolated known-hosts, no inherited SSH config/agent/X11 forwarding; host fingerprint compared with guest console before connection |
+| Final lifecycle | Normal guest reboot once between workflows, then normal guest poweroff for review; VM Off, zero checkpoints, automatic checkpoints false, start Nothing/stop ShutDown |
+| Preserved artifacts | ISO remains in project downloads, automatically ejected from virtual DVD; VM and both synthetic outputs retained; original private logs/frames/archive hashes retained outside Git |
+
+The [report and evidence index](EXP-009-APP-BASELINE-REPORT.md#current-assessment) contain full
+artifact identities, dependency inventories, exact commands and failure annotations. The
+[archived instrumentation](evidence/app-baseline-execution-2026-09-07/INDEX.md) is specific to this
+VM and execution. It is not a general VM orchestrator or permission to provision another instance.
+The ordinary installer updated guest Ubuntu packages; no host package/security setting was changed.
+The first private GPG path attempt and Windows keyscan attempt failed; their corrected tooling
+paths retained the same verification requirements. Native computer-use transport was unavailable,
+so documented Hyper-V console methods were used. All failures remain evidence.
+
+W1 prematurely submitted Add and wrote `inputs/fixture.zip`; the required before-restart output
+is still absent. Its content passed a supplementary check, but W1/V1 remain FAIL. W2 created
+`outputs/after-restart/workflow.zip` with verified paths and bytes. No W1 repeat, output move,
+runtime fallback, prefix rollback or recovery was performed. Control/GUI/coverage verdicts stay
+separate. The interface was operated and inspected by one agent, not an unattended fixed script.
+
+At the [final inventory](evidence/app-baseline-execution-2026-09-07/host-final-state.json), D: project
+file lengths totalled 20.175 GiB, including 13.973 GiB for the VHDX. C:/D: retained 79.992/513.920 GiB
+free, comfortably beyond the 40 GiB reserve even allowing remaining disk growth. File lengths,
+guest filesystem usage and volume-free observations have distinct measurement limits. The three
+existing project WSL labs and normal Ubuntu remained stopped; host boot time predates the task.
+
+Keep this state for owner review. Do not delete evidence, enlarge/clone the VM, start another
+workflow, or implement the proposed first HELM module without a new bounded owner decision.

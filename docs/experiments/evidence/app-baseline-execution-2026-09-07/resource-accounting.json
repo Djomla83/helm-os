@@ -1,0 +1,124 @@
+{
+  "recorded_utc": "2026-09-07T21:11:22.061013+00:00",
+  "execution_baseline": "7b9ec6f91d33d44578179da467cb01f4da55ea2c",
+  "definition_commit": "5a83f8cb2fbb5a3597ddff6b5cae9cb813f1c5ae",
+  "host_preflight_utc": "2026-09-07T19:05:09.9195847Z",
+  "retained_host_state_at": "2026-09-07T21:08:37.6805063Z",
+  "project_D_file_length_bytes": 21663009019.0,
+  "vhd_file_bytes": 15003025408,
+  "vhd_cap_bytes": 34359738368,
+  "volume_free_bytes": {
+    "C": 85890379776,
+    "D": 551817273344
+  },
+  "private_archive_file_length_bytes_at_inventory": 148621169,
+  "private_archive_file_count": 781,
+  "volume_and_file_measurement_limit": "File lengths and Get-VHD FileSize, plus host volume free-space observations. NTFS allocation/metadata overhead not separately measured; host volume changes are not exclusively attributable to this task.",
+  "iso_download_bytes": 6655619072,
+  "iso_download_duration_seconds": 229.1454619,
+  "wine_provision_duration_seconds": 685.8286413000314,
+  "wine_provision_apt_summary_lines": [
+    "Fetched 12.7 MB in 2s (6,886 kB/s)",
+    "0 upgraded, 4 newly installed, 0 to remove and 99 not upgraded.",
+    "Need to get 1,509 kB of archives.",
+    "After this operation, 3,980 kB of additional disk space will be used.",
+    "Fetched 1,509 kB in 0s (3,165 kB/s)",
+    "Fetched 496 kB in 0s (1,456 kB/s)",
+    "7 upgraded, 236 newly installed, 0 to remove and 92 not upgraded.",
+    "Need to get 417 MB of archives.",
+    "After this operation, 2,189 MB of additional disk space will be used.",
+    "Fetched 417 MB in 14s (29.8 MB/s)",
+    "7 upgraded, 236 newly installed, 0 to remove and 92 not upgraded.",
+    "After this operation, 2,189 MB of additional disk space will be used."
+  ],
+  "wine_four_pinned_deb_bytes": 303879358,
+  "retained_downloaded_deb_list_bytes": 418996868,
+  "retained_downloaded_deb_count": 251,
+  "download_limit": "APT human-readable transfer totals are rounded. ISO exact bytes are measured; installer reused from preparation. Ubuntu installation/security-update transfer volume, protocol overhead and research reads are not completely metered. Retained .deb sizes are not a cumulative network counter.",
+  "steps": {
+    "prefix": {
+      "started_utc": "2026-09-07T20:48:38.510530+00:00",
+      "ended_utc": "2026-09-07T20:49:38.769166+00:00",
+      "duration_seconds": 60.25863847999972,
+      "exit_code": 0
+    },
+    "installation": {
+      "started_utc": "2026-09-07T20:50:03.810792+00:00",
+      "ended_utc": "2026-09-07T20:50:59.937994+00:00",
+      "duration_seconds": 56.12720737300015,
+      "exit_code": 0
+    },
+    "workflow_before": {
+      "started_utc": "2026-09-07T20:51:23.839643+00:00",
+      "ended_utc": "2026-09-07T20:54:13.590177+00:00",
+      "duration_seconds": 169.75053824600036,
+      "exit_code": 0
+    },
+    "workflow_after": {
+      "started_utc": "2026-09-07T20:59:23.821538+00:00",
+      "ended_utc": "2026-09-07T21:02:35.123484+00:00",
+      "duration_seconds": 191.301955395,
+      "exit_code": 0
+    },
+    "verify_before_required": {
+      "started_utc": "2026-09-07T20:53:52.749951+00:00",
+      "ended_utc": "2026-09-07T20:53:52.780154+00:00",
+      "duration_seconds": 0.030203773999801342,
+      "exit_code": 1
+    },
+    "verify_before_accidental": {
+      "started_utc": "2026-09-07T20:54:08.747287+00:00",
+      "ended_utc": "2026-09-07T20:54:08.778113+00:00",
+      "duration_seconds": 0.03082523199964271,
+      "exit_code": 0
+    },
+    "verify_after": {
+      "started_utc": "2026-09-07T21:01:21.001218+00:00",
+      "ended_utc": "2026-09-07T21:01:21.033523+00:00",
+      "duration_seconds": 0.032305052999959116,
+      "exit_code": 0
+    },
+    "control_before_good": {
+      "started_utc": "2026-09-07T20:45:41.148203+00:00",
+      "ended_utc": "2026-09-07T20:45:41.183769+00:00",
+      "duration_seconds": 0.03555759500022759,
+      "exit_code": 0
+    },
+    "control_before_bad": {
+      "started_utc": "2026-09-07T20:45:41.216890+00:00",
+      "ended_utc": "2026-09-07T20:45:41.248260+00:00",
+      "duration_seconds": 0.031368566999844916,
+      "exit_code": 1
+    },
+    "control_after_good": {
+      "started_utc": "2026-09-07T20:58:48.153818+00:00",
+      "ended_utc": "2026-09-07T20:58:48.193097+00:00",
+      "duration_seconds": 0.03927701800000705,
+      "exit_code": 0
+    },
+    "control_after_bad": {
+      "started_utc": "2026-09-07T20:58:48.223801+00:00",
+      "ended_utc": "2026-09-07T20:58:48.254851+00:00",
+      "duration_seconds": 0.03105030199998282,
+      "exit_code": 1
+    },
+    "guest_helper_tests": {
+      "started_utc": "2026-09-07T20:45:40.824889+00:00",
+      "ended_utc": "2026-09-07T20:45:41.050651+00:00",
+      "duration_seconds": 0.22576256899992586,
+      "exit_code": 0
+    }
+  },
+  "engineering": {
+    "agents": 1,
+    "delegated_agents": 0,
+    "human_gui_actions": 0,
+    "human_permission_actions": 1,
+    "human_permission_action_basis": "Owner reports personally completing group addition; effective result independently verified. Agent did not execute that action.",
+    "human_attended_minutes": null,
+    "model_tokens_or_billing": null,
+    "engineering_active_minutes": null,
+    "wall_clock_limit": "Session wall time includes package execution, agent analysis, documentation and a roughly 25-minute pause between console observations at 20:03 and 20:28 UTC. It is not active engineering time.",
+    "manual_analysis": "One model operated and reviewed console frames; diagnosed capture/input/GPG/SSH tooling failures, reviewed archive content, assembled and redacted evidence. GUI was agent-operated, not a fixed unattended workflow."
+  }
+}

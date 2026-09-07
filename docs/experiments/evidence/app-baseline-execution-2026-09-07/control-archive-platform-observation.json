@@ -1,0 +1,85 @@
+{
+  "scope": "Metadata comparison of host and guest synthetic oracle ZIPs; no application execution",
+  "host_sha256": "2bd1a021bafe1f93dc88cfaa19539e4cf3b26b777c8df0c976250c8a93b0a029",
+  "guest_sha256": "6e5d9fccf785742c3918d0b00b9eaa1801a4cc44f5593cf64fdfdf8d0f3e9e4a",
+  "host_bytes": 5632,
+  "guest_bytes": 5632,
+  "different_byte_offsets": [
+    4816,
+    4870,
+    4931,
+    5001,
+    5061,
+    5122,
+    5190,
+    5262,
+    5325,
+    5401,
+    5476,
+    5552
+  ],
+  "same_names_and_content": true,
+  "entries": [
+    {
+      "name": "fixture/",
+      "host_create_system": 0,
+      "guest_create_system": 3
+    },
+    {
+      "name": "fixture/binary/",
+      "host_create_system": 0,
+      "guest_create_system": 3
+    },
+    {
+      "name": "fixture/empty-directory/",
+      "host_create_system": 0,
+      "guest_create_system": 3
+    },
+    {
+      "name": "fixture/names/",
+      "host_create_system": 0,
+      "guest_create_system": 3
+    },
+    {
+      "name": "fixture/nested/",
+      "host_create_system": 0,
+      "guest_create_system": 3
+    },
+    {
+      "name": "fixture/nested/deeper/",
+      "host_create_system": 0,
+      "guest_create_system": 3
+    },
+    {
+      "name": "fixture/binary/payload.bin",
+      "host_create_system": 0,
+      "guest_create_system": 3
+    },
+    {
+      "name": "fixture/empty.dat",
+      "host_create_system": 0,
+      "guest_create_system": 3
+    },
+    {
+      "name": "fixture/names/caf\u00e9-\u6f22\u5b57.txt",
+      "host_create_system": 0,
+      "guest_create_system": 3
+    },
+    {
+      "name": "fixture/names/with spaces.txt",
+      "host_create_system": 0,
+      "guest_create_system": 3
+    },
+    {
+      "name": "fixture/nested/deeper/data.txt",
+      "host_create_system": 0,
+      "guest_create_system": 3
+    },
+    {
+      "name": "fixture/plain.txt",
+      "host_create_system": 0,
+      "guest_create_system": 3
+    }
+  ],
+  "interpretation": "Control archive identities differ across host/guest metadata; content expectations and control outcomes are unchanged. No helper or oracle criterion was edited."
+}

@@ -1,0 +1,31 @@
+{
+  "argv": [
+    "C:\\Program Files\\Git\\usr\\bin\\gpg.exe",
+    "--no-options",
+    "--homedir",
+    "./gnupg",
+    "--batch",
+    "--import",
+    "ubuntu-cd-signing-key.asc"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z",
+  "started_utc": "2026-09-07T19:08:21.531378+00:00",
+  "exit_code": 0,
+  "stdout_base64": "",
+  "stderr_base64": "Z3BnOiBrZXkgRDk0QUEzRjBFRkUyMTA5MjogMTAyIHNpZ25hdHVyZXMgbm90IGNoZWNrZWQgZHVlIHRvIG1pc3Npbmcga2V5cwpncGc6IGtleSBEOTRBQTNGMEVGRTIxMDkyOiBwdWJsaWMga2V5ICJVYnVudHUgQ0QgSW1hZ2UgQXV0b21hdGljIFNpZ25pbmcgS2V5ICgyMDEyKSA8Y2RpbWFnZUB1YnVudHUuY29tPiIgaW1wb3J0ZWQKZ3BnOiBUb3RhbCBudW1iZXIgcHJvY2Vzc2VkOiAxCmdwZzogICAgICAgICAgICAgICBpbXBvcnRlZDogMQpncGc6IG5vIHVsdGltYXRlbHkgdHJ1c3RlZCBrZXlzIGZvdW5kCg==",
+  "stdout": "",
+  "stderr": "gpg: key D94AA3F0EFE21092: 102 signatures not checked due to missing keys\ngpg: key D94AA3F0EFE21092: public key \"Ubuntu CD Image Automatic Signing Key (2012) <cdimage@ubuntu.com>\" imported\ngpg: Total number processed: 1\ngpg:               imported: 1\ngpg: no ultimately trusted keys found\n",
+  "ended_utc": "2026-09-07T19:08:21.761290+00:00",
+  "duration_seconds": 0.22990930001833476,
+  "scope": "Command capture only; exit status is not a workflow verdict",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "95023266d97c1dba9500881aae07abf2fdeb8affa5f58cf8d1006a3980709b05",
+    "raw_bytes": 1277,
+    "redacted_fields": [
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "argv": [
+    "python",
+    "tools/validate_docs.py"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T21:25:37.716586+00:00",
+  "exit_code": 0,
+  "stdout_base64": "eyJqc29uX2ZpbGVzIjogMTczLCAibGlua190YXJnZXRzIjogNzIyLCAibWFya2Rvd25fZmlsZXMiOiA4MH0NClBBU1M6IGxva2FsbmEgc3RydWt0dXJhIGRva3VtZW50YWNpamUgaSBvc25vdm5lIEpTT04gaW52YXJpamFudGUuDQpOaXN1IHByb3ZlcmVuaSB3ZWIgVVJMIGRvc3R1cG5vc3QsIGlzdGluaXRvc3QgZG9rYXphLCBPUywgYXBsaWthY2lqZSBpbGkgc2FuZGJveC4NCg==",
+  "stderr_base64": "",
+  "stdout": "{\"json_files\": 173, \"link_targets\": 722, \"markdown_files\": 80}\r\nPASS: lokalna struktura dokumentacije i osnovne JSON invarijante.\r\nNisu provereni web URL dostupnost, istinitost dokaza, OS, aplikacije ili sandbox.\r\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T21:25:39.072723+00:00",
+  "duration_seconds": 1.356119200005196,
+  "scope": "Command capture only; exit status is not a workflow verdict",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "ce5a50f56e0cc5bad4b667bc9baee252a3ca198e7f37fa8c055fe2fa4ccd1a29",
+    "raw_bytes": 939,
+    "redacted_fields": [
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

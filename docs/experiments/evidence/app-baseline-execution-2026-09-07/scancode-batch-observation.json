@@ -1,0 +1,8 @@
+{
+  "time_utc": "2026-09-07T19:23:57.2598625Z",
+  "observation": "Short raw scancode batches changed fields as requested. Longer batches returned zero without entering the full text; the masked password showed only two characters and weak strength. No account was submitted.",
+  "interpretation": "A guest-input batching limitation is suspected; not established as a general Hyper-V limit.",
+  "next_method": "Use chunks of at most four ASCII characters (at most sixteen scan bytes), with 500ms between calls. Clear the incomplete fields first and verify strong/matching passwords before submitting.",
+  "evidence": "ubuntu-056-account-final.png",
+  "host_security_unchanged": true
+}

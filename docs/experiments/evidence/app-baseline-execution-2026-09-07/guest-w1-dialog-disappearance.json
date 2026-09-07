@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmlab@<lab-guest-ip>",
+    "find /home/helmlab/exp009-a0-7zip/inputs /home/helmlab/exp009-a0-7zip/outputs -maxdepth 2 -type f -printf \"%p %s bytes\\n\"; pgrep -a -u helmlab -f \"7zFM.exe|7zG.exe\""
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T20:53:09.774153+00:00",
+  "exit_code": 0,
+  "stdout_base64": "L2hvbWUvaGVsbWxhYi9leHAwMDktYTAtN3ppcC9pbnB1dHMvZml4dHVyZS9lbXB0eS5kYXQgMCBieXRlcwovaG9tZS9oZWxtbGFiL2V4cDAwOS1hMC03emlwL2lucHV0cy9maXh0dXJlL3BsYWluLnR4dCA0NCBieXRlcwovaG9tZS9oZWxtbGFiL2V4cDAwOS1hMC03emlwL2lucHV0cy9maXh0dXJlLnppcCAyMjgyIGJ5dGVzCi9ob21lL2hlbG1sYWIvZXhwMDA5LWEwLTd6aXAvaW5wdXRzL29yYWNsZS1nb29kLnppcCA1NjMyIGJ5dGVzCi9ob21lL2hlbG1sYWIvZXhwMDA5LWEwLTd6aXAvaW5wdXRzL29yYWNsZS1jb3JydXB0ZWQuemlwIDU2MzIgYnl0ZXMKMTQzMzIgcHl0aG9uMyB0b29scy9hcHBfYmFzZWxpbmUucHkgY2FwdHVyZSAtLWN3ZCAvaG9tZS9oZWxtbGFiL2V4cDAwOS1hMC03emlwIC0tdGltZW91dCA2MDAgcmVjb3Jkcy93b3JrZmxvdy1iZWZvcmUuanNvbiAtLSBlbnYgRElTUExBWT06MCBXQVlMQU5EX0RJU1BMQVk9d2F5bGFuZC0wIFhBVVRIT1JJVFk9L3J1bi91c2VyLzEwMDEvLm11dHRlci1Yd2F5bGFuZGF1dGguSDJKMVUzIFhER19TRVNTSU9OX1RZUEU9d2F5bGFuZCBYREdfUlVOVElNRV9ESVI9L3J1bi91c2VyLzEwMDEgREJVU19TRVNTSU9OX0JVU19BRERSRVNTPXVuaXg6cGF0aD0vcnVuL3VzZXIvMTAwMS9idXMgV0lORVBSRUZJWD0vaG9tZS9oZWxtbGFiL2V4cDAwOS1hMC03emlwL3ByZWZpeCBXSU5FQVJDSD13aW42NCBXSU5FRExMT1ZFUlJJREVTPW1zY29yZWUsbXNodG1sPSAvb3B0L3dpbmUtZGV2ZWwvYmluL3dpbmUgcHJlZml4L2RyaXZlX2MvUHJvZ3JhbSBGaWxlcy83LVppcC83ekZNLmV4ZQoxNDM4MyBaOlxob21lXGhlbG1sYWJcZXhwMDA5LWEwLTd6aXBccHJlZml4XGRyaXZlX2NcUHJvZ3JhbSBGaWxlc1w3LVppcFw3ekZNLmV4ZQo=",
+  "stderr_base64": "",
+  "stdout": "/home/helmlab/exp009-a0-7zip/inputs/fixture/empty.dat 0 bytes\n/home/helmlab/exp009-a0-7zip/inputs/fixture/plain.txt 44 bytes\n/home/helmlab/exp009-a0-7zip/inputs/fixture.zip 2282 bytes\n/home/helmlab/exp009-a0-7zip/inputs/oracle-good.zip 5632 bytes\n/home/helmlab/exp009-a0-7zip/inputs/oracle-corrupted.zip 5632 bytes\n14332 python3 tools/app_baseline.py capture --cwd /home/helmlab/exp009-a0-7zip --timeout 600 records/workflow-before.json -- env DISPLAY=:0 WAYLAND_DISPLAY=wayland-0 XAUTHORITY=/run/user/1001/.mutter-Xwaylandauth.H2J1U3 XDG_SESSION_TYPE=wayland XDG_RUNTIME_DIR=/run/user/1001 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1001/bus WINEPREFIX=/home/helmlab/exp009-a0-7zip/prefix WINEARCH=win64 WINEDLLOVERRIDES=mscoree,mshtml= /opt/wine-devel/bin/wine prefix/drive_c/Program Files/7-Zip/7zFM.exe\n14383 Z:\\home\\helmlab\\exp009-a0-7zip\\prefix\\drive_c\\Program Files\\7-Zip\\7zFM.exe\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:53:09.964957+00:00",
+  "duration_seconds": 0.1908030000049621,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "273bdba14356e024256b83186f244692defa3663fa882a65fb5c63d78a6980c5",
+    "raw_bytes": 3330,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

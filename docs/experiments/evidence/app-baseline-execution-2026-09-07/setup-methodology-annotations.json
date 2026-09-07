@@ -1,0 +1,11 @@
+{
+  "time_utc": "2026-09-07T19:41:35.8094183Z",
+  "helper_observations": [
+    "The initial TypeText action sequence produced unexpected installer text. Input mapping, timing and dynamic field positions were not independently isolated.",
+    "Direct short scancode input was visibly correct. Larger batches reported success while omitting text.",
+    "Four-character chunks with a 500 ms delay produced a strong, matching password in the unsubmitted account form before installation. No short/weak credential was submitted.",
+    "The first screenshot read raced a still-running exec cell and reported file not found; the completed capture was subsequently read.",
+    "A wildcard path passed literally to rg and one guessed evidence filename produced path errors; neither changed files."
+  ],
+  "installer_current_stage": "Installer performs its normal guest security/package updates. Logs show progress after the initial unattended-upgrade CPU work. No process has been killed or retried."
+}

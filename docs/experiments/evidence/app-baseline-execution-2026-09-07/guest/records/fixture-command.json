@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "python3",
+    "tools/app_baseline.py",
+    "prepare",
+    "inputs",
+    "fixture-record.json"
+  ],
+  "cwd": "/home/helmlab/exp009-a0-7zip",
+  "started_utc": "2026-09-07T20:45:41.082691+00:00",
+  "exit_code": 0,
+  "stdout_base64": "eyJzY29wZSI6ICJTeW50aGV0aWMgaGFybmVzcyBmaXh0dXJlcywgbm90IGFwcGxpY2F0aW9uIG91dHB1dCIsICJjcmVhdGVkX3V0YyI6ICIyMDI2LTA5LTA3VDIwOjQ1OjQxLjExMTA3NyswMDowMCIsICJmaXh0dXJlX21hbmlmZXN0X3NoYTI1NiI6ICI3NWQ3OGJjNmJjMGY1MzlkZjVjYThkNTRkZjM0ZjQwNmU0NGYyYWE1Y2ViOGEwN2JmM2Q4NTZjZTcyNzQ3YzhmIiwgImNvbnRyb2xzIjogW3siZmlsZSI6ICJvcmFjbGUtZ29vZC56aXAiLCAiYnl0ZXMiOiA1NjMyLCAic2hhMjU2IjogIjZlNWQ5ZmNjZjc4NTc0MmMzOTE4ZDBiMDBiOWVhYTE4MDFhNGNjNDRmNTU5M2NmNjRmZGZkZjhkMGYzZTllNGEiLCAiZXhwZWN0ZWRfdmVyaWZpZXJfdmVyZGljdCI6ICJQQVNTIn0sIHsiZmlsZSI6ICJvcmFjbGUtY29ycnVwdGVkLnppcCIsICJieXRlcyI6IDU2MzIsICJzaGEyNTYiOiAiNTgzNGU4YTVhOGFkM2M1MGI4NzQ4ZjdjMDE5MzJjMjY5ZGUwM2ZlNmYwZTVhNTNhODA3OTIzMGM2ZTE1MTM3NiIsICJleHBlY3RlZF92ZXJpZmllcl92ZXJkaWN0IjogIkZBSUwifV0sICJjb3JydXB0aW9uIjogIkZsaXAgYml0IDAgb2YgdGhlIGZpcnN0IGJpbmFyeSBwYXlsb2FkIGJ5dGU7IFpJUCBDUkMgcmVtYWlucyB2YWxpZC4ifQo=",
+  "stderr_base64": "",
+  "stdout": "{\"scope\": \"Synthetic harness fixtures, not application output\", \"created_utc\": \"2026-09-07T20:45:41.111077+00:00\", \"fixture_manifest_sha256\": \"75d78bc6bc0f539df5ca8d54df34f406e44f2aa5ceb8a07bf3d856ce72747c8f\", \"controls\": [{\"file\": \"oracle-good.zip\", \"bytes\": 5632, \"sha256\": \"6e5d9fccf785742c3918d0b00b9eaa1801a4cc44f5593cf64fdfdf8d0f3e9e4a\", \"expected_verifier_verdict\": \"PASS\"}, {\"file\": \"oracle-corrupted.zip\", \"bytes\": 5632, \"sha256\": \"5834e8a5a8ad3c50b8748f7c01932c269de03fe6f0e5a53a8079230c6e151376\", \"expected_verifier_verdict\": \"FAIL\"}], \"corruption\": \"Flip bit 0 of the first binary payload byte; ZIP CRC remains valid.\"}\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:45:41.116326+00:00",
+  "duration_seconds": 0.03363958199997796,
+  "scope": "Command capture only; exit status is not a workflow verdict"
+}

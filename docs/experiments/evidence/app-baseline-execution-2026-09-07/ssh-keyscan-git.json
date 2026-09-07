@@ -1,0 +1,31 @@
+{
+  "argv": [
+    "C:\\Program Files\\Git\\usr\\bin\\ssh-keyscan.exe",
+    "-t",
+    "ed25519",
+    "<lab-guest-ip>"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z",
+  "started_utc": "2026-09-07T20:32:44.442879+00:00",
+  "exit_code": 0,
+  "stdout_base64": "IyA8bGFiLWd1ZXN0LWlwPjoyMiBTU0gtMi4wLU9wZW5TU0hfOS42cDEgVWJ1bnR1LTN1YnVudHUxMy4xOQo8bGFiLWd1ZXN0LWlwPiBzc2gtZWQyNTUxOSBBQUFBQzNOemFDMWxaREkxTlRFNUFBQUFJSkpJaEJSN084UWF2UWpjRmdIcExkV1BxcHcwajYzSUhJZGlwOUhscTlyQwo=",
+  "stderr_base64": "",
+  "stdout": "# <lab-guest-ip>:22 SSH-2.0-OpenSSH_9.6p1 Ubuntu-3ubuntu13.19\n<lab-guest-ip> ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJJIhBR7O8QavQjcFgHpLdWPqpw0j63IHIdip9Hlq9rC\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:32:44.512630+00:00",
+  "duration_seconds": 0.06974090001313016,
+  "scope": "Command capture only; exit status is not a workflow verdict",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "ac094e5dcf3ea5d908dc8bb2d456813ebbd597bf8c4c3f157bf48f98f21f89a0",
+    "raw_bytes": 897,
+    "redacted_fields": [
+      "argv[3]",
+      "cwd",
+      "stdout_base64 (decoded UTF-8 stream)",
+      "stdout"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

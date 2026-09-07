@@ -1,5 +1,21 @@
 # Istorija promena
 
+## 0.4.4 — 2026-09-07
+
+Executed the separately authorised A0-7ZIP desktop baseline after verifying the owner's completed
+Hyper-V group action was effective in a non-elevated session. Created and retained one Ubuntu
+24.04.4 Generation 2 VM within the registered limits, with Secure Boot and the existing switch.
+Verified pinned WineHQ vanilla 11.17 and Windows x64 7-Zip 26.03; guest controls and executable
+identities passed. The first GUI attempt created its correct-content ZIP at the wrong destination
+because of agent actuation error; W1/V1 remain FAIL without retry. The planned post-restart W2/V2
+passed. Overall A0-7ZIP is FAIL against the unchanged two-workflow protocol, not an application
+incompatibility conclusion.
+
+Published scoped experimental instrumentation, commands, synthetic GUI evidence, package and
+output identities, failures, resource measurements and private/public provenance. VM and prior labs
+are stopped and preserved. No product module, runtime switching, recovery, architecture acceptance
+or larger PoC was started. Work stops at application-baseline review.
+
 ## 0.4.3 — 2026-09-07
 
 Recorded owner acceptance of G0-2 only for the controlled HRESULT comparison and the separately

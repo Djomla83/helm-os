@@ -1,0 +1,1635 @@
+{
+  "schema_note": "Task-specific publication manifest in the existing EXP-009 evidence structure; not a product framework",
+  "generated_utc": "2026-09-07T21:37:29.880002+00:00",
+  "baseline_commit": "7b9ec6f91d33d44578179da467cb01f4da55ea2c",
+  "definition_commit": "5a83f8cb2fbb5a3597ddff6b5cae9cb813f1c5ae",
+  "excludes": [
+    "publication-manifest.json itself; immutable Git blob/commit identifies it"
+  ],
+  "raw_location": "Private project archive outside Git; never uploaded",
+  "redaction_rule": "Owner home/account, account SID, host name and local network addresses replaced by documented tokens; UTF-8 base64 streams reflect publication bytes when redacted. Guest project names/paths, runtime identities, failures and outcomes unchanged. PNG copies are unretouched derived framebuffer images, not raw RGB565.",
+  "artifacts": [
+    {
+      "file": "boot-001-failure.json",
+      "publication_sha256": "9ece784a6a70c70272f54eedd1dd9e80972c81d54f28c24230a1e590c043d785",
+      "publication_bytes": 1003,
+      "raw_sha256": "9ece784a6a70c70272f54eedd1dd9e80972c81d54f28c24230a1e590c043d785",
+      "raw_bytes": 1003,
+      "redacted": false
+    },
+    {
+      "file": "capacity-preflight.json",
+      "publication_sha256": "49ec554fc1e432cde42a3e1222a2819f8c89ce430ebb98642b6a11ad9a30088c",
+      "publication_bytes": 1126,
+      "raw_sha256": "49ec554fc1e432cde42a3e1222a2819f8c89ce430ebb98642b6a11ad9a30088c",
+      "raw_bytes": 1126,
+      "redacted": false
+    },
+    {
+      "file": "console-actions.json",
+      "publication_sha256": "6cddce2b3e9201d64da53bfbd7a7bcbcfff218b5a2a72fb50c218e859722dd13",
+      "publication_bytes": 201084,
+      "kind": "Derived index/analysis from identified source records; not claimed as a raw command stream"
+    },
+    {
+      "file": "control-archive-platform-observation.json",
+      "publication_sha256": "9e69b3b03ead900ac84a506f0e332ba10bb7af57144b24f0f9920a3de84c0ff3",
+      "publication_bytes": 2168,
+      "raw_sha256": "9e69b3b03ead900ac84a506f0e332ba10bb7af57144b24f0f9920a3de84c0ff3",
+      "raw_bytes": 2168,
+      "redacted_fields": []
+    },
+    {
+      "file": "execution-annotations.json",
+      "publication_sha256": "1ae6ef408ce322da1fa816f7b8619707dbd6d25e10ac3ac489d6dd51a961d2a5",
+      "publication_bytes": 4869,
+      "raw_sha256": "1ae6ef408ce322da1fa816f7b8619707dbd6d25e10ac3ac489d6dd51a961d2a5",
+      "raw_bytes": 4869,
+      "redacted_fields": []
+    },
+    {
+      "file": "final-review-tooling.json",
+      "publication_sha256": "9246637b506e037ac26d1c5434867cd90b6e64b51145849c91096f2b9333b7b4",
+      "publication_bytes": 1682,
+      "kind": "Derived index/analysis from identified source records; not claimed as a raw command stream"
+    },
+    {
+      "file": "first-boot-command.json",
+      "publication_sha256": "602a9084ac34ddc848b092e31dbdbb8bed7dfd2894a3dec8ed71597d9c01f677",
+      "publication_bytes": 2303,
+      "raw_sha256": "50e371768702cb6f20785737bdbd18433adc79da0979fae4422b372baa6e6d4f",
+      "raw_bytes": 1979,
+      "redacted_fields": [
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest/apt-index-sha256.txt",
+      "publication_sha256": "84bd8ace2f8b1dfe3c942cddee25c4e2619fe5514c7df48bf5273cc296fb37f0",
+      "publication_bytes": 453,
+      "raw_sha256": "84bd8ace2f8b1dfe3c942cddee25c4e2619fe5514c7df48bf5273cc296fb37f0",
+      "redacted": false,
+      "source": "Guest Wine provisioning metadata"
+    },
+    {
+      "file": "guest/controls/after-bad.json",
+      "publication_sha256": "2cc2e1f29224882b73c6cd170517f328d1d11739c3ecd7c6994371f647f3a690",
+      "publication_bytes": 1447,
+      "raw_sha256": "2cc2e1f29224882b73c6cd170517f328d1d11739c3ecd7c6994371f647f3a690",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": false
+    },
+    {
+      "file": "guest/controls/after-good.json",
+      "publication_sha256": "544aebd9ee0c630c8c6efa6ef4ba25d296e6fa484c224e27e8d727d518e57e3d",
+      "publication_bytes": 1380,
+      "raw_sha256": "544aebd9ee0c630c8c6efa6ef4ba25d296e6fa484c224e27e8d727d518e57e3d",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": false
+    },
+    {
+      "file": "guest/controls/before-bad.json",
+      "publication_sha256": "85cbc786a8239716e726a4d52a34e0b89a05f77d36f2f53647850277faff841f",
+      "publication_bytes": 1447,
+      "raw_sha256": "85cbc786a8239716e726a4d52a34e0b89a05f77d36f2f53647850277faff841f",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": true
+    },
+    {
+      "file": "guest/controls/before-good.json",
+      "publication_sha256": "2f4c306d9f69bf7c4ddd80caaca05660e15eeaad96f836aec6fb228728185432",
+      "publication_bytes": 1380,
+      "raw_sha256": "2f4c306d9f69bf7c4ddd80caaca05660e15eeaad96f836aec6fb228728185432",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": true
+    },
+    {
+      "file": "guest/downloaded-packages.tsv",
+      "publication_sha256": "2e8e1f4806fd75784b42ff3fbc7d583a9e991dd48ff1d21b4ace1c12e2195b16",
+      "publication_bytes": 11554,
+      "raw_sha256": "2e8e1f4806fd75784b42ff3fbc7d583a9e991dd48ff1d21b4ace1c12e2195b16",
+      "redacted": false,
+      "source": "Guest Wine provisioning metadata"
+    },
+    {
+      "file": "guest/expected-wine-sha256.txt",
+      "publication_sha256": "d7a8f323f251db83937112951f2fe89b54a9e1e94cf81c8cdcfaab71d09e9a4d",
+      "publication_bytes": 416,
+      "raw_sha256": "d7a8f323f251db83937112951f2fe89b54a9e1e94cf81c8cdcfaab71d09e9a4d",
+      "redacted": false,
+      "source": "Guest Wine provisioning metadata"
+    },
+    {
+      "file": "guest/fixture-record.json",
+      "publication_sha256": "a4db3fc61c0d7e06b7ea475e61c4ef36bd4bcccd1f9767e565c227f460065b11",
+      "publication_bytes": 716,
+      "raw_sha256": "a4db3fc61c0d7e06b7ea475e61c4ef36bd4bcccd1f9767e565c227f460065b11",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": true
+    },
+    {
+      "file": "guest/package-differences.json",
+      "publication_sha256": "e2e97a40912108a0accf92ea45aad51829a13d825777f743eed9b23b869cf69b",
+      "publication_bytes": 20204,
+      "kind": "Derived index/analysis from identified source records; not claimed as a raw command stream"
+    },
+    {
+      "file": "guest/packages-after.tsv",
+      "publication_sha256": "a4e0133e12c08ed5f959e00164362b706c46228a30e4afc3fe84b3855d891493",
+      "publication_bytes": 70295,
+      "raw_sha256": "a4e0133e12c08ed5f959e00164362b706c46228a30e4afc3fe84b3855d891493",
+      "redacted": false,
+      "source": "Guest Wine provisioning metadata"
+    },
+    {
+      "file": "guest/packages-before.tsv",
+      "publication_sha256": "adeef1c8e27d4ace00a8b55ef2194a0187c86091209b685f50e8bd685d0e9469",
+      "publication_bytes": 60738,
+      "raw_sha256": "adeef1c8e27d4ace00a8b55ef2194a0187c86091209b685f50e8bd685d0e9469",
+      "redacted": false,
+      "source": "Guest Wine provisioning metadata"
+    },
+    {
+      "file": "guest/records/7zip-installation.json",
+      "publication_sha256": "8897ed27a8e104bb341a1ba053d073c1650fa38056b5218a088e3127268df8a7",
+      "publication_bytes": 1115,
+      "raw_sha256": "8897ed27a8e104bb341a1ba053d073c1650fa38056b5218a088e3127268df8a7",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": true
+    },
+    {
+      "file": "guest/records/after-bad-command.json",
+      "publication_sha256": "4af477915fd20f468e6f5e5fe93dbf9ffae9c626853f0ad09b7e1f44e9a86fc3",
+      "publication_bytes": 3508,
+      "raw_sha256": "4af477915fd20f468e6f5e5fe93dbf9ffae9c626853f0ad09b7e1f44e9a86fc3",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": false
+    },
+    {
+      "file": "guest/records/after-good-command.json",
+      "publication_sha256": "a68e9a1fa6edfb2a0749c47745e203fe3735f58f8337927d37b1e797ade09935",
+      "publication_bytes": 3363,
+      "raw_sha256": "a68e9a1fa6edfb2a0749c47745e203fe3735f58f8337927d37b1e797ade09935",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": false
+    },
+    {
+      "file": "guest/records/before-bad-command.json",
+      "publication_sha256": "59f3ddb5405aba0fe5a98a1ffa577f78ee18edadf11132b6e76e20d1e4c8351a",
+      "publication_bytes": 3510,
+      "raw_sha256": "59f3ddb5405aba0fe5a98a1ffa577f78ee18edadf11132b6e76e20d1e4c8351a",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": true
+    },
+    {
+      "file": "guest/records/before-good-command.json",
+      "publication_sha256": "2c2eb95fc9ae090a9e0e5f3924e1bcf24f9eb6b61856e9e7b39de7508e91e5fd",
+      "publication_bytes": 3364,
+      "raw_sha256": "2c2eb95fc9ae090a9e0e5f3924e1bcf24f9eb6b61856e9e7b39de7508e91e5fd",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": true
+    },
+    {
+      "file": "guest/records/display-scale-after.json",
+      "publication_sha256": "bdb87e6d7c7459c9a637894ea9e96ccc9dd47d304281f47dca33d9e8e14de97d",
+      "publication_bytes": 4987,
+      "raw_sha256": "bdb87e6d7c7459c9a637894ea9e96ccc9dd47d304281f47dca33d9e8e14de97d",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": false
+    },
+    {
+      "file": "guest/records/environment-after.json",
+      "publication_sha256": "470d7c6aa040a921d23580e77d41cb04a1fb5f67076660bff13b717e74be80f5",
+      "publication_bytes": 214797,
+      "raw_sha256": "470d7c6aa040a921d23580e77d41cb04a1fb5f67076660bff13b717e74be80f5",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": false
+    },
+    {
+      "file": "guest/records/environment-before.json",
+      "publication_sha256": "cddd652213bd65cd68e918a4c7b65f0b90c2abc2042c3cfa03a1a83e443c176c",
+      "publication_bytes": 215601,
+      "raw_sha256": "cddd652213bd65cd68e918a4c7b65f0b90c2abc2042c3cfa03a1a83e443c176c",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": true
+    },
+    {
+      "file": "guest/records/fixture-command.json",
+      "publication_sha256": "870568592c52034c792e82935213f25c82034a0203c6eca3525d508b48e35083",
+      "publication_bytes": 2000,
+      "raw_sha256": "870568592c52034c792e82935213f25c82034a0203c6eca3525d508b48e35083",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": true
+    },
+    {
+      "file": "guest/records/guest-helper-tests.json",
+      "publication_sha256": "e66923eee8e40a4309a65d07ec40016d7e4dc9f44d7eb863b4c5e91d966cf0a4",
+      "publication_bytes": 5402,
+      "raw_sha256": "e66923eee8e40a4309a65d07ec40016d7e4dc9f44d7eb863b4c5e91d966cf0a4",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": true
+    },
+    {
+      "file": "guest/records/installed-after.json",
+      "publication_sha256": "858c6310e8507c97e502922cf6f0eb0f179992caf1732e0e664f41bc9e0d4ade",
+      "publication_bytes": 2455,
+      "raw_sha256": "858c6310e8507c97e502922cf6f0eb0f179992caf1732e0e664f41bc9e0d4ade",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": false
+    },
+    {
+      "file": "guest/records/installed-before.json",
+      "publication_sha256": "f1ded2865228894bff3f3583f8247b0d4e17437b3dc0fedcf8d11da259a49f47",
+      "publication_bytes": 2455,
+      "raw_sha256": "f1ded2865228894bff3f3583f8247b0d4e17437b3dc0fedcf8d11da259a49f47",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": true
+    },
+    {
+      "file": "guest/records/prefix-initialization.json",
+      "publication_sha256": "606d58ad6a29552035294bfeff2917b5261a3ced1bb2f5b0bc40928851543b5a",
+      "publication_bytes": 4717,
+      "raw_sha256": "606d58ad6a29552035294bfeff2917b5261a3ced1bb2f5b0bc40928851543b5a",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": true
+    },
+    {
+      "file": "guest/records/verify-after-command.json",
+      "publication_sha256": "3a905be9d0f6f85697235809afe207658d5cdd320e5311a671d74e54340d2a40",
+      "publication_bytes": 3377,
+      "raw_sha256": "3a905be9d0f6f85697235809afe207658d5cdd320e5311a671d74e54340d2a40",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": false
+    },
+    {
+      "file": "guest/records/verify-after.json",
+      "publication_sha256": "dea27f01b12665b6ecacaf3b9215d04d13cdb4504ed427d9d2c6982064fa1056",
+      "publication_bytes": 1380,
+      "raw_sha256": "dea27f01b12665b6ecacaf3b9215d04d13cdb4504ed427d9d2c6982064fa1056",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": false
+    },
+    {
+      "file": "guest/records/verify-before-accidental-command.json",
+      "publication_sha256": "98eb476da11f97f631b5b7f30754fffc8f7870cc8371425b9f2138bf7468872b",
+      "publication_bytes": 3372,
+      "raw_sha256": "98eb476da11f97f631b5b7f30754fffc8f7870cc8371425b9f2138bf7468872b",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": true
+    },
+    {
+      "file": "guest/records/verify-before-accidental.json",
+      "publication_sha256": "4f5455bd6f92038ca88348c5af17df39ef1b66501b66d79590c055fac88af0e9",
+      "publication_bytes": 1380,
+      "raw_sha256": "4f5455bd6f92038ca88348c5af17df39ef1b66501b66d79590c055fac88af0e9",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": true
+    },
+    {
+      "file": "guest/records/verify-before-required-command.json",
+      "publication_sha256": "d531b1594308ad0000fb0af51e0a8161f9f18009701b1bccf0764499d3464eeb",
+      "publication_bytes": 1451,
+      "raw_sha256": "d531b1594308ad0000fb0af51e0a8161f9f18009701b1bccf0764499d3464eeb",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": true
+    },
+    {
+      "file": "guest/records/verify-before-required.json",
+      "publication_sha256": "deb105644a8cf4e20002262fe0998ac159ff662e1258ebc5d50379455b2e4a7f",
+      "publication_bytes": 410,
+      "raw_sha256": "deb105644a8cf4e20002262fe0998ac159ff662e1258ebc5d50379455b2e4a7f",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": true
+    },
+    {
+      "file": "guest/records/wine-backend-after.json",
+      "publication_sha256": "53ed85b40316f24fb1766f46e47be7c88f14fad763db0e4268d832034539ea7c",
+      "publication_bytes": 21229,
+      "raw_sha256": "53ed85b40316f24fb1766f46e47be7c88f14fad763db0e4268d832034539ea7c",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": false
+    },
+    {
+      "file": "guest/records/wine-backend-before.json",
+      "publication_sha256": "661106ea037daa54a498a3114eab7fad3eca824c0a55f80e32d0699033c4b76a",
+      "publication_bytes": 18674,
+      "raw_sha256": "661106ea037daa54a498a3114eab7fad3eca824c0a55f80e32d0699033c4b76a",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": true
+    },
+    {
+      "file": "guest/records/workflow-after.json",
+      "publication_sha256": "57dddf376a6780d024798601ae5889d01963eafcabaa97ed1ad18e1c56966eb2",
+      "publication_bytes": 2385,
+      "raw_sha256": "57dddf376a6780d024798601ae5889d01963eafcabaa97ed1ad18e1c56966eb2",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": false
+    },
+    {
+      "file": "guest/records/workflow-before.json",
+      "publication_sha256": "56705b36984925af0809c7b6081d8a7b83b5f014dca19619664ca32d28248b3d",
+      "publication_bytes": 2390,
+      "raw_sha256": "56705b36984925af0809c7b6081d8a7b83b5f014dca19619664ca32d28248b3d",
+      "redacted": false,
+      "source": "Private extracted guest evidence archive",
+      "previous_capture_preserved": true
+    },
+    {
+      "file": "guest/winehq-key-identity.txt",
+      "publication_sha256": "7b8846e00927d914c2f5bb208b24bf60790b1be7b8c84429921146b98351ed93",
+      "publication_bytes": 345,
+      "raw_sha256": "7b8846e00927d914c2f5bb208b24bf60790b1be7b8c84429921146b98351ed93",
+      "redacted": false,
+      "source": "Guest Wine provisioning metadata"
+    },
+    {
+      "file": "guest-7zip-installation.json",
+      "publication_sha256": "8b1284d0a79b99b1c61e9c86a1c93d5859ac2b99b9312e4d6536b3f3bf7dfa96",
+      "publication_bytes": 4443,
+      "raw_sha256": "8f9b6aea06059e610311b9109aabf63f0d8982a9e2ee094c8280fc1783797b84",
+      "raw_bytes": 4054,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-admin-final-accounting.json",
+      "publication_sha256": "711e0ffda8c0513624d6aadb5711776991c31a68194f412b084b03efa08318f7",
+      "publication_bytes": 2504,
+      "raw_sha256": "2ffba5d64d31350e091da41955d17f0db61c5fdb92f7a3bb0c64f40c28d39c73",
+      "raw_bytes": 2115,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-after-evidence-preserve.json",
+      "publication_sha256": "62f3cbc7c0b88e26ae03089815c90f492b22ed588c4a8cd52e14df5cca9b1707",
+      "publication_bytes": 1940,
+      "raw_sha256": "97648b58471766f45a6fdf65deaeff0829554681258666678a7605b3382d96f7",
+      "raw_bytes": 1551,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-app-account-password.json",
+      "publication_sha256": "81d5f644b86178b7ff3c533873072e668e3a34116b4b2f0eedaae07181a59c59",
+      "publication_bytes": 1570,
+      "raw_sha256": "b9ce740bcef9a39e96f7d0c9e525723476638ac4fb9c9db3bd7dd0fd10720325",
+      "raw_bytes": 1181,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-app-files-placement.json",
+      "publication_sha256": "3fcedd9e4a551f879cc22c30ab2601dbe906c46c334fe0cc4b2d0603e8ba050f",
+      "publication_bytes": 1764,
+      "raw_sha256": "a74c3de2d38071cd568cf9520cb0a00610ab2400bb70a7c1decec48f209057cf",
+      "raw_bytes": 1375,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-app-session-initial.json",
+      "publication_sha256": "efd856160a7765fc1a56fcd51919646a8b715f3cf9d811ccac45f7b4179c43f3",
+      "publication_bytes": 1885,
+      "raw_sha256": "eb170eb5a083e5ef17936b036334096c865aa15df8bc0f2531a11b2faf904719",
+      "raw_bytes": 1496,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-before-evidence-preserve.json",
+      "publication_sha256": "b8db8722efdf6ef6296e6d18912276f325624cd8cb5ef3ca3b7f329d3195ce46",
+      "publication_bytes": 2067,
+      "raw_sha256": "bbd7ef6dbd8732b66972bbdd36585e8a5731e1cfaf0b13a95770ae0d103e7abd",
+      "raw_bytes": 1678,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-controls-and-identities-after.json",
+      "publication_sha256": "0db24ff4cd985bce0967be266e3aa6c6190283913e75ee6afb0de202e219f355",
+      "publication_bytes": 23847,
+      "raw_sha256": "160d15d165a28c6cc684d534d794287add30ae83913d8b6904842e453fde35dd",
+      "raw_bytes": 23457,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-controls-before.json",
+      "publication_sha256": "14195b5d7985b88604d3b557acf52be67104a6d59db9deae2066872958b27c46",
+      "publication_bytes": 35489,
+      "raw_sha256": "044e4f57586e6b2080945d1c4aa79c6c2b0055ae43c1ccfac59bf09608ba440f",
+      "raw_bytes": 35099,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-controls-command-definition.json",
+      "publication_sha256": "baf8c64c94eeb3cabcd154fe106cf41acea03b276062e9e27c0fe8f6195e9f6b",
+      "publication_bytes": 329,
+      "raw_sha256": "baf8c64c94eeb3cabcd154fe106cf41acea03b276062e9e27c0fe8f6195e9f6b",
+      "raw_bytes": 329,
+      "redacted_fields": []
+    },
+    {
+      "file": "guest-controls-precheck.json",
+      "publication_sha256": "4e3f8a1000ad61e0c6dba7b71e3d7ef2a4960f671f0076a596b7849ebff216d8",
+      "publication_bytes": 1926,
+      "raw_sha256": "86e992d79ed0538ca76b000492f347cd13cd067c5c984470e986accefbbf5396",
+      "raw_bytes": 1537,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-desktop-env-before.json",
+      "publication_sha256": "63d1d54996b6ddecbf315a07bcf8c179e7745b9c64faa1ded3a35661a272651c",
+      "publication_bytes": 2371,
+      "raw_sha256": "a328fe285f34878da1afd7b3ba8ff0038af2a735b413b1e888a961166b24fcbb",
+      "raw_bytes": 1982,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-display-depth-after.json",
+      "publication_sha256": "30e1f8e3fc8350eb1690aea192d2a45e45ea245fc42e5b4e4961e8dfb0bfa579",
+      "publication_bytes": 63598,
+      "raw_sha256": "9d467dc7028663faa965052978a218dccaed0625c08406a3e763b54682a26004",
+      "raw_bytes": 63208,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-display-scale-before.json",
+      "publication_sha256": "a0f804385bc67268ba4d8b39fb489157928ca15d1093f2d4ab9ea65091175fdc",
+      "publication_bytes": 5989,
+      "raw_sha256": "b34cf1f0e5f118fcc74700370203eda104aa3caebe15e9aca02de78e2ac3b2e2",
+      "raw_bytes": 5600,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-environment-after.json",
+      "publication_sha256": "02a422fdf02a794d285cf1a51fb530b487de3caa893ef9ecafa3eb64f060f501",
+      "publication_bytes": 505151,
+      "raw_sha256": "9116c3d560f3574a621e6f491dbbfa1856c23c6b07a51d4480ec774cb52c1c2f",
+      "raw_bytes": 504760,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-environment-before.json",
+      "publication_sha256": "5358c2f416f77be9deb7730c51ee1874565b790b6ba5c46c7aebe975e09cf9fc",
+      "publication_bytes": 507029,
+      "raw_sha256": "72ae6f20d6a1f5eef1b2c21fc33e529076a88b9887e1924468e327563ed7103d",
+      "raw_bytes": 506638,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-final-observations-own-files.json",
+      "publication_sha256": "50e3ea2dbfe6dd07be79cc4b3cd47a3c7990e1a61c851c24a7fd8c83ae712726",
+      "publication_bytes": 14216,
+      "raw_sha256": "8331406e0459648ad21e990b18370648639bedb4d051fb6bef787655588607af",
+      "raw_bytes": 13826,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-final-observations.json",
+      "publication_sha256": "b822f93cf1cd4e84a718723174fc0fba0f2865d9f2a1c8f7bb7556e47b215a75",
+      "publication_bytes": 3816,
+      "raw_sha256": "5b072b5018c3a2e4ff74f107cb0e95a8bfba73c59cc5d567ba28a02410a9c66a",
+      "raw_bytes": 3427,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-install-definition.json",
+      "publication_sha256": "7912eb887766ff325f388cb9d364f58ad5d6093657e44448146d11a236889751",
+      "publication_bytes": 1435,
+      "raw_sha256": "7912eb887766ff325f388cb9d364f58ad5d6093657e44448146d11a236889751",
+      "raw_bytes": 1435,
+      "redacted": false
+    },
+    {
+      "file": "guest-install-log-inventory.json",
+      "publication_sha256": "4a85d8d54b6b6660e9ca8f074b20c4c29864e9bf94172e0d7b3724ad4fa056d5",
+      "publication_bytes": 3741,
+      "raw_sha256": "7272c9320e9a08fa80704d9cad8936fe5d3b303da9507451edccb4c3408f04a9",
+      "raw_bytes": 3352,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-install-private-archive.json",
+      "publication_sha256": "4d201e96c2a0e74f3c478e1082b937da326c9ceab67eeb36ac2c01373058ca98",
+      "publication_bytes": 2144,
+      "raw_sha256": "37a5e38c39987c163724954ba72f10ecd019a4945bc5aa3e171ed05f403755ac",
+      "raw_bytes": 1755,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-installed-before.json",
+      "publication_sha256": "991638451b13e595d19fbbba64e181161d05e38497e45cfebe5b706c6b89eefa",
+      "publication_bytes": 6506,
+      "raw_sha256": "213ae9cfb3506b8a913a5088a02cf34c9f39c92dc2e6423ee57aad0e734d2052",
+      "raw_bytes": 6117,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-os-bootstrap-inventory.json",
+      "publication_sha256": "b34ae9d06fce524b5645b7ef72a0833aa60c8ab4551f4c86bf4faf1efce79c6f",
+      "publication_bytes": 5103,
+      "raw_sha256": "f3ae26e3695c14c62fe6dcf99f47c31dc3ad6adaf381729bf6bb2c1098ccdaee",
+      "raw_bytes": 4714,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-prefix-initialization.json",
+      "publication_sha256": "507c8ceb09acc5cadef39092d08248228d97ebb7970499b6098ae6dce4c58301",
+      "publication_bytes": 12897,
+      "raw_sha256": "06ae33adb0d632f1015aabbfba5aa2dbc1ca0c1871ec43e598eedbef734cb6dd",
+      "raw_bytes": 12507,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-prefix-progress.json",
+      "publication_sha256": "5d477b8962d0c8e5860f7c4589dc63856308a2f2dd92b657f9f45ecf58c008b5",
+      "publication_bytes": 10789,
+      "raw_sha256": "0ac5c3d3bbe9e56f48134d1b20d99c9890b34ad3e0a1606f067bde19ca3cf97a",
+      "raw_bytes": 10399,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-prepared-scripts.json",
+      "publication_sha256": "b3c22eb44f062dcd0134b927e433ebf2c4a66a0bbde54dc143042fc845a3b7c4",
+      "publication_bytes": 489,
+      "raw_sha256": "b3c22eb44f062dcd0134b927e433ebf2c4a66a0bbde54dc143042fc845a3b7c4",
+      "raw_bytes": 489,
+      "redacted_fields": []
+    },
+    {
+      "file": "guest-provision-log-checkpoint.json",
+      "publication_sha256": "cdad2978135e835be6e0c680a7647e108b48e3bef7bef135fc1849956a12856c",
+      "publication_bytes": 2541,
+      "raw_sha256": "119c24dad7e8dbf7cddfcb3f90934f6983f62a3b7fa99d86ebda84d730e70da7",
+      "raw_bytes": 2152,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-provision-precheck.json",
+      "publication_sha256": "78b248fd0877ffff6c43ee6e6ae18b5c44370ded149f9d9f9fd97a9b1f162cb2",
+      "publication_bytes": 2041,
+      "raw_sha256": "f380a51cb53ea23b88f385bfc86a79df507893c96c17822bc482525aab979cf0",
+      "raw_bytes": 1652,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-provision-progress-1.json",
+      "publication_sha256": "0f70bd9a3ae8fe14ae18569e30c4f135510ed744653bc458e061b13c256f3761",
+      "publication_bytes": 2649,
+      "raw_sha256": "7fa5cbace7cab1c1549ce7de5bab3918906a7c6931c123fbe0edca6a8e874601",
+      "raw_bytes": 2260,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-provision-progress-2.json",
+      "publication_sha256": "4d684332e1788be71e21356c015276e2756119bca24640e5801527fb922ee2be",
+      "publication_bytes": 2897,
+      "raw_sha256": "910370a33c4d4b01ec4b43554090405551e4b0d0745385dbdf9ee200e7bd8fcb",
+      "raw_bytes": 2508,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-provision-progress-3.json",
+      "publication_sha256": "dcb9720eb161f026cc047c09a9f9e14f6cc4537b57fae8bd8d4daf081dc00ab4",
+      "publication_bytes": 2380,
+      "raw_sha256": "f9e31a0d26981d9b95fa91e494832544914c7076152c9e0d65d97934e7093774",
+      "raw_bytes": 1991,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-provision-progress-4.json",
+      "publication_sha256": "557a4c4154a32ea8501d3ddbd6ccad21da68dded525d32019266aa88fcf37e9e",
+      "publication_bytes": 2483,
+      "raw_sha256": "79eab608fdd0851e4b5f92c861f0418164f368b29c54695c305078a9051e8795",
+      "raw_bytes": 2094,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-provision-progress-5.json",
+      "publication_sha256": "307b35fdd4ef9b354aba8f657fbab9db2bc299cc88382dc61f68dea9e2dacafa",
+      "publication_bytes": 2698,
+      "raw_sha256": "372fb7288a66ef70a080ef6dc697d35181ff05e61c20305f25d0838195166985",
+      "raw_bytes": 2309,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-provision-progress-6.json",
+      "publication_sha256": "b69d36fb7bf098739d5a35c41e296a2537b3d8f52e9bd266fff0b6279b64a7af",
+      "publication_bytes": 2593,
+      "raw_sha256": "34e3353482c19eb9c358171898b22c34eb3e4d0ee05cb9b461eb67618c9833db",
+      "raw_bytes": 2204,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-provision-progress-7.json",
+      "publication_sha256": "6fd73c2d70114438a70b29d779cb9c8c546a438b840b84155e2cbe8b12734bda",
+      "publication_bytes": 2340,
+      "raw_sha256": "554296657b6bf22c2d60960ca8557a44f5dd6733e43a35d04829bb7fcb657813",
+      "raw_bytes": 1951,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-provision-progress-8.json",
+      "publication_sha256": "587eae0676bf092e13aac73f3bde4374f9bb2f198a41db6a865bb5afce12f4cb",
+      "publication_bytes": 2251,
+      "raw_sha256": "5752adea0c76b7c98200b7ff8071d8a781da7b4aeae3e70030252584406e114c",
+      "raw_bytes": 1862,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-provision-progress-9.json",
+      "publication_sha256": "5db3ff664cdcbdd0a6f58ea08eea400d5908a2513c4e39011b6ad5aad62dce14",
+      "publication_bytes": 3309,
+      "raw_sha256": "9829d45781b397808104c4f256738907ad3d803d99e266641af3e3ec5dabd1c7",
+      "raw_bytes": 2920,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-r1-restart.json",
+      "publication_sha256": "e575462fa7a1136b28ff5db6cc6bb0efc035fbb94497150e4f63c142cb0e6efc",
+      "publication_bytes": 1579,
+      "raw_sha256": "fd48f30389f872d5bbe6f0c9d871caeb2a5b457689d8538bec301d6aebb3ed11",
+      "raw_bytes": 1190,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-review-boundary-poweroff.json",
+      "publication_sha256": "36a7d316bdcf0e7c6cde38055de140e0bee54c96fe0521b419d190186ca2ce77",
+      "publication_bytes": 1580,
+      "raw_sha256": "38347aea7fc8523f5f657ede903b632bb8d179e1ca55aad245525324542758f6",
+      "raw_bytes": 1191,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-session-after-restart.json",
+      "publication_sha256": "30708a0772e3835d178959e21d81efa776a2f6d9e2640840255f6d9ed5f1395e",
+      "publication_bytes": 2710,
+      "raw_sha256": "27815ff03b3acb782da7d68c868642a2da35585b2b1a169dedc8ac7ac87165d3",
+      "raw_bytes": 2321,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-session-manager-env-before.json",
+      "publication_sha256": "cbb59e436608b6ca0f4d97e070a278c10cce95ce18ec20505096308db066c256",
+      "publication_bytes": 2374,
+      "raw_sha256": "ca92c4d78d2644d13385b1e60c0ce5652ea915ad74f1f687fac58b72c443d83d",
+      "raw_bytes": 1985,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-setup-logout.json",
+      "publication_sha256": "e7ccaeb58bc45a0ecc9e6da35c77e1399ba2ef7d90ea421674cb2432b935ed24",
+      "publication_bytes": 1557,
+      "raw_sha256": "2d38580384e5bf8922552c710847e99a2b8df6533b72ef42a223867b675f940d",
+      "raw_bytes": 1168,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-ssh-initial.json",
+      "publication_sha256": "10f210544c61e4d205fb9c092c6893718cd58da45100c1b5048573d21034276a",
+      "publication_bytes": 2194,
+      "raw_sha256": "95db13a55cebb72b3d1f31803cd3048acacfc0b6d0f60c881b96c0a1d09c2096",
+      "raw_bytes": 1805,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-verified-wine-downloads.json",
+      "publication_sha256": "8e31ed5b14770ee2025b6dd084b59d5050fa2cae2e6098f26f282332927b18ad",
+      "publication_bytes": 30898,
+      "raw_sha256": "633a30aa20f0842a891de302766b1bb775163feedc526ee500aa9c2f7dc49470",
+      "raw_bytes": 30508,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-verify-after.json",
+      "publication_sha256": "595d9a47547a2e43a5ad84ad1959003a9d40bce8fe169b803bd57b0db81ff4d8",
+      "publication_bytes": 9718,
+      "raw_sha256": "d48de4186ff48ceba7d927e1072f73ced0d454962180591486d359e57a5c080c",
+      "raw_bytes": 9329,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-verify-before-accidental.json",
+      "publication_sha256": "0bf572485d4784aa8e035ed2cb46f07361d4042ea7023b0c87579af5061afbf7",
+      "publication_bytes": 9713,
+      "raw_sha256": "7e7a71ffb2fbdae59df017ace00cd43574991fdc534b3f6eacb54fec01aa37f8",
+      "raw_bytes": 9324,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-verify-before-required.json",
+      "publication_sha256": "02f77c37f41ceebbe4e3a556b54b2a65a47497037bbc13faff25fc8645065658",
+      "publication_bytes": 5111,
+      "raw_sha256": "3ff20df39d8c4473ad75e8d2a6801ea543750d0d6bf3b8436889b5b270480ad2",
+      "raw_bytes": 4722,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-w1-dialog-disappearance.json",
+      "publication_sha256": "ce3718c40c193c9d37a98113357f184b90108755cd00073b86d19f4d01228f4a",
+      "publication_bytes": 3719,
+      "raw_sha256": "273bdba14356e024256b83186f244692defa3663fa882a65fb5c63d78a6980c5",
+      "raw_bytes": 3330,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-wine-backend-after.json",
+      "publication_sha256": "c69967c441a9a05d7ff55003ca722bbcc5ef5213ac0d142dc7d54f204488d7a0",
+      "publication_bytes": 44712,
+      "raw_sha256": "c4d0e79e9d1e75227568aa259ea0a93412380949832568a26c4c6de5bf4fac20",
+      "raw_bytes": 44322,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-wine-backend-before.json",
+      "publication_sha256": "6c912c8a4d0b3ac4e64575f910950f22c63caabbdc4488247fcc38f75fdb1c89",
+      "publication_bytes": 39509,
+      "raw_sha256": "6fa9475f7ee8b1376f12c7de6cbf8e5ab4751f670a699629874d5fd089f07754",
+      "raw_bytes": 39119,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-wine-provision.json",
+      "publication_sha256": "df20676bac65010524200f0405575316a0cdd0903b1e8a5ba97186aebd04ea11",
+      "publication_bytes": 345716,
+      "raw_sha256": "ab890f47dd14a2c6a4ae8d8ceb30dbdc9d745fe003b4eb61aaa301f4d1329062",
+      "raw_bytes": 345325,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-workflow-after.json",
+      "publication_sha256": "bcd251c7b34a8de149fadf089e3f4a5dd501f673037cade402194bd7cb34e2e8",
+      "publication_bytes": 7489,
+      "raw_sha256": "f0fe8134f770e69678684066c504e0e7fb6e55af6e35b1c40ef8cdb45fb413d2",
+      "raw_bytes": 7100,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "guest-workflow-before.json",
+      "publication_sha256": "31e41d64868e8f7c41c11dcbe606558da954b92b5fa6516026d13884e184501e",
+      "publication_bytes": 7504,
+      "raw_sha256": "b25c1b9cdd802aa81832c60c66879b8ad2cb8b261ceef3198422f84d305955c2",
+      "raw_bytes": 7115,
+      "redacted_fields": [
+        "argv[19]",
+        "argv[21]",
+        "argv[22]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "host-final-state.json",
+      "publication_sha256": "92d31073a889f414c7670a5a426c33ef278e6d97ab425900303167050135a97d",
+      "publication_bytes": 3994,
+      "raw_sha256": "92d31073a889f414c7670a5a426c33ef278e6d97ab425900303167050135a97d",
+      "raw_bytes": 3994,
+      "redacted_fields": []
+    },
+    {
+      "file": "hyperv-access.json",
+      "publication_sha256": "9b7820aa71b03030dcd79e7c840b6823f4b179c628c72f90982921f939ac6c23",
+      "publication_bytes": 2375,
+      "raw_sha256": "15d3fa2f86fdd00ce92545b9857add2e0989c54de3748770c2b3ea3b6b5e48f6",
+      "raw_bytes": 1934,
+      "redacted": true,
+      "redacted_fields": [
+        "private_identity",
+        "group_query.output account/SID"
+      ]
+    },
+    {
+      "file": "INDEX.md",
+      "publication_sha256": "18a6cdd869087a80addb1db1f698198f5b28b902c204aa7f78ab0e2e9245f8e0",
+      "publication_bytes": 10147,
+      "kind": "Derived index/analysis from identified source records; not claimed as a raw command stream"
+    },
+    {
+      "file": "iso-download.json",
+      "publication_sha256": "b77567ea14bce3aa5fce97d6a43c5cef7aa458a2f3822ae4ae35f063b719edb1",
+      "publication_bytes": 16911,
+      "raw_sha256": "a1289f058b01d0fb1877484f3e6620ee071b14d2b4da74f148e754c774d1b1a9",
+      "raw_bytes": 16592,
+      "redacted_fields": [
+        "stdout"
+      ]
+    },
+    {
+      "file": "keyboard-input-failure.json",
+      "publication_sha256": "3459be774d4a357842a7bf0781ca105a953b3d613ee4f0a9f6eeb452080acfcb",
+      "publication_bytes": 502,
+      "raw_sha256": "3459be774d4a357842a7bf0781ca105a953b3d613ee4f0a9f6eeb452080acfcb",
+      "raw_bytes": 502,
+      "redacted": false
+    },
+    {
+      "file": "pre-application-methodology.json",
+      "publication_sha256": "32c3ea78854ce8cff7cab46da1b92e644a9ffe44b46b08381514a7c8cb6e4463",
+      "publication_bytes": 1214,
+      "raw_sha256": "32c3ea78854ce8cff7cab46da1b92e644a9ffe44b46b08381514a7c8cb6e4463",
+      "raw_bytes": 1214,
+      "redacted": false
+    },
+    {
+      "file": "private-artifact-manifest.json",
+      "publication_sha256": "776b64f1506b44025636f627d44d6585f0aa83de8c12b45fe4b1c94b7cc4044a",
+      "publication_bytes": 106356,
+      "kind": "Derived index/analysis from identified source records; not claimed as a raw command stream"
+    },
+    {
+      "file": "publication-audit-working.json",
+      "publication_sha256": "d65b6421dd7e6319e3af60ce6d6223aae742031995aca766002bd311c5b2775a",
+      "publication_bytes": 840,
+      "raw_sha256": "d65b6421dd7e6319e3af60ce6d6223aae742031995aca766002bd311c5b2775a",
+      "raw_bytes": 840,
+      "redacted_fields": []
+    },
+    {
+      "file": "resource-accounting.json",
+      "publication_sha256": "3911b9cf4123fecc82d6f6438a0d26d970865afb7889a1d685a95f3e7bd59e3e",
+      "publication_bytes": 5729,
+      "raw_sha256": "3911b9cf4123fecc82d6f6438a0d26d970865afb7889a1d685a95f3e7bd59e3e",
+      "raw_bytes": 5729,
+      "redacted_fields": []
+    },
+    {
+      "file": "resource-provisioning-milestone.json",
+      "publication_sha256": "e31b7702d6d3a52efff06e0fec9fe566f6a6a6006b9e8405818bb6c141a7215e",
+      "publication_bytes": 629,
+      "raw_sha256": "e31b7702d6d3a52efff06e0fec9fe566f6a6a6006b9e8405818bb6c141a7215e",
+      "raw_bytes": 629,
+      "redacted_fields": []
+    },
+    {
+      "file": "result-summary.json",
+      "publication_sha256": "d3410a4fc87b27a6de03bdd992576d537d6e021722de65d0819dc87935258cf0",
+      "publication_bytes": 1499,
+      "raw_sha256": "d3410a4fc87b27a6de03bdd992576d537d6e021722de65d0819dc87935258cf0",
+      "raw_bytes": 1499,
+      "redacted_fields": []
+    },
+    {
+      "file": "retrieve-after-evidence.json",
+      "publication_sha256": "0865060959fa5037638ef8f824a82104340293f395901b3b1c0cc4d2976eeaae",
+      "publication_bytes": 1355,
+      "raw_sha256": "9764b510d8a931e3f1c47c97168f00dbd83e0fcc9271848be376da3c8e4bc54c",
+      "raw_bytes": 967,
+      "redacted_fields": [
+        "argv[14]",
+        "argv[16]",
+        "argv[17]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "retrieve-before-evidence.json",
+      "publication_sha256": "5d2f4d197310a6c796f362e0209477bf1d0dd8dc5e0b23edb05e0297b54168b6",
+      "publication_bytes": 1446,
+      "raw_sha256": "1859fec9459a53098aee30361871b3c1f10d2702e9649e39ef021bfbcf136b14",
+      "raw_bytes": 1038,
+      "redacted_fields": [
+        "argv[15]",
+        "argv[17]",
+        "argv[18]",
+        "argv[19]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "retrieve-ubuntu-install-archive.json",
+      "publication_sha256": "c2f66f25a430928e66106a167f5983fd9d9d9b58a1be30fea2c30b01f4da7c48",
+      "publication_bytes": 1455,
+      "raw_sha256": "ceb9d76c7fd189b44970c94c2b5ecb96020c9d24fc2e6ee3f34daceefe39cc9a",
+      "raw_bytes": 1047,
+      "redacted_fields": [
+        "argv[14]",
+        "argv[16]",
+        "argv[17]",
+        "argv[18]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "scancode-batch-observation.json",
+      "publication_sha256": "e9d985a573970548cd53887b2cc6eaa53c24ddd1fa7e2c85d52fcf99e7bd760d",
+      "publication_bytes": 691,
+      "raw_sha256": "e9d985a573970548cd53887b2cc6eaa53c24ddd1fa7e2c85d52fcf99e7bd760d",
+      "raw_bytes": 691,
+      "redacted": false
+    },
+    {
+      "file": "screens/ubuntu-066-install-summary.png",
+      "publication_sha256": "4545dc8fee12db906eb44f262d5341147bbe17a96d50e3296b9f80a524fa3826",
+      "publication_bytes": 86869,
+      "private_png_sha256": "4545dc8fee12db906eb44f262d5341147bbe17a96d50e3296b9f80a524fa3826",
+      "raw_framebuffer_sha256": "37c336269575f5104004f41762fb41433e201562896c9930ecba9734a3e2abfa",
+      "raw_framebuffer_bytes": 1572868,
+      "redacted": false,
+      "transformation": "Pillow RGB565 to RGB PNG, bounded to requested dimensions",
+      "raw_equals_publication": false,
+      "capture_utc": "2026-09-07T19:25:10.7836965Z"
+    },
+    {
+      "file": "screens/ubuntu-095-install-status.png",
+      "publication_sha256": "a33f57278f7b1de468672725f48de396d2cf4d92c7d02f81cbfd496b55a6166b",
+      "publication_bytes": 70408,
+      "private_png_sha256": "a33f57278f7b1de468672725f48de396d2cf4d92c7d02f81cbfd496b55a6166b",
+      "raw_framebuffer_sha256": "3e1c28137b40da72c5162c47e428a09eff25af5c3877b10bccb631bc34dc3799",
+      "raw_framebuffer_bytes": 1572868,
+      "redacted": false,
+      "transformation": "Pillow RGB565 to RGB PNG, bounded to requested dimensions",
+      "raw_equals_publication": false,
+      "capture_utc": "2026-09-07T19:59:15.1226289Z"
+    },
+    {
+      "file": "screens/ubuntu-144-7zip-installer.png",
+      "publication_sha256": "7677cb7173c771072d33b07a221d2f364ff0ccee44b23ffccc34d010b6d55479",
+      "publication_bytes": 161182,
+      "private_png_sha256": "7677cb7173c771072d33b07a221d2f364ff0ccee44b23ffccc34d010b6d55479",
+      "raw_framebuffer_sha256": "2f07a1cb2c8941990fd743d123e8efbc85f135b136d96c893677ae86c17bdf29",
+      "raw_framebuffer_bytes": 1572868,
+      "redacted": false,
+      "transformation": "Pillow RGB565 to RGB PNG, bounded to requested dimensions",
+      "raw_equals_publication": false,
+      "capture_utc": "2026-09-07T20:50:24.4054395Z"
+    },
+    {
+      "file": "screens/ubuntu-146-7zip-install-result.png",
+      "publication_sha256": "9f8cb78bdc25ba96da27c412aac0ce2c379da8664acce16581b1afe7e84ee7e0",
+      "publication_bytes": 164230,
+      "private_png_sha256": "9f8cb78bdc25ba96da27c412aac0ce2c379da8664acce16581b1afe7e84ee7e0",
+      "raw_framebuffer_sha256": "4f312bcf33a6b74f7992ae626e688e6ffc53355032a9d5808c1bc3e5da56586e",
+      "raw_framebuffer_bytes": 1572868,
+      "redacted": false,
+      "transformation": "Pillow RGB565 to RGB PNG, bounded to requested dimensions",
+      "raw_equals_publication": false,
+      "capture_utc": "2026-09-07T20:50:39.0793635Z"
+    },
+    {
+      "file": "screens/ubuntu-148-w1-launch.png",
+      "publication_sha256": "eea7f3fac694a3f02eae4a1b867d30c18b385d580c04b7ab058262c8b40861a6",
+      "publication_bytes": 107394,
+      "private_png_sha256": "eea7f3fac694a3f02eae4a1b867d30c18b385d580c04b7ab058262c8b40861a6",
+      "raw_framebuffer_sha256": "6d061d6a0e8e2abbcef27c95f1b3bd6e76677705ab38328d49ea4baf209f3c18",
+      "raw_framebuffer_bytes": 1572868,
+      "redacted": false,
+      "transformation": "Pillow RGB565 to RGB PNG, bounded to requested dimensions",
+      "raw_equals_publication": false,
+      "capture_utc": "2026-09-07T20:51:34.1553423Z"
+    },
+    {
+      "file": "screens/ubuntu-151-w1-inputs.png",
+      "publication_sha256": "5f9b12c9941a22fafac52c2caa554063cfdd501383f3e23422101d6cfd5525b1",
+      "publication_bytes": 116118,
+      "private_png_sha256": "5f9b12c9941a22fafac52c2caa554063cfdd501383f3e23422101d6cfd5525b1",
+      "raw_framebuffer_sha256": "09c5bf12186f6875d27871c1123b82a1b586149e964bfcb267f0bc59f27bdb85",
+      "raw_framebuffer_bytes": 1572868,
+      "redacted": false,
+      "transformation": "Pillow RGB565 to RGB PNG, bounded to requested dimensions",
+      "raw_equals_publication": false,
+      "capture_utc": "2026-09-07T20:51:54.3107320Z"
+    },
+    {
+      "file": "screens/ubuntu-154-w1-add-dialog.png",
+      "publication_sha256": "2346fe477b5b90775429aab81a6c554b437fcdacf330adac4e775c3883a27c3c",
+      "publication_bytes": 133253,
+      "private_png_sha256": "2346fe477b5b90775429aab81a6c554b437fcdacf330adac4e775c3883a27c3c",
+      "raw_framebuffer_sha256": "ef09f86050d65a1aca3eb381f5071df3ed9f8b75315088a66a6efa5898a5775a",
+      "raw_framebuffer_bytes": 1572868,
+      "redacted": false,
+      "transformation": "Pillow RGB565 to RGB PNG, bounded to requested dimensions",
+      "raw_equals_publication": false,
+      "capture_utc": "2026-09-07T20:52:23.9310097Z"
+    },
+    {
+      "file": "screens/ubuntu-158-w1-dialog-state.png",
+      "publication_sha256": "c3d99f705d2d3b246ccb444727b5781e46419e9b2e6fe41f5fd4ecc010c17e9f",
+      "publication_bytes": 119148,
+      "private_png_sha256": "c3d99f705d2d3b246ccb444727b5781e46419e9b2e6fe41f5fd4ecc010c17e9f",
+      "raw_framebuffer_sha256": "c370726f60c1bf56a9a5d7e5e0ef86da8d28fb06ad32344f5098d2a88a8168d9",
+      "raw_framebuffer_bytes": 1572868,
+      "redacted": false,
+      "transformation": "Pillow RGB565 to RGB PNG, bounded to requested dimensions",
+      "raw_equals_publication": false,
+      "capture_utc": "2026-09-07T20:53:10.3547590Z"
+    },
+    {
+      "file": "screens/ubuntu-162-r1-login-ready.png",
+      "publication_sha256": "f73171a3f7f85ce39150e46a6b26b3bafbd8ae26edb7c9f15f5bfcbb42533930",
+      "publication_bytes": 19978,
+      "private_png_sha256": "f73171a3f7f85ce39150e46a6b26b3bafbd8ae26edb7c9f15f5bfcbb42533930",
+      "raw_framebuffer_sha256": "823a0fd412ffbb1243916602a73c0fbf4c89368892aafdff77aa40c8b9b15063",
+      "raw_framebuffer_bytes": 1572868,
+      "redacted": false,
+      "transformation": "Pillow RGB565 to RGB PNG, bounded to requested dimensions",
+      "raw_equals_publication": false,
+      "capture_utc": "2026-09-07T20:57:31.4968720Z"
+    },
+    {
+      "file": "screens/ubuntu-167-w2-launched.png",
+      "publication_sha256": "4090212b76b4b0ee19b8dcb821b8cb57cc0cbbabb2edcaadec25bc038f63c108",
+      "publication_bytes": 118146,
+      "private_png_sha256": "4090212b76b4b0ee19b8dcb821b8cb57cc0cbbabb2edcaadec25bc038f63c108",
+      "raw_framebuffer_sha256": "40402a144c67e4e20a352e6a009e2143d806cdd7544edc85f81acd2725daffcf",
+      "raw_framebuffer_bytes": 1572868,
+      "redacted": false,
+      "transformation": "Pillow RGB565 to RGB PNG, bounded to requested dimensions",
+      "raw_equals_publication": false,
+      "capture_utc": "2026-09-07T20:59:50.4118891Z"
+    },
+    {
+      "file": "screens/ubuntu-170-w2-add-dialog.png",
+      "publication_sha256": "0760252373cbd1aad3a5df5785c5df25974b892190d54813421e2b47d14d8791",
+      "publication_bytes": 131503,
+      "private_png_sha256": "0760252373cbd1aad3a5df5785c5df25974b892190d54813421e2b47d14d8791",
+      "raw_framebuffer_sha256": "fecd51544d5882cd278445ef546e63f6a6e67f65e458516ec4d2af1fd787ae18",
+      "raw_framebuffer_bytes": 1572868,
+      "redacted": false,
+      "transformation": "Pillow RGB565 to RGB PNG, bounded to requested dimensions",
+      "raw_equals_publication": false,
+      "capture_utc": "2026-09-07T21:00:05.4734072Z"
+    },
+    {
+      "file": "screens/ubuntu-174-w2-settings.png",
+      "publication_sha256": "ae44c86d550350645375de63c35c39a219372058324f5bfc565e3e58ce2682b5",
+      "publication_bytes": 133313,
+      "private_png_sha256": "ae44c86d550350645375de63c35c39a219372058324f5bfc565e3e58ce2682b5",
+      "raw_framebuffer_sha256": "4045df2a8d1046fed3b1fd4fb649bd631ae9b49b19bd0cb7353b05bc8585bbf0",
+      "raw_framebuffer_bytes": 1572868,
+      "redacted": false,
+      "transformation": "Pillow RGB565 to RGB PNG, bounded to requested dimensions",
+      "raw_equals_publication": false,
+      "capture_utc": "2026-09-07T21:00:34.0723788Z"
+    },
+    {
+      "file": "screens/ubuntu-176-w2-result.png",
+      "publication_sha256": "fb36e1bcc752ac4ac821cc477c3ab5a1b06e78dd6adc86f8d0ae6d5d963e7ec6",
+      "publication_bytes": 118959,
+      "private_png_sha256": "fb36e1bcc752ac4ac821cc477c3ab5a1b06e78dd6adc86f8d0ae6d5d963e7ec6",
+      "raw_framebuffer_sha256": "b99f5742a733b34d8f2f06af47d8e83573442c697cbd492f5dad4ea01800851d",
+      "raw_framebuffer_bytes": 1572868,
+      "redacted": false,
+      "transformation": "Pillow RGB565 to RGB PNG, bounded to requested dimensions",
+      "raw_equals_publication": false,
+      "capture_utc": "2026-09-07T21:01:19.8041740Z"
+    },
+    {
+      "file": "screens/ubuntu-180-w2-output-present.png",
+      "publication_sha256": "f974374542264f9a69c4a8108075700c23791e4d16dca55246945e668d176147",
+      "publication_bytes": 112109,
+      "private_png_sha256": "f974374542264f9a69c4a8108075700c23791e4d16dca55246945e668d176147",
+      "raw_framebuffer_sha256": "6b89d5c1f78f7bb7550589f3f9ca3357dfe975a15efc8b19fb0d52ddd8e32001",
+      "raw_framebuffer_bytes": 1572868,
+      "redacted": false,
+      "transformation": "Pillow RGB565 to RGB PNG, bounded to requested dimensions",
+      "raw_equals_publication": false,
+      "capture_utc": "2026-09-07T21:01:55.0332116Z"
+    },
+    {
+      "file": "scripts/framebuffer-to-png.py",
+      "publication_sha256": "f40cc017bb33ae4bda009230c900df722be738c48280ee16b1b60041e9b11efb",
+      "publication_bytes": 922,
+      "raw_sha256": "f40cc017bb33ae4bda009230c900df722be738c48280ee16b1b60041e9b11efb",
+      "redacted": false,
+      "note": "Actual bounded A0 instrumentation; no embedded credential or personal owner path; raw source retained outside Git"
+    },
+    {
+      "file": "scripts/guest-console.ps1",
+      "publication_sha256": "4be34c018143e18c6c7f6814dc937f3cff62fa4aa0e90e9c289cfc42e018f745",
+      "publication_bytes": 6427,
+      "raw_sha256": "4be34c018143e18c6c7f6814dc937f3cff62fa4aa0e90e9c289cfc42e018f745",
+      "redacted": false,
+      "note": "Actual bounded A0 instrumentation; no embedded credential or personal owner path; raw source retained outside Git"
+    },
+    {
+      "file": "scripts/guest-type.ps1",
+      "publication_sha256": "d370ab5f1394e319acf822880e61a906a496e649dc3f451a8bfa144d83450872",
+      "publication_bytes": 1627,
+      "raw_sha256": "d370ab5f1394e319acf822880e61a906a496e649dc3f451a8bfa144d83450872",
+      "redacted": false,
+      "note": "Actual bounded A0 instrumentation; no embedded credential or personal owner path; raw source retained outside Git"
+    },
+    {
+      "file": "scripts/observe-guest.py",
+      "publication_sha256": "f012436bc6868334cabdfe31818fd3ae67126d9737cb9a80084d2ae69cbfb1ae",
+      "publication_bytes": 4002,
+      "raw_sha256": "f012436bc6868334cabdfe31818fd3ae67126d9737cb9a80084d2ae69cbfb1ae",
+      "redacted": false,
+      "note": "Actual bounded A0 instrumentation; no embedded credential or personal owner path; raw source retained outside Git"
+    },
+    {
+      "file": "scripts/prepare-baseline.sh",
+      "publication_sha256": "2d93f0b9150cc55c46be72da710a25ecd53b1ee145422980705bfa802bc33682",
+      "publication_bytes": 1704,
+      "raw_sha256": "2d93f0b9150cc55c46be72da710a25ecd53b1ee145422980705bfa802bc33682",
+      "redacted": false,
+      "note": "Actual bounded A0 instrumentation; no embedded credential or personal owner path; raw source retained outside Git"
+    },
+    {
+      "file": "scripts/provision-wine.sh",
+      "publication_sha256": "06e0b0d818930499be155e266ece5b0d6b2569e91689d4214770cc176d23b37e",
+      "publication_bytes": 3698,
+      "raw_sha256": "06e0b0d818930499be155e266ece5b0d6b2569e91689d4214770cc176d23b37e",
+      "redacted": false,
+      "note": "Actual bounded A0 instrumentation; no embedded credential or personal owner path; raw source retained outside Git"
+    },
+    {
+      "file": "scripts/ssh-command.py",
+      "publication_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+      "publication_bytes": 3167,
+      "raw_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+      "redacted": false,
+      "note": "Actual bounded A0 instrumentation; no embedded credential or personal owner path; raw source retained outside Git"
+    },
+    {
+      "file": "setup-methodology-annotations.json",
+      "publication_sha256": "46472b7b1539c2e4e4534b5ecbffec1cc41c18dea0dbe5f91635f4300f3386a2",
+      "publication_bytes": 1004,
+      "raw_sha256": "46472b7b1539c2e4e4534b5ecbffec1cc41c18dea0dbe5f91635f4300f3386a2",
+      "raw_bytes": 1004,
+      "redacted": false
+    },
+    {
+      "file": "source-transfer-identity.json",
+      "publication_sha256": "96d4657d642ad4e49560a2223032d70c34b850e08ab09a7f72c3f2b1cd7726c3",
+      "publication_bytes": 419,
+      "raw_sha256": "96d4657d642ad4e49560a2223032d70c34b850e08ab09a7f72c3f2b1cd7726c3",
+      "raw_bytes": 419,
+      "redacted": false
+    },
+    {
+      "file": "ssh-bootstrap-verification.json",
+      "publication_sha256": "2e2d994f147911bd335e4b924b77d57952be0b237b5a731fe85c99896a820d73",
+      "publication_bytes": 653,
+      "raw_sha256": "2e2d994f147911bd335e4b924b77d57952be0b237b5a731fe85c99896a820d73",
+      "raw_bytes": 653,
+      "redacted_fields": []
+    },
+    {
+      "file": "ssh-keyscan-git.json",
+      "publication_sha256": "6c97402e53077dbbda09556f8b1aac587b57ce6cc560045e5ac191cfea6d3e99",
+      "publication_bytes": 1306,
+      "raw_sha256": "ac094e5dcf3ea5d908dc8bb2d456813ebbd597bf8c4c3f157bf48f98f21f89a0",
+      "raw_bytes": 897,
+      "redacted_fields": [
+        "argv[3]",
+        "cwd",
+        "stdout_base64 (decoded UTF-8 stream)",
+        "stdout"
+      ]
+    },
+    {
+      "file": "transfer-7zip-installer.json",
+      "publication_sha256": "9e373d5a135cf1899ea657bfa111716dc8042e954a18547db484548912aff87c",
+      "publication_bytes": 1353,
+      "raw_sha256": "3fba25714535f4ce6aefd43955a563c42c26631f9b9bfb5c904057ad93c8d9fc",
+      "raw_bytes": 965,
+      "redacted_fields": [
+        "argv[14]",
+        "argv[16]",
+        "argv[18]",
+        "cwd"
+      ]
+    },
+    {
+      "file": "transfer-guest-controls-definition.json",
+      "publication_sha256": "9c387cea5f1b8370347d7e9a5184ae46c6bf30c48e3128e518db00a0fd404972",
+      "publication_bytes": 1294,
+      "raw_sha256": "560913a81c17a0c7407ed059642a4a365d70d7ca5d14252203c8502c34446460",
+      "raw_bytes": 924,
+      "redacted_fields": [
+        "argv[14]",
+        "argv[16]",
+        "argv[18]"
+      ]
+    },
+    {
+      "file": "transfer-test-sources.json",
+      "publication_sha256": "155ea7c8b08d3ce245e5d502121013e2a111987546566b1e9edaa3c77ea30c3b",
+      "publication_bytes": 1318,
+      "raw_sha256": "a937ab0c7e68ed38810f185d41b9f6d1d5d6264a5c6d3ef0f97713d0543a2302",
+      "raw_bytes": 948,
+      "redacted_fields": [
+        "argv[14]",
+        "argv[16]",
+        "argv[19]"
+      ]
+    },
+    {
+      "file": "transfer-wine-provision.json",
+      "publication_sha256": "7dc1343d8c40a7de26741a079c8ae135d5156624ae62d0ecb5b7a1cec299810f",
+      "publication_bytes": 1310,
+      "raw_sha256": "56046891650df583c8f8d8f2cf6b886645c3dab3758d9f8e21448fd264f789c0",
+      "raw_bytes": 940,
+      "redacted_fields": [
+        "argv[14]",
+        "argv[16]",
+        "argv[18]"
+      ]
+    },
+    {
+      "file": "ubuntu-checksum-signature.json",
+      "publication_sha256": "67f85af161b7be24756d0a1939e4ebfa8508d81e9607d8e463b2e9b0bee9e76a",
+      "publication_bytes": 3030,
+      "raw_sha256": "5e549d2f5702d82cc5b09009f513e1160abc8cbfa8068e6eca2e6d9092c75a32",
+      "raw_bytes": 2706,
+      "redacted_fields": [
+        "cwd"
+      ]
+    },
+    {
+      "file": "ubuntu-key-download.json",
+      "publication_sha256": "b44c514b9ac5ff83205d7c3d2910e03f4eb8eab0fbe688528bb8cc8cc1cb0a37",
+      "publication_bytes": 987,
+      "raw_sha256": "ed579ac5879676523172263843863e8d9ca350ba5236eadd9c327fe436f1f047",
+      "raw_bytes": 664,
+      "redacted_fields": [
+        "cwd"
+      ]
+    },
+    {
+      "file": "ubuntu-key-import.json",
+      "publication_sha256": "963c9876394430982f5480c43b09ad360d20c8ed85b502648a2e81093333798e",
+      "publication_bytes": 1601,
+      "raw_sha256": "95023266d97c1dba9500881aae07abf2fdeb8affa5f58cf8d1006a3980709b05",
+      "raw_bytes": 1277,
+      "redacted_fields": [
+        "cwd"
+      ]
+    },
+    {
+      "file": "ubuntu-key-inspect-relative.json",
+      "publication_sha256": "d44ef404afbbaeb32fcd9d14cc66a53c0ac1845dff1588130b89a779e108bb80",
+      "publication_bytes": 2230,
+      "raw_sha256": "df7696e67a87e4dca6c9712db8b3d948c19af8f3dbe88e476920ed05521d32e0",
+      "raw_bytes": 1782,
+      "redacted_fields": [
+        "cwd",
+        "stderr_base64 (decoded UTF-8 stream)",
+        "stderr"
+      ]
+    },
+    {
+      "file": "ubuntu-key-inspect.json",
+      "publication_sha256": "bdb9141598f1ff31740796a184e1eaf6863bebd9c727d8f3f0b0f8753d076773",
+      "publication_bytes": 2251,
+      "raw_sha256": "472db1d2f128bc5e5dc4a5b98cc758040aaff18e3dc4e9a14bd9d6bc8ee417d9",
+      "raw_bytes": 1719,
+      "redacted_fields": [
+        "argv[3]",
+        "cwd",
+        "stderr_base64 (decoded UTF-8 stream)",
+        "stderr"
+      ]
+    },
+    {
+      "file": "validation-docs-final.json",
+      "publication_sha256": "b273da5a16ab2a3b8d18506faf9023d7103dfae28e950721b7a53ea07d8e0904",
+      "publication_bytes": 1263,
+      "raw_sha256": "f0d47d6d51e287755af3b8615d058c0b75ea09e34f2e608d15cbc7a494f8fc52",
+      "raw_bytes": 940,
+      "redacted_fields": [
+        "cwd"
+      ]
+    },
+    {
+      "file": "validation-docs-first.json",
+      "publication_sha256": "9455cff3109aa33c47ec70e13058dcc1c71f5fcf369184d6d7d1f8526bcda40e",
+      "publication_bytes": 1262,
+      "raw_sha256": "ce5a50f56e0cc5bad4b667bc9baee252a3ca198e7f37fa8c055fe2fa4ccd1a29",
+      "raw_bytes": 939,
+      "redacted_fields": [
+        "cwd"
+      ]
+    },
+    {
+      "file": "validation-methodology.json",
+      "publication_sha256": "fec54565f23bde6715abc79208c60de5050fac0ed3e8dfac98bec4af2c495ecb",
+      "publication_bytes": 923,
+      "raw_sha256": "fec54565f23bde6715abc79208c60de5050fac0ed3e8dfac98bec4af2c495ecb",
+      "raw_bytes": 923,
+      "redacted_fields": []
+    },
+    {
+      "file": "validation-tests.json",
+      "publication_sha256": "c611cf11499bff8abd8e0b2bc83639800f0696cd9bc7acd818090fefba7c6b24",
+      "publication_bytes": 10505,
+      "raw_sha256": "891dbc275c46b6f8ee48b51bb92a7c417fc4cd2df0d6891859bba5a2f8f775ab",
+      "raw_bytes": 10180,
+      "redacted_fields": [
+        "cwd"
+      ]
+    },
+    {
+      "file": "vm-created.json",
+      "publication_sha256": "047e6f102f4195d37e7b8da789221edf2fa10a581f4e9a0258731c240dc9f812",
+      "publication_bytes": 1950,
+      "raw_sha256": "047e6f102f4195d37e7b8da789221edf2fa10a581f4e9a0258731c240dc9f812",
+      "raw_bytes": 1950,
+      "redacted": false
+    },
+    {
+      "file": "vm-creation-command.json",
+      "publication_sha256": "78915e6cd8f63a213267b6e9284b7471bbdb69c51ef1fafe8cb538b7f2beebfe",
+      "publication_bytes": 6022,
+      "raw_sha256": "bdb4486f8797958e990459bfbb9321080e96e32eb49de1386c381a559e573893",
+      "raw_bytes": 5698,
+      "redacted_fields": [
+        "cwd"
+      ]
+    },
+    {
+      "file": "wine-key-download.json",
+      "publication_sha256": "aa1f082dde6af0c8d1e1e850117a5eaf5f17c48d0d24e81604998d27c1d2c6eb",
+      "publication_bytes": 921,
+      "raw_sha256": "0e23dceec4fbbf3a7776f78afcf87a9760d46fcb7643155016c716ad6088d052",
+      "raw_bytes": 598,
+      "redacted_fields": [
+        "cwd"
+      ]
+    },
+    {
+      "file": "wine-key-inspect.json",
+      "publication_sha256": "3e6e96d43c45a663e24b4d674f6ca54f01e1d235111e8114a6f9a82dd2c77d98",
+      "publication_bytes": 1736,
+      "raw_sha256": "18dc45b3e8c0baf039798959800e67acfbfec563599efc141608fff31667ffaa",
+      "raw_bytes": 1412,
+      "redacted_fields": [
+        "cwd"
+      ]
+    },
+    {
+      "file": "workflow-w1-deviation.json",
+      "publication_sha256": "3f74af85e32e6274c2d989c762f9c28476a9b8605aa159732154e91686222937",
+      "publication_bytes": 1242,
+      "raw_sha256": "3f74af85e32e6274c2d989c762f9c28476a9b8605aa159732154e91686222937",
+      "raw_bytes": 1242,
+      "redacted": false
+    }
+  ]
+}

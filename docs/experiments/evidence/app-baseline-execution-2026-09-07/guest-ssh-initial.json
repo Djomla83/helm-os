@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmsetup@<lab-guest-ip>",
+    "id; hostname; stat -c \"%a %U %n\" ~/.ssh ~/.ssh/authorized_keys; cat /proc/sys/kernel/random/boot_id"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T20:33:03.287499+00:00",
+  "exit_code": 0,
+  "stdout_base64": "dWlkPTEwMDAoaGVsbXNldHVwKSBnaWQ9MTAwMChoZWxtc2V0dXApIGdyb3Vwcz0xMDAwKGhlbG1zZXR1cCksNChhZG0pLDI0KGNkcm9tKSwyNyhzdWRvKSwzMChkaXApLDQ2KHBsdWdkZXYpLDEwMCh1c2VycyksMTE0KGxwYWRtaW4pCmhlbG0tYTAtN3ppcAo3MDAgaGVsbXNldHVwIC9ob21lL2hlbG1zZXR1cC8uc3NoCjYwMCBoZWxtc2V0dXAgL2hvbWUvaGVsbXNldHVwLy5zc2gvYXV0aG9yaXplZF9rZXlzCjJkNjRjODIyLTIwNWQtNGJmYy1iZGFhLWYyMWU1MGNkMzhiYwo=",
+  "stderr_base64": "",
+  "stdout": "uid=1000(helmsetup) gid=1000(helmsetup) groups=1000(helmsetup),4(adm),24(cdrom),27(sudo),30(dip),46(plugdev),100(users),114(lpadmin)\nhelm-a0-7zip\n700 helmsetup /home/helmsetup/.ssh\n600 helmsetup /home/helmsetup/.ssh/authorized_keys\n2d64c822-205d-4bfc-bdaa-f21e50cd38bc\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:33:03.746984+00:00",
+  "duration_seconds": 0.4594805999659002,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "95db13a55cebb72b3d1f31803cd3048acacfc0b6d0f60c881b96c0a1d09c2096",
+    "raw_bytes": 1805,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

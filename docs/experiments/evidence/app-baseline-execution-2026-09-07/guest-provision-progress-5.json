@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmsetup@<lab-guest-ip>",
+    "tail -6 /home/helmsetup/a0-provision/stdout.log; df -B1 /"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T20:39:30.139682+00:00",
+  "exit_code": 0,
+  "stdout_base64": "U2VsZWN0aW5nIHByZXZpb3VzbHkgdW5zZWxlY3RlZCBwYWNrYWdlIGxpYndheWxhbmQtZWdsMTppMzg2Lg0KUHJlcGFyaW5nIHRvIHVucGFjayAuLi4vMTg3LWxpYndheWxhbmQtZWdsMV8xLjIyLjAtMi4xYnVpbGQxX2kzODYuZGViIC4uLg0KVW5wYWNraW5nIGxpYndheWxhbmQtZWdsMTppMzg2ICgxLjIyLjAtMi4xYnVpbGQxKSAuLi4NClNlbGVjdGluZyBwcmV2aW91c2x5IHVuc2VsZWN0ZWQgcGFja2FnZSBsaWJ4a2Jjb21tb24wOmkzODYuDQpQcmVwYXJpbmcgdG8gdW5wYWNrIC4uLi8xODgtbGlieGtiY29tbW9uMF8xLjYuMC0xYnVpbGQxX2kzODYuZGViIC4uLg0KVW5wYWNraW5nIGxpYnhrYmNvbW1vbjA6aTM4NiAoMS42LjAtMWJ1aWxkMSkgLi4uDQpGaWxlc3lzdGVtICAgICAgIDFCLWJsb2NrcyAgICAgICAgVXNlZCAgIEF2YWlsYWJsZSBVc2UlIE1vdW50ZWQgb24KL2Rldi9zZGEyICAgICAgMzI1MjM1MDE1NjggMTExMDU0MjMzNjAgMTk3Mzk3ODMxNjggIDM3JSAvCg==",
+  "stderr_base64": "",
+  "stdout": "Selecting previously unselected package libwayland-egl1:i386.\r\nPreparing to unpack .../187-libwayland-egl1_1.22.0-2.1build1_i386.deb ...\r\nUnpacking libwayland-egl1:i386 (1.22.0-2.1build1) ...\r\nSelecting previously unselected package libxkbcommon0:i386.\r\nPreparing to unpack .../188-libxkbcommon0_1.6.0-1build1_i386.deb ...\r\nUnpacking libxkbcommon0:i386 (1.6.0-1build1) ...\r\nFilesystem       1B-blocks        Used   Available Use% Mounted on\n/dev/sda2      32523501568 11105423360 19739783168  37% /\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:39:30.315292+00:00",
+  "duration_seconds": 0.17562270001508296,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "372fb7288a66ef70a080ef6dc697d35181ff05e61c20305f25d0838195166985",
+    "raw_bytes": 2309,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

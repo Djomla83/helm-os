@@ -1,0 +1,49 @@
+{
+  "argv": [
+    "scp.exe",
+    "-r",
+    "-F",
+    "NUL",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmlab@<lab-guest-ip>:/home/helmlab/a0-before-evidence.tar.gz",
+    "helmsetup@<lab-guest-ip>:/home/helmsetup/a0-provision",
+    "."
+  ],
+  "cwd": "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z",
+  "started_utc": "2026-09-07T20:55:31.955082+00:00",
+  "exit_code": 0,
+  "stdout_base64": "",
+  "stderr_base64": "",
+  "stdout": "",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:55:32.487669+00:00",
+  "duration_seconds": 0.5325895000132732,
+  "scope": "Command capture only; exit status is not a workflow verdict",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "1859fec9459a53098aee30361871b3c1f10d2702e9649e39ef021bfbcf136b14",
+    "raw_bytes": 1038,
+    "redacted_fields": [
+      "argv[15]",
+      "argv[17]",
+      "argv[18]",
+      "argv[19]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

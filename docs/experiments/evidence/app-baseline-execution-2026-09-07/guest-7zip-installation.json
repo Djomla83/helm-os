@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmlab@<lab-guest-ip>",
+    "cd /home/helmlab/exp009-a0-7zip && python3 tools/app_baseline.py capture --cwd /home/helmlab/exp009-a0-7zip --timeout 600 records/7zip-installation.json -- env DISPLAY=:0 WAYLAND_DISPLAY=wayland-0 XAUTHORITY=/run/user/1001/.mutter-Xwaylandauth.H2J1U3 XDG_SESSION_TYPE=wayland XDG_RUNTIME_DIR=/run/user/1001 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1001/bus WINEPREFIX=/home/helmlab/exp009-a0-7zip/prefix WINEARCH=win64 WINEDLLOVERRIDES=mscoree,mshtml= /opt/wine-devel/bin/wine 7z2603-x64.exe"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T20:50:03.600858+00:00",
+  "exit_code": 0,
+  "stdout_base64": "eyJhcmd2IjogWyJlbnYiLCAiRElTUExBWT06MCIsICJXQVlMQU5EX0RJU1BMQVk9d2F5bGFuZC0wIiwgIlhBVVRIT1JJVFk9L3J1bi91c2VyLzEwMDEvLm11dHRlci1Yd2F5bGFuZGF1dGguSDJKMVUzIiwgIlhER19TRVNTSU9OX1RZUEU9d2F5bGFuZCIsICJYREdfUlVOVElNRV9ESVI9L3J1bi91c2VyLzEwMDEiLCAiREJVU19TRVNTSU9OX0JVU19BRERSRVNTPXVuaXg6cGF0aD0vcnVuL3VzZXIvMTAwMS9idXMiLCAiV0lORVBSRUZJWD0vaG9tZS9oZWxtbGFiL2V4cDAwOS1hMC03emlwL3ByZWZpeCIsICJXSU5FQVJDSD13aW42NCIsICJXSU5FRExMT1ZFUlJJREVTPW1zY29yZWUsbXNodG1sPSIsICIvb3B0L3dpbmUtZGV2ZWwvYmluL3dpbmUiLCAiN3oyNjAzLXg2NC5leGUiXSwgImN3ZCI6ICIvaG9tZS9oZWxtbGFiL2V4cDAwOS1hMC03emlwIiwgInN0YXJ0ZWRfdXRjIjogIjIwMjYtMDktMDdUMjA6NTA6MDMuODEwNzkyKzAwOjAwIiwgImV4aXRfY29kZSI6IDAsICJzdGRvdXRfYmFzZTY0IjogIiIsICJzdGRlcnJfYmFzZTY0IjogImJHbGlSVWRNSUhkaGNtNXBibWM2SUVSU1NUTWdaWEp5YjNJNklFTnZkV3hrSUc1dmRDQm5aWFFnUkZKSk15QmtaWFpwWTJVS2JHbGlSVWRNSUhkaGNtNXBibWM2SUVWdWMzVnlaU0I1YjNWeUlGZ2djMlZ5ZG1WeUlITjFjSEJ2Y25SeklFUlNTVE1nZEc4Z1oyVjBJR0ZqWTJWc1pYSmhkR1ZrSUhKbGJtUmxjbWx1WndvPSIsICJzdGRvdXQiOiAiIiwgInN0ZGVyciI6ICJsaWJFR0wgd2FybmluZzogRFJJMyBlcnJvcjogQ291bGQgbm90IGdldCBEUkkzIGRldmljZVxubGliRUdMIHdhcm5pbmc6IEVuc3VyZSB5b3VyIFggc2VydmVyIHN1cHBvcnRzIERSSTMgdG8gZ2V0IGFjY2VsZXJhdGVkIHJlbmRlcmluZ1xuIiwgImVuZGVkX3V0YyI6ICIyMDI2LTA5LTA3VDIwOjUwOjU5LjkzNzk5NCswMDowMCIsICJkdXJhdGlvbl9zZWNvbmRzIjogNTYuMTI3MjA3MzczMDAwMTUsICJzY29wZSI6ICJDb21tYW5kIGNhcHR1cmUgb25seTsgZXhpdCBzdGF0dXMgaXMgbm90IGEgd29ya2Zsb3cgdmVyZGljdCJ9Cg==",
+  "stderr_base64": "",
+  "stdout": "{\"argv\": [\"env\", \"DISPLAY=:0\", \"WAYLAND_DISPLAY=wayland-0\", \"XAUTHORITY=/run/user/1001/.mutter-Xwaylandauth.H2J1U3\", \"XDG_SESSION_TYPE=wayland\", \"XDG_RUNTIME_DIR=/run/user/1001\", \"DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1001/bus\", \"WINEPREFIX=/home/helmlab/exp009-a0-7zip/prefix\", \"WINEARCH=win64\", \"WINEDLLOVERRIDES=mscoree,mshtml=\", \"/opt/wine-devel/bin/wine\", \"7z2603-x64.exe\"], \"cwd\": \"/home/helmlab/exp009-a0-7zip\", \"started_utc\": \"2026-09-07T20:50:03.810792+00:00\", \"exit_code\": 0, \"stdout_base64\": \"\", \"stderr_base64\": \"bGliRUdMIHdhcm5pbmc6IERSSTMgZXJyb3I6IENvdWxkIG5vdCBnZXQgRFJJMyBkZXZpY2UKbGliRUdMIHdhcm5pbmc6IEVuc3VyZSB5b3VyIFggc2VydmVyIHN1cHBvcnRzIERSSTMgdG8gZ2V0IGFjY2VsZXJhdGVkIHJlbmRlcmluZwo=\", \"stdout\": \"\", \"stderr\": \"libEGL warning: DRI3 error: Could not get DRI3 device\\nlibEGL warning: Ensure your X server supports DRI3 to get accelerated rendering\\n\", \"ended_utc\": \"2026-09-07T20:50:59.937994+00:00\", \"duration_seconds\": 56.12720737300015, \"scope\": \"Command capture only; exit status is not a workflow verdict\"}\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:50:59.923002+00:00",
+  "duration_seconds": 56.32110920001287,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "8f9b6aea06059e610311b9109aabf63f0d8982a9e2ee094c8280fc1783797b84",
+    "raw_bytes": 4054,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

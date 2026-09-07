@@ -1,0 +1,32 @@
+{
+  "argv": [
+    "curl.exe",
+    "--fail",
+    "--location",
+    "--show-error",
+    "--silent",
+    "--output",
+    "winehq.key",
+    "https://dl.winehq.org/wine-builds/winehq.key"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z",
+  "started_utc": "2026-09-07T19:34:31.051910+00:00",
+  "exit_code": 0,
+  "stdout_base64": "",
+  "stderr_base64": "",
+  "stdout": "",
+  "stderr": "",
+  "ended_utc": "2026-09-07T19:34:31.209347+00:00",
+  "duration_seconds": 0.15743299998575822,
+  "scope": "Command capture only; exit status is not a workflow verdict",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "0e23dceec4fbbf3a7776f78afcf87a9760d46fcb7643155016c716ad6088d052",
+    "raw_bytes": 598,
+    "redacted_fields": [
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

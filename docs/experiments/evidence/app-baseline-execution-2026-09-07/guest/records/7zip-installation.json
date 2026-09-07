@@ -1,0 +1,26 @@
+{
+  "argv": [
+    "env",
+    "DISPLAY=:0",
+    "WAYLAND_DISPLAY=wayland-0",
+    "XAUTHORITY=/run/user/1001/.mutter-Xwaylandauth.H2J1U3",
+    "XDG_SESSION_TYPE=wayland",
+    "XDG_RUNTIME_DIR=/run/user/1001",
+    "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1001/bus",
+    "WINEPREFIX=/home/helmlab/exp009-a0-7zip/prefix",
+    "WINEARCH=win64",
+    "WINEDLLOVERRIDES=mscoree,mshtml=",
+    "/opt/wine-devel/bin/wine",
+    "7z2603-x64.exe"
+  ],
+  "cwd": "/home/helmlab/exp009-a0-7zip",
+  "started_utc": "2026-09-07T20:50:03.810792+00:00",
+  "exit_code": 0,
+  "stdout_base64": "",
+  "stderr_base64": "bGliRUdMIHdhcm5pbmc6IERSSTMgZXJyb3I6IENvdWxkIG5vdCBnZXQgRFJJMyBkZXZpY2UKbGliRUdMIHdhcm5pbmc6IEVuc3VyZSB5b3VyIFggc2VydmVyIHN1cHBvcnRzIERSSTMgdG8gZ2V0IGFjY2VsZXJhdGVkIHJlbmRlcmluZwo=",
+  "stdout": "",
+  "stderr": "libEGL warning: DRI3 error: Could not get DRI3 device\nlibEGL warning: Ensure your X server supports DRI3 to get accelerated rendering\n",
+  "ended_utc": "2026-09-07T20:50:59.937994+00:00",
+  "duration_seconds": 56.12720737300015,
+  "scope": "Command capture only; exit status is not a workflow verdict"
+}

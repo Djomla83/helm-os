@@ -1,0 +1,33 @@
+{
+  "recorded_utc": "2026-09-07T19:31:25.2740050Z",
+  "vm_name": "helm-lab-desktop-7zip",
+  "vm_id": "bd39f424-5b26-479d-846f-2f28f6639637",
+  "ubuntu_installer_started_utc": "2026-09-07T19:25:27.1562957Z",
+  "selected_options": [
+    "English (US) keyboard",
+    "Wired connection via existing Default Switch",
+    "Skip offered installer update",
+    "Interactive install",
+    "Default application selection",
+    "No third-party graphics/Wi-Fi or media add-ons selected",
+    "Erase only new VM disk sda: EFI FAT32 and root ext4",
+    "Dedicated helmsetup administrative setup account; separate helmlab application account to be created",
+    "Require password login",
+    "Atlantic/Reykjavik lab timezone, UTC offset 0"
+  ],
+  "helpers": [
+    {
+      "file": "guest-console.ps1",
+      "sha256": "4be34c018143e18c6c7f6814dc937f3cff62fa4aa0e90e9c289cfc42e018f745"
+    },
+    {
+      "file": "guest-type.ps1",
+      "sha256": "d370ab5f1394e319acf822880e61a906a496e649dc3f451a8bfa144d83450872"
+    },
+    {
+      "file": "framebuffer-to-png.py",
+      "sha256": "f40cc017bb33ae4bda009230c900df722be738c48280ee16b1b60041e9b11efb"
+    }
+  ],
+  "interpretation": "Console APIs and image inspection are agent-operated. No human GUI actions were required. RGB565 thumbnails are diagnostic session evidence, not a rendering oracle; full returned bytes including four extra bytes are retained privately."
+}

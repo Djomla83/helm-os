@@ -1,0 +1,23 @@
+{
+  "recorded_utc": "2026-09-07T19:10:17.7513156Z",
+  "computer_use_initialization": {
+    "result": "BLOCKED",
+    "message": "Computer Use native pipe is unavailable: Error: failed to connect native pipe: The system cannot find the file specified. (os error 2)",
+    "observed_at_utc": "2026-09-07T19:06Z",
+    "sky_runtime_created": false,
+    "host_app_input_sent": false
+  },
+  "gpg_methodology": {
+    "failed_record": "ubuntu-key-inspect.json",
+    "cause": "Bundled MSYS GPG interpreted a Windows backslash absolute --homedir path as a relative path",
+    "change": "Use --homedir ./gnupg with the same isolated project working directory, key, signature and checksum bytes",
+    "corrected_record": "ubuntu-key-inspect-relative.json",
+    "does_not_change_test_criteria": true
+  },
+  "gui_plan": {
+    "method": "Documented Hyper-V virtual keyboard/mouse and thumbnail capture APIs, scoped to the single project VM, if available",
+    "fallback_reason": "Native computer-use transport unavailable",
+    "no_host_clipboard_or_share": true,
+    "failure_policy": "If guest console cannot be actuated/observed, record the gap; a CLI ZIP cannot satisfy the registered GUI workflow"
+  }
+}

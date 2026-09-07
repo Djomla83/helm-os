@@ -1,0 +1,2966 @@
+{
+  "scope": "Private originals and failed instrumentation, retained outside Git. This list publishes identities only, not private file contents. Guest credentials, SSH private keys and keyring state are excluded even from this inventory. Bare private capture names in setup records resolve here; public screenshots are separately listed in publication-manifest.json.",
+  "created_utc": "2026-09-07T21:13:55.441545+00:00",
+  "artifacts": [
+    {
+      "private_file": "a0-after-evidence.tar.gz",
+      "sha256": "95ecd7a94e46fb48e1f00cede5a4c35a0793482b7a7be94acf2cc8db4c6bff7c",
+      "bytes": 140662
+    },
+    {
+      "private_file": "a0-before-evidence.tar.gz",
+      "sha256": "aa6fe20fa9b480fc25794c9c50a1366582bad18edfe16a6357fd838490f774ae",
+      "bytes": 73362
+    },
+    {
+      "private_file": "boot-001-bounded.png",
+      "sha256": "e9951159ce3602b53afa4902d126866132d558287343b64f7ec5ae02e276d029",
+      "bytes": 5851
+    },
+    {
+      "private_file": "boot-001-failure.json",
+      "sha256": "9ece784a6a70c70272f54eedd1dd9e80972c81d54f28c24230a1e590c043d785",
+      "bytes": 1003
+    },
+    {
+      "private_file": "boot-001.rgb565",
+      "sha256": "dca8f087fecf2317a6621ced06a1502cb0ed8118515c5b4b06fd0fea44f84045",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "boot-002.json",
+      "sha256": "5e1f69fda51484e29659f70bf197e3006517c9c94fd4ed9c017ede2c5fbf14af",
+      "bytes": 1019
+    },
+    {
+      "private_file": "boot-002.png",
+      "sha256": "f30fb9f63df246092612c2e6d42f9d055ba0cf841bc907e07cb54f096f14737b",
+      "bytes": 47329
+    },
+    {
+      "private_file": "boot-002.rgb565",
+      "sha256": "3a0097f5f12729b166a89c9262454cb5993e5a1ccff358483ef0c66711df87f8",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "guest-console-at-clr-failure.ps1",
+      "sha256": "07a322693829ee187f5fddec931b896af05751646fd7cc527568182cd7636f1b",
+      "bytes": 6399
+    },
+    {
+      "private_file": "guest-console-at-typetext-failure.ps1",
+      "sha256": "ac8d76769fd82682ff6c389eb8883528658b35653bbbb3e8cfe4f59e7f464ef3",
+      "bytes": 6064
+    },
+    {
+      "private_file": "guest-type-before-batching.ps1",
+      "sha256": "21f915fa00dda3065d822dc5a3bb8fcc57f4203934162f176200fe25096ef39c",
+      "bytes": 1369
+    },
+    {
+      "private_file": "hyperv-access.raw.json",
+      "sha256": "15d3fa2f86fdd00ce92545b9857add2e0989c54de3748770c2b3ea3b6b5e48f6",
+      "bytes": 1934
+    },
+    {
+      "private_file": "publish-console-before-filename-fix.py",
+      "sha256": "c622bd942124aacc2f1fed4c074b020c8ba750bcf911a50c35dca42cafc17c64",
+      "bytes": 2329
+    },
+    {
+      "private_file": "ssh/keyscan.stderr.txt",
+      "sha256": "9f8ef4a8930fead6900a88cd87ed514ebe2e52fdf7916d01c628f7d9e8124b19",
+      "bytes": 133
+    },
+    {
+      "private_file": "ubuntu-001-next.json",
+      "sha256": "8518e0c6e3e9116b647d19b85d3455020c643a8a82a8e9456f29e7eedf5cab88",
+      "bytes": 487
+    },
+    {
+      "private_file": "ubuntu-002-accessibility.json",
+      "sha256": "06bf52289f120b0b0ac3b2a189343a2bcd4513f8c06865f0de1c6ded3ad3a08e",
+      "bytes": 1035
+    },
+    {
+      "private_file": "ubuntu-002-accessibility.png",
+      "sha256": "ae5ab60708904db6b1224b387b993b5bf34a525e104558c93aeadd3d1dcf26fa",
+      "bytes": 70139
+    },
+    {
+      "private_file": "ubuntu-002-accessibility.rgb565",
+      "sha256": "19d8bd5b11cf04b57a03eb0e4eb40f2143a0083ff234c31601f764e435518fba",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-003-next.json",
+      "sha256": "12f51671aa5da1c385fb5a91b1431028452221a5189ad9eba8f33d5bb63d2957",
+      "bytes": 487
+    },
+    {
+      "private_file": "ubuntu-004-keyboard.json",
+      "sha256": "47c383a695c3ae41745ee82bc0615a286cb184cca47d68b9c229c949860691cd",
+      "bytes": 1030
+    },
+    {
+      "private_file": "ubuntu-004-keyboard.png",
+      "sha256": "622e960b5e0c73dbcd941339875bac9bf263236fc35c4958a4ec229618ec33ee",
+      "bytes": 78748
+    },
+    {
+      "private_file": "ubuntu-004-keyboard.rgb565",
+      "sha256": "ad9addc824e21d3b1c1679003db9e258ed38ee13b149f56d4981c274a8f9b5c0",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-005-next.json",
+      "sha256": "8aae27c9fa0af9193ee604ccec0233279b0bd59fae901ef1ad454084561ed3ba",
+      "bytes": 487
+    },
+    {
+      "private_file": "ubuntu-006-network.json",
+      "sha256": "f5d8f46c12ae863e8f2a2e1839f469e1cd206d725e51bab43d7916481fb11358",
+      "bytes": 1029
+    },
+    {
+      "private_file": "ubuntu-006-network.png",
+      "sha256": "6b9ba9438e179dae7cdb0a9f12ad139e61dec42ac5674a539d19f0f87cf7af89",
+      "bytes": 73326
+    },
+    {
+      "private_file": "ubuntu-006-network.rgb565",
+      "sha256": "a63374d19287dd66c4621a49ec9245c9c743b0cc5d9925208da64cdfc6336ebb",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-007-next.json",
+      "sha256": "fa8a4f258a8543bec88c12daa3acc432bdbbddf70afff0e2a1899373e644ed81",
+      "bytes": 487
+    },
+    {
+      "private_file": "ubuntu-008-selection.json",
+      "sha256": "64f2363ffe17419335487c1cf65609e9be6532322cffe2b144f7f644ef44da95",
+      "bytes": 1031
+    },
+    {
+      "private_file": "ubuntu-008-selection.png",
+      "sha256": "402bf8cd6c286834adbac3550ee41595fd06788c3f6154c8bf267d206c4a7269",
+      "bytes": 56469
+    },
+    {
+      "private_file": "ubuntu-008-selection.rgb565",
+      "sha256": "3d063c625d539906c03c367d219bc84ab76cab007b3c817af32fb5f46e888cb0",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-009-skip-installer-update.json",
+      "sha256": "575f262284941550f4f516cf24c519e34734f1234609624f7abcfa418e45355b",
+      "bytes": 504
+    },
+    {
+      "private_file": "ubuntu-010-install-choice.json",
+      "sha256": "8ba343b6dd2abc590586d9ce0acb8757a3f093f49d7513503ba22149e9bd7315",
+      "bytes": 1036
+    },
+    {
+      "private_file": "ubuntu-010-install-choice.png",
+      "sha256": "cc44fde691f216bdf64066b7e6aaae97b452fb21616a7a09e58beb545aca7b7a",
+      "bytes": 76297
+    },
+    {
+      "private_file": "ubuntu-010-install-choice.rgb565",
+      "sha256": "924edf1369d2d1f21447965420b38751003518ad2691600e0918aa06cc43ecc9",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-011-next.json",
+      "sha256": "3e5f0023bd7821a3708678cb26a3ed498a84af3f1f837fb3052c8d87c88db6a5",
+      "bytes": 487
+    },
+    {
+      "private_file": "ubuntu-012-mode.json",
+      "sha256": "e5047a6421c7bce76b6b0c18205ab4ad706dc771f4db24830f470204c333ec1d",
+      "bytes": 1026
+    },
+    {
+      "private_file": "ubuntu-012-mode.png",
+      "sha256": "cf0dc45ec6d7e1e9579cecbf24f836a201f3a7333394cab81a35d8cb3d18a1d5",
+      "bytes": 72849
+    },
+    {
+      "private_file": "ubuntu-012-mode.rgb565",
+      "sha256": "519a885d747491f00f25d0ade7660c2abae0e7db006646e5a3bc4a2a995a2915",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-013-next.json",
+      "sha256": "474d7824e8a50508fce6e11046a37daa178b9fbddd21790709172f8306fd2c2a",
+      "bytes": 487
+    },
+    {
+      "private_file": "ubuntu-014-apps.json",
+      "sha256": "5427174a3333be3318260a491219acb17163e329151f72c1253d56ad515a445b",
+      "bytes": 1026
+    },
+    {
+      "private_file": "ubuntu-014-apps.png",
+      "sha256": "99924b6882a77a54196a8084daaa22ad9b8a095987490ba19fd4a36f8bda48db",
+      "bytes": 78031
+    },
+    {
+      "private_file": "ubuntu-014-apps.rgb565",
+      "sha256": "e9275abb1d489b014e8506cc16d1f05ac1381599c087497207807cd20262f7fb",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-015-next.json",
+      "sha256": "9b47191a41b61edb1f59ca3db15e1be77fcb847863a61a400932adf220d4c76c",
+      "bytes": 487
+    },
+    {
+      "private_file": "ubuntu-016-drivers.json",
+      "sha256": "e4c0a9b355ed1423ae0d5f72a124c55295169c6f6a67b0eee3ffd9d378cdda8a",
+      "bytes": 1029
+    },
+    {
+      "private_file": "ubuntu-016-drivers.png",
+      "sha256": "8624e8d873798d9c4b5f7b8658300cbcc62ec1b2a396a43ee943be53e54ea7b1",
+      "bytes": 81911
+    },
+    {
+      "private_file": "ubuntu-016-drivers.rgb565",
+      "sha256": "96eab7962b7fb8efea16c80f5f34ac0814eaf67b890c8ecfeb45957a5b0d7963",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-017-next.json",
+      "sha256": "16adc598bbc55a1f41e0848450384c7bf831154fa3854eae09ec01d12e558c63",
+      "bytes": 487
+    },
+    {
+      "private_file": "ubuntu-018-disk.json",
+      "sha256": "96beb2b2906ed8a485f0d4a13dfe08789cb3222f82a2341cacfd3d0e593f0a5c",
+      "bytes": 1026
+    },
+    {
+      "private_file": "ubuntu-018-disk.png",
+      "sha256": "fe436843704ced2c0e5df8d3614455b3a390d3b02bd2e5024291dc4b8394c822",
+      "bytes": 81958
+    },
+    {
+      "private_file": "ubuntu-018-disk.rgb565",
+      "sha256": "4d0c85330a0fe70ffe8443319a5848bc2978a529089bec68974c19cc83cde183",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-019-disk-ready.json",
+      "sha256": "27cb4cc0916733128cf0cc0e41ac2c0aa6e7b110c31790013b5ccd5fe099fca5",
+      "bytes": 1032
+    },
+    {
+      "private_file": "ubuntu-019-disk-ready.png",
+      "sha256": "eb4424dcfa9b30c5d20e9d8b5d4bd138deabc8f11361916a955ec785c47aa66c",
+      "bytes": 67535
+    },
+    {
+      "private_file": "ubuntu-019-disk-ready.rgb565",
+      "sha256": "f30c74702b998705b7188c5dede0a55a8e073774869312c8c6c2f54ac285dcf0",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-020-next-guest-disk.json",
+      "sha256": "111b29e46fed8d0f6517e87e66bb6227e760b2b129bec6abf746500a97420ceb",
+      "bytes": 498
+    },
+    {
+      "private_file": "ubuntu-021-account.json",
+      "sha256": "b8c7808da66a2737e6bd9a77f46b8cb8de4a2ff9d82e1cbd37e326e4b271b611",
+      "bytes": 1029
+    },
+    {
+      "private_file": "ubuntu-021-account.png",
+      "sha256": "0a4d9708311c12f00dd1ebc2848823a371248f1aff0c5391ee4535ec6e99d396",
+      "bytes": 70934
+    },
+    {
+      "private_file": "ubuntu-021-account.rgb565",
+      "sha256": "3bef2b5c1e85a0142e6d6ff701ae235e10192151360b12e10da4730441d1fff5",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-022-setup-name.json",
+      "sha256": "7aed48149d1b96cd8bb39ed910905894a5e0bb7e455bef6fb124d6e7a32bb5cd",
+      "bytes": 415
+    },
+    {
+      "private_file": "ubuntu-023-hostname-focus.json",
+      "sha256": "6bfe844d69c1e769543b81b6afa9ff89aaa00f4fa6d3961dc3cd74c532331d7c",
+      "bytes": 497
+    },
+    {
+      "private_file": "ubuntu-024-hostname-select.json",
+      "sha256": "a23bc410f4e63c27b486164e86d4905d99b2439b1b2dac0a97c461e1919105cb",
+      "bytes": 719
+    },
+    {
+      "private_file": "ubuntu-025-hostname.json",
+      "sha256": "3d36cfebf32ece37c564b7fc8c8d8843368986e29acf59e1050fae37e7c9ac14",
+      "bytes": 415
+    },
+    {
+      "private_file": "ubuntu-026-username-focus.json",
+      "sha256": "cba83545d74862826800d96d91eb2005dfc2a957dc6f01053d4c726144ddc319",
+      "bytes": 497
+    },
+    {
+      "private_file": "ubuntu-027-username-select.json",
+      "sha256": "255e6591dec5cca9599d31f9aab35decb5d649aea1fa8f5545ad13066314ca67",
+      "bytes": 719
+    },
+    {
+      "private_file": "ubuntu-028-username.json",
+      "sha256": "68e1fcb5892190c6345fdd8faf13fb654ce7b15b35d2d23402bbaa3f768ef738",
+      "bytes": 412
+    },
+    {
+      "private_file": "ubuntu-029-password-focus.json",
+      "sha256": "231cbad90fe591b08b10870c0bde35978ad8663d87eb4c7d4de7ba3d81dff3de",
+      "bytes": 497
+    },
+    {
+      "private_file": "ubuntu-030-password.json",
+      "sha256": "105afd3958e7a438a8b39475c62d79365502e3ef86c32b02ce68b76865057bde",
+      "bytes": 372
+    },
+    {
+      "private_file": "ubuntu-031-confirm-focus.json",
+      "sha256": "3f3f727883b645885c39928b2fd05496dcd316c6c632b9e6af33d6df183404e4",
+      "bytes": 496
+    },
+    {
+      "private_file": "ubuntu-032-confirm.json",
+      "sha256": "0ea66971ca9a00cdef3bf10ddd8cbbbd1b4d3475279e1f27ce4b6adb6b54d9b1",
+      "bytes": 371
+    },
+    {
+      "private_file": "ubuntu-033-account-ready.json",
+      "sha256": "0443877ed8e0775ea4137a71955888eab4aac5b848246c431dde59e341116b30",
+      "bytes": 1035
+    },
+    {
+      "private_file": "ubuntu-033-account-ready.png",
+      "sha256": "0deb3834c35c8fcba1d67d0adfbbb8f3a8c592b1913e8cc2f4c282ce71640f73",
+      "bytes": 74767
+    },
+    {
+      "private_file": "ubuntu-033-account-ready.rgb565",
+      "sha256": "a5880b33596f1b1b2c6282e01afcd29942d5f78052c6cb88280cc275cfbab7e7",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-034-scancode-field.json",
+      "sha256": "8991f198434db31668878c3c5325e7b27da4ff624022be24cf7ba3b12137ddcd",
+      "bytes": 497
+    },
+    {
+      "private_file": "ubuntu-035-select-name.json",
+      "sha256": "92f85427c43f5f668dffbf5baf7a0a57738d283d924b2bbea693c354b71292e6",
+      "bytes": 460
+    },
+    {
+      "private_file": "ubuntu-036-type-name.json",
+      "sha256": "e5a7b9b947897003196e21d4b0b25e2c1445fb2f53ce767b566b8aef014cef11",
+      "bytes": 619
+    },
+    {
+      "private_file": "ubuntu-037-scancode-observation.json",
+      "sha256": "bacd1c9635d91bb6377bf48a63e578133fd7035605ebb041bf19d974f2955060",
+      "bytes": 1042
+    },
+    {
+      "private_file": "ubuntu-037-scancode-observation.png",
+      "sha256": "84ca8a507a698a1a62959b8288333b24c267d10f5ab4fe2ce639f8c66073842f",
+      "bytes": 74985
+    },
+    {
+      "private_file": "ubuntu-037-scancode-observation.rgb565",
+      "sha256": "777302628ed79a0565dc305640747942cc2dc85557af8ec4455f7260bc6bc939",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-038-hostname-refocus.json",
+      "sha256": "766a446dcbaa318fe6ebf477bea9262c6645ff6a9e1b541a0078a4de6ebc4ad4",
+      "bytes": 499
+    },
+    {
+      "private_file": "ubuntu-039-hostname-reselect.json",
+      "sha256": "3986e756a6de491f8c4f79892d3784a1731da9d6e2916f38e8f8d9ffa22c0d43",
+      "bytes": 466
+    },
+    {
+      "private_file": "ubuntu-040-hostname-scan.json",
+      "sha256": "00660c1e527f5da339c144a4addf0c96799d5ce2a9ac89796e44b2f8abdfe19b",
+      "bytes": 691
+    },
+    {
+      "private_file": "ubuntu-041-before-password.json",
+      "sha256": "d38bbbf0bd0cb04a3ec72a87421ddcd5e0101aca0138123036c960330fa30085",
+      "bytes": 1037
+    },
+    {
+      "private_file": "ubuntu-041-before-password.png",
+      "sha256": "6bc07c4c71a25838d48e0245de86c4d32be772b0a695f4aa64e57c616b201082",
+      "bytes": 75205
+    },
+    {
+      "private_file": "ubuntu-041-before-password.rgb565",
+      "sha256": "5727a09da4a907eb892e52664a0c43df47c65dde7e0ef2fb1aa8ba409dc5ebc7",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-042-name-anchor.json",
+      "sha256": "47a3f7da474d467c9ee1de4a77f1d24300ac4b0dcb653b0f56cb091937104b5a",
+      "bytes": 494
+    },
+    {
+      "private_file": "ubuntu-043-hostname-tab-select.json",
+      "sha256": "4693bd0f509119269262ae6f679bf83d9bc3c772992570673e0814207ab7ee3c",
+      "bytes": 491
+    },
+    {
+      "private_file": "ubuntu-044-hostname-tab-write.json",
+      "sha256": "689d6d92bd4e62cd2af9463fe7cb6c75f3407100f5c109867fd029751f5edc8e",
+      "bytes": 696
+    },
+    {
+      "private_file": "ubuntu-045-hostname-inspect.json",
+      "sha256": "f589f008919cac472bb48366953da12a508502012f2f4f3055ffa24c0e2efe31",
+      "bytes": 1038
+    },
+    {
+      "private_file": "ubuntu-045-hostname-inspect.png",
+      "sha256": "4bca100214ada532b6a4d42940f0e7f77cc2878141b5bd98be654b81f2776218",
+      "bytes": 75222
+    },
+    {
+      "private_file": "ubuntu-045-hostname-inspect.rgb565",
+      "sha256": "6e2d083ba55f6ed1066e3656d9b74cfd65eae7645f31634ebf6c350d1d5c613d",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-046-single-character.json",
+      "sha256": "8122966a0251017effdfc00c0719e4378bf13de8dbe3909c45381d980cda8e44",
+      "bytes": 442
+    },
+    {
+      "private_file": "ubuntu-047-single-character-observed.json",
+      "sha256": "d0715d44a732e09fbebd5117dce1c7bc09c05f279036b2d2721c016aaa00bfdc",
+      "bytes": 1047
+    },
+    {
+      "private_file": "ubuntu-047-single-character-observed.png",
+      "sha256": "2347ea081b4b5d81c2c45b07b08cf207f7a5cd387e5df168a4c5a919ad12a7d8",
+      "bytes": 73740
+    },
+    {
+      "private_file": "ubuntu-047-single-character-observed.rgb565",
+      "sha256": "7896699965b308a1650da7a2f0c99874a15f7c68224fc312f6e2fedcd93c0771",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-048-short-text.json",
+      "sha256": "d9e0d7e598aac2c717ab5cf3978b270aa198427c0eb8b157b6c0dbcf89b6c5a0",
+      "bytes": 505
+    },
+    {
+      "private_file": "ubuntu-049-short-text-observed.json",
+      "sha256": "e70e27aea177b15b5b2ead85443bc3cd9d45e5687e72772e37393974b679e64d",
+      "bytes": 1041
+    },
+    {
+      "private_file": "ubuntu-049-short-text-observed.png",
+      "sha256": "af8bbab6b71252467589954bc1d66acb1fbd14157d720c04555f4034693511b5",
+      "bytes": 75150
+    },
+    {
+      "private_file": "ubuntu-049-short-text-observed.rgb565",
+      "sha256": "51818a86fc09ae8687c5a7d3acb6cef365d853fcd0571ac82c578bc5485d4f39",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-050-hostname-suffix.json",
+      "sha256": "743bb9c1c05e011f6bbe45529878511e64f102c9d76bc43b181e84bc266bcb56",
+      "bytes": 578
+    },
+    {
+      "private_file": "ubuntu-051-hostname-complete.json",
+      "sha256": "609bb0b9ea0c9b90724517ee57358c037265cc7e0920416bbbbc59a95496a051",
+      "bytes": 1039
+    },
+    {
+      "private_file": "ubuntu-051-hostname-complete.png",
+      "sha256": "f2f450ef3c516feb54c32068c62c3a15889ebedd8be33b4e295c54a06d9e734a",
+      "bytes": 75026
+    },
+    {
+      "private_file": "ubuntu-051-hostname-complete.rgb565",
+      "sha256": "68d1b19736aeeab051bbb154c381c5f0a97948846d709a766a88153b0ddfe710",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-052-password-refocus.json",
+      "sha256": "1746cbc162c2b24eb49ca40c31f600c31b3503bd46004b3db4940dedda707a9f",
+      "bytes": 499
+    },
+    {
+      "private_file": "ubuntu-053-password-chunk-0.json",
+      "sha256": "d8278cbf8f01e2d77a1bbd95eb5cfc56491c15518486ab70111dadda3d8cbc65",
+      "bytes": 385
+    },
+    {
+      "private_file": "ubuntu-053-password-chunk-16.json",
+      "sha256": "fd56a86a063eabd40fea97b6bcba880767fa16c221e61cde58b85e77e8ec27af",
+      "bytes": 386
+    },
+    {
+      "private_file": "ubuntu-053-password-chunk-24.json",
+      "sha256": "d6ec5f3b61ca002fcba9bc33e276bab2e3b593d02eb332b6ae19139b29398706",
+      "bytes": 386
+    },
+    {
+      "private_file": "ubuntu-053-password-chunk-32.json",
+      "sha256": "406bc7dc78a08aefb334a8dfee890e41d8cff4f8c23059153526e563dad1c474",
+      "bytes": 386
+    },
+    {
+      "private_file": "ubuntu-053-password-chunk-8.json",
+      "sha256": "a0f597b6eb6fae4fffd1d27ef01d30743ec680d2ddb2a41e22ad511cdb7767a3",
+      "bytes": 385
+    },
+    {
+      "private_file": "ubuntu-054-confirm-refocus.json",
+      "sha256": "455477617d3e217b949a51f34f1c56626d98033e1d8843bc0c0e8f7776521b07",
+      "bytes": 498
+    },
+    {
+      "private_file": "ubuntu-055-confirm-chunk-0.json",
+      "sha256": "2c196f331a5bcac027fbf46add757676ce00db9cb7293fdc27027a818eb7b16e",
+      "bytes": 384
+    },
+    {
+      "private_file": "ubuntu-055-confirm-chunk-16.json",
+      "sha256": "5814645b6f6ec9283f00467a6de1f6f4156cc20afb8346aa2df2b50fc59b1659",
+      "bytes": 385
+    },
+    {
+      "private_file": "ubuntu-055-confirm-chunk-24.json",
+      "sha256": "a20cf6edf3f300647cd2f112d802f1402c2dce961852705eea0f14ad2796202d",
+      "bytes": 385
+    },
+    {
+      "private_file": "ubuntu-055-confirm-chunk-32.json",
+      "sha256": "7582598d37d6f595751f4aaf9d32f7d2d2bce9a8e8a555d913f901f90c08b9d2",
+      "bytes": 385
+    },
+    {
+      "private_file": "ubuntu-055-confirm-chunk-8.json",
+      "sha256": "1392075f0064afea064883413e38524692703e38c74e70f55fcf1cce9631ad6c",
+      "bytes": 384
+    },
+    {
+      "private_file": "ubuntu-056-account-final.json",
+      "sha256": "ba1664182f5b0a125b5b6f39497a684a262672f7641708db3fc824a64335342d",
+      "bytes": 1035
+    },
+    {
+      "private_file": "ubuntu-056-account-final.png",
+      "sha256": "6a0080bd9c03e1c043094494d68128f5b90b2d048db6d1442753cdc738ad327f",
+      "bytes": 76702
+    },
+    {
+      "private_file": "ubuntu-056-account-final.rgb565",
+      "sha256": "9762667d815caba19e6850d794090ce49aa9a582068ac9b45c842d7cae60383f",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-057-confirm-focus.json",
+      "sha256": "a8d35f2ddc280e0c6632f52cf6d276b3cb1356f03a79fa622caf8b0db8a15e45",
+      "bytes": 496
+    },
+    {
+      "private_file": "ubuntu-057-password-focus.json",
+      "sha256": "fbe4999240e5df930a25bd28b054eca1427a546c0c7e5b62457b6fb8acccdcac",
+      "bytes": 497
+    },
+    {
+      "private_file": "ubuntu-058-confirm-clear.json",
+      "sha256": "81889c8696305c2e05130eb38435b527c3114b14e2bca5225f00279c533a22e0",
+      "bytes": 462
+    },
+    {
+      "private_file": "ubuntu-058-password-clear.json",
+      "sha256": "c63b877210e07bbdd3ddc62ca334474c778eec6ad390c5472c7647b797c27f34",
+      "bytes": 463
+    },
+    {
+      "private_file": "ubuntu-059-confirm-chunk-0.json",
+      "sha256": "67a1bb395ea90cabe43294b6ec0d4bc376b131a4a9c34e80be03c28ad1fcfabe",
+      "bytes": 384
+    },
+    {
+      "private_file": "ubuntu-059-confirm-chunk-12.json",
+      "sha256": "b46f00ef251e52bd66bbb544c2aaec81bdf66ed46445b6b1b51411f9e34258a3",
+      "bytes": 385
+    },
+    {
+      "private_file": "ubuntu-059-confirm-chunk-16.json",
+      "sha256": "9213611f85185ecf89ca8bb2c6fca29a2951f8510a59e52baf24ff290d4de5b2",
+      "bytes": 385
+    },
+    {
+      "private_file": "ubuntu-059-confirm-chunk-20.json",
+      "sha256": "bfe1595e346b4367ff97c6cad7c4de0949484dedd80d39a033da9062b5f3395b",
+      "bytes": 385
+    },
+    {
+      "private_file": "ubuntu-059-confirm-chunk-24.json",
+      "sha256": "e7ccf27e75d99558b74011778f599ce17e5cd449712619c65184209fc513a5d6",
+      "bytes": 385
+    },
+    {
+      "private_file": "ubuntu-059-confirm-chunk-28.json",
+      "sha256": "3c8e0dbefe61ddafacc0386968f268c7beebdfa3d49351d2c6b0e7adada52b60",
+      "bytes": 385
+    },
+    {
+      "private_file": "ubuntu-059-confirm-chunk-32.json",
+      "sha256": "097534ceab29ff6384abd925134d51b3806f457a805a8d11cb78b855a14a57ea",
+      "bytes": 385
+    },
+    {
+      "private_file": "ubuntu-059-confirm-chunk-4.json",
+      "sha256": "395c65bb9067b50bce0c6a43217a6a60466d51eda39ede9f1de4b27fdbe5054f",
+      "bytes": 384
+    },
+    {
+      "private_file": "ubuntu-059-confirm-chunk-8.json",
+      "sha256": "7bd91772167b17072e347fafedc3f1a60a48bc66c64c65c25a51bcfa8a1e91e2",
+      "bytes": 384
+    },
+    {
+      "private_file": "ubuntu-059-password-chunk-0.json",
+      "sha256": "6a63ffc5a90328267e771f83d04ef67560493f3440085cc8729d65887e4caa9a",
+      "bytes": 385
+    },
+    {
+      "private_file": "ubuntu-059-password-chunk-12.json",
+      "sha256": "ec394dfd53eaeb40b4a8b10eae6524fbc7b5c270629b4d82e2de2e4a502cdd8a",
+      "bytes": 386
+    },
+    {
+      "private_file": "ubuntu-059-password-chunk-16.json",
+      "sha256": "09e0f1692518defbf72a53185dc36166d0de105cc02bfd78c0e7b89cf7e9e194",
+      "bytes": 386
+    },
+    {
+      "private_file": "ubuntu-059-password-chunk-20.json",
+      "sha256": "0a71221b714c5bf3eec7d6d71e2cb863d8f047f13ba10b59f19eb4dfd8087b55",
+      "bytes": 386
+    },
+    {
+      "private_file": "ubuntu-059-password-chunk-24.json",
+      "sha256": "48c6997b2bd0064071d04ee7dcd34f96191532a09ff652f6f62d4df30d20c464",
+      "bytes": 386
+    },
+    {
+      "private_file": "ubuntu-059-password-chunk-28.json",
+      "sha256": "233a9b8bb44c331c93444be89c36eeb765cb26c0149262199f1c27763815274b",
+      "bytes": 386
+    },
+    {
+      "private_file": "ubuntu-059-password-chunk-32.json",
+      "sha256": "42eb07539aa852b9dbefddca15cb7e7914078e89f84b89240c2fd3bed9f9f349",
+      "bytes": 386
+    },
+    {
+      "private_file": "ubuntu-059-password-chunk-4.json",
+      "sha256": "f23ad100d8ae3f1cb68c9b8cbdd923d30f011586b89e328cce2888b44e5e4904",
+      "bytes": 385
+    },
+    {
+      "private_file": "ubuntu-059-password-chunk-8.json",
+      "sha256": "629e2b79e6e628d3dca197cdcb954074c2803f7ca17781150c70f4f3731a7bb9",
+      "bytes": 385
+    },
+    {
+      "private_file": "ubuntu-060-account-checked.json",
+      "sha256": "11effe35d14fc934f91bd5a5ded49f8a90f860105e5dfcb8b074405a2f9c9813",
+      "bytes": 1037
+    },
+    {
+      "private_file": "ubuntu-060-account-checked.png",
+      "sha256": "760d32f575b0527f18bef91d2f53cd234cfecd1f9f73005df0ee238e01ac35e0",
+      "bytes": 77194
+    },
+    {
+      "private_file": "ubuntu-060-account-checked.rgb565",
+      "sha256": "7aee4da4f78c133186a4ea2c412beaf8766a108057d54b4367cdef56557bda3a",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-061-next-account.json",
+      "sha256": "fd3bc5339ac6432f223f5dd9bdc9b9ba00fb51dc2802274bff844bbc0c0d5689",
+      "bytes": 495
+    },
+    {
+      "private_file": "ubuntu-062-timezone.json",
+      "sha256": "15d198a32a61403619d4e67d134ef47c6d1659105db5529a1be9565a30093d30",
+      "bytes": 1030
+    },
+    {
+      "private_file": "ubuntu-062-timezone.png",
+      "sha256": "3bdce4edc2beace61c8b6d6c7667f7b02955d4ea8e1ad76654ae1a752b7ebdc7",
+      "bytes": 152263
+    },
+    {
+      "private_file": "ubuntu-062-timezone.rgb565",
+      "sha256": "a3f2ce539d019a89745698238e7a8836a830ca3eae2945b69968c36fbea85109",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-063-timezone-map.json",
+      "sha256": "f7ed0a05d019825cba3ee172f76de55b316c2633ee698d223a43ad1d37798d9c",
+      "bytes": 495
+    },
+    {
+      "private_file": "ubuntu-064-timezone-selected.json",
+      "sha256": "62017d2ee1766d9983bb9fe4104f708bd43e9158042afe72a74fda6e8d8a8803",
+      "bytes": 1039
+    },
+    {
+      "private_file": "ubuntu-064-timezone-selected.png",
+      "sha256": "0b7db5ba1aa2532b69f1672da8f956b4a55fc5da63679f3750aa26f7df9ff356",
+      "bytes": 151389
+    },
+    {
+      "private_file": "ubuntu-064-timezone-selected.rgb565",
+      "sha256": "cc7d04e1ec9dd8cef50202b80b6dec482776eb4a6f43359f51b263d7e344b287",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-065-next-timezone.json",
+      "sha256": "5c0cac450b3fc3af4b746459eb318cd1e04d0f523aaa6599cdfbd39a07711437",
+      "bytes": 496
+    },
+    {
+      "private_file": "ubuntu-066-install-summary.json",
+      "sha256": "3cc63da341ae2c30bbb029cd27d10ac1ee32f975d666b91b8a98625e13f24a41",
+      "bytes": 1037
+    },
+    {
+      "private_file": "ubuntu-066-install-summary.png",
+      "sha256": "4545dc8fee12db906eb44f262d5341147bbe17a96d50e3296b9f80a524fa3826",
+      "bytes": 86869
+    },
+    {
+      "private_file": "ubuntu-066-install-summary.rgb565",
+      "sha256": "37c336269575f5104004f41762fb41433e201562896c9930ecba9734a3e2abfa",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-067-install-submitted.json",
+      "sha256": "e95b0f111b2a57f48fa8f71efd2e3640cc63607966f3fdb32b98652449b3be08",
+      "bytes": 500
+    },
+    {
+      "private_file": "ubuntu-068-install-started.json",
+      "sha256": "cf91d3b20cb7e490b8fcbf0557724adca9fbce88b90ead0fc1d5953654fd6eb7",
+      "bytes": 1037
+    },
+    {
+      "private_file": "ubuntu-068-install-started.png",
+      "sha256": "a1d97f0efdb200a8a01b9fb23dee3268cb65132c25446bb8b6b1970c8a83c19d",
+      "bytes": 74799
+    },
+    {
+      "private_file": "ubuntu-068-install-started.rgb565",
+      "sha256": "8ed70f4d749af12f886f881e4de5ae9e7e00dfc6ba26b5c2fe97948797d7f56f",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-069-install-progress.json",
+      "sha256": "51c629fe89966d779c9074386b3e3d94fef05ac8036be3b11866aa504c43c671",
+      "bytes": 1038
+    },
+    {
+      "private_file": "ubuntu-069-install-progress.png",
+      "sha256": "4eeb6177f09025e10b54dc4443241b746162ca459ad6ff6801f7fe7d580d2de2",
+      "bytes": 213994
+    },
+    {
+      "private_file": "ubuntu-069-install-progress.rgb565",
+      "sha256": "0d6bbf8ad91d5cf8926ba97a87adb5ba0c11655bc1ad4cadb5a3490670854db8",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-070-install-progress.json",
+      "sha256": "de1ab2314c0d8c1e93011190e26a4e7f90c142d92587f7a95cd9ff17e27429c4",
+      "bytes": 1038
+    },
+    {
+      "private_file": "ubuntu-070-install-progress.png",
+      "sha256": "1bac2c47da72b2d95e9f668599ded5ef71cdf61af2bcb316fc23717d5ad7771c",
+      "bytes": 75290
+    },
+    {
+      "private_file": "ubuntu-070-install-progress.rgb565",
+      "sha256": "27d96ca9221c6647bd163eade41e15a69c0dc8ca5852b9fb666f8861a3bc0725",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-071-show-install-log.json",
+      "sha256": "86e8bea1c58ce4695de44bf634d4d4d40ce63e2ca1dee375b78eab92da149c80",
+      "bytes": 499
+    },
+    {
+      "private_file": "ubuntu-072-install-log.json",
+      "sha256": "8e9015725fc1d58c6e6b2318644204cb42e1a72c28c13e96b67513fea859bccc",
+      "bytes": 1033
+    },
+    {
+      "private_file": "ubuntu-072-install-log.png",
+      "sha256": "89e4bfcc789919f6c13af4c03fa248102204ae386b6b8c82b5d1aef2a0fe5ebc",
+      "bytes": 156241
+    },
+    {
+      "private_file": "ubuntu-072-install-log.rgb565",
+      "sha256": "0fe7411d2255b5aaca6cf74c8fa1c0e64d5b3588ebe66da9a3a98978c1f09584",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-073-install-progress.json",
+      "sha256": "52520df424225e6ed253d20947dd25f0ed968c5acec7679fe35595b4b9cb5bc2",
+      "bytes": 1038
+    },
+    {
+      "private_file": "ubuntu-073-install-progress.png",
+      "sha256": "26032bd62ea0c175995cb05f0db13ad7ad312e71f5073caf0ecbe59d0e3c2942",
+      "bytes": 158716
+    },
+    {
+      "private_file": "ubuntu-073-install-progress.rgb565",
+      "sha256": "090070f42d2e8a82fe9835c1d6e986a159c70c8813ec8326cafad18806338b2d",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-074-install-progress.json",
+      "sha256": "1ffcbb2c6bdbc7cdf5c07c6f01e9d00e63196b206a92d0be0eabbeeb36abf589",
+      "bytes": 1038
+    },
+    {
+      "private_file": "ubuntu-074-install-progress.png",
+      "sha256": "e35f73600f80e5a2da108ddb535135157c28ab3091e88852fb655744c7054676",
+      "bytes": 161169
+    },
+    {
+      "private_file": "ubuntu-074-install-progress.rgb565",
+      "sha256": "fc73ab70f9a24b743abc48f988ffad73a359aef1c5c44a6e6a1e34b4201cba3b",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-075-install-progress.json",
+      "sha256": "78c5a7e4c2c3ed978339f85d84621c3e3031605a688306cebca332dce7817690",
+      "bytes": 1038
+    },
+    {
+      "private_file": "ubuntu-075-install-progress.png",
+      "sha256": "0fadc76c5d5775ea4ef5461d257073b241b61dd4e065f837b139403dd96616f8",
+      "bytes": 160120
+    },
+    {
+      "private_file": "ubuntu-075-install-progress.rgb565",
+      "sha256": "e1f259554627dd0024848f95e732134b728580a80767a73293d13407c9eb4846",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-076-install-status.json",
+      "sha256": "216a5d99aa5fb094b87b5048c1ce471d909288d005e0c631ca95b5c4c601e846",
+      "bytes": 1036
+    },
+    {
+      "private_file": "ubuntu-076-install-status.png",
+      "sha256": "324e51fb50172b3d94f0086423a76879a04e1798747fafe482414e170be3e880",
+      "bytes": 160165
+    },
+    {
+      "private_file": "ubuntu-076-install-status.rgb565",
+      "sha256": "bcb034ac885670422af859157362019fcd94c9b85f52bce2d908ba4c6485a0c6",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-077-install-status.json",
+      "sha256": "4fa9928e317b234d3304b8e1c7ad218ce47fcb1e5d09d05211c066ef7af9604a",
+      "bytes": 1036
+    },
+    {
+      "private_file": "ubuntu-077-install-status.png",
+      "sha256": "ee5ec33d49d9973e69ee612b86090dd6a64e2448725b42b9a243472368926a11",
+      "bytes": 160037
+    },
+    {
+      "private_file": "ubuntu-077-install-status.rgb565",
+      "sha256": "4bf61c6f48862f2e2b4528c411577626b25630c436346de2fd48ef62b1b8a382",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-078-live-terminal.json",
+      "sha256": "6cfddaaa3613621842235068f41826dcfbbb36100ec263cab7bd8d7b157daa2c",
+      "bytes": 485
+    },
+    {
+      "private_file": "ubuntu-079-live-terminal.json",
+      "sha256": "d2fe000344151958a025a24fe7dd8d1980aa342e2537c563070c016a807a2af5",
+      "bytes": 1035
+    },
+    {
+      "private_file": "ubuntu-079-live-terminal.png",
+      "sha256": "740d10e246c464509fd258520e5045ced4ea3af3812a820024f0510f5a87a61e",
+      "bytes": 72739
+    },
+    {
+      "private_file": "ubuntu-079-live-terminal.rgb565",
+      "sha256": "dd84aa4e95c311c19dab5f7cfdc755d298d61fd281b25cde0e21de01f1069cec",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-080-update-log-read-0.json",
+      "sha256": "8c658b2ef1bb49918631df1fd6b25014d30659ab993d422015ff6631a20a2a48",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-080-update-log-read-12.json",
+      "sha256": "7bc331ee4dca9f41c626dd7e166363eff6850dcc15d0cf203c09e12bac7fa773",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-080-update-log-read-16.json",
+      "sha256": "27790117b582ecb65c48b4b3f96b6b001bcb322a724b959a9d962d3e5e7bb7ea",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-080-update-log-read-20.json",
+      "sha256": "676292896cd2283506a5287372ebcb3c22cf75832fe4d403c174279ddb61d5b4",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-080-update-log-read-24.json",
+      "sha256": "886581aa24fb28e559ed9d99e7cef5bc9381ed1bbf201ab20f0d0919d2ad0486",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-080-update-log-read-28.json",
+      "sha256": "d73859501df905e8dc782975ddad06acc37fa081bacced6c9d6e78971f1a91c9",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-080-update-log-read-32.json",
+      "sha256": "f0eec3a805608864faaf2e64e386e97ee152f00d617bba976b880bbb9231d52c",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-080-update-log-read-36.json",
+      "sha256": "3615463c0c2693406c5ef6c840cd0e06d18a7d0a9eee007c0efd05982e8fca4b",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-080-update-log-read-4.json",
+      "sha256": "6a801572d0677b9a9801f19a90bfb59992ce58843325881c08dcd8c45f4cb228",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-080-update-log-read-40.json",
+      "sha256": "0de34aa06cc3d368e866113a8a6edb49759749ecba740851936baa80c941b188",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-080-update-log-read-44.json",
+      "sha256": "b9ca626ee89bb44dfc49387b4df9c6ac40c1e1d90986b1a85dfbbaa827e69d69",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-080-update-log-read-48.json",
+      "sha256": "ddce5fcda05d2b04a4c1c7b8debb075e171a4a8ca96cf618c1228efb73e52834",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-080-update-log-read-52.json",
+      "sha256": "6f79417c6346fea0e400464f79a10ff6ec7b1b50ed79512badbb10b5d6efe8e5",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-080-update-log-read-56.json",
+      "sha256": "a819e6840aa9613ee2c1068e92b1f1e787cd7d172425d359b4d094843fb1bf35",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-080-update-log-read-60.json",
+      "sha256": "1de4fdc892fc402a90ade2e4ac0f48e88ada7cca35fc8f8914076f7b6b189e52",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-080-update-log-read-64.json",
+      "sha256": "93673f21b15b4e1a1626ab6ff2206f4964fa364b2413695b0ae471d38f8f53df",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-080-update-log-read-68.json",
+      "sha256": "fe7ccf8ac7c236a9fb5e2226c2003d4202170f3459e179b12c4f9f140ec1dc38",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-080-update-log-read-72.json",
+      "sha256": "b44e12917b87a44acdb8e87d2083bb0600a5ed44ffc02ef8778f5f387787d885",
+      "bytes": 444
+    },
+    {
+      "private_file": "ubuntu-080-update-log-read-8.json",
+      "sha256": "0be58101cd0c869085947153f947090e1f9de692b1a0db7b8362b76978a78184",
+      "bytes": 511
+    },
+    {
+      "private_file": "ubuntu-081-update-log-result.json",
+      "sha256": "3e9cb47716c1a885bf50f87f90086c5e8ec18073e36fe7f8297575dcec6a99fc",
+      "bytes": 1039
+    },
+    {
+      "private_file": "ubuntu-081-update-log-result.png",
+      "sha256": "a966a4573e0f3fce510733b9fa70e8fb71fd3a2e12ac4a53fc840c50389cfe3b",
+      "bytes": 123768
+    },
+    {
+      "private_file": "ubuntu-081-update-log-result.rgb565",
+      "sha256": "db5e35f44cbc159e54b1183bc8959140019dea47e5a2c74397ad7278dabf8bb6",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-082-update-process-0.json",
+      "sha256": "6e0bdec99055e1a7fd1fea40e4ac862c66d71735051642c683e024601f3fd610",
+      "bytes": 511
+    },
+    {
+      "private_file": "ubuntu-082-update-process-12.json",
+      "sha256": "aeae829b5990e50b93fca5a99282d02bb84fc4f8deb4f6aad877fb35831f9eec",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-082-update-process-16.json",
+      "sha256": "3c041b018d24df5ae75b1d63a20cdac482e563f5ec074d414985fffe8bf1c578",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-082-update-process-20.json",
+      "sha256": "359574afa1cc3933294f8c7007b11fc90aa05ffc95b04ae5b62a5e2298d26587",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-082-update-process-24.json",
+      "sha256": "457e05896dd02304470adc38bdcd5b9811d66f90ecf276e7f294134ba2e7f89b",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-082-update-process-28.json",
+      "sha256": "862d65a45f96eee2f804ab21e061b04a1d0c87c31b9057c01ad362d91b91a9cc",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-082-update-process-32.json",
+      "sha256": "2f12950c367403c25465d4669250253ba025c29efc42a16e214aba8cd79f9930",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-082-update-process-36.json",
+      "sha256": "efa6e2aa06a555ef4ec2cf7dccb1e3b2d926da2b21d5e4743091474842b39648",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-082-update-process-4.json",
+      "sha256": "0e8c9bc945f1884be2a215810a07d4219ff09b43cdf5a447967a0fb5f1576494",
+      "bytes": 534
+    },
+    {
+      "private_file": "ubuntu-082-update-process-40.json",
+      "sha256": "f069c377a34d566f388933c068ca707bdf03fee9bd7a54db446534811025a4f6",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-082-update-process-44.json",
+      "sha256": "836ee27819c5b56ffb0af7c7ad61b56f8f1eb541a73de228ae12a4a19fd7b13e",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-082-update-process-48.json",
+      "sha256": "d0f914601e07da7b033bc28b8d4661df1c394a9b641b9e38171f02a103c42a1b",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-082-update-process-52.json",
+      "sha256": "6ead49d057118d9234d346f934e6f43088d8cbb58606386ab12700194bccb83e",
+      "bytes": 466
+    },
+    {
+      "private_file": "ubuntu-082-update-process-8.json",
+      "sha256": "69e196910844b557e51399b8430b1caf9dbf5720e0eff96782ed5583b210668e",
+      "bytes": 511
+    },
+    {
+      "private_file": "ubuntu-083-update-process-result.json",
+      "sha256": "37b0f5ed441c0661545709563c7d815878cac09b28e14fabdfe276049ddc189f",
+      "bytes": 1043
+    },
+    {
+      "private_file": "ubuntu-083-update-process-result.png",
+      "sha256": "a415329e3fe3477c8f94c18937ab27d168db3aa6156ed8d663c8c245420c9660",
+      "bytes": 134354
+    },
+    {
+      "private_file": "ubuntu-083-update-process-result.rgb565",
+      "sha256": "b546436a4d9ee615caf34ab3f73f9755e6e90efaddaf7501946d6160599f8588",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-084-update-progress-0.json",
+      "sha256": "704368227a28fb728988b357241941ca10a76382521062c89c8126f007ab6b2c",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-084-update-progress-12.json",
+      "sha256": "2a68d573b6303af0896b0a1b68fd783f29bba19207a186a765674f426ed17704",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-084-update-progress-16.json",
+      "sha256": "2cebeacc07d555ccdfc456df7ebfd707eda6fffcc91199fb26dc44efefab8eaf",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-084-update-progress-20.json",
+      "sha256": "6ee07e0fdbc884f82982eeae8d2845ab44c6cc0770fcc55e99c2c378ab73a8be",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-084-update-progress-24.json",
+      "sha256": "870f9c961dae5ede164fb379438ee8936162e850f063610d08b3b9a8597b1ff2",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-084-update-progress-28.json",
+      "sha256": "fc386eef712cc355641170fe97a9fb5d4419cbf377ceff7de864891d1dd48642",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-084-update-progress-32.json",
+      "sha256": "2221e9a9129761124ddc5c5642f578a1fb36cc42c202c77d04b0e443b397fce7",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-084-update-progress-36.json",
+      "sha256": "4a7c66478e110aa85562fb270ae930dcc375b41cf822f8370078852ef3258b23",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-084-update-progress-4.json",
+      "sha256": "451dd74cbb9906fd18dab03ff7773c685a9fb40e95c15672f851476f02820888",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-084-update-progress-40.json",
+      "sha256": "876184b0df60a7dccf3539d39b624f63038b736edf609f8f6aee14283a9f8485",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-084-update-progress-44.json",
+      "sha256": "ee648ec5e1237475cd42433c8583a4e10f19ef2186a52986532cf5fae093e2ee",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-084-update-progress-48.json",
+      "sha256": "32f9c9ac1d7cd7d5112fd5753536bbbbde277c70fa2b982c4bdf7ec602f5b0fd",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-084-update-progress-52.json",
+      "sha256": "534175482782d4b420f276336ced317adf36aab7af4f3914182dc1b87fee8db1",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-084-update-progress-56.json",
+      "sha256": "fb8eb7380e715c60880a1416c337b99496189506a623116044c011134a152aec",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-084-update-progress-60.json",
+      "sha256": "827f286d498f6a06cf3506a61b2adb2a0f06f3b041e5e0a5f12c83bd45e766d2",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-084-update-progress-64.json",
+      "sha256": "46e2f74724218772e88193c54056960885dd024d8eb85dae41e0673a73620cf0",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-084-update-progress-68.json",
+      "sha256": "a8d46652774271496d4b943b57d93449cfb0da01eec328b555e600f05f013c26",
+      "bytes": 513
+    },
+    {
+      "private_file": "ubuntu-084-update-progress-72.json",
+      "sha256": "87f763dabacf66e816243928e505d4c8bc9ce406c117400ad5bbc683ada074ed",
+      "bytes": 444
+    },
+    {
+      "private_file": "ubuntu-084-update-progress-8.json",
+      "sha256": "d1df3a2aff989ef752c50b2d5f0f86a93ef4702dd9453ee6b91b325c25a6099c",
+      "bytes": 511
+    },
+    {
+      "private_file": "ubuntu-085-update-progress-result.json",
+      "sha256": "97523a9c7b9b8f9f7071caa2537b7025d97842086a5097d44486d30656ece268",
+      "bytes": 1044
+    },
+    {
+      "private_file": "ubuntu-085-update-progress-result.png",
+      "sha256": "d22ceb7c4a3e444225f8c6032cbd519caadf290faaf5540881f83112853747e9",
+      "bytes": 157097
+    },
+    {
+      "private_file": "ubuntu-085-update-progress-result.rgb565",
+      "sha256": "5893d286add3b991c9fea0e04ab7e3688bd293387219677f4558a8bcd52cfe71",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-086-minimize-live-terminal.json",
+      "sha256": "e2123aac2077230886accf4344181cd4da56e088f51e1f51231d35356fc6bf6b",
+      "bytes": 505
+    },
+    {
+      "private_file": "ubuntu-087-install-status.json",
+      "sha256": "1db9a73675b292e77cd8ffd858f337dea0303e70a7d3a013d0872efee2bb6c7c",
+      "bytes": 1036
+    },
+    {
+      "private_file": "ubuntu-087-install-status.png",
+      "sha256": "478cdfed95803f6d4efc1b8211d0f1e57daeca18045cd51758f5cdb968d1690b",
+      "bytes": 149471
+    },
+    {
+      "private_file": "ubuntu-087-install-status.rgb565",
+      "sha256": "bdc57e81fd5c4cbe047a8dc78cd124d08bf799fb79ce531e559d560e2d45e243",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-088-install-status.json",
+      "sha256": "29be6a544d887aac28df43d303c2d4c369d1ba9edd4192431da8ac76ea327b7b",
+      "bytes": 1036
+    },
+    {
+      "private_file": "ubuntu-088-install-status.png",
+      "sha256": "b14f680c34ffb93ecc01e0f1cc981cd5120bd1a3c8de1f49a46024482ddfdf2f",
+      "bytes": 153343
+    },
+    {
+      "private_file": "ubuntu-088-install-status.rgb565",
+      "sha256": "da802abdc2fafd9e89f77366ccc3a66264e4a74d33c1fab5cd4397059e3c26a2",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-089-install-status.json",
+      "sha256": "fd1598ec61458f103b7722c0aedad2857f55d85a88d8a5b9197f683325851b11",
+      "bytes": 1036
+    },
+    {
+      "private_file": "ubuntu-089-install-status.png",
+      "sha256": "557f07696ade1a777e638481b118fc7d9c03b9cb439edbd1d1a2a22bb28ba4fe",
+      "bytes": 152079
+    },
+    {
+      "private_file": "ubuntu-089-install-status.rgb565",
+      "sha256": "7a93afe0e11a434277a780c68db2d31bde6d89fd12f48917f803df3520b52c14",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-090-install-status.json",
+      "sha256": "832a1d7499b340bd9e9e2ad749a1ee09b2706d4039d1807a14ef0aaac15d3c39",
+      "bytes": 1036
+    },
+    {
+      "private_file": "ubuntu-090-install-status.png",
+      "sha256": "b2647ec972aec35b008e428ba8537d8180257c97d915d4f14c77d47609e70827",
+      "bytes": 155354
+    },
+    {
+      "private_file": "ubuntu-090-install-status.rgb565",
+      "sha256": "d42bfc026eaadf27e09b7e21ccf9e7aaca08f5ebaeae2daf7d9ffefb6778b52d",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-091-install-status.json",
+      "sha256": "a1a08284dbfb14d7143755e6c820893c0f6c7b1ad9ef5edde1d6ed1740a9bf1a",
+      "bytes": 1036
+    },
+    {
+      "private_file": "ubuntu-091-install-status.png",
+      "sha256": "ea855e93dccd1e19fb930e8f57d790c8ce3182ee9890d179b98b922f5134c222",
+      "bytes": 157152
+    },
+    {
+      "private_file": "ubuntu-091-install-status.rgb565",
+      "sha256": "0b01a0e865071d62662c111cb60386d95b1be048d4805bb19a96b90e53699e47",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-092-install-status.json",
+      "sha256": "11384368b20031ac3c0d489420fbbb6c2dc690cab8d5646583ab218d5a515776",
+      "bytes": 1036
+    },
+    {
+      "private_file": "ubuntu-092-install-status.png",
+      "sha256": "f9154b9fc9ddff9000ab2eef1f2ec332db7877a233a914f523c07ee20c0340a8",
+      "bytes": 153975
+    },
+    {
+      "private_file": "ubuntu-092-install-status.rgb565",
+      "sha256": "907da666905343b8001ffc71548a123f7ef5c872d7c1a5c50abca1a2013de6d4",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-093-install-status.json",
+      "sha256": "3b40a79718f6a705ee4dfd1ecaee9c62d1eafac160b48486ffb9813bc351eb01",
+      "bytes": 1036
+    },
+    {
+      "private_file": "ubuntu-093-install-status.png",
+      "sha256": "3f0ddfc2869c40e4ff2060bdaea534a5052d66528177a90bbf2a89960a7489d2",
+      "bytes": 151174
+    },
+    {
+      "private_file": "ubuntu-093-install-status.rgb565",
+      "sha256": "a58069cd9ac02074c582607cf4dbdcc0c41e311cb48706afcd35f313e5f861cd",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-094-install-status.json",
+      "sha256": "3ec29090471e720487301eb631fea24d5181efd34c3b0b3c5e8452df0ffe61b9",
+      "bytes": 1036
+    },
+    {
+      "private_file": "ubuntu-094-install-status.png",
+      "sha256": "de8b086c57c6f274b0539607c0517fb78bc94712d7d6d48ac935147165b06c1b",
+      "bytes": 150721
+    },
+    {
+      "private_file": "ubuntu-094-install-status.rgb565",
+      "sha256": "196ec00e85dd5435c01089880b51077a8c512914e9431c29ce411f01858a01d9",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-095-install-status.json",
+      "sha256": "32673c4b9d916ace5dd621fb73ab02c1d0fb35911fc5eb8d8b7473f2a92e8774",
+      "bytes": 1036
+    },
+    {
+      "private_file": "ubuntu-095-install-status.png",
+      "sha256": "a33f57278f7b1de468672725f48de396d2cf4d92c7d02f81cbfd496b55a6166b",
+      "bytes": 70408
+    },
+    {
+      "private_file": "ubuntu-095-install-status.rgb565",
+      "sha256": "3e1c28137b40da72c5162c47e428a09eff25af5c3877b10bccb631bc34dc3799",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-096-setup-restart.json",
+      "sha256": "c5e752a3b11c937d3db22fe625571c31dd2b851c95e49698a8699a02bc487d1d",
+      "bytes": 496
+    },
+    {
+      "private_file": "ubuntu-097-restart-state.json",
+      "sha256": "94573de07e20b3b0960a65bdbd858e4d6330302a9aab29d68e94a843696a6cab",
+      "bytes": 1035
+    },
+    {
+      "private_file": "ubuntu-097-restart-state.png",
+      "sha256": "5daef298d5f7705e384439334c9d976860a8cb0995c3c73d08a0284d76031754",
+      "bytes": 11050
+    },
+    {
+      "private_file": "ubuntu-097-restart-state.rgb565",
+      "sha256": "8f6eaf26c5e2e8d50b8e89e3afca8a3d8fe5080e1815b26f8cdc6f4db8263bd9",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-098-installed-boot.json",
+      "sha256": "629196428e867113b38b1be5e924596058d0faf34b61b3eea5c4c0fb79d4c837",
+      "bytes": 1036
+    },
+    {
+      "private_file": "ubuntu-098-installed-boot.png",
+      "sha256": "afa008d748cb85f56a9df35704a1b76725fe48247043446290a82e94c980c8f2",
+      "bytes": 14197
+    },
+    {
+      "private_file": "ubuntu-098-installed-boot.rgb565",
+      "sha256": "1f558cceeb81a91600870933a74afa9322b6f192bcc18273321f547d54243303",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-099-ejected-media-enter.json",
+      "sha256": "64098e9140238f3b93c2cd43eaa6c7ca8ce7ba2c8cfa51b691a0f9af8f2e6fdd",
+      "bytes": 445
+    },
+    {
+      "private_file": "ubuntu-100-disk-boot.json",
+      "sha256": "4e127aaed7e6987cf2a5d5c20b9ac886f658c608dc9e443153c70976fc6983a4",
+      "bytes": 1031
+    },
+    {
+      "private_file": "ubuntu-100-disk-boot.png",
+      "sha256": "e9951159ce3602b53afa4902d126866132d558287343b64f7ec5ae02e276d029",
+      "bytes": 5851
+    },
+    {
+      "private_file": "ubuntu-100-disk-boot.rgb565",
+      "sha256": "dca8f087fecf2317a6621ced06a1502cb0ed8118515c5b4b06fd0fea44f84045",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-101-login-state.json",
+      "sha256": "0148d008e6ff0872b68196990334648405334a1b32a51434cab46db9d05c33c7",
+      "bytes": 1033
+    },
+    {
+      "private_file": "ubuntu-101-login-state.png",
+      "sha256": "a2428992e546308f63b0d8e7b84e2646a3aff3480740adeb8ae57cffb7af0d02",
+      "bytes": 11058
+    },
+    {
+      "private_file": "ubuntu-101-login-state.rgb565",
+      "sha256": "5e08ef49be5d75644e7c388f0bd2513b51a149d414d59ceb4e32e6d8aaf9fa4b",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-102-boot-state.json",
+      "sha256": "9c0e2fddafb5470d3a56ab3dc1628ce460e7c3d00547639eabee0d42f8fe8742",
+      "bytes": 1032
+    },
+    {
+      "private_file": "ubuntu-102-boot-state.png",
+      "sha256": "6c8d93e1ee23780c34a7d5a9c53c4d882fb1291d052c808bd9bd64ccbf186731",
+      "bytes": 17024
+    },
+    {
+      "private_file": "ubuntu-102-boot-state.rgb565",
+      "sha256": "d9fbac3a430bf2bad6d6e64ad83156f5de510e45506df3dd5ae2899fcd21ba6c",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-103-resumed-state.json",
+      "sha256": "47b3c76503ecf5cad7bfa8cfe80e6a055a5e4d0f750829ba2d58d23da0631c44",
+      "bytes": 1035
+    },
+    {
+      "private_file": "ubuntu-103-resumed-state.png",
+      "sha256": "77526a9b5364feb4f9fa891b1366792dcb9d8e10d678d56fb066ae4fa4321df4",
+      "bytes": 2371
+    },
+    {
+      "private_file": "ubuntu-103-resumed-state.rgb565",
+      "sha256": "d92af9987dc2a1751a961a760cc7d002d63f5f0e7d77c6ac2692920b11db3044",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-104-wake.json",
+      "sha256": "8fb6e282e21e84f59ef07b41446e9174de84e0e00766d01da542c28bee5cabdc",
+      "bytes": 430
+    },
+    {
+      "private_file": "ubuntu-105-awake.json",
+      "sha256": "89178f01c84b1f19fb695a71f61426c0b668895c21405c79619ab59fe8adc37c",
+      "bytes": 1027
+    },
+    {
+      "private_file": "ubuntu-105-awake.png",
+      "sha256": "5f3deff76267893e1389990b854c41ebd7875ed39dcf903321f8342ba681d781",
+      "bytes": 16234
+    },
+    {
+      "private_file": "ubuntu-105-awake.rgb565",
+      "sha256": "ceecc5ecb7cd1b2695f112f6876b9ab2529e17325acb143a575269ab102542c3",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-106-login-select.json",
+      "sha256": "e3ef6d1a214e37c6e884713c84d453fd232733e4045d98077d9a2241fccd9dca",
+      "bytes": 495
+    },
+    {
+      "private_file": "ubuntu-107-login-secret-0.json",
+      "sha256": "661bb634ca0fb97c5c885a0db64e7bf5785d84086dd21de5b3495ce7db3d410e",
+      "bytes": 383
+    },
+    {
+      "private_file": "ubuntu-107-login-secret-12.json",
+      "sha256": "2301798b6136aa177a976e0ac4622526fc79b53ae3f2592b5af458e127922f1e",
+      "bytes": 384
+    },
+    {
+      "private_file": "ubuntu-107-login-secret-16.json",
+      "sha256": "810203da8fb4c61c26ecf349505325e7678571a2bbddd22d825a2bf208205df0",
+      "bytes": 384
+    },
+    {
+      "private_file": "ubuntu-107-login-secret-20.json",
+      "sha256": "a9e5cf202ff1717ae1ee668c41b208d0b856ab2ad10e27bb2383f9d0e7c3f429",
+      "bytes": 384
+    },
+    {
+      "private_file": "ubuntu-107-login-secret-24.json",
+      "sha256": "b3e9fcf647c6c04fb88bf7126a355e802daac85b62cc05c1e40dcf369a2892ce",
+      "bytes": 384
+    },
+    {
+      "private_file": "ubuntu-107-login-secret-28.json",
+      "sha256": "3598a398b7010e69109b5e932a0b6361b5255fef344c6187a340a5f059146781",
+      "bytes": 384
+    },
+    {
+      "private_file": "ubuntu-107-login-secret-32.json",
+      "sha256": "07c7868459b028471db96593c3f5e3463c8054dd85faebb9bf2e784b6f64fc4b",
+      "bytes": 384
+    },
+    {
+      "private_file": "ubuntu-107-login-secret-4.json",
+      "sha256": "df295d30e41d76e0ec61cbbea98353ab93230d9cce4c795b1c7cba1aa1031c9f",
+      "bytes": 383
+    },
+    {
+      "private_file": "ubuntu-107-login-secret-8.json",
+      "sha256": "19462d36c337b032ee52570db8b10204993f39b03842e3aa100b9f5bb83f2282",
+      "bytes": 383
+    },
+    {
+      "private_file": "ubuntu-108-login-submit.json",
+      "sha256": "e470eff2eda2472606f4a232bd2d0fbcfe5e13fd4628b158affeff9aee773076",
+      "bytes": 438
+    },
+    {
+      "private_file": "ubuntu-109-login-result.json",
+      "sha256": "88b3a2ba7c7ea850895a2c3b8c63ce972b5600a4428d09bf78024ee69ad59ef6",
+      "bytes": 1034
+    },
+    {
+      "private_file": "ubuntu-109-login-result.png",
+      "sha256": "14d9c18539dd18190b0f0ed7e188c66f17fc83c319801ff6dbb93f4a17b739eb",
+      "bytes": 22066
+    },
+    {
+      "private_file": "ubuntu-109-login-result.rgb565",
+      "sha256": "9c76d711083b1fd2753a0e7ce3c03cf7c249022124f7158b9283989d5e5bc074",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-110-login-settled.json",
+      "sha256": "b049b177743175fc44efc6dfb34fb180f67875a78aa90df5179ce92174eefb3e",
+      "bytes": 1035
+    },
+    {
+      "private_file": "ubuntu-110-login-settled.png",
+      "sha256": "4c5cc247049a2ade69f3708401fd1bdbec6e70bfac3879cfdbdcce90b45ca9aa",
+      "bytes": 106215
+    },
+    {
+      "private_file": "ubuntu-110-login-settled.rgb565",
+      "sha256": "39ec812b3f82892ee94a703d4d0992b7e8301f00448353034660447c93765a78",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-111-terminal.json",
+      "sha256": "0fd9b895d6d11e8d5f5e94d0e6652dcaaed9029bdcf980e141de0baf6ccb14d8",
+      "bytes": 480
+    },
+    {
+      "private_file": "ubuntu-112-terminal-state.json",
+      "sha256": "f878986c8e1471fef0590283dc66af63a99daa898b0ba8252d9ffb593bf0d04c",
+      "bytes": 1036
+    },
+    {
+      "private_file": "ubuntu-112-terminal-state.png",
+      "sha256": "426515990fedc51e347feae644f2d47c2e0e21b29acd2c56f85ba20b62445602",
+      "bytes": 39017
+    },
+    {
+      "private_file": "ubuntu-112-terminal-state.rgb565",
+      "sha256": "b12e95d05d348855ed8282f6db9168a0ba2109104565398fd9300aa2c413ccae",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-113-ssh-install-0.json",
+      "sha256": "d75aaee01b9e759162fc421cc8f136a6bc30813ed5fe9740340dd840dd45b535",
+      "bytes": 508
+    },
+    {
+      "private_file": "ubuntu-113-ssh-install-12.json",
+      "sha256": "ea886064094a688a3dbc360276ba62e757cafb1e294b0a6eba95217c1600cd5d",
+      "bytes": 509
+    },
+    {
+      "private_file": "ubuntu-113-ssh-install-16.json",
+      "sha256": "ff8f71e82ed91b8dc0f018a1dc74228c1ff7523cf0d01c1fdb69627074ce87b5",
+      "bytes": 509
+    },
+    {
+      "private_file": "ubuntu-113-ssh-install-20.json",
+      "sha256": "18e95129440c9c430fb5a6e893552548ff45b27f3d9ceafa794c0644d3920802",
+      "bytes": 509
+    },
+    {
+      "private_file": "ubuntu-113-ssh-install-24.json",
+      "sha256": "14a532a10ed848afec110a1fc1838e34fe76e2c61ed587c091e43597834d58a0",
+      "bytes": 509
+    },
+    {
+      "private_file": "ubuntu-113-ssh-install-28.json",
+      "sha256": "bacb92cee8cf9539b6a9fa83235a299fcaccdbb158834fd3bb10bddbb00f6ed6",
+      "bytes": 509
+    },
+    {
+      "private_file": "ubuntu-113-ssh-install-32.json",
+      "sha256": "d7d5a8ad775ac083b1145c9f10c1220c15c909f549c1253039331d829ee6c060",
+      "bytes": 509
+    },
+    {
+      "private_file": "ubuntu-113-ssh-install-36.json",
+      "sha256": "baf6d5608ca4969f5fdf3d23e4fccb63c53d94d008586ecf70357b87dc03fd59",
+      "bytes": 509
+    },
+    {
+      "private_file": "ubuntu-113-ssh-install-4.json",
+      "sha256": "99592097669b440ac643f49a3d86be0a2a66e6389a8abe814754f58e8edb306b",
+      "bytes": 508
+    },
+    {
+      "private_file": "ubuntu-113-ssh-install-40.json",
+      "sha256": "da9c1a08f9270bdfaef21ce20f2194f6871f5fae3f5f8b9b7177bf28da5519f3",
+      "bytes": 509
+    },
+    {
+      "private_file": "ubuntu-113-ssh-install-44.json",
+      "sha256": "6ce7b4f92fbf2c26d6d56cf5a9bb3c38382d96377024f3e8c266c37bb67a1426",
+      "bytes": 509
+    },
+    {
+      "private_file": "ubuntu-113-ssh-install-48.json",
+      "sha256": "4c54ac4fd0bd012586b41638b413cc772b0ecc7f6e013ac199a8bdcde01ed79c",
+      "bytes": 509
+    },
+    {
+      "private_file": "ubuntu-113-ssh-install-52.json",
+      "sha256": "83f38e222ca2f053b27a8b41c2c1dff52424516999dff0b803684fe518b85ec1",
+      "bytes": 509
+    },
+    {
+      "private_file": "ubuntu-113-ssh-install-56.json",
+      "sha256": "05f889d02f2223cde83c13fc2b59245107d72cbc1c6cf87c223320376bb2ee1a",
+      "bytes": 509
+    },
+    {
+      "private_file": "ubuntu-113-ssh-install-60.json",
+      "sha256": "db2f19bb0afeea1671e256216b74faa3ce8f03a738ac14608d99b61d11e6d0d1",
+      "bytes": 509
+    },
+    {
+      "private_file": "ubuntu-113-ssh-install-64.json",
+      "sha256": "80b5c3231ced7b71e6dea380fc96cbabff5cdfe852d937523172d0dde7725305",
+      "bytes": 509
+    },
+    {
+      "private_file": "ubuntu-113-ssh-install-68.json",
+      "sha256": "7c6f4ae7529d2fee495b2de2851267570c2919fe704455c2636607637d1b276a",
+      "bytes": 509
+    },
+    {
+      "private_file": "ubuntu-113-ssh-install-72.json",
+      "sha256": "ed31b0faefe37983669e05e2a72ad309b5afadbffd8a6ee4b5d79f6d3b002f19",
+      "bytes": 509
+    },
+    {
+      "private_file": "ubuntu-113-ssh-install-76.json",
+      "sha256": "15be62502a99e6ce0038facdd27731a9be6592b91a150fc2f56bfc2ad7ef4964",
+      "bytes": 509
+    },
+    {
+      "private_file": "ubuntu-113-ssh-install-8.json",
+      "sha256": "8e9a280ae72ca619d50449ec3ec0d3bf59224821dd06e2ab9808c22e7b71986e",
+      "bytes": 508
+    },
+    {
+      "private_file": "ubuntu-114-ssh-prompt.json",
+      "sha256": "049660cbabbda3845bb9cad76cc1d65c36d535770f35560866dbee7ea4fbdd81",
+      "bytes": 1032
+    },
+    {
+      "private_file": "ubuntu-114-ssh-prompt.png",
+      "sha256": "5e41bfaae1d28fa6d93d004222e4752581da402d020bba52c4847b3e3ed6bb1f",
+      "bytes": 46117
+    },
+    {
+      "private_file": "ubuntu-114-ssh-prompt.rgb565",
+      "sha256": "6c8463cd04b8c08da6123400032ac12bc707488e75b153f13f5fc309bc3253b0",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-115-sudo-secret-0.json",
+      "sha256": "6f0aab7b8a065ae12a8e45809d7b3a40a0d493a3416964ffc7696269b2a49246",
+      "bytes": 382
+    },
+    {
+      "private_file": "ubuntu-115-sudo-secret-12.json",
+      "sha256": "fe822bc8a345b4d360de67806329c3e02a62fa074d41b63363a761942bbcdc7d",
+      "bytes": 383
+    },
+    {
+      "private_file": "ubuntu-115-sudo-secret-16.json",
+      "sha256": "3517ac3a910ab958194c6ac6b30a05a258079cb4d6232277609ee12cafc453fe",
+      "bytes": 383
+    },
+    {
+      "private_file": "ubuntu-115-sudo-secret-20.json",
+      "sha256": "e31077fd43cfdadc0450730fe256e6568a416168b8da0ae87b0f406e289f40c4",
+      "bytes": 383
+    },
+    {
+      "private_file": "ubuntu-115-sudo-secret-24.json",
+      "sha256": "118145b60568a62d8bc3062c842c6c9c2028b12dee7a759bca73cd11364e6283",
+      "bytes": 383
+    },
+    {
+      "private_file": "ubuntu-115-sudo-secret-28.json",
+      "sha256": "f7d9c78bd200f26f70785d448086d3aac9d40042d42c5dee21ae303084593482",
+      "bytes": 383
+    },
+    {
+      "private_file": "ubuntu-115-sudo-secret-32.json",
+      "sha256": "ec5ef71a7929ea329426617cb6e69f90fcb22ed67c2bb73341b4b642e5a6ddd6",
+      "bytes": 383
+    },
+    {
+      "private_file": "ubuntu-115-sudo-secret-4.json",
+      "sha256": "33d24ab5b4c43a61d8ea61a8c1418d7eb261b2aafb0da3f9db03a89b38b02c77",
+      "bytes": 382
+    },
+    {
+      "private_file": "ubuntu-115-sudo-secret-8.json",
+      "sha256": "9f4c742d9414d7a3fa15ecc576208474e8a5f30dae8b4b0be5cb6c78f88e64c4",
+      "bytes": 382
+    },
+    {
+      "private_file": "ubuntu-116-ssh-install-progress.json",
+      "sha256": "b54b7d6752b87440b1f8c14247582f2000149a74093b11e3ac282939b2561b58",
+      "bytes": 1042
+    },
+    {
+      "private_file": "ubuntu-116-ssh-install-progress.png",
+      "sha256": "d432c29da21e0c7539020322e035600b9d7f69c0f3a48e0f0d6baed59ad842a7",
+      "bytes": 114366
+    },
+    {
+      "private_file": "ubuntu-116-ssh-install-progress.rgb565",
+      "sha256": "2dbf9902a3bbb3e4827b0d451c6610ea617d6511c8a520612cd2bfc50c35baf4",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-117-ssh-status.json",
+      "sha256": "44402b22cdd9cb5d3f0078e22684b58abaf26c046882050ca927e96465d2d2fd",
+      "bytes": 1032
+    },
+    {
+      "private_file": "ubuntu-117-ssh-status.png",
+      "sha256": "8b782720b817c215c86263d838c329e02fbdf345ff727fcd4329601f7dfbb20b",
+      "bytes": 119144
+    },
+    {
+      "private_file": "ubuntu-117-ssh-status.rgb565",
+      "sha256": "510839ba8da38b0ed4f02674ebc1a58f52f561a4b4922fc114c69b704f2c1ef0",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-0.json",
+      "sha256": "5f27055d194881f5e4a592ea51681a4f259d8647786190e97c0a99e19c4abd75",
+      "bytes": 515
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-100.json",
+      "sha256": "737001ddd12e55383a5e4e6c0085ee90f2577dbe2d140842122b89662f648564",
+      "bytes": 609
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-104.json",
+      "sha256": "8995e426195753916853f8a2e8aeebdd5950c0edc5ec778e9869d40c672d48d6",
+      "bytes": 517
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-108.json",
+      "sha256": "0e333583855b88fa44b8f49c6fa8b3fec109e6101a3a2002b3455c9ef2287b41",
+      "bytes": 517
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-112.json",
+      "sha256": "664bfdf1a02a9481cdfe9a8b0bb5d9fba6ace1b93575d46645b7a1319ddd75d6",
+      "bytes": 540
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-116.json",
+      "sha256": "c763c337a07db19357d3e1826da8e81e2c0ed8748c2033b1fba584042b953c3a",
+      "bytes": 586
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-12.json",
+      "sha256": "be3e00178b46351244d6993caa9b6af891c3cbdef5da84637612588c6c090387",
+      "bytes": 516
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-120.json",
+      "sha256": "b49ac0d5a8d5c9a8b109d30d9dadecb61929399549beb61850a20ef48dbc7124",
+      "bytes": 586
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-124.json",
+      "sha256": "779dd378f7838400796622e2fc8712f7967ea3f6298d27ebc725fbd3dc5a5c0c",
+      "bytes": 539
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-128.json",
+      "sha256": "8c73e9b3a68ad5659e60f67c87fc679e4a27c49eaa49e7c043de8ed3663fa9ec",
+      "bytes": 586
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-132.json",
+      "sha256": "32bc2ea893d6fe1cd00fa0edea015e768d06b0b2bc89cd5b44daf138c4c03837",
+      "bytes": 540
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-136.json",
+      "sha256": "50c2f93765f204e9ab7cf1ee8b78959f3f3d6a4fb29df54e0dba5d0c07834e66",
+      "bytes": 517
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-140.json",
+      "sha256": "79b519f873f8377a087518f673466bcf399769fecd8bb70f12772445a6a6e0a9",
+      "bytes": 517
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-144.json",
+      "sha256": "b0f82e64dd298714e8be19196774af6cf6485555259c664d718049a743b52ca4",
+      "bytes": 517
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-148.json",
+      "sha256": "62818b3701a94229fadd46a45161c5585bc13ce303f8004b41bf1ae722ce18c3",
+      "bytes": 540
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-152.json",
+      "sha256": "4cf40d8e9b101f4be961c56bf4d628727ed556123f44d72cbae4c8778cb34783",
+      "bytes": 517
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-16.json",
+      "sha256": "b98f2e57d67e45c7d3aa86095ada161ef4e46adda0aaa559596bebe43d995c2b",
+      "bytes": 516
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-20.json",
+      "sha256": "8e943944952f62153bd8f667c981bea23edba0719b88411dfd7e757447e5204d",
+      "bytes": 516
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-24.json",
+      "sha256": "47cf937e49e993bbea818caa4894019182df88628dbeb8e37378141b5d35ffca",
+      "bytes": 516
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-28.json",
+      "sha256": "1f2f93351d07f4188351c96430ac378ee4b3db3ef6abd3812d7c87df8745a752",
+      "bytes": 516
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-32.json",
+      "sha256": "8f9871679305f5f4baccb92b1083613507f0169c85ea63e8916ab3ccc96b48e9",
+      "bytes": 516
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-36.json",
+      "sha256": "544295e6c3d8cc12efa6ec3806aa1022ee6b5afc14848013e1b32e278dd17f4c",
+      "bytes": 516
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-4.json",
+      "sha256": "41723261829e107d0e3a6729b47f2b7815d94815ab5dfac3fe42d3facce03a80",
+      "bytes": 514
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-40.json",
+      "sha256": "9ee123e5028e1a0624dc817bf0b68525cb30a5a1474192e0df3e8c3c4c1fe1f0",
+      "bytes": 516
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-44.json",
+      "sha256": "6f92dbcac4365142a55f927960423511b52e5c0774bb1ceeb854e5780030a35d",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-48.json",
+      "sha256": "9bc06502c31a92e7df66a95cc04700e601e5e3b33d47f2f5d073662e7838ad30",
+      "bytes": 562
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-52.json",
+      "sha256": "3b8ccceacdbda351132aea86a847c12df04af9dec15c7384032a1cc619e514c5",
+      "bytes": 584
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-56.json",
+      "sha256": "a050dd0efc736db4612e997b4730135152d4583cda7c16fb78eb0e9c38a4591f",
+      "bytes": 562
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-60.json",
+      "sha256": "c4ae01bbaa1de87afa3ec563b178f6f6ace137e5038b414ab8e8a352c42ce41d",
+      "bytes": 561
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-64.json",
+      "sha256": "76235e1083c10ac6cee25afdc45e02194dce8ae7f3f7fc5ec8086112209bc7ab",
+      "bytes": 584
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-68.json",
+      "sha256": "4ec07905c798fe3040d3039957f8a6f164665d7e3ea97f8bd8cb49d9dd00833a",
+      "bytes": 584
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-72.json",
+      "sha256": "135bda574653be52acc765f08f4e188cd49d218c3313d3cc98b7faeeaa30a8e1",
+      "bytes": 608
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-76.json",
+      "sha256": "efca2a4e2af48f1a7df73618020f865f0efe172e0d3705f776fd9243e68cdb0e",
+      "bytes": 562
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-8.json",
+      "sha256": "76d197e77d363e18b194e3af318c51ce1835578a27a2bd652f727e84596dd3de",
+      "bytes": 514
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-80.json",
+      "sha256": "c43768aef949d7e2b66748f3d5b9495d7f474d60f1c62cd789331d6994321e49",
+      "bytes": 562
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-84.json",
+      "sha256": "c27edd8e7ffb86059d5652e5172103ad0941da77541e612a71cb7fed5029227c",
+      "bytes": 561
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-88.json",
+      "sha256": "3a5b6ba2b0285ff03bc3d92adfdfbd526b2f96ca147d278ccfad170acec9eade",
+      "bytes": 538
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-92.json",
+      "sha256": "e1d1df4683f9124baf2b044336fd1c5cea2c413c1755e6ca5c71ddef55ee0fb1",
+      "bytes": 608
+    },
+    {
+      "private_file": "ubuntu-118-project-public-key-96.json",
+      "sha256": "92508c71d42108282b89b3f10fdbc102eb49db0e03bcd8d23c65bb575df5aa6a",
+      "bytes": 539
+    },
+    {
+      "private_file": "ubuntu-119-guest-network-key-0.json",
+      "sha256": "88898543206da34ae380f13f3c97d3a4639d38e313b3512d32462090ce211622",
+      "bytes": 514
+    },
+    {
+      "private_file": "ubuntu-119-guest-network-key-12.json",
+      "sha256": "e115334188ef393f6640666834f110148c3baebebfb1b54a70502bd39c2a4493",
+      "bytes": 515
+    },
+    {
+      "private_file": "ubuntu-119-guest-network-key-16.json",
+      "sha256": "e9873c7d2129dc1c4c2696682138fb3d5a94760f35654dd67314726b3a439bcc",
+      "bytes": 515
+    },
+    {
+      "private_file": "ubuntu-119-guest-network-key-20.json",
+      "sha256": "569e393de961af48cb5726016e38ceacedb074370757ac214b16a13f771efd0b",
+      "bytes": 515
+    },
+    {
+      "private_file": "ubuntu-119-guest-network-key-24.json",
+      "sha256": "b884cb4c4c4cac27a570714e5519083321bc63062ff3ac92b079ddcf3a427ac3",
+      "bytes": 515
+    },
+    {
+      "private_file": "ubuntu-119-guest-network-key-28.json",
+      "sha256": "33d1702c0d3c3ad60157032baf01f6a3bcb3723216eef5cd86332c2f9869376d",
+      "bytes": 515
+    },
+    {
+      "private_file": "ubuntu-119-guest-network-key-32.json",
+      "sha256": "96b23d6b57ba0629395378816a2d1a9890fa3569cba31ed8ce93ebfc0ff67473",
+      "bytes": 515
+    },
+    {
+      "private_file": "ubuntu-119-guest-network-key-36.json",
+      "sha256": "b18ec8eceb92759291a27688a9aabb954cd65bcf7f478fcc03409c65c384b376",
+      "bytes": 515
+    },
+    {
+      "private_file": "ubuntu-119-guest-network-key-4.json",
+      "sha256": "120d1724fa9f8a89b6b423f8af77c75b644b14212abf4391160e80db454c284a",
+      "bytes": 514
+    },
+    {
+      "private_file": "ubuntu-119-guest-network-key-40.json",
+      "sha256": "eb749423be3f19778afcf6465d677bfbd62de8647a65188a2257dd2ae61b02c9",
+      "bytes": 538
+    },
+    {
+      "private_file": "ubuntu-119-guest-network-key-44.json",
+      "sha256": "80d3917766f6986849a4f970b6abe3e027de4ec143a792b2e6af0439d073aca7",
+      "bytes": 538
+    },
+    {
+      "private_file": "ubuntu-119-guest-network-key-48.json",
+      "sha256": "498468a07964b7748490b62cdfd67b3f21b337ce2cda534249622b85fe2fc63a",
+      "bytes": 511
+    },
+    {
+      "private_file": "ubuntu-119-guest-network-key-52.json",
+      "sha256": "ea1fe98ed05b8e1fa2bbf0c4e3d119ae4cd4b1035388f6ae2ac7c6f1dbbd1298",
+      "bytes": 538
+    },
+    {
+      "private_file": "ubuntu-119-guest-network-key-56.json",
+      "sha256": "fe91f5f3e3c8f93c99c970226ec2daa9fb065adc6e3f1626d90ca688b02c61a9",
+      "bytes": 515
+    },
+    {
+      "private_file": "ubuntu-119-guest-network-key-60.json",
+      "sha256": "f35fc7a0a3bbfae4bac40e4b6b30caeabceb80afa25a12adcca84e1f99d1b604",
+      "bytes": 469
+    },
+    {
+      "private_file": "ubuntu-119-guest-network-key-8.json",
+      "sha256": "83410ab71dfa6c65bce73d3ac7f9bff523932f05aa48b9b99f977169c1bfbcaa",
+      "bytes": 537
+    },
+    {
+      "private_file": "ubuntu-120-guest-network-key.json",
+      "sha256": "4b400670a4e55707c25bdc8b5fa6f3ddeb523bec8564a4894d616524f06daf13",
+      "bytes": 1039
+    },
+    {
+      "private_file": "ubuntu-120-guest-network-key.png",
+      "sha256": "a84e6662ae891d4e9a3817f226ff75921eff06e493b44e2730cb0f44331f2d52",
+      "bytes": 119649
+    },
+    {
+      "private_file": "ubuntu-120-guest-network-key.rgb565",
+      "sha256": "f70fadfac49b55139cd4f7eabf148cf2c740f68a61851c687d07a47f8657e3e9",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-121-close-bootstrap-terminal.json",
+      "sha256": "a192da479009856a60e16a6c13490fc63a61da01025af5e8a45e2dbc9c473edb",
+      "bytes": 473
+    },
+    {
+      "private_file": "ubuntu-122-welcome.json",
+      "sha256": "f9377204fba73d332a9561690fe081c3d2abdc70b66ae26c2f68cd8e98b5337c",
+      "bytes": 1029
+    },
+    {
+      "private_file": "ubuntu-122-welcome.png",
+      "sha256": "50a85f98e6fc6df26fec609194114513d54a97d4ef365455cdc56417dcc5933b",
+      "bytes": 33792
+    },
+    {
+      "private_file": "ubuntu-122-welcome.rgb565",
+      "sha256": "b0b71965c788bef65d17d07b1b73ff7ee4d99104d44990921bb9b9cf93ada868",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-123-welcome-next.json",
+      "sha256": "b5aa4d6ac883dca8d7de1941d2dd71828526b5a37d7c8b413425689a15aad829",
+      "bytes": 494
+    },
+    {
+      "private_file": "ubuntu-124-welcome-pro.json",
+      "sha256": "d5773de9b8133dc04f80dc43e66df23c51a8a63986f4f3761ae0a0d3c72e0fa2",
+      "bytes": 1033
+    },
+    {
+      "private_file": "ubuntu-124-welcome-pro.png",
+      "sha256": "391b7a41ae052938cbfcdc8dc8be6fb33101f027bd58ec5f4658346e1577023c",
+      "bytes": 57640
+    },
+    {
+      "private_file": "ubuntu-124-welcome-pro.rgb565",
+      "sha256": "068c2fc1a87de55105e15263f2d6e36c350875b2b6e478ebfe496c5fcf8be36e",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-125-pro-skip.json",
+      "sha256": "797baac8579c5a5724b4d2a6f4eeb2e17c6bb3a0eb4cf70a163197a1d4e8df3f",
+      "bytes": 490
+    },
+    {
+      "private_file": "ubuntu-126-telemetry.json",
+      "sha256": "6f70477ba27253527252cceb83037dca8d261db595b1091de836ae0aa7eac44f",
+      "bytes": 1031
+    },
+    {
+      "private_file": "ubuntu-126-telemetry.png",
+      "sha256": "f5c96faddb1c337492d4a7b02ff1095391c38f914890c51521a11eb21fc15b7c",
+      "bytes": 42757
+    },
+    {
+      "private_file": "ubuntu-126-telemetry.rgb565",
+      "sha256": "ce8764c81967482841270f6aeb34d5416cc05876dc91cdfce1db130701d6018b",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-127-decline-telemetry.json",
+      "sha256": "c11f0c0765cae09148b44001b55f0b4155b983b07b973dc7e29d15696c1bb865",
+      "bytes": 500
+    },
+    {
+      "private_file": "ubuntu-128-telemetry-next.json",
+      "sha256": "bc69a500fd4fea5efb8934e5706bd58017c8af567387433b7a1b5929aefe874e",
+      "bytes": 496
+    },
+    {
+      "private_file": "ubuntu-129-welcome-final.json",
+      "sha256": "830a9ae2035a1edcd4e7ba3eec6bb4671b72bd7fb2fa5583cd1bf56f442e6364",
+      "bytes": 1035
+    },
+    {
+      "private_file": "ubuntu-129-welcome-final.png",
+      "sha256": "21c4c56636f056246c4b270ce7d5bbea3f6dee4200c8131b2f5e8821b046ecbd",
+      "bytes": 65698
+    },
+    {
+      "private_file": "ubuntu-129-welcome-final.rgb565",
+      "sha256": "005617f19eb405ca4b233e7a7838f1b06d39f965d6199d08ab9225c9bd137d8c",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-130-welcome-finish.json",
+      "sha256": "0b04e3cb70c5da713e8a31e727db72ef93433d0636d4aaa9769b1a996375ea9f",
+      "bytes": 496
+    },
+    {
+      "private_file": "ubuntu-131-session-menu.json",
+      "sha256": "f806c4fc856d2af626488d85fbf7bcd46d5c0a44cc979854bd4ac8fad267abfa",
+      "bytes": 494
+    },
+    {
+      "private_file": "ubuntu-132-session-menu.json",
+      "sha256": "bf9a1b375d0ac6346a76da7851cb50f3d5d8532ef8eae0f20387369570539dde",
+      "bytes": 1034
+    },
+    {
+      "private_file": "ubuntu-132-session-menu.png",
+      "sha256": "906e2f077dec2d6bf92f31da7423bfaba19f91a35b24b392c470ce595b1e5b23",
+      "bytes": 32598
+    },
+    {
+      "private_file": "ubuntu-132-session-menu.rgb565",
+      "sha256": "426996dc30465291c210bad45e30993d717729ca67875d56fd991f77ebaf1574",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-133-app-login-screen.json",
+      "sha256": "f37701e4ec1949c4b23f43dbc5834fee9c1c851c8a05e5af2da28127168fb05c",
+      "bytes": 1038
+    },
+    {
+      "private_file": "ubuntu-133-app-login-screen.png",
+      "sha256": "d01e1ff5c4961e7662d4e68292d5260dd21394725372d4dc361e8fc150fcd1fc",
+      "bytes": 20140
+    },
+    {
+      "private_file": "ubuntu-133-app-login-screen.rgb565",
+      "sha256": "d6aa5a08a872d770f2b2d53af591743ff2c4b4fcc951fd77630f1d51a781574a",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-134-app-user-select.json",
+      "sha256": "d8442843ab81d3359a9810e97d7e16584002298d5edfc1361a39b219861e6235",
+      "bytes": 498
+    },
+    {
+      "private_file": "ubuntu-135-app-login-secret-0.json",
+      "sha256": "84c93281cb6fa4f6b769874cd0f3453f8aad186cba68db2173cd391422b9f875",
+      "bytes": 387
+    },
+    {
+      "private_file": "ubuntu-135-app-login-secret-12.json",
+      "sha256": "5ecd6696e8d4ebc04be9fec93a584d62ca78db2dd8309aaea869cff146ab438d",
+      "bytes": 388
+    },
+    {
+      "private_file": "ubuntu-135-app-login-secret-16.json",
+      "sha256": "7fb10e56bd4e3354adb40406bd20ffcd211890b58a5d3a9a88d0b10fbda0e18d",
+      "bytes": 388
+    },
+    {
+      "private_file": "ubuntu-135-app-login-secret-20.json",
+      "sha256": "d2760cf71f53a6749ee7196eb3d8ae8cded1000f224e04e0e9abd5aba4062961",
+      "bytes": 388
+    },
+    {
+      "private_file": "ubuntu-135-app-login-secret-24.json",
+      "sha256": "bde74587dd762e9616bf8ba6b2d150fabc6b86a334a3484ee1ca58f48bf011f9",
+      "bytes": 388
+    },
+    {
+      "private_file": "ubuntu-135-app-login-secret-28.json",
+      "sha256": "045b2cbe5214cdcaa2b7ec20597b6cb38896afdf909701762bab1da779873996",
+      "bytes": 388
+    },
+    {
+      "private_file": "ubuntu-135-app-login-secret-32.json",
+      "sha256": "edb642cb6607f8dc9fc48b9673b74c44744bd2bcedb77dda83a5092335f38485",
+      "bytes": 388
+    },
+    {
+      "private_file": "ubuntu-135-app-login-secret-4.json",
+      "sha256": "fd5e08c695f2a6f74e177abaaa90b9bb9b6093e7359d011ab5a695d6fc938ba6",
+      "bytes": 387
+    },
+    {
+      "private_file": "ubuntu-135-app-login-secret-8.json",
+      "sha256": "5da8da6bc30a4c252b500c2db5a68da95c94b267d2096c41c61a012c370a1b02",
+      "bytes": 387
+    },
+    {
+      "private_file": "ubuntu-136-app-desktop.json",
+      "sha256": "bdaa51ab4d077d59868bb7c1b8af8cc3855b92e1e0ef6920a9dc64a8b322d185",
+      "bytes": 1033
+    },
+    {
+      "private_file": "ubuntu-136-app-desktop.png",
+      "sha256": "41f5d9e079418ac276cd5246d619b61c83d9b81e314aa6c88cfcc70ca316d1d0",
+      "bytes": 34486
+    },
+    {
+      "private_file": "ubuntu-136-app-desktop.rgb565",
+      "sha256": "e18b76b2089373f0ec1e50a9b09cd87e248ec14a3f621eb324b89e0e5a745bcb",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-137-app-welcome-next.json",
+      "sha256": "2e4487f9a1d8f56cb7478c4c78db51b950628dfa6359af8ed493377981310b97",
+      "bytes": 498
+    },
+    {
+      "private_file": "ubuntu-138-app-pro-skip.json",
+      "sha256": "47e948c58d09d3610277ab8ad649e1bd17e00df8bd27c4f2058cc3c330e29383",
+      "bytes": 494
+    },
+    {
+      "private_file": "ubuntu-139-app-telemetry.json",
+      "sha256": "a9822130f7462f8c9ad934c8f4fafa59e061711e91ade749c3df874e3061baf4",
+      "bytes": 1035
+    },
+    {
+      "private_file": "ubuntu-139-app-telemetry.png",
+      "sha256": "a222facdf4214e20e99a9f36bf4f543b6fdc1d954a78ecdaf6428c0d2ac4b1c4",
+      "bytes": 42632
+    },
+    {
+      "private_file": "ubuntu-139-app-telemetry.rgb565",
+      "sha256": "118206e8d5de83557c116f072ef1d1b2224f99491982dfa11ad027f4d3b33bb2",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-140-app-decline-telemetry.json",
+      "sha256": "8b6bbb073a6cec037ab690a18e9003d72c03f6ea99329815a7ae0feb61c7c836",
+      "bytes": 504
+    },
+    {
+      "private_file": "ubuntu-141-app-welcome-next.json",
+      "sha256": "b3dfffc53e194ebca9690594b3708feb3802379b028ac7586cd99d9a14e1450e",
+      "bytes": 498
+    },
+    {
+      "private_file": "ubuntu-142-app-welcome-finish.json",
+      "sha256": "4ec699b39371a68d30e50f72b2c84eb32fd08c66e6aa7515c06ec6bce1272235",
+      "bytes": 500
+    },
+    {
+      "private_file": "ubuntu-143-prefix-initialization.json",
+      "sha256": "e5d44c1f1ff5b2aa37a47ad319b9d63996e35817462d38d4cfae51fdd488b612",
+      "bytes": 1043
+    },
+    {
+      "private_file": "ubuntu-143-prefix-initialization.png",
+      "sha256": "08b6687c0631cde9c45dfe1a83af56e900f3df829cd7bd31a7ce1e88a06b86f5",
+      "bytes": 170469
+    },
+    {
+      "private_file": "ubuntu-143-prefix-initialization.rgb565",
+      "sha256": "fe0b32b99eefdb151148793778abb14d576979fef9765b10ec595a38c02248c1",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-144-7zip-installer.json",
+      "sha256": "33cc20ed35cd18d10f41d3e6ea82260142c5401d2d9f3ad6eeadee2c7b467c3b",
+      "bytes": 1036
+    },
+    {
+      "private_file": "ubuntu-144-7zip-installer.png",
+      "sha256": "7677cb7173c771072d33b07a221d2f364ff0ccee44b23ffccc34d010b6d55479",
+      "bytes": 161182
+    },
+    {
+      "private_file": "ubuntu-144-7zip-installer.rgb565",
+      "sha256": "2f07a1cb2c8941990fd743d123e8efbc85f135b136d96c893677ae86c17bdf29",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-145-7zip-install.json",
+      "sha256": "2891638b90e506cba03f61ede492c90e2391e8c75a67d71f0e153e5e2dc1c0be",
+      "bytes": 495
+    },
+    {
+      "private_file": "ubuntu-146-7zip-install-result.json",
+      "sha256": "1cf373e2fb5a82451f93ea1c87bd80d28d0b37635c4c37674322d5576de93a1a",
+      "bytes": 1041
+    },
+    {
+      "private_file": "ubuntu-146-7zip-install-result.png",
+      "sha256": "9f8cb78bdc25ba96da27c412aac0ce2c379da8664acce16581b1afe7e84ee7e0",
+      "bytes": 164230
+    },
+    {
+      "private_file": "ubuntu-146-7zip-install-result.rgb565",
+      "sha256": "4f312bcf33a6b74f7992ae626e688e6ffc53355032a9d5808c1bc3e5da56586e",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-147-installer-close.json",
+      "sha256": "d7540748064f492b39ff348b6b46148005722820e142aec7a7d4e63977089e74",
+      "bytes": 498
+    },
+    {
+      "private_file": "ubuntu-148-w1-launch.json",
+      "sha256": "593efb3d4ddba77051d44298d1321c63a99b3c0eb6962bb8296df2a2fc56b9e5",
+      "bytes": 1031
+    },
+    {
+      "private_file": "ubuntu-148-w1-launch.png",
+      "sha256": "eea7f3fac694a3f02eae4a1b867d30c18b385d580c04b7ab058262c8b40861a6",
+      "bytes": 107394
+    },
+    {
+      "private_file": "ubuntu-148-w1-launch.rgb565",
+      "sha256": "6d061d6a0e8e2abbcef27c95f1b3bd6e76677705ab38328d49ea4baf209f3c18",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-149-w1-address.json",
+      "sha256": "f02f185d1c42567e1af8ea25dbfe83e67f9e0a8c13a6285bf0d16b653e129f2c",
+      "bytes": 493
+    },
+    {
+      "private_file": "ubuntu-150-w1-input-path-0.json",
+      "sha256": "cc793b7d15f5dce2b2c7cf682e7ff3ceac121057592d8741b2aec7a1eb9c225a",
+      "bytes": 556
+    },
+    {
+      "private_file": "ubuntu-150-w1-input-path-12.json",
+      "sha256": "a08c767474d7104d790c96375e5a6c3d70cf6cdc8c772cc41c786ce8e785133a",
+      "bytes": 511
+    },
+    {
+      "private_file": "ubuntu-150-w1-input-path-16.json",
+      "sha256": "ca704dedd70ee9525359a670df840110aaff04a77b2f4d8bf1f68632ad525561",
+      "bytes": 511
+    },
+    {
+      "private_file": "ubuntu-150-w1-input-path-20.json",
+      "sha256": "4722e8f215576aa217047e54f78efe5165f104a8582c4a425e943d38239d39f9",
+      "bytes": 511
+    },
+    {
+      "private_file": "ubuntu-150-w1-input-path-24.json",
+      "sha256": "538a640673ed476d73c3e40c81f6f2723b3c77ffe6721d77609a46a80d15503a",
+      "bytes": 510
+    },
+    {
+      "private_file": "ubuntu-150-w1-input-path-28.json",
+      "sha256": "943e5e5d0cd5eeb1341a88ae3aaab201fe5b6d7e344936709386367981340a19",
+      "bytes": 511
+    },
+    {
+      "private_file": "ubuntu-150-w1-input-path-32.json",
+      "sha256": "6caec45b0a7ad227e8303e0f6ab0eb03bc82a3d6d7e342a7f65f1155dcffe891",
+      "bytes": 511
+    },
+    {
+      "private_file": "ubuntu-150-w1-input-path-36.json",
+      "sha256": "bd078eecf718314cf668f3bf7b3bbc4b7c07068eeb061248ae9e8af0bf4e49a7",
+      "bytes": 488
+    },
+    {
+      "private_file": "ubuntu-150-w1-input-path-4.json",
+      "sha256": "629e21f8dee3432ec5aff6bdf9d3b36f1b036cd80647658f7461ea60dbb9052a",
+      "bytes": 510
+    },
+    {
+      "private_file": "ubuntu-150-w1-input-path-8.json",
+      "sha256": "df4f0157fb19a4763aca353dd881ce1ed76c2bab5bc66f72f5042b15d14c7d70",
+      "bytes": 510
+    },
+    {
+      "private_file": "ubuntu-151-w1-inputs.json",
+      "sha256": "6fc66cce69770782c76cd62eab5f82838033dec8733500d05b204abec296c092",
+      "bytes": 1031
+    },
+    {
+      "private_file": "ubuntu-151-w1-inputs.png",
+      "sha256": "5f9b12c9941a22fafac52c2caa554063cfdd501383f3e23422101d6cfd5525b1",
+      "bytes": 116118
+    },
+    {
+      "private_file": "ubuntu-151-w1-inputs.rgb565",
+      "sha256": "09c5bf12186f6875d27871c1123b82a1b586149e964bfcb267f0bc59f27bdb85",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-152-w1-select-fixture.json",
+      "sha256": "d1ea3889a4cc10c133abc1b13f017b5ba33a546f4c8edef91ec1c96a802eea58",
+      "bytes": 500
+    },
+    {
+      "private_file": "ubuntu-153-w1-add.json",
+      "sha256": "025fe1ea4b5b67751f91795b29e5b270cacd5a37d2963382acf9cd471a9f2650",
+      "bytes": 488
+    },
+    {
+      "private_file": "ubuntu-154-w1-add-dialog.json",
+      "sha256": "482e5f05f5e161c34812a088bf0760458a54925066a760e20a3c08f2d47c59a8",
+      "bytes": 1035
+    },
+    {
+      "private_file": "ubuntu-154-w1-add-dialog.png",
+      "sha256": "2346fe477b5b90775429aab81a6c554b437fcdacf330adac4e775c3883a27c3c",
+      "bytes": 133253
+    },
+    {
+      "private_file": "ubuntu-154-w1-add-dialog.rgb565",
+      "sha256": "ef09f86050d65a1aca3eb381f5071df3ed9f8b75315088a66a6efa5898a5775a",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-155-w1-format-menu.json",
+      "sha256": "9f24c906b83698b8eb07df2b6d78012835d082143887467aa798386fcbea9fd1",
+      "bytes": 497
+    },
+    {
+      "private_file": "ubuntu-156-w1-zip-format.json",
+      "sha256": "e585e011df4e82a6a0f75765080e97b3125287b403a456d306e1516f98d54ad9",
+      "bytes": 462
+    },
+    {
+      "private_file": "ubuntu-157-w1-zip-selected.json",
+      "sha256": "fa6d47ea1b524acaba51cbe840920956283fd55e71aa7b57669f46d1e945c4b6",
+      "bytes": 1037
+    },
+    {
+      "private_file": "ubuntu-157-w1-zip-selected.png",
+      "sha256": "2bb676a8c3a3599d0428eb34678aa6f06795f9616135dd3ed38ee1bf14d413e5",
+      "bytes": 117157
+    },
+    {
+      "private_file": "ubuntu-157-w1-zip-selected.rgb565",
+      "sha256": "8c9e0129dd4372e55cf4429d77141cab32fe775c651eddbe7a98b71f201c60ce",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-158-w1-dialog-state.json",
+      "sha256": "40cb139ee534a4d49f027b6e5fe49b522c9a8514bc1ab573d9fa30618b9e7dcd",
+      "bytes": 1037
+    },
+    {
+      "private_file": "ubuntu-158-w1-dialog-state.png",
+      "sha256": "c3d99f705d2d3b246ccb444727b5781e46419e9b2e6fe41f5fd4ecc010c17e9f",
+      "bytes": 119148
+    },
+    {
+      "private_file": "ubuntu-158-w1-dialog-state.rgb565",
+      "sha256": "c370726f60c1bf56a9a5d7e5e0ef86da8d28fb06ad32344f5098d2a88a8168d9",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-159-w1-close.json",
+      "sha256": "f1853d6eb31feecee55b573555f378f1786a71729cb914a084d6abea842eb830",
+      "bytes": 490
+    },
+    {
+      "private_file": "ubuntu-160-r1-restarting.json",
+      "sha256": "94d4d363faea7caae986c8c72dbd0972e3bab33c0a7f3a2d7127fda60d47e064",
+      "bytes": 1035
+    },
+    {
+      "private_file": "ubuntu-160-r1-restarting.png",
+      "sha256": "2ff0e50142005abd7ab0008b1c9e5433dcfb83e898cbace15cf0cfe1c1806e0f",
+      "bytes": 11067
+    },
+    {
+      "private_file": "ubuntu-160-r1-restarting.rgb565",
+      "sha256": "fc6d45468148aeccb7ef8c487a621ce1cc6601e27a1b62a9c9e02498922796d0",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-161-r1-boot-state.json",
+      "sha256": "0f771d0f851b9b93e1f46d34f4382966a0ca35281545a0a08d776157443e633b",
+      "bytes": 1035
+    },
+    {
+      "private_file": "ubuntu-161-r1-boot-state.png",
+      "sha256": "13c748960f2d8b1100738eca457dd8c8cf0e95594b374a401165795d57db01b6",
+      "bytes": 9648
+    },
+    {
+      "private_file": "ubuntu-161-r1-boot-state.rgb565",
+      "sha256": "a6bdb6186b5e160dbad7ea9914940d9ad5c4c14867a07d4b6122149e7df751f4",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-162-r1-login-ready.json",
+      "sha256": "db32c32a1e8476e41e45ddd46212d9d49c7a2ca23acd268258439d988ce2e573",
+      "bytes": 1036
+    },
+    {
+      "private_file": "ubuntu-162-r1-login-ready.png",
+      "sha256": "f73171a3f7f85ce39150e46a6b26b3bafbd8ae26edb7c9f15f5bfcbb42533930",
+      "bytes": 19978
+    },
+    {
+      "private_file": "ubuntu-162-r1-login-ready.rgb565",
+      "sha256": "823a0fd412ffbb1243916602a73c0fbf4c89368892aafdff77aa40c8b9b15063",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-163-r1-app-login.json",
+      "sha256": "c89df1e4720dbd4d8a2989cfea5d915655333c0ce29642c29d3f81736dbc6172",
+      "bytes": 495
+    },
+    {
+      "private_file": "ubuntu-164-r1-app-secret-0.json",
+      "sha256": "9248f0411b13602b8588159d55fd768c336b06722471f7b720748a1f6e7af831",
+      "bytes": 384
+    },
+    {
+      "private_file": "ubuntu-164-r1-app-secret-12.json",
+      "sha256": "e65198d238e6d0bdda461db3fee21fa09427a62eb9fabfac9415c728674297b9",
+      "bytes": 385
+    },
+    {
+      "private_file": "ubuntu-164-r1-app-secret-16.json",
+      "sha256": "a5d52e3ebf2012ca9a0db5d1b86329ed9d18166cd0c0dce6665cafa37c311819",
+      "bytes": 385
+    },
+    {
+      "private_file": "ubuntu-164-r1-app-secret-20.json",
+      "sha256": "c8677fa9455d8171cb00715c40bc18ce7451663fbb3271175995cf3e152902f7",
+      "bytes": 385
+    },
+    {
+      "private_file": "ubuntu-164-r1-app-secret-24.json",
+      "sha256": "eb1796b46a5f057d967e6365a0901d49705a5fcb9e0bd6fb58f9d2ab5ab16659",
+      "bytes": 385
+    },
+    {
+      "private_file": "ubuntu-164-r1-app-secret-28.json",
+      "sha256": "da7f66507b30cea9c1e8e04b7edbc5ae32bdceda6be6018ba0d9eadc3c6a3c7f",
+      "bytes": 385
+    },
+    {
+      "private_file": "ubuntu-164-r1-app-secret-32.json",
+      "sha256": "246f7d4845447aa5962587f1a4a25bb37c09ac3a05d0f2a37f5298395e2e6314",
+      "bytes": 385
+    },
+    {
+      "private_file": "ubuntu-164-r1-app-secret-4.json",
+      "sha256": "c707cc00e9cad6cb16d5d57ed4ca758dc624625a0016d437e227bc87d086cf80",
+      "bytes": 384
+    },
+    {
+      "private_file": "ubuntu-164-r1-app-secret-8.json",
+      "sha256": "70234435b4f72a0dd800707e4945a1af2e3b59842ac53cd5c1ae9e7752daf7e0",
+      "bytes": 384
+    },
+    {
+      "private_file": "ubuntu-165-r1-desktop.json",
+      "sha256": "ab3db65f8b700fec2860f685389c4dd3bec99ce418d4d7d8d71faa7d4b8be0e9",
+      "bytes": 1032
+    },
+    {
+      "private_file": "ubuntu-165-r1-desktop.png",
+      "sha256": "1710964426e3f26c261c958992ffa1b4296ace1cc3fb86945fbb9ac20cd790be",
+      "bytes": 21557
+    },
+    {
+      "private_file": "ubuntu-165-r1-desktop.rgb565",
+      "sha256": "d5959ec322e1fc971b95efdf2bfd157d34358d9b45da209bc7c453ead9293739",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-166-w2-launch.json",
+      "sha256": "e858ef191e1d34827618291db2351e65d0d8bb562e28c047d668c7b1e4c7b793",
+      "bytes": 1031
+    },
+    {
+      "private_file": "ubuntu-166-w2-launch.png",
+      "sha256": "f47b07a49017f25035fa52946217c06d235622466dfa6bab5bef47655fdb9108",
+      "bytes": 168279
+    },
+    {
+      "private_file": "ubuntu-166-w2-launch.rgb565",
+      "sha256": "761ed3c748f895ede062fc03283614e507286d85e374ea3094cad46312098b56",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-167-w2-launched.json",
+      "sha256": "862bf38acc259fbd3308bc450dbe69db0f0f3b03588d12e6c482f74392bf82c7",
+      "bytes": 1033
+    },
+    {
+      "private_file": "ubuntu-167-w2-launched.png",
+      "sha256": "4090212b76b4b0ee19b8dcb821b8cb57cc0cbbabb2edcaadec25bc038f63c108",
+      "bytes": 118146
+    },
+    {
+      "private_file": "ubuntu-167-w2-launched.rgb565",
+      "sha256": "40402a144c67e4e20a352e6a009e2143d806cdd7544edc85f81acd2725daffcf",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-168-w2-select-fixture.json",
+      "sha256": "52f6f0c854be15d3a72b94f5814e117a3ed738f3b9aaabfc0b51a2eef6ac83fb",
+      "bytes": 500
+    },
+    {
+      "private_file": "ubuntu-169-w2-add.json",
+      "sha256": "96bae81094770fefb6102cb9067c16c07b6e0810a50714106f18fcacacaa6d3a",
+      "bytes": 488
+    },
+    {
+      "private_file": "ubuntu-170-w2-add-dialog.json",
+      "sha256": "e56cc53842d34942f9766cd42ebaaffa7b5cb9e5d5651d3544abb1bba48e0c0e",
+      "bytes": 1035
+    },
+    {
+      "private_file": "ubuntu-170-w2-add-dialog.png",
+      "sha256": "0760252373cbd1aad3a5df5785c5df25974b892190d54813421e2b47d14d8791",
+      "bytes": 131503
+    },
+    {
+      "private_file": "ubuntu-170-w2-add-dialog.rgb565",
+      "sha256": "fecd51544d5882cd278445ef546e63f6a6e67f65e458516ec4d2af1fd787ae18",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-171-w2-output-field.json",
+      "sha256": "589034b543823f96a8c3389f066ace26796cea29822b22e28d945e0638a16c0c",
+      "bytes": 498
+    },
+    {
+      "private_file": "ubuntu-172-w2-output-select-all.json",
+      "sha256": "721510807d6a992446b1c28f544d30bba200148871acaa3cf6092b9076269a6d",
+      "bytes": 469
+    },
+    {
+      "private_file": "ubuntu-173-w2-output-path-0.json",
+      "sha256": "f2f3db5542408476e461994e1d0fb3788b16e6dbaa514ea3dc7b470437474dc7",
+      "bytes": 557
+    },
+    {
+      "private_file": "ubuntu-173-w2-output-path-12.json",
+      "sha256": "dc92a77ea0490594eb013ee907ee1c24ee13adaef4165b0de24c2c55c59a83d0",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-173-w2-output-path-16.json",
+      "sha256": "ac4de4fb1f71d2bda9ea002619ca21afc337aae54e6779e583dbe1542a148c69",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-173-w2-output-path-20.json",
+      "sha256": "2caa36acafeb8a92f169b598e1de47f070f66c1795a28f4201c98844cdff01c8",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-173-w2-output-path-24.json",
+      "sha256": "192ba660bbed72c7abdfd9099e3e234d76a11a0a476c8adc430e14e9e0f659e5",
+      "bytes": 511
+    },
+    {
+      "private_file": "ubuntu-173-w2-output-path-28.json",
+      "sha256": "3bb7da8abd927c8c2f79532dc46659c0beb0fe9ff7735d1702fc80933bfc2048",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-173-w2-output-path-32.json",
+      "sha256": "79df99e7b7e5849df17bdd6895a696221eb7abdc9e11157dc7ba8bba8150dd83",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-173-w2-output-path-36.json",
+      "sha256": "3b11090f744b8677a460e6308f9cac8f5cb2bc2d58e5378e72634841961251aa",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-173-w2-output-path-4.json",
+      "sha256": "cb483c0d529544d9c6ac1ccdcc0917d95fb258df7895d3d4edb4684c7d08d33d",
+      "bytes": 511
+    },
+    {
+      "private_file": "ubuntu-173-w2-output-path-40.json",
+      "sha256": "c15a3ebe0956df3efa9d65a6fc136da908691921eb7eac32ffe3704ebd87eec9",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-173-w2-output-path-44.json",
+      "sha256": "9fb2519737038546aedca4d2459713902c53d3fca2cb056316fa44a98159a6a8",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-173-w2-output-path-48.json",
+      "sha256": "3c8b2be452727f70b14e720a25ecb79f1dfc4bf8fe26116cd5c364f8545f5e47",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-173-w2-output-path-52.json",
+      "sha256": "61b9271a0aaece32fd2502a1de3d47962bf8a3d057f190bb89063d2996682604",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-173-w2-output-path-56.json",
+      "sha256": "6fb104a038fe87eb1488b411149acf2eef4144e505383e6230169c077af92f11",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-173-w2-output-path-60.json",
+      "sha256": "6825e610b2baaca375f175565208b9a52711a655b7ce0dbe292db40c46d9eaf4",
+      "bytes": 512
+    },
+    {
+      "private_file": "ubuntu-173-w2-output-path-64.json",
+      "sha256": "66ca4a6900e0ae397ed16b13807aa9936f3708657f3e32b8146b1902a85cbd17",
+      "bytes": 443
+    },
+    {
+      "private_file": "ubuntu-173-w2-output-path-8.json",
+      "sha256": "031fe09428b8f7fd780a9e89fd2b1fedabc99ddb5df11f0e2456f56d2c6d21c4",
+      "bytes": 511
+    },
+    {
+      "private_file": "ubuntu-174-w2-settings.json",
+      "sha256": "aa0e3d9020ff7f5fa17a7fadce6f6d2be8d80104c500623483e5fe16bfb7478a",
+      "bytes": 1033
+    },
+    {
+      "private_file": "ubuntu-174-w2-settings.png",
+      "sha256": "ae44c86d550350645375de63c35c39a219372058324f5bfc565e3e58ce2682b5",
+      "bytes": 133313
+    },
+    {
+      "private_file": "ubuntu-174-w2-settings.rgb565",
+      "sha256": "4045df2a8d1046fed3b1fd4fb649bd631ae9b49b19bd0cb7353b05bc8585bbf0",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-175-w2-create-zip.json",
+      "sha256": "c499513cb99f93cd75907ab90e7486ea1239950c5308ca4d053c05d93ceecf76",
+      "bytes": 496
+    },
+    {
+      "private_file": "ubuntu-176-w2-result.json",
+      "sha256": "672fccc958bf4212c9871888aaec3cfa23c72e782997b533dc902025e881df7e",
+      "bytes": 1031
+    },
+    {
+      "private_file": "ubuntu-176-w2-result.png",
+      "sha256": "fb36e1bcc752ac4ac821cc477c3ab5a1b06e78dd6adc86f8d0ae6d5d963e7ec6",
+      "bytes": 118959
+    },
+    {
+      "private_file": "ubuntu-176-w2-result.rgb565",
+      "sha256": "b99f5742a733b34d8f2f06af47d8e83573442c697cbd492f5dad4ea01800851d",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-177-w2-output-navigation.json",
+      "sha256": "3abac106e6dbf19fba5c0e763e9e6d1f98e10796b7fb81114cf4eb9d749507fc",
+      "bytes": 503
+    },
+    {
+      "private_file": "ubuntu-178-w2-address-select-all.json",
+      "sha256": "ad4846c0ac10005e7a90fdbb5c0ca361095d72d48e132a6ce431b65185e768d6",
+      "bytes": 470
+    },
+    {
+      "private_file": "ubuntu-179-w2-output-directory-0.json",
+      "sha256": "d096bccc4a3bf51f1140c55ef043fb28a897c74a944b59a6596b50c39f59cd30",
+      "bytes": 562
+    },
+    {
+      "private_file": "ubuntu-179-w2-output-directory-12.json",
+      "sha256": "739343a6484df88e6d685dec55ae54bf7e328f8bd655b273a787253f75efa694",
+      "bytes": 517
+    },
+    {
+      "private_file": "ubuntu-179-w2-output-directory-16.json",
+      "sha256": "9794e647b683ceeb2617396a165d20921f800b5b5066d6bbc0cda830ffa1e014",
+      "bytes": 517
+    },
+    {
+      "private_file": "ubuntu-179-w2-output-directory-20.json",
+      "sha256": "32e3c45fc33259ed8e86821a940a563560dc68e39e3864e3d9e67277f7a6779a",
+      "bytes": 517
+    },
+    {
+      "private_file": "ubuntu-179-w2-output-directory-24.json",
+      "sha256": "9a5a14af7c509c12c648769b153deb2619c2c402d891961c895640789545d80f",
+      "bytes": 516
+    },
+    {
+      "private_file": "ubuntu-179-w2-output-directory-28.json",
+      "sha256": "6fd2302d25a7c7eddbe3ff77b3ed756055efcc7b3ddf0fab9f3766a38b3ef573",
+      "bytes": 517
+    },
+    {
+      "private_file": "ubuntu-179-w2-output-directory-32.json",
+      "sha256": "ad961c014c949cc95590ec8f190cd150a1a47f64adc7e0325abbe1cbee003753",
+      "bytes": 517
+    },
+    {
+      "private_file": "ubuntu-179-w2-output-directory-36.json",
+      "sha256": "4d6b9c84d37888d2b520071f493848902ab1ecd0d4a0d7d644768c3d63cda7de",
+      "bytes": 517
+    },
+    {
+      "private_file": "ubuntu-179-w2-output-directory-4.json",
+      "sha256": "1079a167c36cc428c6f80aaf8b0f4aedda28cafb7bfeb42a2124e400ec648842",
+      "bytes": 516
+    },
+    {
+      "private_file": "ubuntu-179-w2-output-directory-40.json",
+      "sha256": "b7b8aa544bb24efbe74d7b067806209d85cae5bd3c270b7674f915d16ee1f9e2",
+      "bytes": 517
+    },
+    {
+      "private_file": "ubuntu-179-w2-output-directory-44.json",
+      "sha256": "a827f9c331152d0defc922070ec33143180202517794b2ab6ce2f298008b5d88",
+      "bytes": 517
+    },
+    {
+      "private_file": "ubuntu-179-w2-output-directory-48.json",
+      "sha256": "a39ff9905b6ba4d83ffdc5b3976b01829fe7ae38d39550b444e93c044c1d8276",
+      "bytes": 517
+    },
+    {
+      "private_file": "ubuntu-179-w2-output-directory-52.json",
+      "sha256": "277d41f26fe48bc8fc000b120db04cbbac1ee26834b0f406a47fba8f87cfea04",
+      "bytes": 471
+    },
+    {
+      "private_file": "ubuntu-179-w2-output-directory-8.json",
+      "sha256": "99444b8405e40ba988c3aa2f427f2fe432b403834632679751a999147f819d91",
+      "bytes": 516
+    },
+    {
+      "private_file": "ubuntu-180-w2-output-present.json",
+      "sha256": "c2f7c42ce877f883f379b6fc3cac6f0051176fde1405a035bb23378fcc72b3ee",
+      "bytes": 1039
+    },
+    {
+      "private_file": "ubuntu-180-w2-output-present.png",
+      "sha256": "f974374542264f9a69c4a8108075700c23791e4d16dca55246945e668d176147",
+      "bytes": 112109
+    },
+    {
+      "private_file": "ubuntu-180-w2-output-present.rgb565",
+      "sha256": "6b89d5c1f78f7bb7550589f3f9ca3357dfe975a15efc8b19fb0d52ddd8e32001",
+      "bytes": 1572868
+    },
+    {
+      "private_file": "ubuntu-181-w2-close.json",
+      "sha256": "904a574a41434793188046e41c4c7ccdc3a9a75c2a6d7afafaa5495c4832c054",
+      "bytes": 490
+    },
+    {
+      "private_file": "ubuntu-cd-signing-key.asc",
+      "sha256": "337fa0013bb263aebcef98fa7b7af18e186d89565a5019f7295beb42ebee5290",
+      "bytes": 64965
+    },
+    {
+      "private_file": "ubuntu-checksum-signature.json",
+      "sha256": "5e549d2f5702d82cc5b09009f513e1160abc8cbfa8068e6eca2e6d9092c75a32",
+      "bytes": 2706
+    },
+    {
+      "private_file": "ubuntu-install-private.tar.gz",
+      "sha256": "cad09ff65af1b799accdfd627d748cbad387fff1fb365291b4185881e4ba8522",
+      "bytes": 198816
+    },
+    {
+      "private_file": "ubuntu-key-download.json",
+      "sha256": "ed579ac5879676523172263843863e8d9ca350ba5236eadd9c327fe436f1f047",
+      "bytes": 664
+    },
+    {
+      "private_file": "ubuntu-key-import.json",
+      "sha256": "95023266d97c1dba9500881aae07abf2fdeb8affa5f58cf8d1006a3980709b05",
+      "bytes": 1277
+    },
+    {
+      "private_file": "ubuntu-key-inspect-relative.json",
+      "sha256": "df7696e67a87e4dca6c9712db8b3d948c19af8f3dbe88e476920ed05521d32e0",
+      "bytes": 1782
+    },
+    {
+      "private_file": "ubuntu-key-inspect.json",
+      "sha256": "472db1d2f128bc5e5dc4a5b98cc758040aaff18e3dc4e9a14bd9d6bc8ee417d9",
+      "bytes": 1719
+    },
+    {
+      "private_file": "ubuntu-SHA256SUMS",
+      "sha256": "2c7aeea36dd83c6eafa951ab2b26c037c8342975ca12950509240856b2605bc7",
+      "bytes": 594
+    },
+    {
+      "private_file": "ubuntu-SHA256SUMS.gpg",
+      "sha256": "35299a7907a456fb2731af087d7ede11f9864d85b3585dbb1612fe2f442a2c0a",
+      "bytes": 833
+    }
+  ]
+}

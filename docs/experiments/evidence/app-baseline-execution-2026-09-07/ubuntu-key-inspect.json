@@ -1,0 +1,35 @@
+{
+  "argv": [
+    "C:\\Program Files\\Git\\usr\\bin\\gpg.exe",
+    "--no-options",
+    "--homedir",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\gnupg",
+    "--batch",
+    "--with-colons",
+    "--show-keys",
+    "ubuntu-cd-signing-key.asc"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z",
+  "started_utc": "2026-09-07T19:07:43.846675+00:00",
+  "exit_code": 2,
+  "stdout_base64": "",
+  "stderr_base64": "Z3BnOiBrZXlibG9jayByZXNvdXJjZSAnL2MvVXNlcnMvPHJlZGFjdGVkLWFjY291bnQ+L2hlbG0tcHJpdmF0ZS1wcm92ZW5hbmNlL2FwcC1iYXNlbGluZS1yZXN1bWUtMjAyNjA5MDdUMTkwNTA5Wi9DOlxcVXNlcnNcXDxyZWRhY3RlZC1hY2NvdW50PlxcaGVsbS1wcml2YXRlLXByb3ZlbmFuY2VcXGFwcC1iYXNlbGluZS1yZXN1bWUtMjAyNjA5MDdUMTkwNTA5WlxcZ251cGcvcHVicmluZy5rYngnOiBObyBzdWNoIGZpbGUgb3IgZGlyZWN0b3J5CmdwZzogRmF0YWw6IC9jL1VzZXJzLzxyZWRhY3RlZC1hY2NvdW50Pi9oZWxtLXByaXZhdGUtcHJvdmVuYW5jZS9hcHAtYmFzZWxpbmUtcmVzdW1lLTIwMjYwOTA3VDE5MDUwOVovQzpcXFVzZXJzXFw8cmVkYWN0ZWQtYWNjb3VudD5cXGhlbG0tcHJpdmF0ZS1wcm92ZW5hbmNlXFxhcHAtYmFzZWxpbmUtcmVzdW1lLTIwMjYwOTA3VDE5MDUwOVpcXGdudXBnOiBkaXJlY3RvcnkgZG9lcyBub3QgZXhpc3QhCg==",
+  "stdout": "",
+  "stderr": "gpg: keyblock resource '/c/Users/<redacted-account>/helm-private-provenance/app-baseline-resume-20260907T190509Z/C:\\\\Users\\\\<redacted-account>\\\\helm-private-provenance\\\\app-baseline-resume-20260907T190509Z\\\\gnupg/pubring.kbx': No such file or directory\ngpg: Fatal: /c/Users/<redacted-account>/helm-private-provenance/app-baseline-resume-20260907T190509Z/C:\\\\Users\\\\<redacted-account>\\\\helm-private-provenance\\\\app-baseline-resume-20260907T190509Z\\\\gnupg: directory does not exist!\n",
+  "ended_utc": "2026-09-07T19:07:43.927820+00:00",
+  "duration_seconds": 0.08114319999003783,
+  "scope": "Command capture only; exit status is not a workflow verdict",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "472db1d2f128bc5e5dc4a5b98cc758040aaff18e3dc4e9a14bd9d6bc8ee417d9",
+    "raw_bytes": 1719,
+    "redacted_fields": [
+      "argv[3]",
+      "cwd",
+      "stderr_base64 (decoded UTF-8 stream)",
+      "stderr"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "argv": [
+    "env",
+    "DISPLAY=:0",
+    "WAYLAND_DISPLAY=wayland-0",
+    "XAUTHORITY=/run/user/1001/.mutter-Xwaylandauth.H2J1U3",
+    "XDG_SESSION_TYPE=wayland",
+    "XDG_RUNTIME_DIR=/run/user/1001",
+    "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1001/bus",
+    "WINEPREFIX=/home/helmlab/exp009-a0-7zip/prefix",
+    "WINEARCH=win64",
+    "WINEDLLOVERRIDES=mscoree,mshtml=",
+    "/opt/wine-devel/bin/wine",
+    "wineboot.exe",
+    "-u"
+  ],
+  "cwd": "/home/helmlab/exp009-a0-7zip",
+  "started_utc": "2026-09-07T20:48:38.510530+00:00",
+  "exit_code": 0,
+  "stdout_base64": "",
+  "stderr_base64": "d2luZTogY3JlYXRlZCB0aGUgY29uZmlndXJhdGlvbiBkaXJlY3RvcnkgJy9ob21lL2hlbG1sYWIvZXhwMDA5LWEwLTd6aXAvcHJlZml4JwowMDJjOmZpeG1lOmFjdGN0eDpwYXJzZV9kZXBlbmRfbWFuaWZlc3RzIENvdWxkIG5vdCBmaW5kIGRlcGVuZGVudCBhc3NlbWJseSBMIk1pY3Jvc29mdC5XaW5kb3dzLkNvbW1vbi1Db250cm9scyIgKDYuMC4wLjApCjAwNGM6Zml4bWU6YWN0Y3R4OnBhcnNlX2RlcGVuZF9tYW5pZmVzdHMgQ291bGQgbm90IGZpbmQgZGVwZW5kZW50IGFzc2VtYmx5IEwiTWljcm9zb2Z0LldpbmRvd3MuQ29tbW9uLUNvbnRyb2xzIiAoNi4wLjAuMCkKMDA1NDpmaXhtZTphY3RjdHg6cGFyc2VfZGVwZW5kX21hbmlmZXN0cyBDb3VsZCBub3QgZmluZCBkZXBlbmRlbnQgYXNzZW1ibHkgTCJNaWNyb3NvZnQuV2luZG93cy5Db21tb24tQ29udHJvbHMiICg2LjAuMC4wKQpsaWJFR0wgd2FybmluZzogRFJJMyBlcnJvcjogQ291bGQgbm90IGdldCBEUkkzIGRldmljZQpsaWJFR0wgd2FybmluZzogRW5zdXJlIHlvdXIgWCBzZXJ2ZXIgc3VwcG9ydHMgRFJJMyB0byBnZXQgYWNjZWxlcmF0ZWQgcmVuZGVyaW5nCmxpYkVHTCB3YXJuaW5nOiBEUkkzIGVycm9yOiBDb3VsZCBub3QgZ2V0IERSSTMgZGV2aWNlCmxpYkVHTCB3YXJuaW5nOiBFbnN1cmUgeW91ciBYIHNlcnZlciBzdXBwb3J0cyBEUkkzIHRvIGdldCBhY2NlbGVyYXRlZCByZW5kZXJpbmcKMDA1NDplcnI6b2xlOlN0ZE1hcnNoYWxJbXBsX01hcnNoYWxJbnRlcmZhY2UgRmFpbGVkIHRvIGNyZWF0ZSBpZnN0dWIsIGhyIDB4ODAwMDQwMDIKMDA1NDplcnI6b2xlOkNvTWFyc2hhbEludGVyZmFjZSBGYWlsZWQgdG8gbWFyc2hhbCB0aGUgaW50ZXJmYWNlIHs2ZDUxNDBjMS03NDM2LTExY2UtODAzNC0wMGFhMDA2MDA5ZmF9LCBociAweDgwMDA0MDAyCjAwNTQ6ZXJyOm9sZTphcGFydG1lbnRfZ2V0X2xvY2FsX3NlcnZlcl9zdHJlYW0gRmFpbGVkOiAweDgwMDA0MDAyCjAwNTQ6ZXJyOm9sZTpzdGFydF9ycGNzcyBGYWlsZWQgdG8gb3BlbiBScGNTcyBzZXJ2aWNlCjAwNGM6ZXJyOm9sZTpTdGRNYXJzaGFsSW1wbF9NYXJzaGFsSW50ZXJmYWNlIEZhaWxlZCB0byBjcmVhdGUgaWZzdHViLCBociAweDgwMDA0MDAyCjAwNGM6ZXJyOm9sZTpDb01hcnNoYWxJbnRlcmZhY2UgRmFpbGVkIHRvIG1hcnNoYWwgdGhlIGludGVyZmFjZSB7NmQ1MTQwYzEtNzQzNi0xMWNlLTgwMzQtMDBhYTAwNjAwOWZhfSwgaHIgMHg4MDAwNDAwMgowMDRjOmVycjpvbGU6YXBhcnRtZW50X2dldF9sb2NhbF9zZXJ2ZXJfc3RyZWFtIEZhaWxlZDogMHg4MDAwNDAwMgowMGUwOmZpeG1lOm1zZzpwYWNrX21lc3NhZ2UgbXNnIDE0IChXTV9FUkFTRUJLR05EKSBub3Qgc3VwcG9ydGVkIHlldAowMDJjOmVycjpzZXR1cGFwaTpkb19maWxlX2NvcHlXIFVuc3VwcG9ydGVkIHN0eWxlKHMpIDB4MTAKMDAyYzplcnI6c2V0dXBhcGk6ZG9fZmlsZV9jb3B5VyBVbnN1cHBvcnRlZCBzdHlsZShzKSAweDEwCjAwMmM6ZXJyOnNldHVwYXBpOmRvX2ZpbGVfY29weVcgVW5zdXBwb3J0ZWQgc3R5bGUocykgMHgxMAowMTBjOmVycjpzZXR1cGFwaTpkb19maWxlX2NvcHlXIFVuc3VwcG9ydGVkIHN0eWxlKHMpIDB4MTAKMDEwYzplcnI6c2V0dXBhcGk6ZG9fZmlsZV9jb3B5VyBVbnN1cHBvcnRlZCBzdHlsZShzKSAweDEwCg==",
+  "stdout": "",
+  "stderr": "wine: created the configuration directory '/home/helmlab/exp009-a0-7zip/prefix'\n002c:fixme:actctx:parse_depend_manifests Could not find dependent assembly L\"Microsoft.Windows.Common-Controls\" (6.0.0.0)\n004c:fixme:actctx:parse_depend_manifests Could not find dependent assembly L\"Microsoft.Windows.Common-Controls\" (6.0.0.0)\n0054:fixme:actctx:parse_depend_manifests Could not find dependent assembly L\"Microsoft.Windows.Common-Controls\" (6.0.0.0)\nlibEGL warning: DRI3 error: Could not get DRI3 device\nlibEGL warning: Ensure your X server supports DRI3 to get accelerated rendering\nlibEGL warning: DRI3 error: Could not get DRI3 device\nlibEGL warning: Ensure your X server supports DRI3 to get accelerated rendering\n0054:err:ole:StdMarshalImpl_MarshalInterface Failed to create ifstub, hr 0x80004002\n0054:err:ole:CoMarshalInterface Failed to marshal the interface {6d5140c1-7436-11ce-8034-00aa006009fa}, hr 0x80004002\n0054:err:ole:apartment_get_local_server_stream Failed: 0x80004002\n0054:err:ole:start_rpcss Failed to open RpcSs service\n004c:err:ole:StdMarshalImpl_MarshalInterface Failed to create ifstub, hr 0x80004002\n004c:err:ole:CoMarshalInterface Failed to marshal the interface {6d5140c1-7436-11ce-8034-00aa006009fa}, hr 0x80004002\n004c:err:ole:apartment_get_local_server_stream Failed: 0x80004002\n00e0:fixme:msg:pack_message msg 14 (WM_ERASEBKGND) not supported yet\n002c:err:setupapi:do_file_copyW Unsupported style(s) 0x10\n002c:err:setupapi:do_file_copyW Unsupported style(s) 0x10\n002c:err:setupapi:do_file_copyW Unsupported style(s) 0x10\n010c:err:setupapi:do_file_copyW Unsupported style(s) 0x10\n010c:err:setupapi:do_file_copyW Unsupported style(s) 0x10\n",
+  "ended_utc": "2026-09-07T20:49:38.769166+00:00",
+  "duration_seconds": 60.25863847999972,
+  "scope": "Command capture only; exit status is not a workflow verdict"
+}

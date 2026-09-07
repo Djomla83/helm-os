@@ -8,3 +8,6 @@ docs/experiments/evidence/g0-2-completion-2026-09-07/** -text whitespace=cr-at-e
 
 # Preserve byte-sensitive captures for the separately authorised application baseline.
 docs/experiments/evidence/app-baseline-2026-09-07/** -text whitespace=cr-at-eol
+
+# Preserve captures for the resumed A0-7ZIP VM execution separately from preparation.
+docs/experiments/evidence/app-baseline-execution-2026-09-07/** -text whitespace=cr-at-eol

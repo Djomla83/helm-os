@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "python3",
+    "tools/app_baseline.py",
+    "verify",
+    "outputs/before-restart/workflow.zip",
+    "records/verify-before-required.json"
+  ],
+  "cwd": "/home/helmlab/exp009-a0-7zip",
+  "started_utc": "2026-09-07T20:53:52.749951+00:00",
+  "exit_code": 1,
+  "stdout_base64": "eyJzY29wZSI6ICJaSVAgb3V0cHV0LWNvbnRlbnQgdmVyaWZpY2F0aW9uIG9ubHkiLCAic3RhcnRlZF91dGMiOiAiMjAyNi0wOS0wN1QyMDo1Mzo1Mi43NzYyNDYrMDA6MDAiLCAidmVyZGljdCI6ICJGQUlMIiwgImVycm9ycyI6IFsiRmlsZU5vdEZvdW5kRXJyb3I6IFtFcnJubyAyXSBObyBzdWNoIGZpbGUgb3IgZGlyZWN0b3J5OiAnb3V0cHV0cy9iZWZvcmUtcmVzdGFydC93b3JrZmxvdy56aXAnIl0sICJmaWxlcyI6IFtdLCAiZW5kZWRfdXRjIjogIjIwMjYtMDktMDdUMjA6NTM6NTIuNzc2MjcwKzAwOjAwIiwgImZpeHR1cmVfbWFuaWZlc3Rfc2hhMjU2IjogIjc1ZDc4YmM2YmMwZjUzOWRmNWNhOGQ1NGRmMzRmNDA2ZTQ0ZjJhYTVjZWI4YTA3YmYzZDg1NmNlNzI3NDdjOGYifQo=",
+  "stderr_base64": "",
+  "stdout": "{\"scope\": \"ZIP output-content verification only\", \"started_utc\": \"2026-09-07T20:53:52.776246+00:00\", \"verdict\": \"FAIL\", \"errors\": [\"FileNotFoundError: [Errno 2] No such file or directory: 'outputs/before-restart/workflow.zip'\"], \"files\": [], \"ended_utc\": \"2026-09-07T20:53:52.776270+00:00\", \"fixture_manifest_sha256\": \"75d78bc6bc0f539df5ca8d54df34f406e44f2aa5ceb8a07bf3d856ce72747c8f\"}\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:53:52.780154+00:00",
+  "duration_seconds": 0.030203773999801342,
+  "scope": "Command capture only; exit status is not a workflow verdict"
+}

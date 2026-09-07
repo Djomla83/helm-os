@@ -1,0 +1,15 @@
+{
+  "recorded_utc": "2026-09-07T20:54:59.6812975Z",
+  "step": "W1/V1",
+  "workflow_verdict": "FAIL",
+  "registered_destination": "outputs/before-restart/workflow.zip",
+  "registered_destination_observation": "Absent; verifier exit 1 with FileNotFoundError",
+  "observed_destination": "inputs/fixture.zip",
+  "observed_archive_sha256": "8f7b7192808b03275239785bc561127e4a1e3cee5edb8471bfff1d33703356e9",
+  "supplemental_content_verdict": "PASS",
+  "cause": "Agent sent z then Enter after clicking the archive-format combo. This selected ZIP and submitted Add before setting the required absolute output path.",
+  "interpretation": "Observed automation/protocol failure, not evidence of application incompatibility. Supplementary content verification does not satisfy the required destination or retroactively establish all selected GUI settings.",
+  "preservation": "No archive moved, deleted, overwritten or relabelled.",
+  "next_planned_step": "Preserve W1 evidence; perform the originally planned guest restart and W2. No W1 repeat. In W2 set destination first, inspect all settings, then click the explicit OK button.",
+  "criteria": "Unchanged original two-workflow requirement; a successful W2 cannot erase W1 failure."
+}

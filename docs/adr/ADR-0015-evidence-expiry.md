@@ -95,6 +95,12 @@ against injected breakages.
 
 ## Corrections required before acceptance (recorded 2026-09-07)
 
+Bounded application evidence annotation, 2026-09-07: [A0-7ZIP](../experiments/EXP-009-APP-BASELINE-REPORT.md#current-assessment)
+produced a content-correct ZIP at the wrong W1 destination after agent actuation error. The
+registered protocol remains FAIL despite valid controls and successful W2. This supports keeping
+output validity separate from required workflow coverage. It does not evaluate expiry, profile
+gating, the proposed three-application PoC, or the openQA option below. Status remains **Proposed**.
+
 The novelty claim in this ADR is materially overstated and must be narrowed before review. A
 comparison against openQA — which the original audit did not perform — found that it already ships
 per-job input recording with pinned test-code commits, per-module artifact collection, a closed

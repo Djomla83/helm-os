@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmsetup@<lab-guest-ip>",
+    "tail -5 /home/helmsetup/a0-provision/stdout.log; ps -C dpkg -o pid,etime,pcpu,stat"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T20:36:35.422740+00:00",
+  "exit_code": 0,
+  "stdout_base64": "UHJlcGFyaW5nIHRvIHVucGFjayAuLi4vMDgxLWxpYnZweDlfMS4xNC4wLTF1YnVudHUyLjNfaTM4Ni5kZWIgLi4uDQpVbnBhY2tpbmcgbGlidnB4OTppMzg2ICgxLjE0LjAtMXVidW50dTIuMykgLi4uDQpTZWxlY3RpbmcgcHJldmlvdXNseSB1bnNlbGVjdGVkIHBhY2thZ2UgbGlid2VicG11eDM6aTM4Ni4NClByZXBhcmluZyB0byB1bnBhY2sgLi4uLzA4Mi1saWJ3ZWJwbXV4M18xLjMuMi0wLjRidWlsZDNfaTM4Ni5kZWIgLi4uDQpVbnBhY2tpbmcgbGlid2VicG11eDM6aTM4NiAoMS4zLjItMC40YnVpbGQzKSAuLi4NCiAgICBQSUQgICAgIEVMQVBTRUQgJUNQVSBTVEFUCiAgIDU0MzYgICAgICAgMDI6MjUgIDEuMyBEcysK",
+  "stderr_base64": "",
+  "stdout": "Preparing to unpack .../081-libvpx9_1.14.0-1ubuntu2.3_i386.deb ...\r\nUnpacking libvpx9:i386 (1.14.0-1ubuntu2.3) ...\r\nSelecting previously unselected package libwebpmux3:i386.\r\nPreparing to unpack .../082-libwebpmux3_1.3.2-0.4build3_i386.deb ...\r\nUnpacking libwebpmux3:i386 (1.3.2-0.4build3) ...\r\n    PID     ELAPSED %CPU STAT\n   5436       02:25  1.3 Ds+\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:36:35.657007+00:00",
+  "duration_seconds": 0.23425460001453757,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "f9e31a0d26981d9b95fa91e494832544914c7076152c9e0d65d97934e7093774",
+    "raw_bytes": 1991,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

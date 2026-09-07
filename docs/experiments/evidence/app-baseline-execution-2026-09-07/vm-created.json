@@ -1,0 +1,77 @@
+{
+  "recorded_utc": "2026-09-07T19:09:27.9170467Z",
+  "vm": {
+    "Name": "helm-lab-desktop-7zip",
+    "Id": "bd39f424-5b26-479d-846f-2f28f6639637",
+    "State": 3,
+    "Generation": 2,
+    "Version": "12.0",
+    "ProcessorCount": 4,
+    "MemoryStartup": 8589934592,
+    "DynamicMemoryEnabled": false,
+    "AutomaticCheckpointsEnabled": false,
+    "CheckpointType": 2,
+    "AutomaticStartAction": 2,
+    "AutomaticStopAction": 4,
+    "ConfigurationLocation": "D:\\helm-lab\\exp009-a0-7zip\\vm\\helm-lab-desktop-7zip",
+    "SnapshotFileLocation": "D:\\helm-lab\\exp009-a0-7zip\\vm",
+    "SmartPagingFilePath": "D:\\helm-lab\\exp009-a0-7zip\\vm"
+  },
+  "firmware": {
+    "SecureBoot": 0,
+    "SecureBootTemplate": "MicrosoftUEFICertificateAuthority",
+    "SecureBootTemplateId": "272e7447-90a4-4563-a4b9-8e4ab00526ce"
+  },
+  "video": {
+    "ResolutionType": 4,
+    "HorizontalResolution": 1920,
+    "VerticalResolution": 1200
+  },
+  "disk": {
+    "Path": "D:\\helm-lab\\exp009-a0-7zip\\vm\\os.vhdx",
+    "VhdFormat": 3,
+    "VhdType": 3,
+    "FileSize": 4194304,
+    "Size": 34359738368,
+    "ParentPath": "",
+    "Attached": false
+  },
+  "network": {
+    "Name": "Network Adapter",
+    "SwitchName": "Default Switch",
+    "MacAddress": "000000000000",
+    "DynamicMacAddressEnabled": true,
+    "MacAddressSpoofing": 1,
+    "DhcpGuard": 1,
+    "RouterGuard": 1,
+    "IovWeight": 0
+  },
+  "integration_services": [
+    {
+      "Name": "Guest Service Interface",
+      "Enabled": false
+    },
+    {
+      "Name": "Heartbeat",
+      "Enabled": true
+    },
+    {
+      "Name": "Key-Value Pair Exchange",
+      "Enabled": true
+    },
+    {
+      "Name": "Shutdown",
+      "Enabled": true
+    },
+    {
+      "Name": "Time Synchronization",
+      "Enabled": true
+    },
+    {
+      "Name": "VSS",
+      "Enabled": true
+    }
+  ],
+  "checkpoint_count": 0,
+  "boot_attempted": false
+}

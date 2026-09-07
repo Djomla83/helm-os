@@ -1,0 +1,24 @@
+{
+  "timestamp": "2026-09-07T20:40:38.4479840Z",
+  "stage": "Wine provisioning in progress, no application attempt",
+  "vm_name": "helm-lab-desktop-7zip",
+  "state": "Running",
+  "cpu_count": 4,
+  "assigned_memory_bytes": 8589934592,
+  "secure_boot": "On",
+  "certificate_template": "MicrosoftUEFICertificateAuthority",
+  "vhd_file_bytes": 11513364480,
+  "vhd_cap_bytes": 34359738368,
+  "volumes": [
+    {
+      "drive": "C",
+      "size_bytes": 498991685632,
+      "free_bytes": 86025924608
+    },
+    {
+      "drive": "D",
+      "size_bytes": 1000068870144,
+      "free_bytes": 555307134976
+    }
+  ]
+}

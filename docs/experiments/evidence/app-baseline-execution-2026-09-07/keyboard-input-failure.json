@@ -1,0 +1,9 @@
+{
+  "time_utc": "2026-09-07T19:18:57.3219382Z",
+  "observed": "WMI TypeText returned zero but the installer fields did not contain the requested setup identity. No account was submitted.",
+  "evidence": "ubuntu-033-account-ready.png",
+  "guest_keyboard_layout": "00000409",
+  "unicode_supported": true,
+  "proposed_methodology": "Use documented TypeScancodes for the selected US keyboard. Verify a simple non-secret field before entering guest credentials.",
+  "application_attempted": false
+}

@@ -1,0 +1,22 @@
+{
+  "kind": "Derived publication-tooling annotation from observed terminal results, not a raw stderr capture",
+  "scope": "Post-execution diff archival only; no guest or application action",
+  "failed_attempts": [
+    {
+      "command_form": "git diff --cached --binary --full-index --output=(Join-Path $helmReviewArchive 'final-staged-review.patch') 7b9ec6f91d33d44578179da467cb01f4da55ea2c",
+      "observed_diagnostic": "error: unknown option `cached'; usage: git diff --no-index ...",
+      "outer_command_exit": 1
+    },
+    {
+      "command_form": "git diff --cached --binary --full-index --output $helmPatchFile 7b9ec6f91d33d44578179da467cb01f4da55ea2c",
+      "observed_diagnostic": "error: unknown option `cached'; usage: git diff --no-index ...",
+      "outer_command_exit": 1
+    }
+  ],
+  "correction": "Confirmed repository location and normal staged diff succeeded. Captured git diff --cached --binary --full-index BASE stdout through Python subprocess.run with an argument list and wrote those bytes to a new private file. Exit 0. No conclusion about the underlying Git option-parsing cause was established.",
+  "archived_review_patch_sha256": "b0327726af171dca1c498a70ab21809b898408b8a74a4fd7fdf0cd75561bad8e",
+  "archived_review_patch_bytes": 5107010,
+  "patch_scope": "Complete staged change before this annotation and its manifest update; retained privately. Final complete diff reviewed again before commit.",
+  "failure_preservation_limit": "The diagnostics above are excerpts observed in tool output, not a claim that complete raw stderr bytes were archived.",
+  "experimental_effect": "None. W1 remains FAIL, W2 remains PASS, no further workflow execution."
+}

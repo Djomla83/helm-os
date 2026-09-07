@@ -1,0 +1,66 @@
+{
+  "recorded_utc": "2026-09-07T21:13:55.443031+00:00",
+  "failures_and_deviations": [
+    {
+      "item": "Original Hyper-V permission blocker",
+      "handling": "Historical 7b9ec6f preparation evidence retained. Owner performed membership addition; effective non-elevated access independently verified before VM creation."
+    },
+    {
+      "item": "GPG isolated-home path handling",
+      "handling": "MSYS GPG absolute-backslash home lookup failed; same key/signature bytes verified with a relative isolated home. Both command captures retained."
+    },
+    {
+      "item": "Computer-use native transport unavailable",
+      "handling": "Native pipe error was recorded; documented VM-scoped Hyper-V keyboard/mouse/framebuffer APIs used. No VMConnect/enhanced-session redirection or host GUI input was used."
+    },
+    {
+      "item": "Initial framebuffer conversion crashed PowerShell",
+      "handling": "Initial native buffer copy exceeded the requested pixel data by four bytes; crash exit and error were observed through the tool, not byte-captured as a stderr artifact. Original frame and failing script retained privately. Bounded conversion used without restarting the VM."
+    },
+    {
+      "item": "Keyboard input omissions",
+      "handling": "TypeText sequence produced unexpected text; long scancode batches omitted input. Short four-character batches were inspected before submitting a strong matching guest setup password. No weak setup account was submitted."
+    },
+    {
+      "item": "Ubuntu setup warnings",
+      "handling": "Installer security updates, unavailable debconf frontends, policy-rc.d daemon restart denials and outdated distro-info-data warning retained in private install logs. No installer rerun or process termination."
+    },
+    {
+      "item": "Guest .ssh folder already existed",
+      "handling": "mkdir reported existing directory. Project public-key placement completed; 700 directory and 600 authorized_keys modes/ownership subsequently observed. No existing personal credentials were transferred."
+    },
+    {
+      "item": "Windows ssh-keyscan KEX implementation error",
+      "handling": "Exit 1 and stderr retained. Existing Git OpenSSH 10.2p1 keyscan used; fingerprint matched guest-console observation before authentication. No legacy crypto or host-security downgrade."
+    },
+    {
+      "item": "Wine diagnostics",
+      "handling": "Prefix initialization retained Common-Controls, OLE 0x80004002/RpcSs and setupapi errors; runtime GUI captures retained EGL DRI3 warnings and Wine fixme/stub output. No runtime/version/fix switching."
+    },
+    {
+      "item": "W1 wrong output destination",
+      "handling": "Agent z/Enter input submitted Add before the output path was set. W1/V1 FAIL; accidental ZIP supplementary content PASS. No W1 retry, move, overwrite or relabelling. Before W2, the correction to GUI handling was recorded in workflow-w1-deviation.json; W2 remained the originally planned second execution."
+    },
+    {
+      "item": "Control ZIP metadata differs between Windows and Linux",
+      "handling": "Twelve creator-platform bytes differ; names and decompressed content match. Distinct control archive hashes retained; no helper or criteria edited."
+    },
+    {
+      "item": "Unprivileged final APT cache measurement denied",
+      "handling": "Original command exit 1 retained. Remaining own-file observations collected separately; administrative setup account measured the package cache read-only. No application execution repeated."
+    },
+    {
+      "item": "Evidence assembly filename mismatch",
+      "handling": "First screen-publication script referenced an action label without a PNG and exited 1. Existing event aggregation retained; actual recorded install-summary capture used. Failed script identity retained privately."
+    },
+    {
+      "item": "Inspection/formatting mistakes",
+      "handling": "Two screenshot reads raced unfinished captures; one rg wildcard and one guessed filename failed; PowerShell Select-Object on ordered dictionaries printed null fields while saved JSON contained the data. Failures changed no experimental outputs."
+    }
+  ],
+  "coverage_limits": [
+    "Colour depth was explicitly queried only after R1 (XWayland root depth 24); before-R1 depth was not separately evidenced. RGB565 thumbnail depth is a capture format, not desktop colour-depth proof.",
+    "W2 output-readback frame shows the new directory title/list while the editable address field still displays the previous text. No persistence or rendering-correctness conclusion is drawn from this single frame.",
+    "The display-session metadata is local Wayland/GNOME, while the actual 7zFM process mapped winex11.so/winex11.drv and ran through XWayland. This is not native Wine Wayland-driver coverage."
+  ]
+}

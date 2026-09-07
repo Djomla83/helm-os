@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmlab@<lab-guest-ip>",
+    "python3 -c 'import json; from pathlib import Path; p=Path(\"/proc/12555\"); assert p.stat().st_uid==1001; assert (p/\"comm\").read_text().strip()==\"gnome-shell\"; e=dict(x.split(b\"=\",1) for x in (p/\"environ\").read_bytes().split(b\"\\0\") if b\"=\" in x); keys=[\"DISPLAY\",\"WAYLAND_DISPLAY\",\"XDG_SESSION_TYPE\",\"XDG_RUNTIME_DIR\",\"XAUTHORITY\",\"DBUS_SESSION_BUS_ADDRESS\"]; print(json.dumps({k:e.get(k.encode(),b\"\").decode() for k in keys}))'"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T20:47:29.668542+00:00",
+  "exit_code": 0,
+  "stdout_base64": "eyJESVNQTEFZIjogIiIsICJXQVlMQU5EX0RJU1BMQVkiOiAiIiwgIlhER19TRVNTSU9OX1RZUEUiOiAid2F5bGFuZCIsICJYREdfUlVOVElNRV9ESVIiOiAiL3J1bi91c2VyLzEwMDEiLCAiWEFVVEhPUklUWSI6ICIiLCAiREJVU19TRVNTSU9OX0JVU19BRERSRVNTIjogInVuaXg6cGF0aD0vcnVuL3VzZXIvMTAwMS9idXMifQo=",
+  "stderr_base64": "",
+  "stdout": "{\"DISPLAY\": \"\", \"WAYLAND_DISPLAY\": \"\", \"XDG_SESSION_TYPE\": \"wayland\", \"XDG_RUNTIME_DIR\": \"/run/user/1001\", \"XAUTHORITY\": \"\", \"DBUS_SESSION_BUS_ADDRESS\": \"unix:path=/run/user/1001/bus\"}\n",
+  "stderr": "",
+  "ended_utc": "2026-09-07T20:47:29.865628+00:00",
+  "duration_seconds": 0.19708320003701374,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "a328fe285f34878da1afd7b3ba8ff0038af2a735b413b1e888a961166b24fcbb",
+    "raw_bytes": 1982,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}
