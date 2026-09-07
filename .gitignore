@@ -29,3 +29,6 @@ artifacts/
 private/
 secrets/
 .DS_Store
+
+# Sacuvane anti-bot/error stranice iz neuspelih preuzimanja (sadrze IP i tokene)
+wspec.txt

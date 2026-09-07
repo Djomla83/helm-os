@@ -1,6 +1,6 @@
 # Stvarno objavljivanje repozitorijuma
 
-**Predložena destinacija:** `Djomla83/helm-os-design`. Naziv je predlog, ne potvrda
+**Predložena destinacija:** `Djomla83/helm-os`. Naziv je predlog, ne potvrda
 slobodnog imena niti dokaz da udaljeni repo postoji. U ovoj sesiji novi GitHub
 repo nije kreiran. Postojeći repozitorijumi nisu menjani.
 
@@ -13,7 +13,7 @@ Ne deliti token u chatu, issue-u ili fajlu repozitorijuma.
 
 ## Put A — raspakovan izvorni ZIP, bez Git istorije
 
-Uđite u direktorijum `helm-os-design`. Prvo završite licencnu odluku, zatim:
+Uđite u direktorijum `helm-os`. Prvo završite licencnu odluku, zatim:
 
 ```bash
 python3 tools/validate_docs.py
@@ -37,7 +37,7 @@ gh auth login
 Ne izvršavati je dok sadržaj i licenca nisu pregledani.
 
 ```bash
-gh repo create Djomla83/helm-os-design --public --source=. --remote=origin --push
+gh repo create Djomla83/helm-os --public --source=. --remote=origin --push
 ```
 
 Sintaksa je proverena prema [zvaničnom CLI uputstvu](https://cli.github.com/manual/gh_repo_create).
@@ -47,8 +47,8 @@ Prvo proverite njegov sadržaj i odlučite o bezbednoj integraciji kroz granu/PR
 ## Put B — Git bundle sa pripremljenom lokalnom istorijom
 
 ```bash
-git clone HELM_OS_DESIGN.bundle helm-os-design
-cd helm-os-design
+git clone HELM_OS_DESIGN.bundle helm-os
+cd helm-os
 git remote remove origin
 ```
 
@@ -59,7 +59,7 @@ primenite istu `gh repo create` komandu. Bundle nije GitHub objava.
 ## Provera posle objavljivanja
 
 ```bash
-gh repo view Djomla83/helm-os-design --json nameWithOwner,url,visibility
+gh repo view Djomla83/helm-os --json nameWithOwner,url,visibility
 git remote -v
 git rev-parse HEAD
 ```

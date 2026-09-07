@@ -8,6 +8,9 @@ pretpostavki i predlog najmanjeg PoC-a (`docs/experiments/EXP-009.md`). Dodato s
 predloženih ADR-ova (0013–0019); nijedan postojeći ADR nije menjan. Ažurirani
 `docs/PROJECT_STATE.md`, indeksi i registar tvrdnji.
 
+Predlozeni naziv repozitorijuma promenjen iz `helm-os-design` u `helm-os`; master plan je
+podignut na reviziju 0.1.1 sa zapisom te promene.
+
 Novi dokumenti su na engleskom po uputstvu vlasnika, što odstupa od jezičnog pravila u
 `CONTRIBUTING.md` i traži odluku vlasnika. Nijedan aplikacioni test, benchmark, sandbox
 audit ni hardverski test nije izvršen. Stopa kompatibilnosti ostaje nepoznata.

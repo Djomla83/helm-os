@@ -4,12 +4,12 @@
 
 | Polje | Vrednost |
 |---|---|
-| Revizija | 0.1.0 — početni nacrt |
+| Revizija | 0.1.1 — nacrt; ažuriran predloženi naziv repozitorijuma |
 | Datum | 6. septembar 2026. |
 | Jezik | Srpski, latinica |
 | Faza | Definisanje proizvoda i priprema eksperimenata |
 | Radni naziv | HELM OS; konačno ime nije izabrano |
-| Predloženo ime repozitorijuma | `helm-os-design` |
+| Predloženo ime repozitorijuma | `helm-os` |
 | Status implementacije | U ovom paketu nema implementiranog OS-a, App Forge-a, SDK-a ili jezika |
 | Rezultati kompatibilnosti | Nema izvršenih testova aplikacija; trenutna stopa je **nepoznata**, ne 95% |
 | Autorstvo dokumentacije | Početni nacrt pripremljen uz AI; odluke odobravaju imenovani ljudski održavaoci |
@@ -827,7 +827,7 @@ Važno je ponuditi benefit i samom proizvođaču: precizne bug report-e, manje n
 
 ## 30. Repozitorijum, dokumentacija i izvori istine
 
-Predlog je jedan početni **design-and-research repozitorijum**, a ne veliki monorepo koji odmah sadrži Linux, Wine, compiler i desktop. Imena `HELM` i `helm-os-design` su privremena. Pre brendiranja proveravamo postojeće projekte, pakete, domene i žigove; ovaj dokument ne potvrđuje dostupnost imena.
+Predlog je jedan početni **design-and-research repozitorijum**, a ne veliki monorepo koji odmah sadrži Linux, Wine, compiler i desktop. Imena `HELM` i `helm-os` su privremena. Pre brendiranja proveravamo postojeće projekte, pakete, domene i žigove; ovaj dokument ne potvrđuje dostupnost imena.
 
 Početna organizacija:
 
@@ -1216,6 +1216,7 @@ Ovaj paket može proći lokalnu proveru fajlova, linkova i primer zapisa. Takav 
 | Revizija | Datum | Promena |
 |---|---|---|
 | 0.1.0 | 2026-09-06 | Strukturisanje vizije, ograničenja, predloga arhitekture, testne metodologije, agent pravila i početnog backlog-a. |
+| 0.1.1 | 2026-09-07 | Predloženi naziv repozitorijuma promenjen iz `helm-os-design` u `helm-os` (odluka vlasnika). Sadržajno ništa drugo nije menjano; ime i dalje nije provereno na dostupnost brenda. |
 
 **Završni princip:** dokumentujemo dovoljno da sledeći korak bude jasan i proverljiv. Zatim eksperimentom proveravamo najrizičniju pretpostavku. Ne čekamo savršenu knjigu, ali ne gradimo ni na neproverenim obećanjima.
 
