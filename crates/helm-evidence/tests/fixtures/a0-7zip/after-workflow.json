@@ -1,0 +1,19 @@
+{
+  "version": "0.1",
+  "workflow": "W2",
+  "boot_id": "77fc6b8f-d5c2-4fec-ba14-d3c680d2e0cb",
+  "steps": [
+    {
+      "id": "W2",
+      "status": "PASS"
+    },
+    {
+      "id": "V2",
+      "status": "PASS"
+    }
+  ],
+  "output": {
+    "path": "outputs/after-restart/workflow.zip",
+    "sha256": "8f7b7192808b03275239785bc561127e4a1e3cee5edb8471bfff1d33703356e9"
+  }
+}

@@ -1,0 +1,212 @@
+{
+  "schema": "helm-evidence",
+  "version": "0.1",
+  "experiment": "EXP-009-A0-7ZIP",
+  "application": {
+    "id": "7zip-x64",
+    "version": "26.03",
+    "source_sha256": "0859c524b8a63551848f0c246abddcb1d0b7b656b0fbfe879f8d85e61a9e6edd"
+  },
+  "experimental_verdict": "FAIL",
+  "artifacts": [
+    {
+      "id": "summary",
+      "path": "summary.json",
+      "sha256": "d3410a4fc87b27a6de03bdd992576d537d6e021722de65d0819dc87935258cf0"
+    },
+    {
+      "id": "deviation",
+      "path": "deviation.json",
+      "sha256": "3f74af85e32e6274c2d989c762f9c28476a9b8605aa159732154e91686222937"
+    },
+    {
+      "id": "before-result",
+      "path": "before-result.json",
+      "sha256": "4f5455bd6f92038ca88348c5af17df39ef1b66501b66d79590c055fac88af0e9"
+    },
+    {
+      "id": "before-missing",
+      "path": "before-missing.json",
+      "sha256": "deb105644a8cf4e20002262fe0998ac159ff662e1258ebc5d50379455b2e4a7f"
+    },
+    {
+      "id": "after-result",
+      "path": "after-result.json",
+      "sha256": "dea27f01b12665b6ecacaf3b9215d04d13cdb4504ed427d9d2c6982064fa1056"
+    },
+    {
+      "id": "after-command",
+      "path": "after-command.json",
+      "sha256": "3a905be9d0f6f85697235809afe207658d5cdd320e5311a671d74e54340d2a40"
+    },
+    {
+      "id": "before-good",
+      "path": "before-good.json",
+      "sha256": "2f4c306d9f69bf7c4ddd80caaca05660e15eeaad96f836aec6fb228728185432"
+    },
+    {
+      "id": "before-bad",
+      "path": "before-bad.json",
+      "sha256": "85cbc786a8239716e726a4d52a34e0b89a05f77d36f2f53647850277faff841f"
+    },
+    {
+      "id": "after-good",
+      "path": "after-good.json",
+      "sha256": "544aebd9ee0c630c8c6efa6ef4ba25d296e6fa484c224e27e8d727d518e57e3d"
+    },
+    {
+      "id": "after-bad",
+      "path": "after-bad.json",
+      "sha256": "2cc2e1f29224882b73c6cd170517f328d1d11739c3ecd7c6994371f647f3a690"
+    },
+    {
+      "id": "before-gui",
+      "path": "before-gui.json",
+      "sha256": "56705b36984925af0809c7b6081d8a7b83b5f014dca19619664ca32d28248b3d"
+    },
+    {
+      "id": "after-gui",
+      "path": "after-gui.json",
+      "sha256": "57dddf376a6780d024798601ae5889d01963eafcabaa97ed1ad18e1c56966eb2"
+    },
+    {
+      "id": "installation",
+      "path": "installation.json",
+      "sha256": "8897ed27a8e104bb341a1ba053d073c1650fa38056b5218a088e3127268df8a7"
+    },
+    {
+      "id": "identities-before",
+      "path": "identities-before.json",
+      "sha256": "f1ded2865228894bff3f3583f8247b0d4e17437b3dc0fedcf8d11da259a49f47"
+    },
+    {
+      "id": "identities-after",
+      "path": "identities-after.json",
+      "sha256": "858c6310e8507c97e502922cf6f0eb0f179992caf1732e0e664f41bc9e0d4ade"
+    },
+    {
+      "id": "restart-command",
+      "path": "restart-command.json",
+      "sha256": "e575462fa7a1136b28ff5db6cc6bb0efc035fbb94497150e4f63c142cb0e6efc"
+    },
+    {
+      "id": "content-manifest",
+      "path": "content-manifest.json",
+      "sha256": "75d78bc6bc0f539df5ca8d54df34f406e44f2aa5ceb8a07bf3d856ce72747c8f"
+    },
+    {
+      "id": "before-workflow",
+      "path": "before-workflow.json",
+      "sha256": "9c1b149d761a9768548ded31d701d76c51906f085e3554c7a42d23baa307c5af"
+    },
+    {
+      "id": "after-workflow",
+      "path": "after-workflow.json",
+      "sha256": "bded7a4be02fb6e62165f9f874f6e9be721b0d3daa33a45e890c6aa822bb47e5"
+    },
+    {
+      "id": "restart",
+      "path": "restart.json",
+      "sha256": "dabee635f261c1c8b009305675e0ff0c145eb73a28706b4c45801ba886e412a1"
+    }
+  ],
+  "workflows": [
+    {
+      "id": "W1",
+      "phase": "before_restart",
+      "record": "before-workflow",
+      "steps": [
+        {
+          "id": "A1",
+          "evidence": [
+            "summary",
+            "installation"
+          ]
+        },
+        {
+          "id": "A2",
+          "evidence": [
+            "summary",
+            "identities-before"
+          ]
+        },
+        {
+          "id": "W1",
+          "evidence": [
+            "summary",
+            "before-gui",
+            "deviation"
+          ]
+        },
+        {
+          "id": "V1",
+          "evidence": [
+            "before-missing",
+            "before-result"
+          ]
+        }
+      ],
+      "output": {
+        "id": "V1",
+        "expected_path": "outputs/before-restart/workflow.zip",
+        "sha256": "8f7b7192808b03275239785bc561127e4a1e3cee5edb8471bfff1d33703356e9",
+        "content_result": "before-result",
+        "content_manifest": "content-manifest",
+        "known_good": {
+          "result": "before-good",
+          "sha256": "6e5d9fccf785742c3918d0b00b9eaa1801a4cc44f5593cf64fdfdf8d0f3e9e4a"
+        },
+        "deliberately_broken": {
+          "result": "before-bad",
+          "sha256": "5834e8a5a8ad3c50b8748f7c01932c269de03fe6f0e5a53a8079230c6e151376"
+        },
+        "local_artifact": null
+      }
+    },
+    {
+      "id": "W2",
+      "phase": "after_restart",
+      "record": "after-workflow",
+      "steps": [
+        {
+          "id": "W2",
+          "evidence": [
+            "summary",
+            "after-gui",
+            "identities-after"
+          ]
+        },
+        {
+          "id": "V2",
+          "evidence": [
+            "after-result",
+            "after-command"
+          ]
+        }
+      ],
+      "output": {
+        "id": "V2",
+        "expected_path": "outputs/after-restart/workflow.zip",
+        "sha256": "8f7b7192808b03275239785bc561127e4a1e3cee5edb8471bfff1d33703356e9",
+        "content_result": "after-result",
+        "content_manifest": "content-manifest",
+        "known_good": {
+          "result": "after-good",
+          "sha256": "6e5d9fccf785742c3918d0b00b9eaa1801a4cc44f5593cf64fdfdf8d0f3e9e4a"
+        },
+        "deliberately_broken": {
+          "result": "after-bad",
+          "sha256": "5834e8a5a8ad3c50b8748f7c01932c269de03fe6f0e5a53a8079230c6e151376"
+        },
+        "local_artifact": null
+      }
+    }
+  ],
+  "restart": {
+    "record": "restart",
+    "evidence": [
+      "restart-command",
+      "summary"
+    ]
+  }
+}

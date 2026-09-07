@@ -1,0 +1,5 @@
+{
+  "version": "0.1",
+  "before_boot_id": "boot-before",
+  "after_boot_id": "boot-after"
+}

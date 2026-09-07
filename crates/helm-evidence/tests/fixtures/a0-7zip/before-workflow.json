@@ -1,0 +1,27 @@
+{
+  "version": "0.1",
+  "workflow": "W1",
+  "boot_id": "2d64c822-205d-4bfc-bdaa-f21e50cd38bc",
+  "steps": [
+    {
+      "id": "A1",
+      "status": "PASS"
+    },
+    {
+      "id": "A2",
+      "status": "PASS"
+    },
+    {
+      "id": "W1",
+      "status": "FAIL"
+    },
+    {
+      "id": "V1",
+      "status": "FAIL"
+    }
+  ],
+  "output": {
+    "path": "inputs/fixture.zip",
+    "sha256": "8f7b7192808b03275239785bc561127e4a1e3cee5edb8471bfff1d33703356e9"
+  }
+}

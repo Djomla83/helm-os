@@ -1,0 +1,17 @@
+{
+  "scope": "ZIP output-content verification only",
+  "verdict": "FAIL",
+  "errors": [
+    "Synthetic seeded content defect"
+  ],
+  "files": [
+    {
+      "path": "payload.txt",
+      "bytes": 7,
+      "sha256": "cdd6c109503d4e19cad782eef4d9ba162af0d84727445edbb9d300df1adc6048"
+    }
+  ],
+  "archive_sha256": "5fbe61bc974ed416d17f5974029be4948300a094158deebc276c42b939980bc1",
+  "archive_bytes": 53,
+  "fixture_manifest_sha256": "3f2812353662209861b4538b35c8fc1b6161a749ce9a4d1572d3f6150216ca4a"
+}

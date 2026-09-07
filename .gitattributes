@@ -11,3 +11,6 @@ docs/experiments/evidence/app-baseline-2026-09-07/** -text whitespace=cr-at-eol
 
 # Preserve captures for the resumed A0-7ZIP VM execution separately from preparation.
 docs/experiments/evidence/app-baseline-execution-2026-09-07/** -text whitespace=cr-at-eol
+
+# A0 regression copies retain the exact published artifact bytes.
+crates/helm-evidence/tests/fixtures/a0-7zip/*.json -text whitespace=cr-at-eol

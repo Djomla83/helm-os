@@ -1,0 +1,53 @@
+{
+  "argv": [
+    "ssh.exe",
+    "-F",
+    "NUL",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "IdentitiesOnly=yes",
+    "-o",
+    "IdentityAgent=none",
+    "-o",
+    "ForwardAgent=no",
+    "-o",
+    "ForwardX11=no",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "-o",
+    "ConnectTimeout=15",
+    "-o",
+    "UserKnownHostsFile=C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\known_hosts",
+    "-i",
+    "C:\\Users\\<redacted>\\helm-private-provenance\\app-baseline-resume-20260907T190509Z\\ssh\\id_ed25519",
+    "helmsetup@<lab-guest-ip>",
+    "sudo -S -p '' -- systemctl reboot"
+  ],
+  "cwd": "C:\\Users\\<redacted>\\Desktop\\helm-os",
+  "started_utc": "2026-09-07T20:55:52.673630+00:00",
+  "stdin": "Private guest credential supplied on stdin; not retained in this record",
+  "exit_code": 0,
+  "stdout": "",
+  "stderr": "",
+  "stdout_base64": "",
+  "stderr_base64": "",
+  "ended_utc": "2026-09-07T20:55:53.040660+00:00",
+  "duration_seconds": 0.36702540004625916,
+  "scope": "SSH command capture in dedicated guest; command exit is not an application verdict",
+  "script_sha256": "596394eb71e78225678ce5bdafe994a585fa8d0fe142dd64cda3f3dd62ab4672",
+  "publication_provenance": {
+    "redacted": true,
+    "raw_sha256": "fd48f30389f872d5bbe6f0c9d871caeb2a5b457689d8538bec301d6aebb3ed11",
+    "raw_bytes": 1190,
+    "redacted_fields": [
+      "argv[19]",
+      "argv[21]",
+      "argv[22]",
+      "cwd"
+    ],
+    "raw_location": "Private project archive outside Git",
+    "publication_is_byte_identical_to_raw": false
+  }
+}

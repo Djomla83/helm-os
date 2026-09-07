@@ -10,6 +10,13 @@ kontrolu i proverljivu podršku za odabrani Windows softver.
 > OS-a, instalacionog ISO-a, implementiranog App Forge-a, SDK-a ili novog jezika.
 > Cilj od 95% kompatibilnosti nije postignut niti izmeren.
 
+**Implementation update, 2026-09-08:** [helm-evidence](crates/helm-evidence/README.md)
+is the first bounded Rust module, an offline, read-only evidence-bundle verifier.
+It checks declared evidence requirements, not general application compatibility.
+A0-7ZIP's experimental FAIL remains preserved; the larger Evidence Loop PoC and
+other product subsystems are not authorised. See the
+[implementation review](docs/implementation/HELM-EVIDENCE-REVIEW.md).
+
 ## Počnite ovde
 
 | Dokument | Namena |

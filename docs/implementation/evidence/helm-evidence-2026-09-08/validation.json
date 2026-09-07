@@ -1,0 +1,186 @@
+{
+  "scope": "Verifier implementation and repository checks; no application rerun",
+  "head_at_check": "ae3f012fb1bfd7b20018c3faf6c71a6740a041fe",
+  "branch": "product/helm-evidence",
+  "log_redaction": "Absolute repository root replaced with <repo>; output otherwise retained",
+  "commands": [
+    {
+      "argv": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.1375168999657035,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cargo",
+        "clippy",
+        "--workspace",
+        "--all-targets",
+        "--locked",
+        "--offline",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.2349767000414431,
+      "stdout": "",
+      "stderr": "    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.13s\n"
+    },
+    {
+      "argv": [
+        "cargo",
+        "test",
+        "--workspace",
+        "--locked",
+        "--offline"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 1.9699547999771312,
+      "stdout": "\nrunning 3 tests\ntest bundle::tests::identity_syntax_is_bounded ... ok\ntest bundle::tests::rejects_portable_escape_and_device_spellings ... ok\ntest oracle::tests::unicode_archive_names_are_data ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 10 tests\ntest manifest_symlink_outside_is_rejected ... ok\ntest directories_cannot_masquerade_as_files ... ok\ntest file_symlink_outside_cannot_supply_artifact ... ok\ntest directory_symlink_outside_cannot_supply_artifact ... ok\ntest opaque_shell_text_is_never_executed ... ok\ntest diagnostics_do_not_echo_host_paths_or_bundle_text ... ok\ntest contained_and_dangling_symlinks_are_rejected ... ok\ntest traversal_absolute_url_and_windows_device_paths_are_rejected ... ok\ntest windows_junction_outside_is_rejected ... ok\ntest manifest_artifact_and_total_size_limits ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.51s\n\n\nrunning 30 tests\ntest fully_complete_bundle ... ok\ntest a0_preserves_failure_and_w2_independent_success ... ok\ntest equivalent_file_elsewhere_does_not_replace_missing_destination ... ok\ntest broken_control_must_evidence_content_defect ... ok\ntest known_good_rejected_is_invalid ... ok\ntest local_output_reference_cannot_declare_a_different_destination ... ok\ntest broken_control_incorrectly_accepted ... ok\ntest invalid_takes_precedence_over_incomplete ... ok\ntest missing_broken_control ... ok\ntest unknown_schema_version_rejected ... ok\ntest missing_known_good_control ... ok\ntest complete_evidence_can_record_experimental_fail ... ok\ntest content_pass_cannot_override_wrong_destination ... ok\ntest unknown_mandatory_field_rejected ... ok\ntest missing_required_artifact ... ok\ntest restart_evidence_missing ... ok\ntest missing_output_observation_does_not_infer_from_content ... ok\ntest unexpected_optional_artifact_ignored ... ok\ntest missing_step_is_incomplete ... ok\ntest wrong_artifact_hash ... ok\ntest oracle_hash_must_bind_the_actual_output ... ok\ntest oracle_pass_with_wrong_content_is_invalid ... ok\ntest unchanged_boot_is_invalid ... ok\ntest missing_workflow_boot_is_incomplete ... ok\ntest workflow_on_wrong_boot_is_invalid ... ok\ntest verification_is_read_only ... ok\ntest duplicate_step_or_artifact_id_rejected ... ok\ntest not_run_and_blocked_steps_are_incomplete ... ok\ntest cli_json_deterministic_and_exit_codes ... ok\ntest malformed_inputs_fail_without_panic ... ok\n\ntest result: ok. 30 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+      "stderr": "    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.14s\n     Running unittests src\\lib.rs (target\\debug\\deps\\helm_evidence-9f87b1ba1d737e46.exe)\n     Running unittests src\\main.rs (target\\debug\\deps\\helm_evidence-5496805038ae05bb.exe)\n     Running tests\\security.rs (target\\debug\\deps\\security-8ddfa158c029da10.exe)\n     Running tests\\verification.rs (target\\debug\\deps\\verification-f82993e13fb47892.exe)\nUsage: helm-evidence verify <bundle-directory> [--json]\nUsage: helm-evidence verify <bundle-directory> [--json]\nUsage: helm-evidence verify <bundle-directory> [--json]\nUsage: helm-evidence verify <bundle-directory> [--json]\n   Doc-tests helm_evidence\n"
+    },
+    {
+      "argv": [
+        "python",
+        "tools/validate_docs.py"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 1.0603737000492401,
+      "stdout": "{\"json_files\": 211, \"link_targets\": 765, \"markdown_files\": 83}\r\nPASS: lokalna struktura dokumentacije i osnovne JSON invarijante.\r\nNisu provereni web URL dostupnost, istinitost dokaza, OS, aplikacije ili sandbox.\r\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "tools/tests",
+        "-v"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.5062330999644473,
+      "stdout": "",
+      "stderr": "test_archive_size_limit_is_enforced (test_app_baseline.ArchiveVerifierTests.test_archive_size_limit_is_enforced) ... ok\r\ntest_capture_preserves_bytes_and_nonzero_process_status (test_app_baseline.ArchiveVerifierTests.test_capture_preserves_bytes_and_nonzero_process_status) ... ok\r\ntest_crc_corruption_is_rejected (test_app_baseline.ArchiveVerifierTests.test_crc_corruption_is_rejected) ... ok\r\ntest_deflate_and_implicit_ancestor_directories_are_valid (test_app_baseline.ArchiveVerifierTests.test_deflate_and_implicit_ancestor_directories_are_valid) ... ok\r\ntest_duplicate_member_is_rejected (test_app_baseline.ArchiveVerifierTests.test_duplicate_member_is_rejected) ... ok\r\ntest_existing_fixtures_and_records_are_preserved (test_app_baseline.ArchiveVerifierTests.test_existing_fixtures_and_records_are_preserved) ... ok\r\ntest_extra_and_traversal_path_rejected_without_extraction (test_app_baseline.ArchiveVerifierTests.test_extra_and_traversal_path_rejected_without_extraction) ... ok\r\ntest_good_control_covers_all_literal_files (test_app_baseline.ArchiveVerifierTests.test_good_control_covers_all_literal_files) ... ok\r\ntest_independently_encoded_stored_zip (test_app_baseline.ArchiveVerifierTests.test_independently_encoded_stored_zip) ... ok\r\ntest_missing_empty_directory_is_rejected (test_app_baseline.ArchiveVerifierTests.test_missing_empty_directory_is_rejected) ... ok\r\ntest_missing_empty_file_is_rejected (test_app_baseline.ArchiveVerifierTests.test_missing_empty_file_is_rejected) ... ok\r\ntest_same_size_wrong_text_is_rejected (test_app_baseline.ArchiveVerifierTests.test_same_size_wrong_text_is_rejected) ... ok\r\ntest_symlink_entry_is_rejected (test_app_baseline.ArchiveVerifierTests.test_symlink_entry_is_rejected) ... ok\r\ntest_truncated_archive_is_rejected (test_app_baseline.ArchiveVerifierTests.test_truncated_archive_is_rejected) ... ok\r\ntest_valid_zip_with_corrupted_payload_is_rejected (test_app_baseline.ArchiveVerifierTests.test_valid_zip_with_corrupted_payload_is_rejected) ... ok\r\ntest_publication_hashes_and_exact_projections (test_helm_evidence_fixture.PublishedFixtureTests.test_publication_hashes_and_exact_projections) ... ok\r\ntest_code_links_ignored (test_validate_docs.MarkdownTests.test_code_links_ignored) ... ok\r\ntest_existing_link_and_explicit_anchor (test_validate_docs.MarkdownTests.test_existing_link_and_explicit_anchor) ... ok\r\ntest_external_url_not_fetched (test_validate_docs.MarkdownTests.test_external_url_not_fetched) ... ok\r\ntest_json_syntax_error_reported (test_validate_docs.MarkdownTests.test_json_syntax_error_reported) ... ok\r\ntest_missing_anchor (test_validate_docs.MarkdownTests.test_missing_anchor) ... ok\r\ntest_missing_target (test_validate_docs.MarkdownTests.test_missing_target) ... ok\r\ntest_reference_definition_required (test_validate_docs.MarkdownTests.test_reference_definition_required) ... ok\r\ntest_repo_escape_rejected (test_validate_docs.MarkdownTests.test_repo_escape_rejected) ... ok\r\ntest_unclosed_fence (test_validate_docs.MarkdownTests.test_unclosed_fence) ... ok\r\ntest_bad_workflow_element_does_not_crash (test_validate_docs.RecordTests.test_bad_workflow_element_does_not_crash) ... ok\r\ntest_draft_cohort_cannot_claim_rate (test_validate_docs.RecordTests.test_draft_cohort_cannot_claim_rate) ... ok\r\ntest_duplicate_cohort_identifier (test_validate_docs.RecordTests.test_duplicate_cohort_identifier) ... ok\r\ntest_fake_verified_rejected (test_validate_docs.RecordTests.test_fake_verified_rejected) ... ok\r\ntest_invalid_hash_rejected (test_validate_docs.RecordTests.test_invalid_hash_rejected) ... ok\r\ntest_non_object_rejected (test_validate_docs.RecordTests.test_non_object_rejected) ... ok\r\ntest_timestamp_requires_timezone (test_validate_docs.RecordTests.test_timestamp_requires_timezone) ... ok\r\ntest_unknown_field_rejected (test_validate_docs.RecordTests.test_unknown_field_rejected) ... ok\r\ntest_untested_example (test_validate_docs.RecordTests.test_untested_example) ... ok\r\ntest_untested_with_date_rejected (test_validate_docs.RecordTests.test_untested_with_date_rejected) ... ok\r\ntest_untested_with_evidence_rejected (test_validate_docs.RecordTests.test_untested_with_evidence_rejected) ... ok\r\n\r\n----------------------------------------------------------------------\r\nRan 36 tests in 0.366s\r\n\r\nOK\r\n"
+    },
+    {
+      "argv": [
+        "python",
+        "tools/helm_evidence_fixture.py"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.0833932000095956,
+      "stdout": "{\"application_executions\": 0, \"fixture_bytes\": 40366, \"fixture_files_checked\": 22, \"historical_files_modified\": 0}\r\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.03443649999098852,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--cached",
+        "--check"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.034919400000944734,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "audit": {
+    "historical_publication_hashes_checked": 153,
+    "historical_sources_unchanged_against": "ae3f012fb1bfd7b20018c3faf6c71a6740a041fe",
+    "publication_files_scanned": [
+      ".gitattributes",
+      ".gitignore",
+      "Cargo.lock",
+      "Cargo.toml",
+      "README.md",
+      "crates/helm-evidence/Cargo.toml",
+      "crates/helm-evidence/README.md",
+      "crates/helm-evidence/src/bundle.rs",
+      "crates/helm-evidence/src/lib.rs",
+      "crates/helm-evidence/src/main.rs",
+      "crates/helm-evidence/src/model.rs",
+      "crates/helm-evidence/src/oracle.rs",
+      "crates/helm-evidence/tests/fixtures/a0-7zip/after-bad.json",
+      "crates/helm-evidence/tests/fixtures/a0-7zip/after-command.json",
+      "crates/helm-evidence/tests/fixtures/a0-7zip/after-good.json",
+      "crates/helm-evidence/tests/fixtures/a0-7zip/after-gui.json",
+      "crates/helm-evidence/tests/fixtures/a0-7zip/after-result.json",
+      "crates/helm-evidence/tests/fixtures/a0-7zip/after-workflow.json",
+      "crates/helm-evidence/tests/fixtures/a0-7zip/before-bad.json",
+      "crates/helm-evidence/tests/fixtures/a0-7zip/before-good.json",
+      "crates/helm-evidence/tests/fixtures/a0-7zip/before-gui.json",
+      "crates/helm-evidence/tests/fixtures/a0-7zip/before-missing.json",
+      "crates/helm-evidence/tests/fixtures/a0-7zip/before-result.json",
+      "crates/helm-evidence/tests/fixtures/a0-7zip/before-workflow.json",
+      "crates/helm-evidence/tests/fixtures/a0-7zip/bundle.json",
+      "crates/helm-evidence/tests/fixtures/a0-7zip/content-manifest.json",
+      "crates/helm-evidence/tests/fixtures/a0-7zip/deviation.json",
+      "crates/helm-evidence/tests/fixtures/a0-7zip/identities-after.json",
+      "crates/helm-evidence/tests/fixtures/a0-7zip/identities-before.json",
+      "crates/helm-evidence/tests/fixtures/a0-7zip/installation.json",
+      "crates/helm-evidence/tests/fixtures/a0-7zip/provenance.json",
+      "crates/helm-evidence/tests/fixtures/a0-7zip/restart-command.json",
+      "crates/helm-evidence/tests/fixtures/a0-7zip/restart.json",
+      "crates/helm-evidence/tests/fixtures/a0-7zip/summary.json",
+      "crates/helm-evidence/tests/fixtures/synthetic/after.json",
+      "crates/helm-evidence/tests/fixtures/synthetic/bad.json",
+      "crates/helm-evidence/tests/fixtures/synthetic/before.json",
+      "crates/helm-evidence/tests/fixtures/synthetic/bundle.json",
+      "crates/helm-evidence/tests/fixtures/synthetic/good.json",
+      "crates/helm-evidence/tests/fixtures/synthetic/manifest.json",
+      "crates/helm-evidence/tests/fixtures/synthetic/outputs/after/output.dat",
+      "crates/helm-evidence/tests/fixtures/synthetic/outputs/before/output.dat",
+      "crates/helm-evidence/tests/fixtures/synthetic/restart.json",
+      "crates/helm-evidence/tests/fixtures/synthetic/result.json",
+      "crates/helm-evidence/tests/security.rs",
+      "crates/helm-evidence/tests/support/mod.rs",
+      "crates/helm-evidence/tests/verification.rs",
+      "docs/PROJECT_STATE.md",
+      "docs/implementation/HELM-EVIDENCE-REVIEW.md",
+      "docs/implementation/HELM-EVIDENCE-START.md",
+      "docs/implementation/evidence/helm-evidence-2026-09-08/measurements.json",
+      "docs/implementation/evidence/helm-evidence-2026-09-08/validation.json",
+      "tools/check_helm_evidence.py",
+      "tools/helm_evidence_fixture.py",
+      "tools/measure_helm_evidence.py",
+      "tools/tests/test_helm_evidence_fixture.py",
+      "tools/validate_docs.py"
+    ],
+    "decoded_command_streams_scanned": 10,
+    "git_index_fixture_artifacts_checked": 29,
+    "product_source_sha256": {
+      "Cargo.toml": "713c05a3dfe7fa78ccf79faa25853c1169587aad5eef952483b11905bd23dce1",
+      "Cargo.lock": "693c2af3b4b98c4f4b34b5baeb94c68fb6091720a39e7e9e903957f0cd26c943",
+      "crates/helm-evidence/Cargo.toml": "e86264e60050d389c472e8d05015378c60355347333f362df85b1e81df3aed1a",
+      "crates/helm-evidence/src/bundle.rs": "2e368a45ac74b78d70d065d976a07da0e23d5d74072fdf4f59ceeab204397b4f",
+      "crates/helm-evidence/src/lib.rs": "bfebad45f15ec7f5a2a77980060838f46064f4ab9f4d0f04855e7587e746d8ff",
+      "crates/helm-evidence/src/main.rs": "20c9bff6415cd2ad9af5603e82f168d10f9cdcb176f90388c9bb1d35e4d0608d",
+      "crates/helm-evidence/src/model.rs": "670cf3acb2248f505463db0b3ad64b6b6e0113d632fcc2e3497d16a80501ef86",
+      "crates/helm-evidence/src/oracle.rs": "11e94c2420572f1d39937e1affbf96e3fb2769e8298a4da1d2bbb7f496b47237"
+    },
+    "privacy_scan_scope": "Changed and new unignored files, UTF-8 and decoded stdout/stderr; current host root/home/account paths plus common credential markers; not a comprehensive secret detector",
+    "product_side_effect_api_scan": "No command/network/file-write/unsafe-block API pattern in product src"
+  }
+}

@@ -1,5 +1,13 @@
 # Stanje projekta
 
+> **Implementation update, 2026-09-08:** the first bounded Rust module,
+> [helm-evidence](../crates/helm-evidence/README.md), implements read-only verification
+> of declared evidence contracts. [Review and validation](implementation/HELM-EVIDENCE-REVIEW.md)
+> supersede earlier statements that no product module exists. The owner accepts
+> A0-7ZIP as a completed experimental baseline with its overall FAIL preserved.
+> No application rerun, larger Evidence Loop PoC, architecture ADR acceptance,
+> licence selection or other subsystem is included in this authorisation.
+
 > Current status: the [application-baseline execution below](#application-baseline) supersedes earlier dated
 > snapshots, including their aggregate counts and publication/isolation claims. Historical text is
 > retained; the [Gate 0 report](experiments/EXP-009-GATE0-REPORT.md#current-assessment) governs Gate 0,

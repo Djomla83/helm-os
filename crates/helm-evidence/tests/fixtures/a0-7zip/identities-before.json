@@ -1,0 +1,76 @@
+{
+  "mode": "installed",
+  "uid": 1001,
+  "groups": [
+    1001
+  ],
+  "source_commit": "5a83f8cb2fbb5a3597ddff6b5cae9cb813f1c5ae",
+  "observation_script_sha256": "f012436bc6868334cabdfe31818fd3ae67126d9737cb9a80084d2ae69cbfb1ae",
+  "boot_id": "2d64c822-205d-4bfc-bdaa-f21e50cd38bc",
+  "environment": {
+    "DISPLAY": null,
+    "WAYLAND_DISPLAY": null,
+    "XDG_SESSION_TYPE": "tty",
+    "XDG_RUNTIME_DIR": "/run/user/1001",
+    "XAUTHORITY": null,
+    "DBUS_SESSION_BUS_ADDRESS": "unix:path=/run/user/1001/bus",
+    "WINEPREFIX": null,
+    "WINEARCH": null,
+    "WINEDLLOVERRIDES": null,
+    "WINEDEBUG": null,
+    "SSH_AUTH_SOCK": null,
+    "DOCKER_HOST": null
+  },
+  "files": [
+    {
+      "path": "prefix/drive_c/Program Files/7-Zip/7zFM.exe",
+      "bytes": 1003520,
+      "sha256": "7f7067b2264fbf8cbd1348cf7f41a0e35c928de750d53533c963ebe334dbd612",
+      "pe_machine": "0x8664",
+      "versions": {
+        "CompanyName": "Igor Pavlov",
+        "FileDescription": "7-Zip File Manager",
+        "FileVersion": "26.03",
+        "InternalName": "7zFM",
+        "LegalCopyright": "Copyright (c) 1999-2026 Igor Pavlov",
+        "OriginalFilename": "7zFM.exe",
+        "ProductName": "7-Zip",
+        "ProductVersion": "26.03"
+      }
+    },
+    {
+      "path": "prefix/drive_c/Program Files/7-Zip/7z.exe",
+      "bytes": 577536,
+      "sha256": "6ee3c0ed0b27663c1b948ae85a7c0bb073aed1498983182f3f0df1f6a8c30b2f",
+      "pe_machine": "0x8664",
+      "versions": {
+        "CompanyName": "Igor Pavlov",
+        "FileDescription": "7-Zip Console",
+        "FileVersion": "26.03",
+        "InternalName": "7z",
+        "LegalCopyright": "Copyright (c) 1999-2026 Igor Pavlov",
+        "OriginalFilename": "7z.exe",
+        "ProductName": "7-Zip",
+        "ProductVersion": "26.03"
+      }
+    },
+    {
+      "path": "prefix/drive_c/Program Files/7-Zip/7z.dll",
+      "bytes": 1906688,
+      "sha256": "65e4c1f855f9ef6e8f0f5df8e3f27d9eb5f07311408639da0a1ca0b8f4871b0d",
+      "pe_machine": "0x8664",
+      "versions": {
+        "CompanyName": "Igor Pavlov",
+        "FileDescription": "7z Plugin",
+        "FileVersion": "26.03",
+        "InternalName": "7z",
+        "LegalCopyright": "Copyright (c) 1999-2026 Igor Pavlov",
+        "OriginalFilename": "7z.dll",
+        "ProductName": "7-Zip",
+        "ProductVersion": "26.03"
+      }
+    }
+  ],
+  "all_x64": true,
+  "scope": "Installed file identity; GUI operation and output content are separate checks"
+}

@@ -1,0 +1,11 @@
+{
+  "scope": "ZIP output-content verification only",
+  "started_utc": "2026-09-07T20:53:52.776246+00:00",
+  "verdict": "FAIL",
+  "errors": [
+    "FileNotFoundError: [Errno 2] No such file or directory: 'outputs/before-restart/workflow.zip'"
+  ],
+  "files": [],
+  "ended_utc": "2026-09-07T20:53:52.776270+00:00",
+  "fixture_manifest_sha256": "75d78bc6bc0f539df5ca8d54df34f406e44f2aa5ceb8a07bf3d856ce72747c8f"
+}

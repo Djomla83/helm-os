@@ -1,0 +1,15 @@
+{
+  "version": "0.1",
+  "workflow": "W2",
+  "boot_id": "boot-after",
+  "steps": [
+    {
+      "id": "W2",
+      "status": "PASS"
+    }
+  ],
+  "output": {
+    "path": "outputs/after/output.dat",
+    "sha256": "ed8a8bb2b422f1abe680a8f2eeeb393e4d1a96f5396e6312096471cee8fab028"
+  }
+}

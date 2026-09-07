@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
-EXCLUDED = {".git", "__pycache__", ".venv", "venv", "build", "dist", "private", "secrets"}
+EXCLUDED = {".git", "__pycache__", ".venv", "venv", "build", "dist", "target", "private", "secrets"}
 STATUSES = {"not_tested", "blocked", "failed", "partial", "verified", "stale"}
 ROUTES = {"undecided", "native", "wine", "steam-proton", "windows-vm"}
 SHA256 = re.compile(r"^[0-9a-f]{64}$")

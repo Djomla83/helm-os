@@ -1,0 +1,15 @@
+{
+  "scope": "ZIP output-content verification only",
+  "verdict": "PASS",
+  "errors": [],
+  "files": [
+    {
+      "path": "payload.txt",
+      "bytes": 18,
+      "sha256": "0e2cee07833ba79d52eb70f4de383de208f70c4976371efa5b88e677ee5e83c6"
+    }
+  ],
+  "archive_sha256": "1672c72c22a8dc028ba9f6b51a65f72dbac3e66fd2985893a20c6483effd1943",
+  "archive_bytes": 53,
+  "fixture_manifest_sha256": "3f2812353662209861b4538b35c8fc1b6161a749ce9a4d1572d3f6150216ca4a"
+}

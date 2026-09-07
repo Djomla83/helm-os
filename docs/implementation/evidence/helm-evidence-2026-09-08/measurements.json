@@ -1,0 +1,644 @@
+{
+  "measurement_kind": "Baseline, not a performance target or application measurement",
+  "method": "Default release CLI wall time including startup, verification, JSON formatting and piped stdout; warm filesystem cache; 3 warmups per fixture; alternating measured runs; no affinity or background-load control",
+  "memory_method": "Windows K32GetProcessMemoryInfo on child handle after communicate; peak working set, not private heap; null if unavailable",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "machine": "AMD64",
+  "rustc": "rustc 1.95.0 (59807616e 2026-04-14)\nbinary: rustc\ncommit-hash: 59807616e1fa2540724bfbac14d7976d7e4a3860\ncommit-date: 2026-04-14\nhost: x86_64-pc-windows-msvc\nrelease: 1.95.0\nLLVM version: 22.1.2",
+  "cargo": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+  "python": "3.14.3",
+  "build_mode": "cargo build --release --locked --offline; default release profile",
+  "binary_bytes": 561664,
+  "direct_dependencies": 4,
+  "active_target_dependencies_including_transitive_and_build": 39,
+  "lockfile_dependencies_all_targets": 59,
+  "dependency_inventory": [
+    {
+      "name": "ambient-authority",
+      "version": "0.0.2",
+      "license": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "repository": "https://github.com/sunfishcode/ambient-authority",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "bitflags",
+      "version": "2.13.1",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/bitflags/bitflags",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "block-buffer",
+      "version": "0.10.4",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/RustCrypto/utils",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "cap-primitives",
+      "version": "4.0.3",
+      "license": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "repository": "https://github.com/bytecodealliance/cap-std",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "cap-std",
+      "version": "4.0.2",
+      "license": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "repository": "https://github.com/bytecodealliance/cap-std",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "cfg-if",
+      "version": "1.0.4",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/rust-lang/cfg-if",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "cpufeatures",
+      "version": "0.2.17",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/RustCrypto/utils",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "crypto-common",
+      "version": "0.1.7",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/RustCrypto/traits",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "digest",
+      "version": "0.10.7",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/RustCrypto/traits",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "fs-set-times",
+      "version": "0.20.3",
+      "license": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "repository": "https://github.com/bytecodealliance/fs-set-times",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "generic-array",
+      "version": "0.14.7",
+      "license": "MIT",
+      "repository": "https://github.com/fizyk20/generic-array.git",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "io-extras",
+      "version": "0.19.0",
+      "license": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "repository": "https://github.com/sunfishcode/io-extras",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "io-lifetimes",
+      "version": "2.0.4",
+      "license": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "repository": "https://github.com/sunfishcode/io-lifetimes",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "io-lifetimes",
+      "version": "3.0.1",
+      "license": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT",
+      "repository": "https://github.com/sunfishcode/io-lifetimes",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "ipnet",
+      "version": "2.12.2",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/krisprice/ipnet",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "itoa",
+      "version": "1.0.18",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/dtolnay/itoa",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "maybe-owned",
+      "version": "0.3.4",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/rustonaut/maybe-owned",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "memchr",
+      "version": "2.8.3",
+      "license": "Unlicense OR MIT",
+      "repository": "https://github.com/BurntSushi/memchr",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "proc-macro2",
+      "version": "1.0.107",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/dtolnay/proc-macro2",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "quote",
+      "version": "1.0.47",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/dtolnay/quote",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "serde",
+      "version": "1.0.228",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/serde-rs/serde",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "serde_core",
+      "version": "1.0.228",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/serde-rs/serde",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "serde_derive",
+      "version": "1.0.228",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/serde-rs/serde",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "serde_json",
+      "version": "1.0.149",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/serde-rs/json",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "sha2",
+      "version": "0.10.9",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/RustCrypto/hashes",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "syn",
+      "version": "2.0.119",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/dtolnay/syn",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "typenum",
+      "version": "1.20.1",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/paholg/typenum",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "unicode-ident",
+      "version": "1.0.24",
+      "license": "(MIT OR Apache-2.0) AND Unicode-3.0",
+      "repository": "https://github.com/dtolnay/unicode-ident",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "version_check",
+      "version": "0.9.5",
+      "license": "MIT/Apache-2.0",
+      "repository": "https://github.com/SergioBenitez/version_check",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "windows-link",
+      "version": "0.2.1",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/microsoft/windows-rs",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "windows-sys",
+      "version": "0.59.0",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/microsoft/windows-rs",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "windows-sys",
+      "version": "0.60.2",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/microsoft/windows-rs",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "windows-sys",
+      "version": "0.61.2",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/microsoft/windows-rs",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "windows-targets",
+      "version": "0.52.6",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/microsoft/windows-rs",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "windows-targets",
+      "version": "0.53.5",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/microsoft/windows-rs",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "windows_x86_64_msvc",
+      "version": "0.52.6",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/microsoft/windows-rs",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "windows_x86_64_msvc",
+      "version": "0.53.1",
+      "license": "MIT OR Apache-2.0",
+      "repository": "https://github.com/microsoft/windows-rs",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "winx",
+      "version": "0.36.4",
+      "license": "Apache-2.0 WITH LLVM-exception",
+      "repository": "https://github.com/sunfishcode/winx",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    },
+    {
+      "name": "zmij",
+      "version": "1.0.23",
+      "license": "MIT",
+      "repository": "https://github.com/dtolnay/zmij",
+      "source": "registry+https://github.com/rust-lang/crates.io-index"
+    }
+  ],
+  "rust_loc": {
+    "crates/helm-evidence/src/bundle.rs": {
+      "physical_lines": 176,
+      "nonblank_non_line_comment_lines": 159
+    },
+    "crates/helm-evidence/src/lib.rs": {
+      "physical_lines": 604,
+      "nonblank_non_line_comment_lines": 587
+    },
+    "crates/helm-evidence/src/main.rs": {
+      "physical_lines": 31,
+      "nonblank_non_line_comment_lines": 30
+    },
+    "crates/helm-evidence/src/model.rs": {
+      "physical_lines": 289,
+      "nonblank_non_line_comment_lines": 252
+    },
+    "crates/helm-evidence/src/oracle.rs": {
+      "physical_lines": 133,
+      "nonblank_non_line_comment_lines": 126
+    },
+    "crates/helm-evidence/tests/security.rs": {
+      "physical_lines": 204,
+      "nonblank_non_line_comment_lines": 189
+    },
+    "crates/helm-evidence/tests/support/mod.rs": {
+      "physical_lines": 104,
+      "nonblank_non_line_comment_lines": 91
+    },
+    "crates/helm-evidence/tests/verification.rs": {
+      "physical_lines": 510,
+      "nonblank_non_line_comment_lines": 479
+    }
+  },
+  "rust_physical_lines": 2051,
+  "rust_nonblank_non_line_comment_lines": 1913,
+  "results": {
+    "synthetic": {
+      "median_wall_ms": 7.646850000000001,
+      "min_wall_ms": 7.342,
+      "max_wall_ms": 8.18,
+      "max_peak_working_set_bytes": 4747264,
+      "samples": [
+        {
+          "wall_ms": 7.4173,
+          "peak_working_set_bytes": 4734976,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 7.8265,
+          "peak_working_set_bytes": 4734976,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 7.342,
+          "peak_working_set_bytes": 4743168,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 7.6861,
+          "peak_working_set_bytes": 4739072,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 7.5548,
+          "peak_working_set_bytes": 4734976,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 7.389,
+          "peak_working_set_bytes": 4739072,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 7.7319,
+          "peak_working_set_bytes": 4734976,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 7.6448,
+          "peak_working_set_bytes": 4734976,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 7.6302,
+          "peak_working_set_bytes": 4743168,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 7.3845,
+          "peak_working_set_bytes": 4734976,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 7.5837,
+          "peak_working_set_bytes": 4739072,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 8.18,
+          "peak_working_set_bytes": 4734976,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 8.0564,
+          "peak_working_set_bytes": 4739072,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 7.7541,
+          "peak_working_set_bytes": 4734976,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 7.6664,
+          "peak_working_set_bytes": 4739072,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 7.6081,
+          "peak_working_set_bytes": 4743168,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 7.6529,
+          "peak_working_set_bytes": 4743168,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 7.6125,
+          "peak_working_set_bytes": 4730880,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 8.1694,
+          "peak_working_set_bytes": 4739072,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 7.6846,
+          "peak_working_set_bytes": 4734976,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 7.5536,
+          "peak_working_set_bytes": 4743168,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 7.6489,
+          "peak_working_set_bytes": 4734976,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 7.513,
+          "peak_working_set_bytes": 4739072,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 7.7446,
+          "peak_working_set_bytes": 4734976,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 7.8862,
+          "peak_working_set_bytes": 4739072,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 7.5757,
+          "peak_working_set_bytes": 4734976,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 8.0055,
+          "peak_working_set_bytes": 4747264,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 7.4915,
+          "peak_working_set_bytes": 4734976,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 7.7151,
+          "peak_working_set_bytes": 4743168,
+          "exit_code": 0
+        },
+        {
+          "wall_ms": 7.6317,
+          "peak_working_set_bytes": 4743168,
+          "exit_code": 0
+        }
+      ]
+    },
+    "a0-7zip": {
+      "median_wall_ms": 9.197600000000001,
+      "min_wall_ms": 8.821,
+      "max_wall_ms": 10.2726,
+      "max_peak_working_set_bytes": 4800512,
+      "samples": [
+        {
+          "wall_ms": 9.6604,
+          "peak_working_set_bytes": 4751360,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 9.2255,
+          "peak_working_set_bytes": 4751360,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 9.2783,
+          "peak_working_set_bytes": 4800512,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 9.1063,
+          "peak_working_set_bytes": 4755456,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 8.955,
+          "peak_working_set_bytes": 4755456,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 8.821,
+          "peak_working_set_bytes": 4751360,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 9.3454,
+          "peak_working_set_bytes": 4751360,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 8.9622,
+          "peak_working_set_bytes": 4755456,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 8.8278,
+          "peak_working_set_bytes": 4755456,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 9.0115,
+          "peak_working_set_bytes": 4751360,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 8.9442,
+          "peak_working_set_bytes": 4755456,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 9.0474,
+          "peak_working_set_bytes": 4755456,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 10.2726,
+          "peak_working_set_bytes": 4751360,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 9.363,
+          "peak_working_set_bytes": 4780032,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 9.371,
+          "peak_working_set_bytes": 4755456,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 9.0336,
+          "peak_working_set_bytes": 4759552,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 9.1697,
+          "peak_working_set_bytes": 4751360,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 9.2305,
+          "peak_working_set_bytes": 4755456,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 9.4953,
+          "peak_working_set_bytes": 4759552,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 9.2722,
+          "peak_working_set_bytes": 4755456,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 9.3495,
+          "peak_working_set_bytes": 4751360,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 9.093,
+          "peak_working_set_bytes": 4751360,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 9.0219,
+          "peak_working_set_bytes": 4751360,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 9.4033,
+          "peak_working_set_bytes": 4755456,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 9.1485,
+          "peak_working_set_bytes": 4755456,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 9.3029,
+          "peak_working_set_bytes": 4755456,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 9.5104,
+          "peak_working_set_bytes": 4755456,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 9.3325,
+          "peak_working_set_bytes": 4755456,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 8.8716,
+          "peak_working_set_bytes": 4747264,
+          "exit_code": 1
+        },
+        {
+          "wall_ms": 9.1543,
+          "peak_working_set_bytes": 4755456,
+          "exit_code": 1
+        }
+      ]
+    }
+  }
+}
