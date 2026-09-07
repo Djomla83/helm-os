@@ -11,7 +11,8 @@
 **Current boundary, 2026-09-07:** the owner-authorised G0-2 completion is finished. The original
 lab and two authorised clones are retained and stopped. The original provisioning account below
 is historical; [completion state](#completion-state) records the additions and measurements.
-No full desktop VM or application PoC has been started.
+No full desktop VM or application PoC has been started. A subsequently authorised desktop
+application baseline is prepared but blocked on Hyper-V access; see [§7](#desktop-baseline).
 
 ---
 
@@ -292,3 +293,113 @@ Remove-Item -Recurse -Force C:\Users\<you>\helm-lab\g0
 ```
 
 Verify with `wsl.exe --list --verbose` that only the original distributions remain.
+
+<a id="desktop-baseline"></a>
+
+## 7. Separately authorised A0-7ZIP desktop VM — preparation only
+
+The owner accepted G0-2 only as the controlled HRESULT comparison and authorised one Ubuntu
+24.04 desktop VM / Windows x64 7-Zip baseline. The [definition](EXP-009.md#application-baseline)
+and [application report](EXP-009-APP-BASELINE-REPORT.md) govern this separate subtask. None of the
+other Gate 0 checks, architecture acceptance or the larger PoC is authorised.
+
+### 7.1. Actual permission blocker and owner-only action
+
+The [preflight](evidence/app-baseline-2026-09-07/hyperv-preflight.json) observed the Hyper-V
+module `2.0.0.0` and running `vmms`, but an unelevated token without group SID `S-1-5-32-578`.
+The local Hyper-V Administrators group was empty. Both `Get-VM` and `Get-VMSwitch` returned
+permission errors. The known blocker remains; no VM creation was attempted.
+
+A private `owner-hyperv-action.ps1` outside Git contains the exact current local account SID,
+resolved with `Get-LocalUser` while preparing the action. The engineering agent has **not** run it.
+The owner should inspect its text, then perform its command in a separate elevated 64-bit
+PowerShell. Public form, with the private account component deliberately omitted:
+
+```powershell
+$helmOwner = Get-LocalUser -SID '<owner-account-SID>' -ErrorAction Stop
+Add-LocalGroupMember -SID 'S-1-5-32-578' -Member $helmOwner -ErrorAction Stop
+```
+
+This adds only the selected account to **Hyper-V Administrators**, not local Administrators.
+However, that group grants general access to Hyper-V features, **not only the HELM VM**.
+[Microsoft's group documentation](https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/manage/understand-security-groups#hyper-v-administrators)
+and [the cmdlet reference](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.localaccounts/add-localgroupmember?view=powershell-5.1)
+describe the scope and SID-based operation. Targeting the recorded SID avoids accidentally adding
+the administrator account used for elevation.
+
+After the owner performs this action, save work and sign out/in to obtain a fresh user token.
+Reopen the coding-agent session normally; do not run it elevated. No host restart, bypass,
+security-policy change or feature installation is part of the action. Recheck effective token
+membership, `Get-VM` and `Get-VMSwitch` before provisioning. Permission is not inferred from an
+owner message, membership alone, or elapsed time. If unavailable, stop at preparation.
+
+### 7.2. Proposed configuration and capacity — not provisioned
+
+| Property | Fixed plan |
+|---|---|
+| VM name | `helm-lab-desktop-7zip`, one new Generation 2 VM; first verify no name collision |
+| Guest | Official Ubuntu `24.04.4` LTS desktop amd64; a lab choice, not HELM's final base OS |
+| CPU / RAM | 4 vCPUs; fixed 8 GiB, dynamic memory off |
+| Disk | One new dynamic VHDX capped at 32 GiB; no automatic growth of that cap |
+| Project directory | `D:\helm-lab\exp009-a0-7zip` (did not exist at inspection) |
+| Project subdirectories | `vm` for VM configuration/runtime-state files; `vm\os.vhdx`; `downloads` for ISO; `transfer` for synthetic artifacts |
+| Firmware | Secure Boot stays on; use the guest-specific `MicrosoftUEFICertificateAuthority` template. Stop on unresolved boot failure; never disable host or guest Secure Boot to get a pass. |
+| Checkpoints / automatic actions | Disable automatic checkpoints and checkpoint creation; automatic start Nothing; automatic stop ShutDown. No saved-state chain, clone or rollback. |
+| Network | Select an existing suitable switch after permissions permit inspection. Prefer an existing suitable Default Switch; do not presume its presence. No new switch, forwarding or host firewall change. |
+| Display / access | Basic VMConnect console initially; actual guest desktop/session/rendering and automation interface must be measured. No enhanced-session drive, clipboard or device redirection. |
+| Account | Dedicated guest `helmlab`; ordinary desktop/application processes unprivileged |
+
+[Storage observations](evidence/app-baseline-2026-09-07/storage-observation.json) found
+573,119,229,952 bytes free on D: (about 533.76 GiB), and 86,528,421,888 on C: (80.58 GiB).
+The host has 16 physical / 32 logical CPU cores and about 42.80 GiB free physical RAM at preflight.
+The proposed CPU/RAM allocation is feasible by these observations, subject to recheck before use.
+
+Reserve **50 GiB on D:** for 32 GiB disk growth, the 6,655,619,072-byte ISO (6.20 GiB), an 8 GiB
+runtime-state allowance, and remaining space for metadata, temporary downloads and transfers.
+Guest package storage is inside the 32 GiB disk cap; a separate download allowance remains in the
+50 GiB host budget. No full ISO duplicate, saved-state copy or checkpoint is budgeted or authorised.
+That leaves about 483.76 GiB on D:; maintain at least **40 GiB on both C: and D:** throughout.
+Keep VM configuration/runtime-state locations on D:, not their default location on C:.
+
+The initial C:-only estimate omitted runtime-state allowance and was corrected before provisioning.
+[Microsoft documents RAM-sized runtime-state files for Hyper-V 2016](https://support.microsoft.com/en-us/servicing/os/windows-server/2017/12/hyper-v-vss-backs-up-a-large-vmrs-file-when-you-back-up-a-virtual-machine).
+An 8 GiB allowance here is conservative planning, not a measurement of this uncreated Windows 11 VM.
+Current allocation is **zero**. Do not shrink allocations, enlarge disks, delete prior labs/evidence,
+or alter host paging to make a plan fit. Stop and report if measured growth invalidates the reserve.
+
+### 7.3. Guest setup, transfer and evidence collection
+
+Download the [pinned official ISO and runtime](evidence/app-baseline-2026-09-07/artifact-pins.json)
+only after permission and capacity checks. Verify complete artifact bytes before use. The small
+7-Zip installer already downloaded privately can be transferred or downloaded again at the exact
+pin; neither route permits executing it on the Windows host. Guest package dependencies and all
+setup commands must be captured, including failures. All required packages are installed inside
+the VM only. Do not start any of the three WSL project labs or enter normal Ubuntu.
+
+Obtain project source/fixtures over HTTPS at the committed definition revision, or use a
+project-only artifact transfer. If SSH/SCP is needed, use a new guest-specific credential, isolated
+known-hosts file and explicit project paths; disable agent forwarding and inherited SSH config.
+Never expose an existing host key, SSH agent, browser, personal folder or Docker socket. No host
+drive mount or clipboard bridge is authorised. Return only this experiment's outputs and logs.
+
+Record `loginctl` session type, `XDG_SESSION_TYPE`, desktop versions, active display server,
+`DISPLAY`/`WAYLAND_DISPLAY`, Wine graphics backend, renderer, resolution and scaling before each
+workflow. If the session is X11, XWayland or remote desktop, label it accurately; do not infer
+Wayland console coverage from the installed GNOME package. Record basic VMConnect versus any
+guest automation tool. If GUI automation is unavailable, use an explicitly human-assisted run
+with measured actions/attended time or report BLOCKED; a CLI run cannot substitute.
+
+The [small helper](../../tools/app_baseline.py) reuses the existing command-capture function and
+preserves stdout/stderr bytes as base64. Example syntax, to be executed **inside the guest** after
+setup, using a new record filename each time:
+
+```bash
+python3 tools/app_baseline.py capture --cwd /home/helmlab/exp009-a0-7zip --timeout 600 install.json -- env WINEPREFIX=/home/helmlab/exp009-a0-7zip/prefix WINEARCH=win64 WINEDLLOVERRIDES=mscoree,mshtml= /opt/wine-devel/bin/wine downloads/7z2603-x64.exe
+```
+
+Prefix initialisation, package inventory, installed-file identities, GUI actions and boot IDs
+need their own records. This command is a capture aid, not a claim that installation ran. Preserve
+both workflow destinations and all failed attempts. Archive verification decompresses members in
+memory against the frozen manifest; screenshots and zero process exit codes are insufficient.
+Use the existing scoped byte-preserving Git attributes and distinguish redacted public artifacts
+from private raw identities. Finish at the application-baseline review; no teardown or larger PoC.

@@ -1,0 +1,38 @@
+{
+  "rule": "Replace actual local account, SID, home path and host identifier with explicit redaction tokens. No outcomes, exceptions or timings removed.",
+  "redactions": [
+    {
+      "file": "hyperv-preflight.json",
+      "raw_sha256": "0537f51e32e0c7c0a65794be14a33d27e1101b9ed6067918ca7d45134320f979",
+      "raw_bytes": 5236,
+      "publication_sha256": "3c51923e78e01fd188f15064626654070bdc83bb5ab6c1cf6fe27d5b6d585f28",
+      "publication_bytes": 5645,
+      "redacted_fields": [
+        "private_identity.account",
+        "private_identity.sid",
+        "private_identity.home",
+        "private_identity.host",
+        "observations[4].error host name",
+        "observations[5].error host name"
+      ]
+    }
+  ],
+  "artifacts": [
+    {
+      "file": "artifact-pins.json",
+      "bytes": 12625,
+      "sha256": "8e4bec9e920cc685e9ca80da191214bcd53dc2fc2eba4d743a0a307e99223268"
+    },
+    {
+      "file": "hyperv-preflight.json",
+      "bytes": 5645,
+      "sha256": "3c51923e78e01fd188f15064626654070bdc83bb5ab6c1cf6fe27d5b6d585f28"
+    },
+    {
+      "file": "storage-observation.json",
+      "bytes": 934,
+      "sha256": "0a5f9b93b1b0bb4b2fdaaea43334aed6f78e488a224a5c20fd25ceeddef2922f"
+    }
+  ],
+  "scope": "Digests identify publication-file bytes; this manifest is excluded to avoid a recursive hash."
+}

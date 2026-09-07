@@ -1,0 +1,161 @@
+{
+  "started_utc": "2026-09-07T17:17:23.5099109Z",
+  "reviewed_baseline": "3f947888067243ba3cedcc3f77916344d9d10a25",
+  "observations": [
+    {
+      "command": "WindowsIdentity.GetCurrent token roles and Hyper-V group SID membership",
+      "started_utc": "2026-09-07T17:17:23.5228688Z",
+      "output": [
+        {
+          "is_administrator": false,
+          "hyperv_admin_sid_in_token": false
+        }
+      ],
+      "completed": true,
+      "seconds": 0.0175244,
+      "ended_utc": "2026-09-07T17:17:23.5410693Z"
+    },
+    {
+      "command": "Get-LocalGroup -SID 'S-1-5-32-578'; test current user SID in Get-LocalGroupMember",
+      "started_utc": "2026-09-07T17:17:23.5431254Z",
+      "output": [
+        {
+          "group_name": "Hyper-V Administrators",
+          "group_sid": "S-1-5-32-578",
+          "current_account_is_member": false,
+          "member_count": 0
+        }
+      ],
+      "completed": true,
+      "seconds": 0.1006566,
+      "ended_utc": "2026-09-07T17:17:23.6437807Z"
+    },
+    {
+      "command": "Get-Module -ListAvailable Hyper-V | Select-Object Name,Version",
+      "started_utc": "2026-09-07T17:17:23.6439263Z",
+      "output": [
+        {
+          "Name": "Hyper-V",
+          "Version": "2.0.0.0"
+        }
+      ],
+      "completed": true,
+      "seconds": 0.0649105,
+      "ended_utc": "2026-09-07T17:17:23.7088316Z"
+    },
+    {
+      "command": "Get-Service vmms | Select-Object Name,Status",
+      "started_utc": "2026-09-07T17:17:23.7089856Z",
+      "output": [
+        {
+          "Name": "vmms",
+          "Status": "Running"
+        }
+      ],
+      "completed": true,
+      "seconds": 0.0241576,
+      "ended_utc": "2026-09-07T17:17:23.7331401Z"
+    },
+    {
+      "command": "Get-VM -ErrorAction Stop | Measure-Object",
+      "started_utc": "2026-09-07T17:17:23.7332761Z",
+      "completed": false,
+      "error": "You do not have the required permission to complete this task. Contact the administrator of the authorization policy for the computer '<redacted-host>'.",
+      "error_id": "Unspecified,Microsoft.HyperV.PowerShell.Commands.GetVM",
+      "exception_type": "Microsoft.HyperV.PowerShell.VirtualizationException",
+      "hresult": -2146233088,
+      "seconds": 0.3388609,
+      "ended_utc": "2026-09-07T17:17:24.0721373Z"
+    },
+    {
+      "command": "Get-VMSwitch -ErrorAction Stop | Select-Object Name,SwitchType",
+      "started_utc": "2026-09-07T17:17:24.0722762Z",
+      "completed": false,
+      "error": "You do not have the required permission to complete this task. Contact the administrator of the authorization policy for the computer '<redacted-host>'.",
+      "error_id": "Unspecified,Microsoft.HyperV.PowerShell.Commands.GetVMSwitch",
+      "exception_type": "Microsoft.HyperV.PowerShell.VirtualizationException",
+      "hresult": -2146233088,
+      "seconds": 0.1154053,
+      "ended_utc": "2026-09-07T17:17:24.1876807Z"
+    },
+    {
+      "command": "Get-CimInstance Win32_OperatingSystem | Select-Object Caption,Version,BuildNumber,TotalVisibleMemorySize,FreePhysicalMemory",
+      "started_utc": "2026-09-07T17:17:24.1878451Z",
+      "output": [
+        {
+          "Caption": "Microsoft Windows 11 Pro",
+          "Version": "10.0.26200",
+          "BuildNumber": "26200",
+          "TotalVisibleMemorySize": 67020520,
+          "FreePhysicalMemory": 44875368
+        }
+      ],
+      "completed": true,
+      "seconds": 0.1205848,
+      "ended_utc": "2026-09-07T17:17:24.3084291Z"
+    },
+    {
+      "command": "Get-CimInstance Win32_Processor | Select-Object Name,NumberOfCores,NumberOfLogicalProcessors",
+      "started_utc": "2026-09-07T17:17:24.3085733Z",
+      "output": [
+        {
+          "Name": "AMD Ryzen 9 5950X 16-Core Processor            ",
+          "NumberOfCores": 16,
+          "NumberOfLogicalProcessors": 32
+        }
+      ],
+      "completed": true,
+      "seconds": 1.2727087,
+      "ended_utc": "2026-09-07T17:17:25.5812947Z"
+    },
+    {
+      "command": "Get-PSDrive -Name C | Select-Object Name,Free,Used",
+      "started_utc": "2026-09-07T17:17:25.5814856Z",
+      "output": [
+        {
+          "Name": "C",
+          "Free": 86431903744,
+          "Used": 412559781888
+        }
+      ],
+      "completed": true,
+      "seconds": 0.1301855,
+      "ended_utc": "2026-09-07T17:17:25.7116676Z"
+    },
+    {
+      "command": "wsl.exe --list --verbose",
+      "started_utc": "2026-09-07T17:17:25.7118434Z",
+      "output": [
+        {
+          "exit_code": 0,
+          "output": "  NAME                   STATE           VERSION\n\n* Ubuntu                 Stopped         2\n\n  helm-lab-g0-proton     Stopped         2\n\n  helm-lab-g0            Stopped         2\n\n  helm-lab-g0-staging    Stopped         2\n\n"
+        }
+      ],
+      "completed": true,
+      "seconds": 0.0659708,
+      "ended_utc": "2026-09-07T17:17:25.7778125Z"
+    }
+  ],
+  "private_identity": {
+    "host": "<redacted-host>",
+    "home": "C:\\Users\\<redacted>",
+    "account": "<redacted-account>",
+    "sid": "<redacted-account-sid>"
+  },
+  "ended_utc": "2026-09-07T17:17:25.7778786Z",
+  "publication": {
+    "redacted": true,
+    "raw_sha256": "0537f51e32e0c7c0a65794be14a33d27e1101b9ed6067918ca7d45134320f979",
+    "raw_bytes": 5236,
+    "redacted_fields": [
+      "private_identity.account",
+      "private_identity.sid",
+      "private_identity.home",
+      "private_identity.host",
+      "observations[4].error host name",
+      "observations[5].error host name"
+    ],
+    "raw_storage": "Private local archive outside Git; not uploaded",
+    "note": "Public JSON is redacted and reserialized; it is not byte-identical to raw capture."
+  }
+}

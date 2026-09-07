@@ -1,0 +1,250 @@
+{
+  "recorded_utc": "2026-09-07T17:21:03.693221+00:00",
+  "scope": "Non-invasive artifact preparation while Hyper-V permissions are blocked; no installation or runtime execution",
+  "application": {
+    "product": "7-Zip",
+    "vendor": "Igor Pavlov / 7-Zip project",
+    "version": "26.03",
+    "architecture": "Windows x64",
+    "installer_technology": "7-Zip EXE installer",
+    "official_route": "https://www.7-zip.org/download.html",
+    "url": "https://github.com/ip7z/7zip/releases/download/26.03/7z2603-x64.exe",
+    "filename": "7z2603-x64.exe",
+    "sha256": "0859c524b8a63551848f0c246abddcb1d0b7b656b0fbfe879f8d85e61a9e6edd",
+    "bytes": 1661239,
+    "retrieved_utc": "2026-09-07T17:19:52.283894+00:00",
+    "github_asset_id": 543966231,
+    "github_asset_digest": "sha256:0859c524b8a63551848f0c246abddcb1d0b7b656b0fbfe879f8d85e61a9e6edd",
+    "pe_machine": "0x8664",
+    "executed": false,
+    "installed_executable_identities": "NOT_RUN; must be measured inside the future guest"
+  },
+  "ubuntu": {
+    "release": "24.04.4 LTS desktop amd64",
+    "filename": "ubuntu-24.04.4-desktop-amd64.iso",
+    "url": "https://releases.ubuntu.com/24.04.4/ubuntu-24.04.4-desktop-amd64.iso",
+    "expected_sha256": "3a4c9877b483ab46d7c3fbe165a0db275e1ae3cfe56a5657e5a47c2f99a99d1e",
+    "expected_bytes": 6655619072,
+    "digest_source": "https://releases.ubuntu.com/24.04.4/SHA256SUMS",
+    "local_artifact_verification": "NOT_DOWNLOADED; full ISO hash and checksum signature must be verified before VM boot"
+  },
+  "wine": {
+    "version": "11.17~noble-1",
+    "repository": "https://dl.winehq.org/wine-builds/ubuntu",
+    "suite": "noble/main",
+    "packages": [
+      {
+        "package": "wine-devel",
+        "version": "11.17~noble-1",
+        "architecture": "amd64",
+        "url": "https://dl.winehq.org/wine-builds/ubuntu/pool/main/w/wine/wine-devel_11.17~noble-1_amd64.deb",
+        "expected_sha256": "eb42cc830c0e0582ecb1c5cf94cbfefe5d0a0235caae771035077b5e7b8ddd8f",
+        "expected_bytes": 11586578,
+        "depends": "libc6 (>= 2.38), wine-devel-i386 (= 11.17~noble-1), wine-devel-amd64 (= 11.17~noble-1)",
+        "http_status": 200,
+        "local_artifact_verification": "NOT_DOWNLOADED; signed APT metadata and package digests must be verified inside the guest before installation"
+      },
+      {
+        "package": "wine-devel-amd64",
+        "version": "11.17~noble-1",
+        "architecture": "amd64",
+        "url": "https://dl.winehq.org/wine-builds/ubuntu/pool/main/w/wine/wine-devel-amd64_11.17~noble-1_amd64.deb",
+        "expected_sha256": "9184a81f0848003460526f30a66bd470a997fa0bd43c0d59efcacce0a12adb63",
+        "expected_bytes": 150150970,
+        "depends": "libasound2t64 (>= 1.0.16), libavcodec60 (>= 7:6.0), libavformat60 (>= 7:6.0), libavutil58 (>= 7:6.0), libc6 (>= 2.38), libgcc-s1 (>= 3.0), libglib2.0-0t64 (>= 2.79.0), libgphoto2-6t64 (>= 2.5.10), libgphoto2-port12t64 (>= 2.5.10), libgstreamer-plugins-base1.0-0 (>= 1.18.0), libgstreamer1.0-0 (>= 1.14.0), libpcap0.8t64 (>= 1.10.0), libpcsclite1 (>= 1.3.3), libpulse0 (>= 0.99.1), libsane1 (>= 1.0.27), libudev1 (>= 183), libusb-1.0-0 (>= 2:1.0.21), libwayland-client0 (>= 1.20.0), libwayland-egl1 (>= 1.15.0), libx11-6, libxext6, libxkbcommon0 (>= 0.5.0), libxkbregistry0 (>= 1.0.0), ocl-icd-libopencl1 | libopencl1, ocl-icd-libopencl1 (>= 1.0) | libopencl-1.2-1, libasound2-plugins, libncurses6 | libncurses5 | libncurses",
+        "http_status": 200,
+        "local_artifact_verification": "NOT_DOWNLOADED; signed APT metadata and package digests must be verified inside the guest before installation"
+      },
+      {
+        "package": "winehq-devel",
+        "version": "11.17~noble-1",
+        "architecture": "amd64",
+        "url": "https://dl.winehq.org/wine-builds/ubuntu/pool/main/w/wine/winehq-devel_11.17~noble-1_amd64.deb",
+        "expected_sha256": "62873c6d7c5b05710064bc5fa3d9e2be0595edd77bc94c2ed3ea7896fdcb7869",
+        "expected_bytes": 1320,
+        "depends": "wine-devel (= 11.17~noble-1)",
+        "http_status": 200,
+        "local_artifact_verification": "NOT_DOWNLOADED; signed APT metadata and package digests must be verified inside the guest before installation"
+      },
+      {
+        "package": "wine-devel-i386",
+        "version": "11.17~noble-1",
+        "architecture": "i386",
+        "url": "https://dl.winehq.org/wine-builds/ubuntu/pool/main/w/wine/wine-devel-i386_11.17~noble-1_i386.deb",
+        "expected_sha256": "599a34d04fd3443a55f5700c3a919f177cdc4ab77b5ee7d6ebcfb87de03cc966",
+        "expected_bytes": 142140490,
+        "depends": "libasound2t64 (>= 1.0.16), libavcodec60 (>= 7:6.0), libavformat60 (>= 7:6.0), libavutil58 (>= 7:6.0), libc6 (>= 2.38), libglib2.0-0t64 (>= 2.79.0), libgphoto2-6t64 (>= 2.5.10), libgphoto2-port12t64 (>= 2.5.10), libgstreamer-plugins-base1.0-0 (>= 1.18.0), libgstreamer1.0-0 (>= 1.14.0), libpcap0.8t64 (>= 1.10.0), libpcsclite1 (>= 1.3.3), libpulse0 (>= 0.99.1), libsane1 (>= 1.0.27), libudev1 (>= 183), libusb-1.0-0 (>= 2:1.0.21), libwayland-client0 (>= 1.20.0), libwayland-egl1 (>= 1.15.0), libx11-6, libxext6, libxkbcommon0 (>= 0.5.0), libxkbregistry0 (>= 1.0.0), ocl-icd-libopencl1 | libopencl1, ocl-icd-libopencl1 (>= 1.0) | libopencl-1.2-1, libasound2-plugins, libncurses6 | libncurses5 | libncurses",
+        "http_status": 200,
+        "local_artifact_verification": "NOT_DOWNLOADED; signed APT metadata and package digests must be verified inside the guest before installation"
+      }
+    ]
+  },
+  "requests": [
+    {
+      "url": "https://www.7-zip.org/download.html",
+      "method": "GET",
+      "started_utc": "2026-09-07T17:19:51.557027+00:00",
+      "status": 200,
+      "content_length": "19945",
+      "bytes_received": 19945,
+      "sha256": "6cbe2ad4a7e405dfb49b155ab85e062ac986bf070ef975074341dca95bd85727",
+      "local_artifact_name": "7zip-download-page.html",
+      "ended_utc": "2026-09-07T17:19:51.815049+00:00",
+      "seconds": 0.25801779999164864
+    },
+    {
+      "url": "https://github.com/ip7z/7zip/releases/download/26.03/7z2603-x64.exe",
+      "method": "GET",
+      "started_utc": "2026-09-07T17:19:51.815583+00:00",
+      "status": 200,
+      "content_length": "1661239",
+      "bytes_received": 1661239,
+      "sha256": "0859c524b8a63551848f0c246abddcb1d0b7b656b0fbfe879f8d85e61a9e6edd",
+      "local_artifact_name": "7z2603-x64.exe",
+      "ended_utc": "2026-09-07T17:19:52.283894+00:00",
+      "seconds": 0.46830960002262145
+    },
+    {
+      "url": "https://api.github.com/repos/ip7z/7zip/releases/tags/26.03",
+      "method": "GET",
+      "started_utc": "2026-09-07T17:19:52.284314+00:00",
+      "status": 200,
+      "content_length": null,
+      "bytes_received": 24548,
+      "sha256": "de8977cc9775851976fa17300125be95824b119b4e2d48fd4f8f784e8ae85b88",
+      "local_artifact_name": "7zip-release.json",
+      "ended_utc": "2026-09-07T17:19:52.602064+00:00",
+      "seconds": 0.31775139999808744
+    },
+    {
+      "url": "https://releases.ubuntu.com/24.04.4/SHA256SUMS",
+      "method": "GET",
+      "started_utc": "2026-09-07T17:19:52.602572+00:00",
+      "status": 200,
+      "content_length": "594",
+      "bytes_received": 594,
+      "sha256": "2c7aeea36dd83c6eafa951ab2b26c037c8342975ca12950509240856b2605bc7",
+      "local_artifact_name": "ubuntu-SHA256SUMS",
+      "ended_utc": "2026-09-07T17:19:53.030931+00:00",
+      "seconds": 0.4283585000084713
+    },
+    {
+      "url": "https://releases.ubuntu.com/24.04.4/SHA256SUMS.gpg",
+      "method": "GET",
+      "started_utc": "2026-09-07T17:19:53.031304+00:00",
+      "status": 200,
+      "content_length": "833",
+      "bytes_received": 833,
+      "sha256": "35299a7907a456fb2731af087d7ede11f9864d85b3585dbb1612fe2f442a2c0a",
+      "local_artifact_name": "ubuntu-SHA256SUMS.gpg",
+      "ended_utc": "2026-09-07T17:19:53.436860+00:00",
+      "seconds": 0.4055588000046555
+    },
+    {
+      "url": "https://releases.ubuntu.com/24.04.4/ubuntu-24.04.4-desktop-amd64.iso",
+      "method": "HEAD",
+      "started_utc": "2026-09-07T17:19:53.437247+00:00",
+      "status": 200,
+      "content_length": "6655619072",
+      "bytes_received": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "ended_utc": "2026-09-07T17:19:53.815500+00:00",
+      "seconds": 0.37825610002619214
+    },
+    {
+      "url": "https://dl.winehq.org/wine-builds/ubuntu/dists/noble/main/binary-amd64/Packages.xz",
+      "method": "GET",
+      "started_utc": "2026-09-07T17:19:53.816109+00:00",
+      "error_type": "HTTPError",
+      "error": "HTTP Error 404: Not Found",
+      "ended_utc": "2026-09-07T17:19:54.006977+00:00",
+      "seconds": 0.19087029999354854
+    },
+    {
+      "url": "https://dl.winehq.org/wine-builds/ubuntu/dists/noble/Release",
+      "method": "GET",
+      "started_utc": "2026-09-07T17:20:51.850748+00:00",
+      "status": 200,
+      "content_length": "8201",
+      "bytes_received": 8201,
+      "sha256": "bf57fba857f9fb7a1d965eb842bd3166a7a7fa92736e4a3cbf3516294d2cbb2e",
+      "local_artifact_name": "winehq-Release-recorded",
+      "ended_utc": "2026-09-07T17:20:51.954136+00:00",
+      "seconds": 0.10338230000343174
+    },
+    {
+      "url": "https://dl.winehq.org/wine-builds/ubuntu/dists/noble/main/binary-amd64/Packages.gz",
+      "method": "GET",
+      "started_utc": "2026-09-07T17:20:51.954562+00:00",
+      "status": 200,
+      "content_length": "268287",
+      "bytes_received": 268287,
+      "sha256": "add1f5c07e23c8dbbab0b37885b641325733e7c31887ed6d0953296ab10ad054",
+      "local_artifact_name": "winehq-amd64-Packages.gz",
+      "ended_utc": "2026-09-07T17:20:52.188075+00:00",
+      "seconds": 0.2335175999905914
+    },
+    {
+      "url": "https://dl.winehq.org/wine-builds/ubuntu/pool/main/w/wine/wine-devel_11.17~noble-1_amd64.deb",
+      "method": "HEAD",
+      "started_utc": "2026-09-07T17:20:52.193927+00:00",
+      "status": 200,
+      "content_length": "11586578",
+      "bytes_received": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "ended_utc": "2026-09-07T17:20:53.174154+00:00",
+      "seconds": 0.9802159999962896
+    },
+    {
+      "url": "https://dl.winehq.org/wine-builds/ubuntu/pool/main/w/wine/wine-devel-amd64_11.17~noble-1_amd64.deb",
+      "method": "HEAD",
+      "started_utc": "2026-09-07T17:20:53.175187+00:00",
+      "status": 200,
+      "content_length": "150150970",
+      "bytes_received": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "ended_utc": "2026-09-07T17:20:57.533647+00:00",
+      "seconds": 4.358418999996502
+    },
+    {
+      "url": "https://dl.winehq.org/wine-builds/ubuntu/pool/main/w/wine/winehq-devel_11.17~noble-1_amd64.deb",
+      "method": "HEAD",
+      "started_utc": "2026-09-07T17:20:57.537681+00:00",
+      "status": 200,
+      "content_length": "1320",
+      "bytes_received": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "ended_utc": "2026-09-07T17:20:57.613047+00:00",
+      "seconds": 0.07537180001963861
+    },
+    {
+      "url": "https://dl.winehq.org/wine-builds/ubuntu/dists/noble/main/binary-i386/Packages.gz",
+      "method": "GET",
+      "started_utc": "2026-09-07T17:20:57.614646+00:00",
+      "status": 200,
+      "content_length": "265701",
+      "bytes_received": 265701,
+      "sha256": "845ce78b157af40631ad030b3513639fb40e90b40db439258d3db00af04904ee",
+      "local_artifact_name": "winehq-i386-Packages.gz",
+      "ended_utc": "2026-09-07T17:20:58.130962+00:00",
+      "seconds": 0.5163161999953445
+    },
+    {
+      "url": "https://dl.winehq.org/wine-builds/ubuntu/pool/main/w/wine/wine-devel-i386_11.17~noble-1_i386.deb",
+      "method": "HEAD",
+      "started_utc": "2026-09-07T17:20:58.135648+00:00",
+      "status": 200,
+      "content_length": "142140490",
+      "bytes_received": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "ended_utc": "2026-09-07T17:21:03.689201+00:00",
+      "seconds": 5.553493999992497
+    }
+  ],
+  "downloaded_body_bytes": 2249348,
+  "request_sha256_meaning": "Each requests[].sha256 identifies received response-body bytes; a HEAD request has an empty body, not the package/ISO digest. Expected artifact hashes are explicitly separate.",
+  "preserved_preparation_failures": [
+    "Assumed Packages.xz URL returned HTTP 404; inspected WineHQ Release and used its advertised Packages.gz. Successful earlier downloads were reused with hash checks, not downloaded again.",
+    "Windows Python warned about a malformed local certificate-store entry. TLS verification was not disabled."
+  ]
+}

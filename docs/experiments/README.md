@@ -27,3 +27,8 @@ PASS only for their recorded mechanics. See
 [EXP-009-GATE0-REPORT.md](EXP-009-GATE0-REPORT.md#current-assessment). Work stops at the Gate 0 review
 boundary; the PoC is not authorised.
 Ostali eksperimenti prema preduslovima i [backlog-u](../../planning/BACKLOG.md).
+
+Subsequent owner decision, 2026-09-07: G0-2 accepted only for its controlled HRESULT comparison.
+The separately authorised [A0-7ZIP desktop application baseline](EXP-009.md#application-baseline)
+has a [preparation report](EXP-009-APP-BASELINE-REPORT.md). It is BLOCKED on Hyper-V permissions;
+no application workflow ran. This does not authorise the larger PoC or any other Gate 0 check.

@@ -1,0 +1,41 @@
+{
+  "id": "EXP-009/A0-7ZIP fixtures v1",
+  "scope": "Synthetic expected paths and decompressed file-byte identities, fixed before application installation",
+  "files": {
+    "fixture/plain.txt": {
+      "bytes": 44,
+      "sha256": "5008ae037ff3d64a4f21184c68f1a89c8e0927d2f4c6e1c6a1a83a054762dc2a"
+    },
+    "fixture/binary/payload.bin": {
+      "bytes": 4096,
+      "sha256": "c8f5d0341d54d951a71b136e6e2afcb14d11ed8489a7ae126a8fee0df6ecf193"
+    },
+    "fixture/empty.dat": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "fixture/nested/deeper/data.txt": {
+      "bytes": 15,
+      "sha256": "54e274cfb7517422ccec200034fd3ac33bde683bb9ae7c729872226f921ae1f2"
+    },
+    "fixture/names/with spaces.txt": {
+      "bytes": 21,
+      "sha256": "9734ad530d20b6929a694abf4e22e1c269666fe6ac1ec0d966e0a08bfea4a9b4"
+    },
+    "fixture/names/caf\u00e9-\u6f22\u5b57.txt": {
+      "bytes": 28,
+      "sha256": "13dec9090e2dfca096b4d6099af64e9c4d54ed6eb9cc475a31ce989dbf93d21e"
+    }
+  },
+  "required_directories": [
+    "fixture/empty-directory/"
+  ],
+  "allowed_directories": [
+    "fixture/",
+    "fixture/binary/",
+    "fixture/empty-directory/",
+    "fixture/names/",
+    "fixture/nested/",
+    "fixture/nested/deeper/"
+  ]
+}

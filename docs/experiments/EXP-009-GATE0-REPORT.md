@@ -5,7 +5,7 @@
 | Experiment | [EXP-009](EXP-009.md) revision 2, Gate 0 stage only |
 | Date | 2026-09-07 |
 | Executor | Development agent, unattended, on the maintainer's workstation |
-| Reviewer | **not assigned** — this report is not accepted |
+| Reviewer | Owner accepted G0-2 only for its controlled HRESULT-comparison scope on 2026-09-07; broader report/architecture acceptance is not implied |
 | Repository revision at execution | Historical rounds: `e09a52f`; completion baseline: `ca0aa5ae26a1d3b630f63eda8f87626d125248d1`; frozen controls: `78422f7cc4f4867ed922150ffedd5646ebcabe0a` |
 | Approved budget | No new spend; Round 2 installed packages inside the disposable lab. |
 | Current outcome summary | **G0-2: PASS for the narrow controlled HRESULT comparison.** G0-1, original G0-3, G0-4 and G0-5: BLOCKED. Separate G0-3a/G0-3b mechanics results unchanged. Historical vanilla and the first Proton completion attempt remain INCONCLUSIVE. See [current assessment](#current-assessment). |
@@ -23,6 +23,12 @@
 <a id="current-assessment"></a>
 
 ## Current assessment — bounded G0-2 completion, 2026-09-07
+
+**Subsequent owner review, 2026-09-07:** accepted G0-2 as completed only in the documented
+controlled HRESULT-comparison scope at `3f947888067243ba3cedcc3f77916344d9d10a25`. Rendering,
+architecture ADRs and the larger PoC remain unaccepted/unauthorised. A separate
+[A0-7ZIP application baseline](EXP-009-APP-BASELINE-REPORT.md) was authorised; it does not reopen
+G0-2 or run the other blocked checks. The original observations below are unchanged.
 
 The owner authorised only G0-2 completion after publication/provenance repair. Fetch verified
 `main == origin/main == ca0aa5ae26a1d3b630f63eda8f87626d125248d1`, with a clean working tree.

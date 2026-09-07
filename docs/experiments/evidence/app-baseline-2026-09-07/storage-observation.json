@@ -1,0 +1,38 @@
+{
+  "observed_utc": "2026-09-07T17:29:14.7052678Z",
+  "command": "Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3'; Test-Path D:\\helm-lab\\exp009-a0-7zip",
+  "fixed_volumes": [
+    {
+      "DeviceID": "C:",
+      "FileSystem": "NTFS",
+      "Size": 498991685632,
+      "FreeSpace": 86528421888
+    },
+    {
+      "DeviceID": "D:",
+      "FileSystem": "NTFS",
+      "Size": 1000068870144,
+      "FreeSpace": 573119229952
+    },
+    {
+      "DeviceID": "G:",
+      "FileSystem": "FAT32",
+      "Size": 498991685632,
+      "FreeSpace": 82201997312
+    },
+    {
+      "DeviceID": "H:",
+      "FileSystem": "FAT32",
+      "Size": 498991685632,
+      "FreeSpace": 82201997312
+    },
+    {
+      "DeviceID": "I:",
+      "FileSystem": "FAT32",
+      "Size": 16106127360,
+      "FreeSpace": 5419921408
+    }
+  ],
+  "proposed_path": "D:\\helm-lab\\exp009-a0-7zip",
+  "proposed_path_exists": false
+}

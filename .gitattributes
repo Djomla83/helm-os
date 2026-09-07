@@ -5,3 +5,6 @@
 
 # Preserve the exact bytes of G0-2 capture artifacts, including Win32 CRLF stdout.
 docs/experiments/evidence/g0-2-completion-2026-09-07/** -text whitespace=cr-at-eol
+
+# Preserve byte-sensitive captures for the separately authorised application baseline.
+docs/experiments/evidence/app-baseline-2026-09-07/** -text whitespace=cr-at-eol

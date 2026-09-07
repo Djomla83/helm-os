@@ -1,6 +1,6 @@
 # Stanje projekta
 
-> Current status: the [G0-2 completion below](#g0-2-completion) supersedes earlier dated
+> Current status: the [application-baseline preparation below](#application-baseline) supersedes earlier dated
 > snapshots, including their aggregate counts and publication/isolation claims. Historical text is
 > retained; the [Gate 0 report](experiments/EXP-009-GATE0-REPORT.md#current-assessment) is authoritative
 > for the current experiment assessment.
@@ -294,3 +294,29 @@ repaired before publication; no public commit was rewritten.
 Recommended owner decision: review G0-2, then separately authorise a full Linux desktop VM
 environment. Rendering and application experiments require their own bounded approval and
 preregistration. Work stops at the Gate 0 review boundary.
+
+<a id="application-baseline"></a>
+
+## Update 2026-09-07 — G0-2 accepted narrowly; application baseline prepared
+
+The owner accepted G0-2 only for its controlled HRESULT comparison at public commit
+`3f947888067243ba3cedcc3f77916344d9d10a25`. This accepts no architecture ADR, rendering result or
+larger Evidence Loop PoC. Fetch found that same clean local/remote state; no history was reset
+or rewritten. Work uses the dedicated `experiment/exp009-app-baseline` branch.
+
+The separately authorised [EXP-009 A0-7ZIP baseline](experiments/EXP-009.md#application-baseline)
+covers one Ubuntu 24.04 desktop VM and two planned Windows x64 7-Zip GUI workflows, before/after
+a guest restart. **Current overall result: BLOCKED on Hyper-V permissions.** The service exists
+and runs, but the current account lacks group membership and VM/switch queries are denied.
+An exact owner-only administrator action is prepared privately, not executed by the agent.
+
+[Preparation report](experiments/EXP-009-APP-BASELINE-REPORT.md): official 7-Zip 26.03 installer
+downloaded/hashed, Ubuntu 24.04.4 desktop and vanilla Wine `11.17~noble-1` artifacts pinned for
+later verification, conservative 50 GiB storage plan on D:, synthetic fixtures and a tested ZIP
+oracle. No VM was created; no application, guest GUI workflow or restart ran. No host security,
+Hyper-V group, global WSL setting or prior lab was changed. The three WSL labs stay stopped.
+
+The host helper's checks do not count as guest application results. Installation, GUI coverage,
+output correctness and post-restart operation remain unevidenced. G0-1, original G0-3, G0-4 and
+G0-5 remain BLOCKED and were not attempted. All architecture ADRs remain Proposed; ADR-0020 stays
+Accepted for documentation language. Stop at non-invasive preparation pending actual VM access.

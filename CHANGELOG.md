@@ -1,5 +1,18 @@
 # Istorija promena
 
+## 0.4.3 — 2026-09-07
+
+Recorded owner acceptance of G0-2 only for the controlled HRESULT comparison and the separately
+authorised EXP-009 A0-7ZIP desktop application baseline. Existing Hyper-V access remains denied;
+prepared the exact owner-only group action privately without executing it. No VM or application
+workflow ran, and all prior labs remain stopped.
+
+Pinned official Windows x64 7-Zip 26.03, Ubuntu 24.04.4 desktop and WineHQ vanilla 11.17 package
+identities. Added small synthetic-fixture/output-verifier code using the existing capture helper,
+unit checks, a two-workflow preregistration and a conservative D: storage plan. Preserved setup
+errors and private/public evidence provenance. Host helper checks do not imply application success.
+No architecture ADR or larger PoC was accepted or started.
+
 ## 0.4.2 — 2026-09-07
 
 Completed the owner-authorised G0-2 HRESULT comparison from public baseline `ca0aa5ae26a1d3b630f63eda8f87626d125248d1`.
