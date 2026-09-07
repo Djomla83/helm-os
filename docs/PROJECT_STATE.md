@@ -160,3 +160,58 @@ One decision from the maintainer: **whether to authorise a lab**, and where it r
 item unblocks four of the five Gate 0 checks. WSL2 can unblock the Wine-mechanics checks; it cannot
 unblock the integration or graphics questions, and results obtained there must not be presented as
 if it could.
+
+
+---
+
+## Update 2026-09-07 (later) — bounded lab phase executed
+
+Owner authorised a bounded Gate 0 lab phase. Full detail:
+[Gate 0 report](experiments/EXP-009-GATE0-REPORT.md) and
+[lab runbook](experiments/LAB-G0-RUNBOOK.md).
+
+### Language policy — decided
+
+[ADR-0020](adr/ADR-0020-documentation-language.md) is **Accepted** with named owner approval, and is
+the authoritative specification for the topic. English is primary for new technical specifications,
+ADRs, RFCs, experiment reports and developer-facing instructions; existing Serbian material is
+preserved as history and originating requirements; the repository is **not** translated now; and
+each topic has exactly one authoritative document that others link to. `CONTRIBUTING.md` now
+summarises this and points at the ADR. **No architecture ADR was accepted.**
+
+### Lab provisioned
+
+The preferred VM path was **not available**: Hyper-V's role is enabled but the account lacks
+permission, and creating a VM would require a host administrator change that the authorisation
+excludes. The authorised fallback was used — a single disposable WSL2 distribution `helm-lab-g0`,
+isolated from Windows drives and interop, running as an unprivileged user. Host changes: one new
+directory and one new WSL distribution. Nothing else.
+
+### Results: 3 PASS, 1 PARTIAL, 3 BLOCKED, 0 FAIL
+
+| Check | Outcome |
+|---|---|
+| G0-3a filesystem mechanics | PASS (round 1; reported as a newly added subtest, **not** as satisfying the originally registered criterion) |
+| G0-3b Wine registry behaviour | **PASS with real Wine 11.17** — hardlink copy contaminated, quiesced full copy independent, both controls correct |
+| G0-2 DirectComposition | **PARTIAL** — vanilla Wine returns E_NOTIMPL; the staging and Proton arms were not tested, so the comparison is unresolved |
+| G0-1, G0-4, G0-5 | BLOCKED — need authorised accounts, a desktop session, and a reviewed containment boundary respectively |
+
+**The most consequential result:** a synthetic user document created after the recovery point did
+**not** survive a whole-prefix restore. That is the failure ADR-0017 rule 2 exists to prevent, now
+demonstrated rather than argued.
+
+### Decision status
+
+| Item | State |
+|---|---|
+| ADR-0020 | **Accepted** 2026-09-07 (documentation language only) |
+| ADR-0013 to ADR-0019 | **All still `Proposed`.** ADR-0017 amended on owner instruction and is now the best-evidenced; ADR-0015 still needs its novelty claim narrowed. |
+| Evidence Loop PoC | **Still not authorised.** Its central thesis needs real applications and a desktop session. |
+| Track A / Track B | **Still open.** G0-1 stayed blocked; a lab does not supply authorised accounts or a reproduction. |
+| Application compatibility rate | **Still unknown.** No Windows application was installed or run. |
+
+### Next step
+
+Finish G0-2's remaining two runtime arms in a second disposable lab (about an hour), take amended
+ADR-0017 to review, and decide the environment for application-level work — a desktop session on
+real hardware, or the Hyper-V group approval recorded in the runbook.

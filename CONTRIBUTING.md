@@ -31,9 +31,17 @@ python3 tools/validate_docs.py
 python3 -m unittest discover -s tools/tests -v
 ```
 
-Dokumentaciju održavamo na srpskom, latinicom, u ovoj početnoj reviziji.
-Prevod za širu zajednicu može doći kroz poseban usklađen proces, bez održavanja
-više kontradiktornih normativnih specifikacija.
+## Jezik dokumentacije
+
+Politika je usvojena 2026-09-07. **Merodavna specifikacija je
+[ADR-0020](docs/adr/ADR-0020-documentation-language.md)**; ovaj odeljak je sažetak i ne sme
+da odstupi od nje.
+
+Ukratko: **engleski** je primarni jezik za nove tehničke specifikacije, ADR-ove, RFC-ove,
+izveštaje eksperimenata i uputstva za razvoj. Postojeći materijal na srpskom čuva se kao
+istorija projekta i kao polazni zahtevi; repozitorijum se **ne prevodi** sada. Svaka tema ima
+tačno jedan jasno označen merodavan dokument, a prevodi i istorijski dokumenti na njega
+**upućuju** umesto da ga prepričavaju.
 
 ## Review
 

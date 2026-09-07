@@ -1,5 +1,29 @@
 # Istorija promena
 
+## 0.4.0 — 2026-09-07
+
+Jezicka politika usvojena: ADR-0020 je **Accepted** uz imenovano odobrenje vlasnika i merodavan je
+za tu temu; `CONTRIBUTING.md` sada upucuje na njega. Nijedan arhitektonski ADR nije prihvacen.
+
+Izvrsena ogranicena Gate 0 lab faza. Preferirani VM put nije bio dostupan (Hyper-V uloga je
+ukljucena, ali nalog nema dozvolu; to bi trazilo administratorsku izmenu koja nije odobrena), pa je
+koriscen odobreni fallback: jedna jednokratna WSL2 distribucija `helm-lab-g0`, izolovana od Windows
+diskova i interop-a, sa neprivilegovanim korisnikom. Dodat
+`docs/experiments/LAB-G0-RUNBOOK.md` sa manifestom, reprodukcijom i uputstvom za uklanjanje.
+
+Rezultati: 3 PASS, 1 PARTIAL, 3 BLOCKED, 0 FAIL. Sa stvarnim Wine 11.17 potvrdjeno je da hardlink
+kopija prefiksa biva kontaminirana, da je quiesced puna kopija nezavisna i da dokument nastao posle
+tacke oporavka **ne prezivljava** vracanje celog prefiksa. Vanilla Wine vraca E_NOTIMPL za
+DirectComposition; staging i Proton grane nisu testirane, pa poredjenje ostaje neresenо.
+
+ADR-0017 izmenjen po uputstvu vlasnika: trazi nezavisno stanje oporavka kao **proverenu osobinu**,
+sa quiesced punom kopijom kao prenosivom osnovom; reflink je opcion i mora se eksplicitno testirati.
+ADR-0017 ostaje `Proposed`.
+
+Zabelezeno je i da round-1 PASS **ne** zadovoljava kriterijum registrovan pre izvrsenja; prijavljen
+je kao novi podtest, bez naknadnog ublazavanja kriterijuma. Nijedan aplikacioni test nije izvrsen;
+stopa kompatibilnosti ostaje nepoznata. PoC nije odobren.
+
 ## 0.3.0 — 2026-09-07
 
 Foundation audit ispravljen na reviziju 2: deset zabelezenih ispravki u

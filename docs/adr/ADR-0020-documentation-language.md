@@ -1,91 +1,77 @@
-# ADR-0020: Documentation language policy — proposed amendment to CONTRIBUTING.md
+# ADR-0020: Documentation language policy
 
-**Status:** Proposed\
+**Status:** **Accepted**\
 **Draft date:** 2026-09-07\
-**Approver:** not entered\
-**Acceptance date:** not entered
+**Approver:** Repository owner (Djomla83), by written instruction of 2026-09-07\
+**Acceptance date:** 2026-09-07
+
+> This is the **authoritative specification** for the documentation language policy. Any other
+> document that describes this topic — including `CONTRIBUTING.md` — links here rather than
+> restating the rules, so the two cannot silently diverge.
 
 ## Context
 
-`CONTRIBUTING.md` states that documentation is maintained in Serbian, latinica, in this initial
-revision, and that translation for a wider community should come through a separate coordinated
-process rather than maintaining several contradictory normative specifications.
+`CONTRIBUTING.md` originally required documentation in Serbian, latinica. From 2026-09-06 that rule
+was overridden in practice: the foundation audit, the ADR series and the experiment documents were
+written in English on the owner's verbal instruction, recorded nowhere in the repository. A rule
+that is silently overridden is worse than either following it or changing it, because a contributor
+cannot tell which language to use or which document is normative.
 
-Since 2026-09-06 that rule has been overridden in practice: the foundation audit, eight ADRs, two
-experiment documents and part of `PROJECT_STATE.md` are in English, on the owner's instruction given
-in conversation. The repository is therefore currently in a state its own contribution rules
-prohibit, on the strength of an instruction recorded nowhere in the repository.
+An earlier draft of this ADR proposed a different policy (Serbian normative for product documents,
+English for technical records). **That draft is superseded by the owner's decision below**, which
+differs from it: the decision makes English primary for new technical material and treats the
+Serbian corpus as history and originating requirements, rather than as the normative tier.
 
-That is the problem this record exists to fix. A rule that is silently overridden is worse than
-either following it or changing it, because a later contributor cannot tell which language a new
-document should be written in, and cannot tell whether the Serbian documents are still normative.
+## Decision
 
-## Options considered
+Approved by the owner on 2026-09-07:
 
-1. **Translate the new English documents to Serbian and restore the rule.** Consistent, and it
-   preserves a single normative language. Costs a substantial translation of technical material
-   whose primary sources are all English, and the translation would need re-doing on every revision.
-2. **Switch the project to English entirely.** Consistent, and it matches the language of every
-   upstream project, specification and bug tracker the work depends on. Costs a retranslation of the
-   existing Serbian corpus, including the master plan, which is the largest document in the
-   repository.
-3. **Adopt an explicit two-tier policy**: Serbian for the founding product documents, English for
-   research and technical records, with one rule stating which is normative when they disagree.
-4. **Leave it undefined.** Rejected: this is the current state, and it is the defect.
+1. **English is the primary language** for new technical specifications, ADRs, RFCs, experiment
+   reports and developer-facing instructions.
+2. **Existing Serbian material is preserved** as project history and as the originating
+   requirements. **The repository is not translated now.**
+3. **Each topic has exactly one clearly identified authoritative specification.** Translations and
+   historical documents must **link to it** rather than restating it and silently diverging.
 
-## Proposed decision
+### Applying rule 3
 
-Adopt option 3, and amend `CONTRIBUTING.md` accordingly. This is a proposal; the owner decides, and
-option 1 or 2 remains open.
+| Topic | Authoritative document | Status of the other documents |
+|---|---|---|
+| Product vision, scope, originating requirements | [`HELM_MASTER_PLAN.md`](../../HELM_MASTER_PLAN.md) (Serbian) | Originating requirements. Preserved. Where a later English ADR supersedes a specific point, that ADR is authoritative **for that point** and says so. |
+| Architectural decisions | The individual ADR in `docs/adr/` (English) | The index in [`DECISIONS.md`](../DECISIONS.md) is a pointer list, not a specification. |
+| Experiments and their results | The `EXP-*` document and its report in `docs/experiments/` (English) | — |
+| Research findings | [`FOUNDATION_AUDIT.md`](../research/FOUNDATION_AUDIT.md) (English) | [`PRIOR_ART.md`](../research/PRIOR_ART.md) links to it rather than duplicating it. |
+| Contribution rules | [`CONTRIBUTING.md`](../../CONTRIBUTING.md) (Serbian) | Authoritative for contribution process; for the **language policy specifically** it links to this ADR. |
+| Agent rules | [`AGENTS.md`](../../AGENTS.md) (Serbian) | Preserved. New agent-facing instructions are written in English. |
 
-Proposed replacement for the language paragraph in `CONTRIBUTING.md`:
+### What this does not mean
 
-> Dokumentaciju održavamo dvojezično, sa jasnom podelom i jednim pravilom prvenstva.
->
-> **Srpski, latinica** — proizvodni i upravljački dokumenti: `README.md`, `HELM_MASTER_PLAN.md`,
-> `AGENTS.md`, `CONTRIBUTING.md`, `SECURITY.md`, `LICENSE-DECISION.md`, `CHANGELOG.md` i indeksi u
-> `docs/`. Ovi dokumenti su **normativni**.
->
-> **Engleski** — istraživački i tehnički zapisi: `docs/research/`, `docs/adr/`,
-> `docs/experiments/` i `tools/`. Ovi dokumenti citiraju primarne izvore koji su na engleskom, i
-> namenjeni su i saradnji sa upstream projektima.
->
-> **Pravilo prvenstva:** ako se normativni dokument i tehnički zapis razlikuju, važi normativni
-> dokument, a razlika se rešava u istom PR-u. Prevod postojećih dokumenata nije uslov za doprinos.
-
-Rationale for the split. The technical records cite primary sources that are exclusively in English,
-are the documents most likely to be shared with upstream projects when reporting a defect or
-proposing a patch, and change most often. The product documents define what the project promises and
-who decides, are read first by anyone new, and should stay in the founder's language. The precedence
-rule prevents the two tiers from becoming two competing specifications, which is the outcome the
-original rule was written to avoid.
+- It does **not** authorise translating or rewriting existing Serbian documents.
+- It does **not** demote the master plan. It remains the originating requirements document.
+- It does **not** apply retroactively: no existing document must be rewritten to comply.
 
 ## Consequences
 
-The repository becomes bilingual by design rather than by accident. A contributor gets an
-unambiguous answer to "which language does my document use". The existing English documents become
-compliant without retranslation, and the existing Serbian documents remain normative and unchanged.
+New technical material is written in the language of the primary sources it cites and of the
+upstream projects it must interoperate with, which lowers the cost of reporting defects and
+proposing patches upstream. The Serbian corpus stays readable and authoritative for what it covers.
 
-The cost is real: a Serbian-speaking reader who does not read English loses direct access to the
-technical records, and the project takes on a small permanent obligation to keep the two tiers from
-contradicting each other. If the owner judges that cost too high, option 1 is the correct choice and
-this ADR should be rejected in favour of translating the English documents.
-
-This ADR does not itself modify `CONTRIBUTING.md`. The amendment applies only on acceptance.
+The cost is a bilingual repository, and a standing obligation that every topic names one
+authoritative document. A Serbian-speaking reader who does not read English loses direct access to
+new technical records; the owner accepted that trade explicitly.
 
 ## Evidence
 
-The current state of the repository: [FOUNDATION_AUDIT.md](../research/FOUNDATION_AUDIT.md),
-ADR-0013 to ADR-0019 and this record are in English; `CONTRIBUTING.md` and the master plan are in
-Serbian. The deviation is flagged in the audit header, in
-[PROJECT_STATE.md](../PROJECT_STATE.md) and in `CHANGELOG.md` 0.2.0, but was never proposed as a
-decision until now.
+The owner's written instruction of 2026-09-07 states the three rules verbatim. The prior state —
+English documents in a repository whose contribution rules required Serbian — is visible in the
+2026-09-06 commits and was flagged in the audit header, `PROJECT_STATE.md` and `CHANGELOG.md` 0.2.0
+without ever being proposed as a decision.
 
 ## Revisiting
 
-The project acquires contributors who need a single language; or the volume of Serbian technical
-material grows enough that the split stops paying for itself; or the owner decides the master plan
-should be translated, at which point option 2 becomes cheap and this record is superseded.
+The project acquires contributors for whom a single language is necessary; or the owner decides to
+translate the master plan, at which point a single-language policy becomes cheap and this record is
+superseded by a new ADR.
 
-This record is not human approval. Changing the status to `Accepted` requires the name and role of
-an approver, a date and a review reference; the draft date above is not an acceptance date.
+**This record carries a named human approval and is accepted.** No other ADR in this repository is
+accepted; ADR-0013 to ADR-0019 remain `Proposed` and this decision does not change their status.

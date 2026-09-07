@@ -50,16 +50,37 @@ destructive for Wine prefixes.
 Adopt option 3, as six rules that are individually testable. A recovery implementation that does not
 satisfy all six must not be described to users as protecting their work.
 
-1. **Quiesce before copying.** Stop the application and shut down its wineserver with
-   `wineserver -k -w` so that the deferred registry save completes and file descriptors close. No
-   snapshot of a live prefix is honest.
-2. **Classify every path.** Each prefix path belongs to exactly one tier: *runtime state* (revertible),
-   *application state* (revertible with the application), or *user data* (**never** reverted, backed
-   up separately). The tier split is declared, not guessed. Deriving it requires observing the
-   installer, which is why rule 6 exists.
-3. **Copy with reflinks or full copies, never hardlinks.** Group each database with its journal and
-   write-ahead sidecar files as one atomic unit. Retain N generations. Write the completion marker
-   last and flush it, so that a torn snapshot self-invalidates.
+1. **Quiesce before copying, and verify the quiesce.** Stop the application and its background
+   writers so that deferred state is flushed and file descriptors close. **Issuing a stop command is
+   not sufficient evidence that it worked** — the documented Wine command escalates to an
+   uncatchable kill after roughly ten seconds, which bypasses the shutdown flush. The procedure must
+   confirm that the expected state was actually written before the copy is taken. No copy of a live
+   prefix is honest.
+2. **Classify every path, and keep the four recovery layers separate.** Each prefix path belongs to
+   exactly one tier: *runtime state* (revertible), *application state* (revertible with the
+   application), or *user data* (**never** reverted, backed up separately). The tier split is
+   declared, not guessed. Deriving it requires observing the installer, which is why rule 6 exists.
+
+   Separately, **runtime rollback, prefix rollback, user-document recovery and external or
+   server-side state are four different things** and are designed, tested and reported separately.
+   A virtual-machine checkpoint restores a whole machine; it is **not** validated application
+   recovery and must never be presented as evidence of it.
+3. **Produce an independent recoverable copy. Never a mutable source-to-snapshot hardlink.**
+   *(Amended 2026-09-07 — the original wording mandated reflink support, which execution showed is
+   not available on ordinary filesystems.)* The requirement is a property, not a mechanism: after
+   the copy exists, **subsequent writes to the source must not change it**, and that independence is
+   **verified**, not assumed. Acceptable mechanisms, in order of preference:
+   - a **quiesced full copy** — stop all relevant writers, copy into a fresh destination, then
+     verify contents, the metadata the application depends on, and independence from subsequent
+     writes. This is the baseline and it works everywhere;
+   - a filesystem snapshot or reflink copy **where capability-testing proves it is available**.
+     Reflink is **optional and capability-tested**, never assumed — and a command that silently
+     falls back to a full copy on failure is **not** evidence that reflink was used. Probe the
+     capability explicitly and record the answer.
+
+   In every case: group each database with its journal and write-ahead sidecar files as one atomic
+   unit, retain N generations, and write the completion marker last and flush it, so that a torn
+   copy self-invalidates.
 4. **Stamp a forward-only version beside the data** and refuse to launch an older binary against
    newer data, rather than letting it write. Refusal is a visible, recoverable event; silent
    corruption is not.
@@ -100,20 +121,21 @@ The ten-minute falsification test for rule 3 is gate check G0-3 in
 whole decision. One material question is untested and must be answered before recovery is promised:
 whether restoring a snapshot consumes or invalidates a software licence activation.
 
-## Corrections required before acceptance (recorded 2026-09-07)
+## Corrections applied 2026-09-07 (ADR remains Proposed)
 
 Gate 0 produced execution evidence that contradicts two of the six rules. This ADR must be amended
 before it is taken to review; it is recorded here rather than silently edited.
 
-1. **Rule 3 mandates reflink copies, and reflink was unsupported on both filesystems tested** —
+1. **Rule 3 mandated reflink copies, and reflink was unsupported on both filesystems tested** —
    including the ext filesystem of a default Ubuntu install. See
-   [EXP-009 Gate 0 report, G0-3a](../experiments/EXP-009-GATE0-REPORT.md). The rule must add an
-   explicit filesystem precondition, a supported fallback (full copy, or a filesystem that provides
-   copy-on-write), and a startup check that refuses to promise recovery on a filesystem that cannot
-   deliver it.
-2. **Rule 1's quiesce step is not sufficient as written.** The documented command escalates to an
-   uncatchable kill after roughly ten seconds, which bypasses the shutdown flush entirely. The rule
-   must require *verification* that the hive was written, not the issuing of a command.
+   [EXP-009 Gate 0 report, G0-3a](../experiments/EXP-009-GATE0-REPORT.md). **Amended 2026-09-07 on
+   owner instruction:** the rule now requires *independent recoverable state* as a verified
+   property, with a quiesced full copy as the portable baseline and reflink treated as optional and
+   capability-tested.
+2. **Rule 1's quiesce step was not sufficient as written.** The documented command escalates to an
+   uncatchable kill after roughly ten seconds, which bypasses the shutdown flush entirely.
+   **Amended:** the rule now requires *verification* that the expected state was written, not the
+   issuing of a command.
 
 Two clarifications that strengthen rather than weaken the ADR:
 

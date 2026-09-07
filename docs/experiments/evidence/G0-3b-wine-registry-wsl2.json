@@ -1,0 +1,124 @@
+{
+  "checks": {
+    "Q1_hardlink_copy_contaminated": {
+      "changed_hives_in_copy": [
+        "system.reg",
+        "user.reg"
+      ],
+      "contaminated": true,
+      "nlink_before": {
+        "system.reg": 2,
+        "user.reg": 2,
+        "userdef.reg": 2
+      },
+      "question": "Does a Wine registry write reach a hardlink copy of the prefix?",
+      "tracks_live": {
+        "system.reg": true,
+        "user.reg": true,
+        "userdef.reg": true
+      }
+    },
+    "Q2_full_copy_independent": {
+      "changed_hives_in_copy": [],
+      "independent": true,
+      "question": "Does a quiesced full copy stay unchanged after further writes?"
+    },
+    "Q3_post_copy_document_survives_restore": {
+      "document_digest": "6d3f8d487f6639fe8fe6dc234b112cade4f41d71a87dcc8f8a51d9b062ac194d",
+      "interpretation": "If false, a naive whole-prefix restore silently destroys work created after the recovery point. This is the exact failure ADR-0017 rule 2 (tier separation) exists to prevent, and it is why runtime, prefix and user-document recovery must be separate operations.",
+      "question": "Does a user document created after the copy survive restoring that copy?",
+      "survived_whole_prefix_restore": false
+    },
+    "Q4_which_hive_records_hkcu": {
+      "changed_hives": [
+        "system.reg",
+        "user.reg"
+      ],
+      "note": "audit correction C-9: revision 1 inspected system.reg only, which is the wrong hive for an HKCU write",
+      "question": "Which hive changes when a per-user value is written?"
+    },
+    "control_deliberately_broken": {
+      "description": "a mutated copy must compare unequal, proving the comparison detects change",
+      "detected": true
+    },
+    "control_known_good": {
+      "description": "with no intervening write, the full copy must equal the prefix",
+      "equal": true
+    },
+    "quiesce_after_init": {
+      "verified_stopped": true,
+      "wait_rc": 0,
+      "wineserver_still_running": false
+    },
+    "quiesce_after_write": {
+      "verified_stopped": true,
+      "wait_rc": 0,
+      "wineserver_still_running": false
+    }
+  },
+  "commands": [
+    {
+      "cmd": "wineboot --init",
+      "label": "wineboot --init",
+      "rc": 0,
+      "seconds": 19.55,
+      "stderr_tail": [
+        "libEGL warning: Ensure your X server supports DRI3 to get accelerated rendering",
+        "libEGL warning: DRI3 error: Could not get DRI3 device",
+        "libEGL warning: Ensure your X server supports DRI3 to get accelerated rendering"
+      ]
+    },
+    {
+      "cmd": "wineserver -k",
+      "label": "wineserver -k",
+      "rc": 1,
+      "seconds": 0.0,
+      "stderr_tail": []
+    },
+    {
+      "cmd": "wineserver -w",
+      "label": "wineserver -w (wait for exit)",
+      "rc": 0,
+      "seconds": 0.0,
+      "stderr_tail": []
+    },
+    {
+      "cmd": "wine reg add HKCU\\Software\\HelmGate0 /v Probe /t REG_SZ /d helm-g0-17 /f",
+      "label": "reg add HKCU",
+      "rc": 0,
+      "seconds": 4.14,
+      "stderr_tail": []
+    },
+    {
+      "cmd": "wineserver -k",
+      "label": "wineserver -k",
+      "rc": 1,
+      "seconds": 0.0,
+      "stderr_tail": []
+    },
+    {
+      "cmd": "wineserver -w",
+      "label": "wineserver -w (wait for exit)",
+      "rc": 0,
+      "seconds": 0.0,
+      "stderr_tail": []
+    }
+  ],
+  "filesystem": "ext2/ext3",
+  "kernel": "6.6.87.2-microsoft-standard-WSL2",
+  "probe": "wine_registry_semantics",
+  "probe_version": "1",
+  "reflink": {
+    "note": "capability-tested explicitly; never inferred from a fallback-capable command",
+    "rc": 1,
+    "stderr": "cp: failed to clone '/home/helmlab/g0/run1/rl_dst' from '/home/helmlab/g0/run1/rl_src': Operation not supported",
+    "supported": false
+  },
+  "scope_limits": [
+    "Real Wine was executed; results are for the pinned Wine build and filesystem recorded above.",
+    "WSL2 environment: valid only for this WSL configuration. Not generalisable to bare-metal graphics, device support, battery or physical sleep/resume.",
+    "Synthetic data only. No application, no user account, no licensed software.",
+    "This probe does NOT demonstrate application recovery: it tests state independence, not whether an application still works after a restore."
+  ],
+  "wine_version": "wine-11.17"
+}

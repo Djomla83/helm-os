@@ -1,0 +1,30 @@
+{
+  "arms_not_tested": [
+    "wine-staging (conflicts with the installed winehq-devel package)",
+    "Proton (requires umu-launcher; not installed)"
+  ],
+  "check": "G0-2 (PARTIAL: 1 of 3 runtime arms)",
+  "compiler": "x86_64-w64-mingw32-gcc (GCC) 13-win32",
+  "interpretation": "E_NOTIMPL (0x80004001) means this runtime does not implement DirectComposition device creation. The audit reports this as the gate on the Chromium-embedding application class.",
+  "kernel": "6.6.87.2-microsoft-standard-WSL2",
+  "package_source": "https://dl.winehq.org/wine-builds/ubuntu noble/main",
+  "probe": "dcomposition_availability",
+  "probe_exe_sha256": "b74011c0c154e1e742b6a27c2de7259befce4e9e528cb946f9221fdd2f445ce4",
+  "probe_src_sha256": "70b1b1e86eae6f4d3977713d8c66956061a2ab69f9518dcb2d93dc74af2ce316",
+  "probe_version": "1",
+  "question": "Does DCompositionCreateDevice succeed on this runtime?",
+  "result": {
+    "dcomp_dll_loaded": true,
+    "entrypoint_found": true,
+    "hresult": "0x80004001",
+    "is_E_NOTIMPL": true
+  },
+  "runtime_arm": "vanilla upstream Wine (winehq-devel)",
+  "scope_limits": [
+    "Single runtime arm; the staging and Proton comparison is NOT established.",
+    "WSL2 environment, kernel 6.6; valid only for this configuration.",
+    "Tests entry-point availability only, not whether a real Chromium UI renders."
+  ],
+  "wine_package_version": "11.17~noble-1",
+  "wine_version": "wine-11.17"
+}

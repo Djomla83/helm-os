@@ -8,11 +8,15 @@
 | Reviewer | **not assigned** — this report is not accepted |
 | Repository revision at execution | `e09a52f` |
 | Approved budget | none set; no spend incurred, no software installed |
-| Outcome summary | 1 PASS (partial), 4 BLOCKED, 0 FAIL |
+| Outcome summary | **Round 1** (no lab): 1 PASS, 5 BLOCKED. **Round 2** (lab provisioned): 3 PASS, 1 PARTIAL, 3 BLOCKED, 0 FAIL |
 
-> **This report contains no Windows compatibility result.** No Windows application was installed or
-> run, because no Wine of any version is present in the available environment. Nothing here should
-> be read as evidence about application compatibility.
+> **This report contains no Windows application compatibility result.** Round 2 executed real Wine
+> 11.17 in a disposable lab, but only against synthetic probes — no Windows application was
+> installed or run. Nothing here should be read as evidence about application compatibility.
+>
+> **Round 1** (2026-09-07, morning) ran with no lab available. **Round 2** (2026-09-07, afternoon)
+> ran after the maintainer authorised a bounded lab phase. Round 1's results are preserved
+> unchanged below; Round 2 is added in [§2A](#2a-round-2-results-after-the-lab-was-provisioned).
 
 ---
 
@@ -89,11 +93,29 @@ INCONCLUSIVE: the decisive work has not been attempted, not merely failed to dec
 
 No inference is offered in place of the measurement.
 
-### G0-3a — Filesystem snapshot mechanics (Wine-free part) → **PASS**
+### G0-3a — Filesystem snapshot mechanics (Wine-free subtest) → **PASS**, with a provenance caveat
+
+> **Provenance check, performed 2026-09-07 at the maintainer's instruction — and it failed.**
+> The criterion registered *before* execution, in `EXP-009` revision 1 as committed in `f6fe363`,
+> described G0-3 as a **Wine registry** test. What was actually executed is a **filesystem-mechanics
+> test driven by a synthetic writer, with no Wine involved**. The `G0-3a` / `G0-3b` split that makes
+> this subtest legitimate was written in revision 2 **after** the run.
+>
+> Consequences, applied rather than argued away:
+> - **G0-3 as originally registered is BLOCKED, not passed.** It is recorded as `G0-3b` below and
+>   remains blocked on Wine.
+> - **This subtest is reported as a newly added subtest**, not as satisfaction of the original
+>   criterion. The criterion has not been relaxed to fit the result.
+> - What *was* pre-registered for this subtest is narrower but real: its three questions and its
+>   verdict logic were written into
+>   [`probe_snapshot_semantics.py`](../../tools/gate0/probe_snapshot_semantics.py) before it ran, and
+>   that file is committed, so the expectations were fixed in code ahead of the observation.
+> - **This result must never be described as execution of Wine registry operations, or as a
+>   demonstration of successful application recovery.** It is neither.
 
 | Field | Value |
 |---|---|
-| Outcome | **PASS** — the pre-registered expectation held on both filesystems tested |
+| Outcome | **PASS** for the subtest as encoded in the probe; the expectations were fixed in probe source before execution, but **not** in the experiment document |
 | Executed | 2026-09-07, unattended |
 | Probe | [`tools/gate0/probe_snapshot_semantics.py`](../../tools/gate0/probe_snapshot_semantics.py) (repository revision `e09a52f`) |
 | Artifacts | [ext4](evidence/G0-3-snapshot-semantics-ext4.json), [drvfs](evidence/G0-3-snapshot-semantics-drvfs.json) |
@@ -177,20 +199,125 @@ Nothing was inferred about confinement strength.
 
 ---
 
+<a id="2a"></a>
+
+## 2A. Round 2 results, after the lab was provisioned
+
+Lab: `helm-lab-g0`, a disposable WSL2 Ubuntu 24.04 distribution. Full manifest, isolation
+configuration, reproduction steps and teardown: [LAB-G0-RUNBOOK.md](LAB-G0-RUNBOOK.md).
+
+**The preferred VM path was not taken, and was not attempted.** Hyper-V's role is enabled and its
+service is running, but `Get-VM` returns *"You do not have the required permission"* and the account
+is not in `Hyper-V Administrators`. Creating a VM therefore requires a host administrator change,
+which the authorisation excludes, so the stop rule applied. **Single approval that would unlock it:**
+add the account to the local `Hyper-V Administrators` group (admin action, requires re-login). No
+hypervisor install, Windows feature or reboot beyond that is needed.
+
+Runtime installed: **`wine-devel` pinned at `11.17~noble-1`** from `dl.winehq.org/wine-builds/ubuntu`
+noble/main — the exact release whose source the audit's registry findings were read from.
+
+### G0-3b — Wine registry save behaviour → **PASS** (the Round 1 blocker is cleared)
+
+| Field | Value |
+|---|---|
+| Outcome | **PASS.** Both controls behaved correctly, so the comparison is trustworthy. |
+| Probe | [`tools/gate0/probe_wine_registry.py`](../../tools/gate0/probe_wine_registry.py), transferred into the lab and verified **byte-identical** (`4ec6d1f4…`) to the committed source |
+| Evidence | [`G0-3b-wine-registry-wsl2.json`](evidence/G0-3b-wine-registry-wsl2.json) (digest `75ce39d5…`, verified equal in-lab and in-repo) |
+
+Questions were fixed in the probe source before execution. Observed with **real Wine 11.17**:
+
+| # | Question | Result |
+|---|---|---|
+| Q1 | Does a Wine registry write reach a hardlink copy of the prefix? | **Yes — contaminated.** `system.reg` and `user.reg` both changed in the copy, and all three hives track the live prefix exactly. |
+| Q2 | Does a quiesced full copy stay unchanged after further writes? | **Yes — independent.** No hive in the copy changed. |
+| Q3 | Does a user document created *after* the copy survive restoring that copy? | **No.** It is destroyed by a whole-prefix restore. |
+| Q4 | Which hive records an `HKCU` write? | **Both** `system.reg` and `user.reg` changed. |
+| — | Control: known-good (copy with no intervening write) | Compared **equal**, as required |
+| — | Control: deliberately broken (mutated copy) | Difference **detected**, as required |
+| — | Reflink capability, explicitly probed | **Unsupported** on the lab filesystem — a third filesystem, consistent with Round 1 |
+
+**What this establishes.** The audit's hardlink claim moves from VERIFIED_SOURCE plus a synthetic
+analogue to **VERIFIED_EXECUTION against real Wine**. Contamination is confirmed: a hardlink farm is
+not a snapshot. The amended ADR-0017 baseline — a quiesced full copy — is confirmed to produce
+genuinely independent state, verified by comparison rather than assumed.
+
+**Q3 is the most consequential result in this report.** A naive whole-prefix restore silently
+destroyed synthetic user work created after the recovery point. That is precisely the failure
+ADR-0017 rule 2 exists to prevent, and it is now demonstrated rather than argued.
+
+**Q4 refines audit correction C-9 rather than confirming it.** The correction said revision 1
+inspected the wrong hive. In fact *both* hives changed on an `HKCU` write, so revision 1's procedure
+would have coincidentally detected a change — but for the wrong reason, and its fatal defect
+(comparing two hardlinks to the same inode, which are identical by construction) is unaffected. The
+correction stands; its stated rationale is narrowed.
+
+**An incidental finding that supports the ADR-0017 quiesce amendment.** `wineserver -k` returned a
+**non-zero exit status** on both invocations, while the verification step (`wineserver -w` plus a
+process check) confirmed the server had actually stopped. A design that trusted the command's exit
+status would have drawn the wrong conclusion in both directions. This is exactly why the amended
+rule requires *verification*, not issuance.
+
+### G0-2 — DirectComposition availability → **PARTIAL** (1 of 3 runtime arms)
+
+| Field | Value |
+|---|---|
+| Outcome | **PARTIAL.** The vanilla arm ran; the comparison the check exists to make did not. |
+| Probe | [`tools/gate0/dcomp_probe.c`](../../tools/gate0/dcomp_probe.c), cross-compiled with `x86_64-w64-mingw32-gcc (GCC) 13-win32` |
+| Evidence | [`G0-2-dcomposition-vanilla-wine-11.17.json`](evidence/G0-2-dcomposition-vanilla-wine-11.17.json) (digest `63252e36…`) |
+
+Observed on **vanilla Wine 11.17**: `dcomp.dll` loads, the entry point resolves, and
+`DCompositionCreateDevice` returns **`0x80004001` (E_NOTIMPL)**. Reproduced twice.
+
+**Arms not tested, and therefore not concluded:** wine-staging (its package conflicts with the
+installed `winehq-devel`) and Proton (needs `umu-launcher`, not installed). **The audit's claim is
+that staging succeeds where vanilla does not — that half remains unverified.** What is now
+established is only that the vanilla arm returns E_NOTIMPL, which is consistent with the audit and
+insufficient to confirm it.
+
+### G0-1, G0-4, G0-5 → still **BLOCKED**
+
+| Check | Why it remains blocked |
+|---|---|
+| G0-1 | Needs authorised test accounts and a reproduction of the user's actual symptom. A lab removes missing-tool blockers; it does not supply an authorised account or a reproduction. |
+| G0-4 | Needs the incumbent manager plus a graphical desktop session and the application cohort. The lab has no desktop environment. |
+| G0-5 | **Deliberately kept blocked.** Hostile sandbox-escape testing must not run in an environment whose outer containment has not been reviewed. Not attempted. |
+
+### Scope of validity
+
+These results are valid **only for this WSL2 configuration** on kernel
+`6.6.87.2-microsoft-standard-WSL2`. They must not be generalised to bare-metal graphics, device
+support, battery life or physical sleep and resume. The lab has no desktop environment, portal
+backend or tray host, so **no desktop-integration claim was or could be tested**. Wine reported
+`libEGL` warnings about absent DRI3 during prefix creation, which is expected here and is a further
+reason no graphics conclusion is available.
+
+---
+
 ## 3. Costs and interventions
 
-| Measure | Value |
-|---|---|
-| Software installed | **None.** No package was installed on the host or in WSL. |
-| Money spent | None. |
-| Host changes | None persistent. The probe wrote only to disposable temporary directories, which it removed. |
-| Manual human interventions | **Zero** during execution. |
-| Machine time | Under one minute for the executed probe; environment discovery a few minutes. |
-| Automated research | 8 parallel agents, 611 tool calls, ≈1.19M tokens, ≈32 minutes wall-clock, for the corrections research supporting this report. |
-| Agent necessity | The executed check (G0-3a) required **no** model at all — it is deterministic scripting. The model was used for source reading and for correcting the audit, which is the genuinely agent-shaped part. |
+| Measure | Round 1 (no lab) | Round 2 (lab) |
+|---|---|---|
+| Software installed on the **host** | None | **None.** All packages were installed inside the disposable lab only. |
+| Money spent | None | None |
+| Persistent host changes | None | One new directory and one new WSL distribution — enumerated in the [runbook §2.1](LAB-G0-RUNBOOK.md) |
+| Disk consumed | 0 | ~2.9 GB (free space went 138.0 → 135.5 GB before package installs; 16 GB sparse cap, 14 GB still free inside the lab) |
+| Manual human interventions during execution | 0 | **0** |
+| Machine time | ~1 min probe, a few min discovery | ~6 min provisioning and package installation, ~30 s of probe execution |
+| Model usage | Source reading and audit corrections | Same; **no probe required a model to execute** |
+| Agent necessity | G0-3a is deterministic scripting | G0-3b and G0-2 are also deterministic scripting. The model's contribution was writing the probes and diagnosing an inconsistent tool report, not running anything. |
 
-No baseline arm was measurable: with no Wine present, arms B0, B1 and B2 are all unavailable, so no
-comparative cost claim is made.
+**A baseline arm was still not measurable.** Arms B0, B1 and B2 compare the effort of installing and
+running a real Windows *application*; no application was installed in either round, so no
+comparative cost claim is made. Round 2 does not change this — installing Wine is a precondition for
+the baseline, not the baseline itself.
+
+**One tooling failure is preserved rather than dropped.** During G0-2 the first command reported the
+compiler as absent and the built binary as missing, while simultaneously producing valid probe
+output — a self-contradictory result. It was not accepted: a separate verification step confirmed the
+compiler was installed (GCC 13-win32), the binary existed as a 250,960-byte PE32+ executable, and the
+result reproduced. The first report was an artefact of output ordering within a compound shell
+command, not a real failure — but it was investigated before anything was recorded, not explained
+away afterwards.
 
 ---
 
@@ -201,11 +328,11 @@ recommendations to the maintainer, based on what execution and corrected source 
 
 | ADR | Recommendation | Basis |
 |---|---|---|
-| [ADR-0013](../adr/ADR-0013-pinned-wine-runtime.md) — ship a pinned Wine | **Hold.** Unaffected by Gate 0, but untested: no Wine was run. | Its premises are source-based and were not contradicted. |
+| [ADR-0013](../adr/ADR-0013-pinned-wine-runtime.md) — ship a pinned Wine | **Hold, with two premises now confirmed by execution.** The WineHQ repository carries `winehq-stable` 11.0.0.0 and 10.0.0.0 and `winehq-devel` through 11.17 for this base, and `winehq-devel` **hard-depends on the i386 package** — both were previously graded LIKELY and are now VERIFIED_EXECUTION. Pinning an exact version string worked as the ADR assumes. | Round 2 package installation. |
 | [ADR-0014](../adr/ADR-0014-version-scoped-profiles.md) — version-scoped profiles | **Hold, with one strengthening note.** The comparison against the mature incumbent shows a history-isolation mechanism already exists there as a natural hook for an application-build axis; the ADR should reference that prior art rather than presenting the idea as unprecedented. | Corrections C-4, C-5. |
 | [ADR-0015](../adr/ADR-0015-evidence-expiry.md) — reproducible, expiring, gating evidence | **Amend before any acceptance.** Its novelty claim is materially overstated: traceability, artifact collection, a closed result vocabulary, reproducible rerun, non-pixel oracles and last-good attribution already ship in openQA. The defensible remainder is **artifact content-hash identity** and **mechanical verdict expiry**, plus two schema-shape fixes. The ADR should also evaluate adopting openQA rather than building. | Corrections C-4, C-5. |
 | [ADR-0016](../adr/ADR-0016-host-side-sandbox.md) — host-side boundary | **Hold.** Untested; G0-5 is BLOCKED. | No new evidence either way. |
-| [ADR-0017](../adr/ADR-0017-data-safety-rules.md) — tiered, quiesced, reflink-based recovery | **Amend before any acceptance — two rules are contradicted.** (i) Rule 3 mandates reflink copies; **reflink was unsupported on both filesystems tested**, including a default Ubuntu install, so the ADR must add a filesystem precondition and a supported fallback. (ii) Rule 1's quiesce step relies on a command that escalates to an uncatchable kill; it must **verify** the hive was written rather than assume it. The hardlink prohibition itself is **strengthened**, not weakened: contamination alone is disqualifying, confirmed by execution. | G0-3a; corrections C-7, C-8, C-10. |
+| [ADR-0017](../adr/ADR-0017-data-safety-rules.md) — tiered, quiesced recovery | **Amended 2026-09-07 on owner instruction; still `Proposed`.** Rule 3 now requires *independent recoverable state* as a verified property, with a quiesced full copy as the portable baseline and reflink optional and capability-tested. Rule 1 now requires *verifying* the quiesce. Rule 2 now separates the four recovery layers explicitly. **Round 2 supports all three amendments with execution evidence:** the full copy was independent, the hardlink copy was contaminated by real Wine, `wineserver -k` returned non-zero while having genuinely stopped, and reflink was unsupported on a third filesystem. **Recommend accepting after review** — it is now the best-evidenced ADR in the set. | G0-3a, G0-3b; corrections C-7, C-8, C-10. |
 | [ADR-0018](../adr/ADR-0018-win32-portal-bridge.md) — Win32-to-portal bridge | **Hold.** Untested; the environment has no portal backend. | No new evidence. |
 | [ADR-0019](../adr/ADR-0019-scope-boundary.md) — publish the unsupportable class; decide the product with evidence | **Hold, and note that its deciding input is still missing.** G0-1 is BLOCKED, so the Track A / Track B decision has **not** acquired the evidence this ADR says should settle it. Do not settle it by argument in the meantime. | G0-1 BLOCKED. |
 
@@ -216,30 +343,41 @@ amendment rather than continuing to override `CONTRIBUTING.md` silently.
 
 ## 5. Recommendation on proceeding to the PoC
 
-**Do not start the Evidence Loop PoC yet.** Four of five Gate 0 checks are BLOCKED on the same
-missing precondition, so the PoC's central assumptions are still untested.
+**Do not start the Evidence Loop PoC yet — but the reason has changed, and narrowed.**
 
-The blocking item is small and specific: **an approved lab**. Concretely, a Linux environment with a
-pinned Wine, a compiler, sandbox tooling and — for the integration and graphics questions — a real
-desktop session on real hardware. WSL2 can unblock G0-2, G0-3b and part of G0-4. It cannot unblock
-the integration or graphics questions at all, and a result obtained there must not be presented as
-if it were.
+After Round 2, the data-safety foundation is no longer speculative. The mechanism ADR-0017 depends
+on is now demonstrated with real Wine: hardlink farms are contaminated, a quiesced full copy is
+genuinely independent, and a whole-prefix restore destroys work created after the recovery point.
+That is the part of the design most likely to cause irreversible user harm, and it is now
+evidence-backed rather than argued.
 
-Recommended order, none of which needs the PoC:
+What still blocks the PoC is unchanged in kind:
 
-1. Maintainer decides whether to authorise a lab, and where it runs. This is the only real blocker.
-2. Re-run Gate 0's blocked checks in that lab and re-issue this report.
-3. Amend ADR-0015 and ADR-0017 as above, then take all seven ADRs to review as a set.
-4. Only then decide on the PoC, with the Track A / Track B question answered by G0-1 rather than by
-   preference.
+1. **The PoC's central thesis remains untested.** It is a claim about the *false-pass rate of
+   automated evidence* and the *human cost of re-qualification*. Neither can be measured without
+   installing and driving real applications, which needs a graphical desktop and an authorised
+   application cohort. The lab supplies neither.
+2. **G0-1 is still blocked**, so the Track A / Track B product decision still has no evidence.
+3. **G0-2 is only half-done.** The claim that gates the Chromium-embedding application class is a
+   *comparison* between vanilla, staging and Proton. Only vanilla ran.
 
-**What Gate 0 did settle**, without a lab and at negligible cost: one proposed recovery mechanism is
-unavailable on ordinary filesystems, one proposed test procedure was invalid and has been replaced,
-one factual claim in the audit was wrong and is corrected, one causal claim was unsupported and is
-withdrawn, and the evidence pillar's novelty is roughly half what was claimed. Those are all
-cheaper to learn now than after implementation.
+Recommended next steps, in order, none of which is the PoC:
 
----
+1. **Complete G0-2 cheaply.** A second disposable lab with `winehq-staging` pinned, plus `umu` for a
+   Proton arm, finishes the comparison in roughly an hour. It is the highest value per unit of
+   effort remaining, because it decides whether a whole application class is in scope.
+2. **Take ADR-0017 to review with the Round 2 evidence attached**, and consider accepting it.
+3. **Decide the environment for the application-level work.** A desktop session on real hardware, or
+   the Hyper-V approval noted in [§2A](#2a). This is the gate on everything that remains.
+4. **Only then** reconsider the PoC, with G0-1 answered.
+
+**What Gate 0 has now settled, at a cost of one disposable lab and no host software:** one proposed
+recovery mechanism was unavailable on every filesystem tested and the ADR was amended; the
+replacement mechanism was verified to work; a whole-prefix restore was shown to destroy user work;
+the hardlink prohibition moved from inference to demonstration; two packaging premises of ADR-0013
+were confirmed; one audit correction was itself refined by execution; and a self-contradictory tool
+report was caught and investigated rather than recorded. Every one of those is cheaper to learn now
+than after implementation.
 
 ## 6. Preserved failures and limitations
 
