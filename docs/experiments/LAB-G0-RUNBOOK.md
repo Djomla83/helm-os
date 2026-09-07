@@ -95,6 +95,71 @@ state and mount observations are reported separately; none establishes general c
 
 ## 3. Reproduction
 
+### G0-2 completion prerequisite, registered 2026-09-07 at 14:37:38 UTC
+
+The owner authorised completion of G0-2 from public baseline
+`ca0aa5ae26a1d3b630f63eda8f87626d125248d1`, conditional on a direct negative interoperability
+test. Main, origin/main and HEAD matched that SHA with a clean tree after fetching; documentation
+validation and all 20 validator tests passed before changes.
+
+Before provisioning or executing a runtime arm, copy the existing Windows system `cmd.exe` bytes
+from `C:\Windows\System32\cmd.exe` through standard input to
+`/home/helmlab/g0/interop-negative-20260907/cmd.exe`. Verify the SHA-256 against the source and
+record its PE signature, file version and size. The executable remains outside Git. This avoids
+mistaking a missing `/mnt/c` executable for an execution block. No Windows directory is mounted.
+
+Run once as `helmlab`, directly through Linux process execution, without Wine or any environment
+override, from the diagnostic directory:
+
+```text
+/home/helmlab/g0/interop-negative-20260907/cmd.exe /d /c echo HELM_G0_INTEROP_NEGATIVE_TEST
+```
+
+Capture exact arguments, exit code, stdout/stderr, timing, `/etc/wsl.conf`, binfmt registration,
+mount observations and `WSL_INTEROP`. A returned marker establishes that Windows execution is
+available and triggers the owner's STOP rule. An explicit interoperability refusal supports only
+the tested execution-blocking property. Missing files, invalid binaries, an unrelated startup
+failure or timeout cannot establish blocking; an ambiguous result also prevents provisioning.
+The test has a 20-second timeout and no automatic retry. `/d` suppresses cmd AutoRun commands.
+Neither configuration nor the interop environment will be enabled to make this test run.
+
+The [capture script](../../tools/gate0/probe_wsl_interop.py) preserves the observation without
+automatically treating a nonzero process exit as proof of containment. This is not G0-5 or a
+sandbox certification. Runtime control definitions and runtime provisioning follow only if this
+prerequisite is satisfied.
+
+### G0-2 additional distribution plan, before creation
+
+The direct [negative execution record](evidence/G0-2-wsl-interop-negative-2026-09-07.json) returned
+exit 1, empty stdout and `UtilAcceptVsock:271: accept4 failed 110` after 10.012 seconds. This is
+an interop connection failure, not an executable-not-found error; the transferred AMD64 PE matched
+the SHA-256 of the Windows system file. The fixed marker was absent. The tested Windows-process
+launch was unavailable with configuration unchanged; broader containment remains unreviewed.
+
+At 14:39 UTC, available host disk space was 132,701,827,072 bytes (about 123.6 GiB).
+The existing lab VHD occupied 11,848,908,800 bytes; its filesystem had about 4.64 GB free.
+No earlier base image exists in the project lab area, so use a distribution-scoped termination
+and a VHD export of this retained Ubuntu 24.04.4/Wine 11.17 lab as the common baseline. Preserve
+the original distribution, and hash the exported image privately outside Git.
+
+| Planned state | Host location (public path token) | Conservative storage allowance |
+|---|---|---|
+| Common retained baseline export | `C:\Users\<redacted>\helm-lab\g0-completion\baseline.vhdx` | 12 GiB |
+| Staging distribution `helm-lab-g0-staging` | `C:\Users\<redacted>\helm-lab\g0-staging` | 16 GiB |
+| Proton distribution `helm-lab-g0-proton` | `C:\Users\<redacted>\helm-lab\g0-proton` | 32 GiB |
+
+Total additional allowance: 60 GiB; projected remaining host space about 63.6 GiB, above the
+40 GiB safety reserve. Stop provisioning if measured free space or projected growth breaches that
+reserve. These are storage estimates, not measurements. Images are sparse; runtime downloads and
+prefixes stay within the respective lab disks. No global `.wslconfig` is changed. Do not run
+`wsl --shutdown`. Before package installation in each clone, repeat only the same interoperability
+prerequisite, preserving each separate record. Imported isolation configuration must match.
+
+The owner permits these two extra distributions solely to avoid modifying the vanilla runtime.
+The common baseline retains historical evidence. Fresh completion prefixes keep the old prefix
+separate. Runtime setup differences and disk growth must be recorded per arm. The original
+single-lab reproduction instructions below remain historical context.
+
 Run from PowerShell on a machine with WSL 2 already installed. Adjust the location if desired.
 
 ```powershell
