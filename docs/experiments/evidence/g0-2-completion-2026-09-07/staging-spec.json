@@ -1,0 +1,16 @@
+{
+  "arm": "staging",
+  "source_commit": "78422f7cc4f4867ed922150ffedd5646ebcabe0a",
+  "baseline_commit": "ca0aa5ae26a1d3b630f63eda8f87626d125248d1",
+  "runtime_argv": [
+    "/opt/wine-staging/bin/wine"
+  ],
+  "directory": "/home/helmlab/g0/completion-20260907",
+  "environment": {
+    "WINEPREFIX": "/home/helmlab/g0/completion-20260907/prefix",
+    "WINEARCH": "win64",
+    "WINEDLLOVERRIDES": "mscoree,mshtml="
+  },
+  "runtime_identity": "WineHQ 11.16~noble-1",
+  "sequence": "one methodological completion; original historical run untouched"
+}

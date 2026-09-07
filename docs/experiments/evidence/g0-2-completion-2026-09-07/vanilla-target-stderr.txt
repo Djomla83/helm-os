@@ -1,0 +1,3 @@
+00a4:err:ntoskrnl:ZwLoadDriver failed to create driver L"\\Registry\\Machine\\System\\CurrentControlSet\\Services\\winebth": c00000e5
+003c:fixme:service:scmdatabase_autostart_services Auto-start service L"winebth" failed to start: 1359
+00dc:fixme:dcomp:DCompositionCreateDevice 0000000000000000, {c37ea93a-e7aa-450d-b16f-9746cb0407f3}, 00007FFFFE30FEC0.

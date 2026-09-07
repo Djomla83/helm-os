@@ -1,0 +1,8 @@
+002c:fixme:winediag:loader_init wine-staging 11.16 is a testing version containing experimental patches.
+002c:fixme:winediag:loader_init Please mention your exact version when filing bug reports on winehq.org.
+00a4:err:ntoskrnl:ZwLoadDriver failed to create driver L"\\Registry\\Machine\\System\\CurrentControlSet\\Services\\winebth": c00000e5
+003c:fixme:service:scmdatabase_autostart_services Auto-start service L"winebth" failed to start: 1359
+0024:fixme:winediag:loader_init wine-staging 11.16 is a testing version containing experimental patches.
+0024:fixme:winediag:loader_init Please mention your exact version when filing bug reports on winehq.org.
+00e0:fixme:winediag:loader_init wine-staging 11.16 is a testing version containing experimental patches.
+00e0:fixme:winediag:loader_init Please mention your exact version when filing bug reports on winehq.org.

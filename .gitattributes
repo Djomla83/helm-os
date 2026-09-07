@@ -2,3 +2,6 @@
 *.md text eol=lf
 *.json text eol=lf
 *.py text eol=lf
+
+# Preserve the exact bytes of G0-2 capture artifacts, including Win32 CRLF stdout.
+docs/experiments/evidence/g0-2-completion-2026-09-07/** -text whitespace=cr-at-eol

@@ -1,0 +1,28 @@
+{
+  "arm": "proton",
+  "source_commit": "78422f7cc4f4867ed922150ffedd5646ebcabe0a",
+  "baseline_commit": "ca0aa5ae26a1d3b630f63eda8f87626d125248d1",
+  "runtime_argv": [
+    "/usr/bin/umu-run"
+  ],
+  "directory": "/home/helmlab/g0/completion-20260907",
+  "environment": {
+    "WINEPREFIX": "/home/helmlab/g0/completion-20260907/prefix",
+    "WINEARCH": "win64",
+    "WINEDLLOVERRIDES": "mscoree,mshtml=",
+    "PROTONPATH": "/home/helmlab/g0/completion-20260907/runtimes/UMU-Proton-10.0-4",
+    "GAMEID": "umu-default",
+    "PROTONFIXES_DISABLE": "1",
+    "UMU_RUNTIME_UPDATE": "0",
+    "UMU_FOLDERS_PATH": "/home/helmlab/g0/completion-20260907/umu-data",
+    "UMU_LOG": "debug",
+    "PROTON_VERB": "waitforexitandrun"
+  },
+  "runtime_identity": {
+    "umu_launcher": "1.4.4-1",
+    "umu_commit": "cf3d1b107147480c447ffbfb3f789dc74335074c",
+    "proton": "UMU-Proton-10.0-4",
+    "steam_linux_runtime": "sniper 3.0.20260805.254768"
+  },
+  "sequence": "one controlled execution; pinned runtime pre-extracted and verified before umu-run"
+}

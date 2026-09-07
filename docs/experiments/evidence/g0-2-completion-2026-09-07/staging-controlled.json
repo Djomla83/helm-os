@@ -1,0 +1,150 @@
+{
+  "spec": {
+    "arm": "staging",
+    "source_commit": "78422f7cc4f4867ed922150ffedd5646ebcabe0a",
+    "baseline_commit": "ca0aa5ae26a1d3b630f63eda8f87626d125248d1",
+    "runtime_argv": [
+      "/opt/wine-staging/bin/wine"
+    ],
+    "directory": "/home/helmlab/g0/completion-20260907",
+    "environment": {
+      "WINEPREFIX": "/home/helmlab/g0/completion-20260907/prefix",
+      "WINEARCH": "win64",
+      "WINEDLLOVERRIDES": "mscoree,mshtml="
+    },
+    "runtime_identity": "WineHQ 11.16~noble-1",
+    "sequence": "one methodological completion; original historical run untouched"
+  },
+  "started_utc": "2026-09-07T14:55:21.104837+00:00",
+  "runs": [
+    {
+      "label": "good",
+      "argv": [
+        "/opt/wine-staging/bin/wine",
+        "/home/helmlab/g0/completion-20260907/g0_2_control.exe",
+        "good"
+      ],
+      "cwd": "/home/helmlab/g0/completion-20260907",
+      "started_utc": "2026-09-07T14:55:21.106655+00:00",
+      "exit_code": 0,
+      "ended_utc": "2026-09-07T14:55:25.258992+00:00",
+      "duration_seconds": 4.15234491199999,
+      "stdout": {
+        "file": "staging-good-stdout.txt",
+        "sha256": "2d83dff7fca1b40f68e6568d643a9564381afe383d82fb3e9be2ac31467953fb",
+        "bytes": 85,
+        "text": "{\"control\":\"good\",\"module_loaded\":true,\"entrypoint_found\":true,\"call_nonzero\":true}\r\n"
+      },
+      "stderr": {
+        "file": "staging-good-stderr.txt",
+        "sha256": "9aa3ec7902258449381543d0e26370aea42618f407ec2b4c04769a7f3f91529f",
+        "bytes": 866,
+        "text": "002c:fixme:winediag:loader_init wine-staging 11.16 is a testing version containing experimental patches.\n002c:fixme:winediag:loader_init Please mention your exact version when filing bug reports on winehq.org.\n00a4:err:ntoskrnl:ZwLoadDriver failed to create driver L\"\\\\Registry\\\\Machine\\\\System\\\\CurrentControlSet\\\\Services\\\\winebth\": c00000e5\n003c:fixme:service:scmdatabase_autostart_services Auto-start service L\"winebth\" failed to start: 1359\n0024:fixme:winediag:loader_init wine-staging 11.16 is a testing version containing experimental patches.\n0024:fixme:winediag:loader_init Please mention your exact version when filing bug reports on winehq.org.\n00e0:fixme:winediag:loader_init wine-staging 11.16 is a testing version containing experimental patches.\n00e0:fixme:winediag:loader_init Please mention your exact version when filing bug reports on winehq.org.\n"
+      },
+      "probe_records": [
+        {
+          "control": "good",
+          "module_loaded": true,
+          "entrypoint_found": true,
+          "call_nonzero": true
+        }
+      ]
+    },
+    {
+      "label": "broken",
+      "argv": [
+        "/opt/wine-staging/bin/wine",
+        "/home/helmlab/g0/completion-20260907/g0_2_control.exe",
+        "broken"
+      ],
+      "cwd": "/home/helmlab/g0/completion-20260907",
+      "started_utc": "2026-09-07T14:55:25.259479+00:00",
+      "exit_code": 2,
+      "ended_utc": "2026-09-07T14:55:29.357157+00:00",
+      "duration_seconds": 4.097689711999976,
+      "stdout": {
+        "file": "staging-broken-stdout.txt",
+        "sha256": "fc2965c434c9db6c144f2a53ac2abb1db68f0548083706a8d004ff53b0df7593",
+        "bytes": 86,
+        "text": "{\"control\":\"broken\",\"module_loaded\":true,\"entrypoint_found\":false,\"win32_error\":127}\r\n"
+      },
+      "stderr": {
+        "file": "staging-broken-stderr.txt",
+        "sha256": "9aa3ec7902258449381543d0e26370aea42618f407ec2b4c04769a7f3f91529f",
+        "bytes": 866,
+        "text": "002c:fixme:winediag:loader_init wine-staging 11.16 is a testing version containing experimental patches.\n002c:fixme:winediag:loader_init Please mention your exact version when filing bug reports on winehq.org.\n00a4:err:ntoskrnl:ZwLoadDriver failed to create driver L\"\\\\Registry\\\\Machine\\\\System\\\\CurrentControlSet\\\\Services\\\\winebth\": c00000e5\n003c:fixme:service:scmdatabase_autostart_services Auto-start service L\"winebth\" failed to start: 1359\n0024:fixme:winediag:loader_init wine-staging 11.16 is a testing version containing experimental patches.\n0024:fixme:winediag:loader_init Please mention your exact version when filing bug reports on winehq.org.\n00e0:fixme:winediag:loader_init wine-staging 11.16 is a testing version containing experimental patches.\n00e0:fixme:winediag:loader_init Please mention your exact version when filing bug reports on winehq.org.\n"
+      },
+      "probe_records": [
+        {
+          "control": "broken",
+          "module_loaded": true,
+          "entrypoint_found": false,
+          "win32_error": 127
+        }
+      ]
+    },
+    {
+      "label": "target",
+      "argv": [
+        "/opt/wine-staging/bin/wine",
+        "/home/helmlab/g0/completion-20260907/dcomp_probe.exe"
+      ],
+      "cwd": "/home/helmlab/g0/completion-20260907",
+      "started_utc": "2026-09-07T14:55:29.357676+00:00",
+      "exit_code": 0,
+      "ended_utc": "2026-09-07T14:55:34.314697+00:00",
+      "duration_seconds": 4.957030122999981,
+      "stdout": {
+        "file": "staging-target-stdout.txt",
+        "sha256": "13bce9b6868602f35b5d417cad45e9c8245c9438178c3ac75b0501d53ef7de26",
+        "bytes": 95,
+        "text": "{\"dcomp_dll_loaded\":true,\"entrypoint_found\":true,\"hresult\":\"0x00000000\",\"is_E_NOTIMPL\":false}\r\n"
+      },
+      "stderr": {
+        "file": "staging-target-stderr.txt",
+        "sha256": "7b20ddef4eb1dbce7d1d12451589d7f9091a1555962568ef842bdae2e064f366",
+        "bytes": 1000,
+        "text": "002c:fixme:winediag:loader_init wine-staging 11.16 is a testing version containing experimental patches.\n002c:fixme:winediag:loader_init Please mention your exact version when filing bug reports on winehq.org.\n00a4:err:ntoskrnl:ZwLoadDriver failed to create driver L\"\\\\Registry\\\\Machine\\\\System\\\\CurrentControlSet\\\\Services\\\\winebth\": c00000e5\n003c:fixme:service:scmdatabase_autostart_services Auto-start service L\"winebth\" failed to start: 1359\n0024:fixme:winediag:loader_init wine-staging 11.16 is a testing version containing experimental patches.\n0024:fixme:winediag:loader_init Please mention your exact version when filing bug reports on winehq.org.\nlibEGL warning: DRI3 error: Could not get DRI3 device\nlibEGL warning: Ensure your X server supports DRI3 to get accelerated rendering\n0120:fixme:winediag:loader_init wine-staging 11.16 is a testing version containing experimental patches.\n0120:fixme:winediag:loader_init Please mention your exact version when filing bug reports on winehq.org.\n"
+      },
+      "probe_records": [
+        {
+          "dcomp_dll_loaded": true,
+          "entrypoint_found": true,
+          "hresult": "0x00000000",
+          "is_E_NOTIMPL": false
+        }
+      ]
+    }
+  ],
+  "identities": {
+    "dcomp_probe.c": {
+      "sha256": "70b1b1e86eae6f4d3977713d8c66956061a2ab69f9518dcb2d93dc74af2ce316",
+      "bytes": 808
+    },
+    "dcomp_probe.exe": {
+      "sha256": "b74011c0c154e1e742b6a27c2de7259befce4e9e528cb946f9221fdd2f445ce4",
+      "bytes": 250960
+    },
+    "g0_2_control.c": {
+      "sha256": "c26842633902a58b1a7158d2b28781d827e5eb80f7dfe6ab63b52b81cfdaed82",
+      "bytes": 1251
+    },
+    "g0_2_control.exe": {
+      "sha256": "b28f3528e158e60fdc536e400e02763a186133eb1922560d92456d6e3bc5c50e",
+      "bytes": 251437
+    },
+    "run_g0_2.py": {
+      "sha256": "024693baeb6490b833a6800324a7da43e681480b0d228123fe5b7d0d2c8d627d",
+      "bytes": 3779
+    }
+  },
+  "inherited_environment": {
+    "DISPLAY": ":0",
+    "WAYLAND_DISPLAY": "wayland-0",
+    "XDG_RUNTIME_DIR": "/mnt/wslg/runtime-dir",
+    "WSL_INTEROP": null,
+    "SSH_AUTH_SOCK": null,
+    "DOCKER_HOST": null
+  },
+  "ended_utc": "2026-09-07T14:55:34.314932+00:00"
+}

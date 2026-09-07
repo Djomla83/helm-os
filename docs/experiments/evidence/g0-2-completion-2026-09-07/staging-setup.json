@@ -1,0 +1,137 @@
+{
+  "started_utc": "2026-09-07T14:54:54.844366+00:00",
+  "spec": {
+    "arm": "staging",
+    "source_commit": "78422f7cc4f4867ed922150ffedd5646ebcabe0a",
+    "baseline_commit": "ca0aa5ae26a1d3b630f63eda8f87626d125248d1",
+    "runtime_argv": [
+      "/opt/wine-staging/bin/wine"
+    ],
+    "directory": "/home/helmlab/g0/completion-20260907",
+    "environment": {
+      "WINEPREFIX": "/home/helmlab/g0/completion-20260907/prefix",
+      "WINEARCH": "win64",
+      "WINEDLLOVERRIDES": "mscoree,mshtml="
+    },
+    "runtime_identity": "WineHQ 11.16~noble-1",
+    "sequence": "one methodological completion; original historical run untouched"
+  },
+  "commands": [
+    {
+      "argv": [
+        "/opt/wine-staging/bin/wine",
+        "--version"
+      ],
+      "started_utc": "2026-09-07T14:54:54.844387+00:00",
+      "ended_utc": "2026-09-07T14:54:54.848664+00:00",
+      "seconds": 0.004283117999989372,
+      "exit_code": 0,
+      "stdout": "wine-11.16 (Staging)\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "df",
+        "-B1",
+        "/home/helmlab/g0/completion-20260907"
+      ],
+      "started_utc": "2026-09-07T14:54:54.848812+00:00",
+      "ended_utc": "2026-09-07T14:54:54.853732+00:00",
+      "seconds": 0.004927178000002641,
+      "exit_code": 0,
+      "stdout": "Filesystem       1B-blocks        Used  Available Use% Mounted on\n/dev/sdd       16729894912 13380894720 2473230336  85% /\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "sha256sum",
+        "/home/helmlab/g0/dcomp_probe.exe",
+        "/home/helmlab/g0/g0-2-result.json"
+      ],
+      "started_utc": "2026-09-07T14:54:54.853944+00:00",
+      "ended_utc": "2026-09-07T14:54:54.861190+00:00",
+      "seconds": 0.007250978000001851,
+      "exit_code": 0,
+      "stdout": "b74011c0c154e1e742b6a27c2de7259befce4e9e528cb946f9221fdd2f445ce4  /home/helmlab/g0/dcomp_probe.exe\n63252e36b25f84925fb323c83a2cd47a5fcbf5493039df5b25a7a090cee77908  /home/helmlab/g0/g0-2-result.json\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "findmnt",
+        "-T",
+        "/home/helmlab/g0/completion-20260907",
+        "-o",
+        "TARGET,FSTYPE,OPTIONS"
+      ],
+      "started_utc": "2026-09-07T14:54:54.861380+00:00",
+      "ended_utc": "2026-09-07T14:54:54.865594+00:00",
+      "seconds": 0.0042189779999830535,
+      "exit_code": 0,
+      "stdout": "TARGET FSTYPE OPTIONS\n/      ext4   rw,relatime,discard,errors=remount-ro,data=ordered\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/opt/wine-staging/bin/wineboot",
+        "-u"
+      ],
+      "started_utc": "2026-09-07T14:54:54.865792+00:00",
+      "ended_utc": "2026-09-07T14:55:21.068638+00:00",
+      "seconds": 26.202860500000043,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "wine: created the configuration directory '/home/helmlab/g0/completion-20260907/prefix'\n002c:fixme:actctx:parse_depend_manifests Could not find dependent assembly L\"Microsoft.Windows.Common-Controls\" (6.0.0.0)\n002c:fixme:winediag:loader_init wine-staging 11.16 is a testing version containing experimental patches.\n002c:fixme:winediag:loader_init Please mention your exact version when filing bug reports on winehq.org.\n004c:fixme:actctx:parse_depend_manifests Could not find dependent assembly L\"Microsoft.Windows.Common-Controls\" (6.0.0.0)\n0054:fixme:actctx:parse_depend_manifests Could not find dependent assembly L\"Microsoft.Windows.Common-Controls\" (6.0.0.0)\nlibEGL warning: DRI3 error: Could not get DRI3 device\nlibEGL warning: Ensure your X server supports DRI3 to get accelerated rendering\nlibEGL warning: DRI3 error: Could not get DRI3 device\nlibEGL warning: Ensure your X server supports DRI3 to get accelerated rendering\n004c:err:ole:StdMarshalImpl_MarshalInterface Failed to create ifstub, hr 0x80004002\n004c:err:ole:CoMarshalInterface Failed to marshal the interface {6d5140c1-7436-11ce-8034-00aa006009fa}, hr 0x80004002\n004c:err:ole:apartment_get_local_server_stream Failed: 0x80004002\n0054:err:ole:StdMarshalImpl_MarshalInterface Failed to create ifstub, hr 0x80004002\n0054:err:ole:CoMarshalInterface Failed to marshal the interface {6d5140c1-7436-11ce-8034-00aa006009fa}, hr 0x80004002\n0054:err:ole:apartment_get_local_server_stream Failed: 0x80004002\n004c:err:ole:start_rpcss Failed to open RpcSs service\n0080:err:ntoskrnl:ServiceMain Failed to load L\"C:\\\\windows\\\\system32\\\\win32k.sys\"\n0080:err:ntoskrnl:ServiceMain Failed to load L\"C:\\\\windows\\\\system32\\\\drivers\\\\dxgkrnl.sys\"\n0080:err:ntoskrnl:ServiceMain Failed to load L\"C:\\\\windows\\\\system32\\\\drivers\\\\dxgmms1.sys\"\n00e0:fixme:msg:pack_message msg 14 (WM_ERASEBKGND) not supported yet\n002c:err:setupapi:do_file_copyW Unsupported style(s) 0x10\n0104:err:ntoskrnl:ZwLoadDriver failed to create driver L\"\\\\Registry\\\\Machine\\\\System\\\\CurrentControlSet\\\\Services\\\\winebth\": c00000e5\n002c:err:setupapi:SetupDiInstallDevice Failed to start service L\"winebth\" for device L\"ROOT\\\\WINE\\\\WINEBTH\", error 1359.\n002c:err:setupapi:SetupDiInstallDevice Failed to control service L\"winebth\" for device L\"ROOT\\\\WINE\\\\WINEBTH\", error 1062.\n002c:err:setupapi:do_file_copyW Unsupported style(s) 0x10\n012c:err:setupapi:do_file_copyW Unsupported style(s) 0x10\n002c:err:setupapi:do_file_copyW Unsupported style(s) 0x10\n012c:err:setupapi:do_file_copyW Unsupported style(s) 0x10\n0024:fixme:winediag:loader_init wine-staging 11.16 is a testing version containing experimental patches.\n0024:fixme:winediag:loader_init Please mention your exact version when filing bug reports on winehq.org.\n018c:fixme:winediag:loader_init wine-staging 11.16 is a testing version containing experimental patches.\n018c:fixme:winediag:loader_init Please mention your exact version when filing bug reports on winehq.org.\n"
+    },
+    {
+      "argv": [
+        "/opt/wine-staging/bin/wineserver",
+        "-w"
+      ],
+      "started_utc": "2026-09-07T14:55:21.069387+00:00",
+      "ended_utc": "2026-09-07T14:55:21.070338+00:00",
+      "seconds": 0.0009563849999949525,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "python3",
+        "/home/helmlab/g0/completion-20260907/run_g0_2.py",
+        "/home/helmlab/g0/completion-20260907/staging-spec.json"
+      ],
+      "started_utc": "2026-09-07T14:55:21.070551+00:00",
+      "ended_utc": "2026-09-07T14:55:34.320950+00:00",
+      "seconds": 13.250409729000012,
+      "exit_code": 0,
+      "stdout": "{\"arm\": \"staging\", \"label\": \"good\", \"exit_code\": 0, \"seconds\": 4.15234491199999, \"probe_records\": [{\"control\": \"good\", \"module_loaded\": true, \"entrypoint_found\": true, \"call_nonzero\": true}]}\n{\"arm\": \"staging\", \"label\": \"broken\", \"exit_code\": 2, \"seconds\": 4.097689711999976, \"probe_records\": [{\"control\": \"broken\", \"module_loaded\": true, \"entrypoint_found\": false, \"win32_error\": 127}]}\n{\"arm\": \"staging\", \"label\": \"target\", \"exit_code\": 0, \"seconds\": 4.957030122999981, \"probe_records\": [{\"dcomp_dll_loaded\": true, \"entrypoint_found\": true, \"hresult\": \"0x00000000\", \"is_E_NOTIMPL\": false}]}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "du",
+        "-sB1",
+        "/home/helmlab/g0/completion-20260907"
+      ],
+      "started_utc": "2026-09-07T14:55:34.321284+00:00",
+      "ended_utc": "2026-09-07T14:55:34.329499+00:00",
+      "seconds": 0.008221862000027613,
+      "exit_code": 0,
+      "stdout": "1741516800\t/home/helmlab/g0/completion-20260907\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "df",
+        "-B1",
+        "/home/helmlab/g0/completion-20260907"
+      ],
+      "started_utc": "2026-09-07T14:55:34.329761+00:00",
+      "ended_utc": "2026-09-07T14:55:34.331955+00:00",
+      "seconds": 0.0021988770000120894,
+      "exit_code": 0,
+      "stdout": "Filesystem       1B-blocks        Used Available Use% Mounted on\n/dev/sdd       16729894912 15121764352 732360704  96% /\n",
+      "stderr": ""
+    }
+  ]
+}

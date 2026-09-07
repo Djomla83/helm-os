@@ -1,0 +1,137 @@
+{
+  "started_utc": "2026-09-07T14:52:55.932891+00:00",
+  "spec": {
+    "arm": "vanilla",
+    "source_commit": "78422f7cc4f4867ed922150ffedd5646ebcabe0a",
+    "baseline_commit": "ca0aa5ae26a1d3b630f63eda8f87626d125248d1",
+    "runtime_argv": [
+      "/opt/wine-devel/bin/wine"
+    ],
+    "directory": "/home/helmlab/g0/completion-20260907",
+    "environment": {
+      "WINEPREFIX": "/home/helmlab/g0/completion-20260907/prefix",
+      "WINEARCH": "win64",
+      "WINEDLLOVERRIDES": "mscoree,mshtml="
+    },
+    "runtime_identity": "WineHQ 11.17~noble-1",
+    "sequence": "one methodological completion; original historical run untouched"
+  },
+  "commands": [
+    {
+      "argv": [
+        "/opt/wine-devel/bin/wine",
+        "--version"
+      ],
+      "started_utc": "2026-09-07T14:52:55.932913+00:00",
+      "ended_utc": "2026-09-07T14:52:55.936705+00:00",
+      "seconds": 0.0037983280000162267,
+      "exit_code": 0,
+      "stdout": "wine-11.17\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "df",
+        "-B1",
+        "/home/helmlab/g0/completion-20260907"
+      ],
+      "started_utc": "2026-09-07T14:52:55.936870+00:00",
+      "ended_utc": "2026-09-07T14:52:55.941645+00:00",
+      "seconds": 0.004780933000006371,
+      "exit_code": 0,
+      "stdout": "Filesystem       1B-blocks        Used  Available Use% Mounted on\n/dev/sdf       16729894912 11213836288 4640288768  71% /\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "sha256sum",
+        "/home/helmlab/g0/dcomp_probe.exe",
+        "/home/helmlab/g0/g0-2-result.json"
+      ],
+      "started_utc": "2026-09-07T14:52:55.941858+00:00",
+      "ended_utc": "2026-09-07T14:52:55.949327+00:00",
+      "seconds": 0.007477482999973972,
+      "exit_code": 0,
+      "stdout": "b74011c0c154e1e742b6a27c2de7259befce4e9e528cb946f9221fdd2f445ce4  /home/helmlab/g0/dcomp_probe.exe\n63252e36b25f84925fb323c83a2cd47a5fcbf5493039df5b25a7a090cee77908  /home/helmlab/g0/g0-2-result.json\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "findmnt",
+        "-T",
+        "/home/helmlab/g0/completion-20260907",
+        "-o",
+        "TARGET,FSTYPE,OPTIONS"
+      ],
+      "started_utc": "2026-09-07T14:52:55.949559+00:00",
+      "ended_utc": "2026-09-07T14:52:55.952057+00:00",
+      "seconds": 0.0025038299999948777,
+      "exit_code": 0,
+      "stdout": "TARGET FSTYPE OPTIONS\n/      ext4   rw,relatime,discard,errors=remount-ro,data=ordered\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/opt/wine-devel/bin/wineboot",
+        "-u"
+      ],
+      "started_utc": "2026-09-07T14:52:55.952294+00:00",
+      "ended_utc": "2026-09-07T14:53:19.323287+00:00",
+      "seconds": 23.37100695699999,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "wine: created the configuration directory '/home/helmlab/g0/completion-20260907/prefix'\n002c:fixme:actctx:parse_depend_manifests Could not find dependent assembly L\"Microsoft.Windows.Common-Controls\" (6.0.0.0)\n004c:fixme:actctx:parse_depend_manifests Could not find dependent assembly L\"Microsoft.Windows.Common-Controls\" (6.0.0.0)\n0054:fixme:actctx:parse_depend_manifests Could not find dependent assembly L\"Microsoft.Windows.Common-Controls\" (6.0.0.0)\nlibEGL warning: DRI3 error: Could not get DRI3 device\nlibEGL warning: Ensure your X server supports DRI3 to get accelerated rendering\nlibEGL warning: DRI3 error: Could not get DRI3 device\nlibEGL warning: Ensure your X server supports DRI3 to get accelerated rendering\n004c:err:ole:StdMarshalImpl_MarshalInterface Failed to create ifstub, hr 0x80004002\n004c:err:ole:CoMarshalInterface Failed to marshal the interface {6d5140c1-7436-11ce-8034-00aa006009fa}, hr 0x80004002\n004c:err:ole:apartment_get_local_server_stream Failed: 0x80004002\n0054:err:ole:StdMarshalImpl_MarshalInterface Failed to create ifstub, hr 0x80004002\n0054:err:ole:CoMarshalInterface Failed to marshal the interface {6d5140c1-7436-11ce-8034-00aa006009fa}, hr 0x80004002\n0054:err:ole:apartment_get_local_server_stream Failed: 0x80004002\n004c:err:ole:start_rpcss Failed to open RpcSs service\n00e0:fixme:msg:pack_message msg 14 (WM_ERASEBKGND) not supported yet\n002c:err:setupapi:do_file_copyW Unsupported style(s) 0x10\n00fc:err:ntoskrnl:ZwLoadDriver failed to create driver L\"\\\\Registry\\\\Machine\\\\System\\\\CurrentControlSet\\\\Services\\\\winebth\": c00000e5\n002c:err:setupapi:SetupDiInstallDevice Failed to start service L\"winebth\" for device L\"ROOT\\\\WINE\\\\WINEBTH\", error 1359.\n002c:err:setupapi:SetupDiInstallDevice Failed to control service L\"winebth\" for device L\"ROOT\\\\WINE\\\\WINEBTH\", error 1062.\n002c:err:setupapi:do_file_copyW Unsupported style(s) 0x10\n0124:err:setupapi:do_file_copyW Unsupported style(s) 0x10\n002c:err:setupapi:do_file_copyW Unsupported style(s) 0x10\n0124:err:setupapi:do_file_copyW Unsupported style(s) 0x10\n"
+    },
+    {
+      "argv": [
+        "/opt/wine-devel/bin/wineserver",
+        "-w"
+      ],
+      "started_utc": "2026-09-07T14:53:19.325407+00:00",
+      "ended_utc": "2026-09-07T14:53:19.326538+00:00",
+      "seconds": 0.0011355419999858896,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "python3",
+        "/home/helmlab/g0/completion-20260907/run_g0_2.py",
+        "/home/helmlab/g0/completion-20260907/vanilla-spec.json"
+      ],
+      "started_utc": "2026-09-07T14:53:19.326747+00:00",
+      "ended_utc": "2026-09-07T14:53:31.724897+00:00",
+      "seconds": 12.398158834000014,
+      "exit_code": 0,
+      "stdout": "{\"arm\": \"vanilla\", \"label\": \"good\", \"exit_code\": 0, \"seconds\": 4.153258179999995, \"probe_records\": [{\"control\": \"good\", \"module_loaded\": true, \"entrypoint_found\": true, \"call_nonzero\": true}]}\n{\"arm\": \"vanilla\", \"label\": \"broken\", \"exit_code\": 2, \"seconds\": 4.101528836, \"probe_records\": [{\"control\": \"broken\", \"module_loaded\": true, \"entrypoint_found\": false, \"win32_error\": 127}]}\n{\"arm\": \"vanilla\", \"label\": \"target\", \"exit_code\": 0, \"seconds\": 4.095700284000003, \"probe_records\": [{\"dcomp_dll_loaded\": true, \"entrypoint_found\": true, \"hresult\": \"0x80004001\", \"is_E_NOTIMPL\": true}]}\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "du",
+        "-sB1",
+        "/home/helmlab/g0/completion-20260907"
+      ],
+      "started_utc": "2026-09-07T14:53:31.725231+00:00",
+      "ended_utc": "2026-09-07T14:53:31.733451+00:00",
+      "seconds": 0.008224946000012778,
+      "exit_code": 0,
+      "stdout": "1730609152\t/home/helmlab/g0/completion-20260907\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "df",
+        "-B1",
+        "/home/helmlab/g0/completion-20260907"
+      ],
+      "started_utc": "2026-09-07T14:53:31.733672+00:00",
+      "ended_utc": "2026-09-07T14:53:31.735848+00:00",
+      "seconds": 0.0021815549999928407,
+      "exit_code": 0,
+      "stdout": "Filesystem       1B-blocks        Used  Available Use% Mounted on\n/dev/sdf       16729894912 12943880192 2910244864  82% /\n",
+      "stderr": ""
+    }
+  ]
+}

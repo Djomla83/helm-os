@@ -1,0 +1,181 @@
+{
+  "check": "G0-2 completion prerequisite: WSL Windows-process execution",
+  "baseline_commit": "ca0aa5ae26a1d3b630f63eda8f87626d125248d1",
+  "distro": "helm-lab-g0-proton",
+  "uid": 1000,
+  "started_utc": "2026-09-07T14:50:27.850954+00:00",
+  "script_sha256": "98b63bfb50c58782fa07a44ad92bafa8e1a07d714d9d184f62b5cf7271bca0a3",
+  "exe": {
+    "path": "/home/helmlab/g0/interop-negative-20260907/cmd.exe",
+    "sha256": "8dd1ebb0b969370c70a5ee7f7ee347949aa7046aa5e1a33fcd7b1e9415b21fc3",
+    "bytes": 344064,
+    "pe_machine": "0x8664"
+  },
+  "environment": {
+    "WSL_INTEROP": null,
+    "WINEPREFIX": null,
+    "DISPLAY": ":0",
+    "WAYLAND_DISPLAY": "wayland-0",
+    "SSH_AUTH_SOCK": null,
+    "DOCKER_HOST": null
+  },
+  "observations": [
+    {
+      "argv": [
+        "cat",
+        "/etc/wsl.conf"
+      ],
+      "cwd": null,
+      "started_utc": "2026-09-07T14:50:27.851010+00:00",
+      "exit_code": 0,
+      "stdout_base64": "W2F1dG9tb3VudF0KZW5hYmxlZCA9IGZhbHNlCltpbnRlcm9wXQplbmFibGVkID0gZmFsc2UKYXBwZW5kV2luZG93c1BhdGggPSBmYWxzZQpbdXNlcl0KZGVmYXVsdCA9IGhlbG1sYWIK",
+      "stderr_base64": "",
+      "stdout": "[automount]\nenabled = false\n[interop]\nenabled = false\nappendWindowsPath = false\n[user]\ndefault = helmlab\n",
+      "stderr": "",
+      "ended_utc": "2026-09-07T14:50:27.855284+00:00",
+      "duration_seconds": 0.004275263000003804
+    },
+    {
+      "argv": [
+        "cat",
+        "/proc/sys/fs/binfmt_misc/WSLInterop"
+      ],
+      "cwd": null,
+      "started_utc": "2026-09-07T14:50:27.855290+00:00",
+      "exit_code": 0,
+      "stdout_base64": "ZW5hYmxlZAppbnRlcnByZXRlciAvaW5pdApmbGFnczogUEYKb2Zmc2V0IDAKbWFnaWMgNGQ1YQo=",
+      "stderr_base64": "",
+      "stdout": "enabled\ninterpreter /init\nflags: PF\noffset 0\nmagic 4d5a\n",
+      "stderr": "",
+      "ended_utc": "2026-09-07T14:50:27.857288+00:00",
+      "duration_seconds": 0.002000123000001963
+    },
+    {
+      "argv": [
+        "cat",
+        "/proc/sys/fs/binfmt_misc/status"
+      ],
+      "cwd": null,
+      "started_utc": "2026-09-07T14:50:27.857293+00:00",
+      "exit_code": 0,
+      "stdout_base64": "ZW5hYmxlZAo=",
+      "stderr_base64": "",
+      "stdout": "enabled\n",
+      "stderr": "",
+      "ended_utc": "2026-09-07T14:50:27.859198+00:00",
+      "duration_seconds": 0.001909402999999088
+    },
+    {
+      "argv": [
+        "mountpoint",
+        "-q",
+        "/mnt/c"
+      ],
+      "cwd": null,
+      "started_utc": "2026-09-07T14:50:27.859206+00:00",
+      "exit_code": 32,
+      "stdout_base64": "",
+      "stderr_base64": "",
+      "stdout": "",
+      "stderr": "",
+      "ended_utc": "2026-09-07T14:50:27.861373+00:00",
+      "duration_seconds": 0.0021706530000003
+    },
+    {
+      "argv": [
+        "findmnt",
+        "-rn",
+        "-o",
+        "TARGET,FSTYPE"
+      ],
+      "cwd": null,
+      "started_utc": "2026-09-07T14:50:27.861379+00:00",
+      "exit_code": 0,
+      "stdout_base64": "L3Vzci9saWIvbW9kdWxlcy82LjYuODcuMi1taWNyb3NvZnQtc3RhbmRhcmQtV1NMMiBvdmVybGF5Ci9tbnQvd3NsIHRtcGZzCi91c3IvbGliL3dzbC9kcml2ZXJzIDlwCi8gZXh0NAovbW50L3dzbGcgdG1wZnMKL21udC93c2xnL2Rpc3RybyBleHQ0Ci91c3IvbGliL3dzbC9saWIgb3ZlcmxheQovaW5pdCByb290ZnMKL2RldiBkZXZ0bXBmcwovc3lzIHN5c2ZzCi9wcm9jIHByb2MKL2Rldi9wdHMgZGV2cHRzCi9ydW4gdG1wZnMKL3J1bi9sb2NrIHRtcGZzCi9ydW4vc2htIHRtcGZzCi9kZXYvc2htIHRtcGZzCi9ydW4vdXNlciB0bXBmcwovcHJvYy9zeXMvZnMvYmluZm10X21pc2MgYmluZm10X21pc2MKL3N5cy9mcy9jZ3JvdXAgY2dyb3VwMgovbW50L3dzbGcvdmVyc2lvbnMudHh0IG92ZXJsYXkKL21udC93c2xnL2RvYyBvdmVybGF5Ci90bXAvLlgxMS11bml4IHRtcGZzCg==",
+      "stderr_base64": "",
+      "stdout": "/usr/lib/modules/6.6.87.2-microsoft-standard-WSL2 overlay\n/mnt/wsl tmpfs\n/usr/lib/wsl/drivers 9p\n/ ext4\n/mnt/wslg tmpfs\n/mnt/wslg/distro ext4\n/usr/lib/wsl/lib overlay\n/init rootfs\n/dev devtmpfs\n/sys sysfs\n/proc proc\n/dev/pts devpts\n/run tmpfs\n/run/lock tmpfs\n/run/shm tmpfs\n/dev/shm tmpfs\n/run/user tmpfs\n/proc/sys/fs/binfmt_misc binfmt_misc\n/sys/fs/cgroup cgroup2\n/mnt/wslg/versions.txt overlay\n/mnt/wslg/doc overlay\n/tmp/.X11-unix tmpfs\n",
+      "stderr": "",
+      "ended_utc": "2026-09-07T14:50:27.863636+00:00",
+      "duration_seconds": 0.0022593799999981456
+    },
+    {
+      "argv": [
+        "uname",
+        "-r"
+      ],
+      "cwd": null,
+      "started_utc": "2026-09-07T14:50:27.863641+00:00",
+      "exit_code": 0,
+      "stdout_base64": "Ni42Ljg3LjItbWljcm9zb2Z0LXN0YW5kYXJkLVdTTDIK",
+      "stderr_base64": "",
+      "stdout": "6.6.87.2-microsoft-standard-WSL2\n",
+      "stderr": "",
+      "ended_utc": "2026-09-07T14:50:27.866163+00:00",
+      "duration_seconds": 0.002524276000002601
+    },
+    {
+      "argv": [
+        "cat",
+        "/etc/os-release"
+      ],
+      "cwd": null,
+      "started_utc": "2026-09-07T14:50:27.866168+00:00",
+      "exit_code": 0,
+      "stdout_base64": "UFJFVFRZX05BTUU9IlVidW50dSAyNC4wNC40IExUUyIKTkFNRT0iVWJ1bnR1IgpWRVJTSU9OX0lEPSIyNC4wNCIKVkVSU0lPTj0iMjQuMDQuNCBMVFMgKE5vYmxlIE51bWJhdCkiClZFUlNJT05fQ09ERU5BTUU9bm9ibGUKSUQ9dWJ1bnR1CklEX0xJS0U9ZGViaWFuCkhPTUVfVVJMPSJodHRwczovL3d3dy51YnVudHUuY29tLyIKU1VQUE9SVF9VUkw9Imh0dHBzOi8vaGVscC51YnVudHUuY29tLyIKQlVHX1JFUE9SVF9VUkw9Imh0dHBzOi8vYnVncy5sYXVuY2hwYWQubmV0L3VidW50dS8iClBSSVZBQ1lfUE9MSUNZX1VSTD0iaHR0cHM6Ly93d3cudWJ1bnR1LmNvbS9sZWdhbC90ZXJtcy1hbmQtcG9saWNpZXMvcHJpdmFjeS1wb2xpY3kiClVCVU5UVV9DT0RFTkFNRT1ub2JsZQpMT0dPPXVidW50dS1sb2dvCg==",
+      "stderr_base64": "",
+      "stdout": "PRETTY_NAME=\"Ubuntu 24.04.4 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"24.04\"\nVERSION=\"24.04.4 LTS (Noble Numbat)\"\nVERSION_CODENAME=noble\nID=ubuntu\nID_LIKE=debian\nHOME_URL=\"https://www.ubuntu.com/\"\nSUPPORT_URL=\"https://help.ubuntu.com/\"\nBUG_REPORT_URL=\"https://bugs.launchpad.net/ubuntu/\"\nPRIVACY_POLICY_URL=\"https://www.ubuntu.com/legal/terms-and-policies/privacy-policy\"\nUBUNTU_CODENAME=noble\nLOGO=ubuntu-logo\n",
+      "stderr": "",
+      "ended_utc": "2026-09-07T14:50:27.868140+00:00",
+      "duration_seconds": 0.001975167000004774
+    },
+    {
+      "argv": [
+        "id"
+      ],
+      "cwd": null,
+      "started_utc": "2026-09-07T14:50:27.868146+00:00",
+      "exit_code": 0,
+      "stdout_base64": "dWlkPTEwMDAoaGVsbWxhYikgZ2lkPTEwMDAoaGVsbWxhYikgZ3JvdXBzPTEwMDAoaGVsbWxhYikK",
+      "stderr_base64": "",
+      "stdout": "uid=1000(helmlab) gid=1000(helmlab) groups=1000(helmlab)\n",
+      "stderr": "",
+      "ended_utc": "2026-09-07T14:50:27.871327+00:00",
+      "duration_seconds": 0.003178054000002817
+    },
+    {
+      "argv": [
+        "df",
+        "-B1",
+        "/home/helmlab"
+      ],
+      "cwd": null,
+      "started_utc": "2026-09-07T14:50:27.871332+00:00",
+      "exit_code": 0,
+      "stdout_base64": "RmlsZXN5c3RlbSAgICAgICAxQi1ibG9ja3MgICAgICAgIFVzZWQgICBBdmFpbGFibGUgVXNlJSBNb3VudGVkIG9uCi9kZXYvc2RlICAgICAgIDMzNjM2MDczNDcyIDExMjEzODMyMTkyIDIwNjg3NDc4Nzg0ICAzNiUgLwo=",
+      "stderr_base64": "",
+      "stdout": "Filesystem       1B-blocks        Used   Available Use% Mounted on\n/dev/sde       33636073472 11213832192 20687478784  36% /\n",
+      "stderr": "",
+      "ended_utc": "2026-09-07T14:50:27.873925+00:00",
+      "duration_seconds": 0.002598556999998891
+    }
+  ],
+  "execution": {
+    "argv": [
+      "/home/helmlab/g0/interop-negative-20260907/cmd.exe",
+      "/d",
+      "/c",
+      "echo",
+      "HELM_G0_INTEROP_NEGATIVE_TEST"
+    ],
+    "cwd": "/home/helmlab/g0/interop-negative-20260907",
+    "started_utc": "2026-09-07T14:50:27.873952+00:00",
+    "exit_code": 1,
+    "stdout_base64": "",
+    "stderr_base64": "PDM+V1NMICgyMiAtICkgRVJST1I6IFV0aWxBY2NlcHRWc29jazoyNzE6IGFjY2VwdDQgZmFpbGVkIDExMAo=",
+    "stdout": "",
+    "stderr": "<3>WSL (22 - ) ERROR: UtilAcceptVsock:271: accept4 failed 110\n",
+    "ended_utc": "2026-09-07T14:50:37.886107+00:00",
+    "duration_seconds": 10.012168240999998
+  },
+  "ended_utc": "2026-09-07T14:50:37.886125+00:00"
+}

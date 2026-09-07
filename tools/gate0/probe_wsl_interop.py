@@ -57,7 +57,7 @@ def main():
     record = {
         "check": "G0-2 completion prerequisite: WSL Windows-process execution",
         "baseline_commit": "ca0aa5ae26a1d3b630f63eda8f87626d125248d1",
-        "distro": "helm-lab-g0", "uid": os.getuid(), "started_utc": now(),
+        "distro": os.environ.get("WSL_DISTRO_NAME"), "uid": os.getuid(), "started_utc": now(),
         "script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         "exe": {"path": str(target), "sha256": digest, "bytes": len(data),
                 "pe_machine": hex(struct.unpack_from("<H", data, pe_offset + 4)[0])},

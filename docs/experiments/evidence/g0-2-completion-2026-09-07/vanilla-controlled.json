@@ -1,0 +1,150 @@
+{
+  "spec": {
+    "arm": "vanilla",
+    "source_commit": "78422f7cc4f4867ed922150ffedd5646ebcabe0a",
+    "baseline_commit": "ca0aa5ae26a1d3b630f63eda8f87626d125248d1",
+    "runtime_argv": [
+      "/opt/wine-devel/bin/wine"
+    ],
+    "directory": "/home/helmlab/g0/completion-20260907",
+    "environment": {
+      "WINEPREFIX": "/home/helmlab/g0/completion-20260907/prefix",
+      "WINEARCH": "win64",
+      "WINEDLLOVERRIDES": "mscoree,mshtml="
+    },
+    "runtime_identity": "WineHQ 11.17~noble-1",
+    "sequence": "one methodological completion; original historical run untouched"
+  },
+  "started_utc": "2026-09-07T14:53:19.365676+00:00",
+  "runs": [
+    {
+      "label": "good",
+      "argv": [
+        "/opt/wine-devel/bin/wine",
+        "/home/helmlab/g0/completion-20260907/g0_2_control.exe",
+        "good"
+      ],
+      "cwd": "/home/helmlab/g0/completion-20260907",
+      "started_utc": "2026-09-07T14:53:19.367495+00:00",
+      "exit_code": 0,
+      "ended_utc": "2026-09-07T14:53:23.520737+00:00",
+      "duration_seconds": 4.153258179999995,
+      "stdout": {
+        "file": "vanilla-good-stdout.txt",
+        "sha256": "2d83dff7fca1b40f68e6568d643a9564381afe383d82fb3e9be2ac31467953fb",
+        "bytes": 85,
+        "text": "{\"control\":\"good\",\"module_loaded\":true,\"entrypoint_found\":true,\"call_nonzero\":true}\r\n"
+      },
+      "stderr": {
+        "file": "vanilla-good-stderr.txt",
+        "sha256": "d9e6c7be3c212bd7c77d6c7c31f1b2981d6e650d49d8f18210be75c2a6e6c3ba",
+        "bytes": 236,
+        "text": "00a4:err:ntoskrnl:ZwLoadDriver failed to create driver L\"\\\\Registry\\\\Machine\\\\System\\\\CurrentControlSet\\\\Services\\\\winebth\": c00000e5\n003c:fixme:service:scmdatabase_autostart_services Auto-start service L\"winebth\" failed to start: 1359\n"
+      },
+      "probe_records": [
+        {
+          "control": "good",
+          "module_loaded": true,
+          "entrypoint_found": true,
+          "call_nonzero": true
+        }
+      ]
+    },
+    {
+      "label": "broken",
+      "argv": [
+        "/opt/wine-devel/bin/wine",
+        "/home/helmlab/g0/completion-20260907/g0_2_control.exe",
+        "broken"
+      ],
+      "cwd": "/home/helmlab/g0/completion-20260907",
+      "started_utc": "2026-09-07T14:53:23.521271+00:00",
+      "exit_code": 2,
+      "ended_utc": "2026-09-07T14:53:27.622790+00:00",
+      "duration_seconds": 4.101528836,
+      "stdout": {
+        "file": "vanilla-broken-stdout.txt",
+        "sha256": "fc2965c434c9db6c144f2a53ac2abb1db68f0548083706a8d004ff53b0df7593",
+        "bytes": 86,
+        "text": "{\"control\":\"broken\",\"module_loaded\":true,\"entrypoint_found\":false,\"win32_error\":127}\r\n"
+      },
+      "stderr": {
+        "file": "vanilla-broken-stderr.txt",
+        "sha256": "d9e6c7be3c212bd7c77d6c7c31f1b2981d6e650d49d8f18210be75c2a6e6c3ba",
+        "bytes": 236,
+        "text": "00a4:err:ntoskrnl:ZwLoadDriver failed to create driver L\"\\\\Registry\\\\Machine\\\\System\\\\CurrentControlSet\\\\Services\\\\winebth\": c00000e5\n003c:fixme:service:scmdatabase_autostart_services Auto-start service L\"winebth\" failed to start: 1359\n"
+      },
+      "probe_records": [
+        {
+          "control": "broken",
+          "module_loaded": true,
+          "entrypoint_found": false,
+          "win32_error": 127
+        }
+      ]
+    },
+    {
+      "label": "target",
+      "argv": [
+        "/opt/wine-devel/bin/wine",
+        "/home/helmlab/g0/completion-20260907/dcomp_probe.exe"
+      ],
+      "cwd": "/home/helmlab/g0/completion-20260907",
+      "started_utc": "2026-09-07T14:53:27.623269+00:00",
+      "exit_code": 0,
+      "ended_utc": "2026-09-07T14:53:31.718959+00:00",
+      "duration_seconds": 4.095700284000003,
+      "stdout": {
+        "file": "vanilla-target-stdout.txt",
+        "sha256": "3791677213f9084e8957fd414e2f6f1fc6fcb71922e2d588cdf787b655b545ab",
+        "bytes": 94,
+        "text": "{\"dcomp_dll_loaded\":true,\"entrypoint_found\":true,\"hresult\":\"0x80004001\",\"is_E_NOTIMPL\":true}\r\n"
+      },
+      "stderr": {
+        "file": "vanilla-target-stderr.txt",
+        "sha256": "7ea49ed27b0fabbfaab1f14fe552aa6c0434a0d685ef94e730492800bb8888cd",
+        "bytes": 354,
+        "text": "00a4:err:ntoskrnl:ZwLoadDriver failed to create driver L\"\\\\Registry\\\\Machine\\\\System\\\\CurrentControlSet\\\\Services\\\\winebth\": c00000e5\n003c:fixme:service:scmdatabase_autostart_services Auto-start service L\"winebth\" failed to start: 1359\n00dc:fixme:dcomp:DCompositionCreateDevice 0000000000000000, {c37ea93a-e7aa-450d-b16f-9746cb0407f3}, 00007FFFFE30FEC0.\n"
+      },
+      "probe_records": [
+        {
+          "dcomp_dll_loaded": true,
+          "entrypoint_found": true,
+          "hresult": "0x80004001",
+          "is_E_NOTIMPL": true
+        }
+      ]
+    }
+  ],
+  "identities": {
+    "dcomp_probe.c": {
+      "sha256": "70b1b1e86eae6f4d3977713d8c66956061a2ab69f9518dcb2d93dc74af2ce316",
+      "bytes": 808
+    },
+    "dcomp_probe.exe": {
+      "sha256": "b74011c0c154e1e742b6a27c2de7259befce4e9e528cb946f9221fdd2f445ce4",
+      "bytes": 250960
+    },
+    "g0_2_control.c": {
+      "sha256": "c26842633902a58b1a7158d2b28781d827e5eb80f7dfe6ab63b52b81cfdaed82",
+      "bytes": 1251
+    },
+    "g0_2_control.exe": {
+      "sha256": "b28f3528e158e60fdc536e400e02763a186133eb1922560d92456d6e3bc5c50e",
+      "bytes": 251437
+    },
+    "run_g0_2.py": {
+      "sha256": "024693baeb6490b833a6800324a7da43e681480b0d228123fe5b7d0d2c8d627d",
+      "bytes": 3779
+    }
+  },
+  "inherited_environment": {
+    "DISPLAY": ":0",
+    "WAYLAND_DISPLAY": "wayland-0",
+    "XDG_RUNTIME_DIR": "/mnt/wslg/runtime-dir",
+    "WSL_INTEROP": null,
+    "SSH_AUTH_SOCK": null,
+    "DOCKER_HOST": null
+  },
+  "ended_utc": "2026-09-07T14:53:31.719189+00:00"
+}

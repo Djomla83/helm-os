@@ -1,0 +1,63 @@
+{
+  "rule": "NAME host identifier -> <redacted-host>; no replacement username or hostname invented. No experimental output other than that identifier is removed.",
+  "byte_preservation": "The directory has -text Git attributes, preserving original CRLF stdout.",
+  "artifacts": [
+    {
+      "file": "proton-broken-stderr.txt",
+      "raw_sha256": "d7aa10eb912b54ae10dfb70eda4b34f70ad691e316e80e200920bb15e5dcb73e",
+      "raw_bytes": 5311,
+      "publication_sha256": "61cfc0f5f802fe64a8d5ffcadd96309e0059a6886eb17bb0e385a9372ac58009",
+      "publication_bytes": 5475,
+      "redacted_fields": [
+        "UMU diagnostic NAME environment variable"
+      ],
+      "raw_storage": "private local archive outside Git; never published"
+    },
+    {
+      "file": "proton-good-stderr.txt",
+      "raw_sha256": "3e4cd7b65638ab9a1127c228f708e91daecd56d4af8b9082a145df521b539124",
+      "raw_bytes": 5309,
+      "publication_sha256": "1457c2c2143e16c4f55e4ea63dee45141b68d8be7cabf0abe7938904c18fadf3",
+      "publication_bytes": 5473,
+      "redacted_fields": [
+        "UMU diagnostic NAME environment variable"
+      ],
+      "raw_storage": "private local archive outside Git; never published"
+    },
+    {
+      "file": "proton-target-stderr.txt",
+      "raw_sha256": "1f64348bc0a7b6299ca113f088811a88df7c6be2e81f208187076ab77f0eef9b",
+      "raw_bytes": 5298,
+      "publication_sha256": "418e4a59146c286c45b351d811db4142acc8ca7254d4a49b1cdafdb67d8d0628",
+      "publication_bytes": 5462,
+      "redacted_fields": [
+        "UMU diagnostic NAME environment variable"
+      ],
+      "raw_storage": "private local archive outside Git; never published"
+    },
+    {
+      "file": "proton-controlled.json",
+      "raw_sha256": "ee431111bbfaf79c4327bde1e5c146578b51657ceec788991e234a984641179b",
+      "raw_bytes": 20742,
+      "publication_sha256": "aa1e26148792cbd02735f8ea6562abd297c7c4c3ce7e931f87a210d8308f240e",
+      "publication_bytes": 21735,
+      "redacted_fields": [
+        "/runs/0/stderr/text",
+        "/runs/1/stderr/text",
+        "/runs/2/stderr/text"
+      ],
+      "metadata_changes": "Explicit original/publication digest identities for redacted stderr artifacts."
+    },
+    {
+      "file": "proton-setup.json",
+      "raw_sha256": "e69b908adef409468bb7e90086ebbd41cec13396b3ba13f45128f1886eacdc46",
+      "raw_bytes": 8459,
+      "publication_sha256": "899a811a41c5156eeb765a7e5ea31f18cd4d89072ed996bbb934a51fab8dfb25",
+      "publication_bytes": 8838,
+      "redacted_fields": [
+        "/commands/3/stderr"
+      ],
+      "metadata_changes": "Explicit original/publication digest identities for redacted stderr artifacts."
+    }
+  ]
+}

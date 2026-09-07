@@ -1,0 +1,105 @@
+{
+  "started_utc": "2026-09-07T14:57:05.200736+00:00",
+  "commands": [
+    {
+      "argv": [
+        "tar",
+        "-xzf",
+        "/home/helmlab/g0/completion-20260907/downloads/UMU-Proton-10.0-4.tar.gz",
+        "-C",
+        "/home/helmlab/g0/completion-20260907/runtimes"
+      ],
+      "started_utc": "2026-09-07T14:57:05.200781+00:00",
+      "ended_utc": "2026-09-07T14:57:11.993881+00:00",
+      "seconds": 6.793117398999982,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "tar",
+        "-xJf",
+        "/home/helmlab/g0/completion-20260907/downloads/SteamLinuxRuntime_sniper.tar.xz",
+        "-C",
+        "/home/helmlab/g0/completion-20260907/umu-data/umu"
+      ],
+      "started_utc": "2026-09-07T14:57:11.994131+00:00",
+      "ended_utc": "2026-09-07T14:57:21.479745+00:00",
+      "seconds": 9.485630721999996,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "python3",
+        "-c",
+        "from pathlib import Path; from umu.umu_runtime import check_runtime; raise SystemExit(check_runtime(Path('/home/helmlab/g0/completion-20260907/umu-data/umu/steamrt3'), (\"sniper\",\"steamrt3\",\"1628350\")))"
+      ],
+      "started_utc": "2026-09-07T14:57:21.480454+00:00",
+      "ended_utc": "2026-09-07T14:57:26.891501+00:00",
+      "seconds": 5.411063710000008,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "INFO: Verifying integrity of sniper_platform_3.0.20260805.254768...\nINFO: sniper_platform_3.0.20260805.254768: mtree is OK\n"
+    },
+    {
+      "argv": [
+        "python3",
+        "-c",
+        "from pathlib import Path; from umu.umu_util import write_install_marker; p=Path('/home/helmlab/g0/completion-20260907/umu-data/umu/steamrt3'); write_install_marker(p); (p/\"umu\").symlink_to(\"_v2-entry-point\")"
+      ],
+      "started_utc": "2026-09-07T14:57:26.891819+00:00",
+      "ended_utc": "2026-09-07T14:57:26.967889+00:00",
+      "seconds": 0.07608516099998042,
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "runtime_environment": {
+    "UMU_FOLDERS_PATH": "/home/helmlab/g0/completion-20260907/umu-data",
+    "UMU_RUNTIME_UPDATE": "0",
+    "PROTONFIXES_DISABLE": "1",
+    "GAMEID": "umu-default"
+  },
+  "runtime_directory_rename": {
+    "from": "/home/helmlab/g0/completion-20260907/umu-data/umu/SteamLinuxRuntime_sniper",
+    "to": "/home/helmlab/g0/completion-20260907/umu-data/umu/steamrt3"
+  },
+  "metadata": {
+    "runtimes/UMU-Proton-10.0-4/version": {
+      "bytes": 29,
+      "sha256": "41eb5c5f0cc1da74f1ee4565306484c26cedf9e21b251d5220b295dc6aed28ad",
+      "content": "1774856027 UMU-Proton-10.0-4\n"
+    },
+    "runtimes/UMU-Proton-10.0-4/toolmanifest.vdf": {
+      "bytes": 156,
+      "sha256": "96480c58a44fe75ee1ca0d923b5640a6cde5b7f19a69b7ddbe72da8e3425b084",
+      "content": "\"manifest\"\n{\n  \"version\" \"2\"\n  \"commandline\" \"/proton %verb%\"\n  \"require_tool_appid\" \"1628350\"\n  \"use_sessions\" \"1\"\n  \"compatmanager_layer_name\" \"proton\"\n}\n"
+    },
+    "umu-data/umu/steamrt3/VERSIONS.txt": {
+      "bytes": 313,
+      "sha256": "4e8836063360de4ff0b2f334af6cd45fcb0b8847ef847cf1493f4c14ddf520b1",
+      "content": "#Name\tVersion\t\tRuntime\tRuntime_Version\tComment\ndepot\t3.0.20260805.254768\t\t\t# Overall version number\npressure-vessel\t0.20260805.0\t\t\t\npressure-vessel-arm64\t0.20260805.0\t\t\t\nscripts\t0.20260805.0\t\t\t# from steam-runtime-tools\nsniper\t3.0.20260805.254768\tsniper\t3.0.20260805.254768\t# sniper_platform_3.0.20260805.254768/\n"
+    },
+    "runtimes/UMU-Proton-10.0-4/proton": {
+      "bytes": 98285,
+      "sha256": "da9bfb62b0326536c4dfdb2a145993d31e987cd46b8acf341ce05160b8775a25"
+    },
+    "runtimes/UMU-Proton-10.0-4/protonfixes/__init__.py": {
+      "bytes": 3316,
+      "sha256": "1fcb1a41a72acb2132f4a84d99a85dc7b8815d8c517661f3daf0e1fbb6e6f93d"
+    }
+  },
+  "protonfixes_disable_source": [
+    {
+      "path": "runtimes/UMU-Proton-10.0-4/protonfixes/__init__.py",
+      "sha256": "1fcb1a41a72acb2132f4a84d99a85dc7b8815d8c517661f3daf0e1fbb6e6f93d",
+      "line": 50,
+      "context": "    return (\n        len(sys.argv) >= 1\n        and 'STEAM_COMPAT_DATA_PATH' in os.environ\n        and 'PROTONFIXES_DISABLE' not in os.environ\n        and 'waitforexitandrun' in sys.argv[1]\n    )\n\n\ndef check_iscriptevaluator() -> bool:\n    \"\"\"Determine, if we were invoked while running \"iscriptevaluator.exe\".\n\n    Returns:"
+    }
+  ],
+  "ended_utc": "2026-09-07T14:57:27.011173+00:00"
+}
