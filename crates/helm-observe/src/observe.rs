@@ -62,10 +62,15 @@ pub fn observe(scope: &AuthorizedScope) -> ObservationArtifact {
     ObservationArtifact::new(ObservationRecord {
         subject_spec_sha256: plan.subject_spec_sha256(),
         plan_sha256: scope.authorized_plan_sha256(),
-        roots: scope
-            .roots()
+        // Plan declaration order, not the caller's capability vector order. Roots
+        // bind by logical ID, so the order in which the trusted caller happened to
+        // hand over descriptors carries no meaning and must not change the
+        // artifact's exact-byte identity. `authorize` has already established that
+        // every declared root has exactly one capability.
+        roots: plan
+            .root_ids()
             .iter()
-            .map(|r| (r.id().to_owned(), r.tuple()))
+            .map(|id| (id.clone(), scope.root(id).and_then(|r| r.tuple())))
             .collect(),
         targets,
     })

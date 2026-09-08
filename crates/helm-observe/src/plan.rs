@@ -243,84 +243,122 @@ fn validate_path(path: &str, index: usize, out: &mut Vec<PlanError>) {
     }
 }
 
-/// Reject duplicate object keys before any map insertion can hide one, and bound
-/// nesting. `serde_json` keeps the last duplicate silently, which would let two
-/// documents with different meaning validate identically.
-fn scan_raw(bytes: &[u8], out: &mut Vec<PlanError>) {
-    let mut de = serde_json::Deserializer::from_slice(bytes);
-    match serde_json::Value::deserialize(&mut de) {
-        Ok(_) => {}
-        Err(_) => out.push(PlanError::new(C::MalformedJson, "plan")),
-    }
-    // Structural duplicate-key and depth scan over the raw token stream.
-    let mut depth = 0usize;
-    let mut stack: Vec<Vec<String>> = Vec::new();
-    let iter = bytes.iter().copied();
-    let mut in_string = false;
-    let mut escaped = false;
-    let mut current = String::new();
-    let mut expect_key = false;
-    for b in iter {
-        if in_string {
-            if escaped {
-                escaped = false;
-            } else if b == b'\\' {
-                escaped = true;
-            } else if b == b'"' {
-                in_string = false;
-                if expect_key {
-                    if let Some(keys) = stack.last_mut() {
-                        if keys.contains(&current) {
-                            out.push(PlanError::new(C::DuplicateKey, "plan"));
-                        } else {
-                            keys.push(current.clone());
-                        }
-                    }
-                    expect_key = false;
-                }
-                current.clear();
-            } else if expect_key {
-                current.push(char::from(b));
-            }
-            continue;
-        }
-        match b {
-            b'"' => {
-                in_string = true;
-            }
-            b'{' => {
-                depth += 1;
-                if depth > MAX_JSON_DEPTH {
-                    out.push(PlanError::new(C::NestingTooDeep, "plan"));
-                    return;
-                }
-                stack.push(Vec::new());
-                expect_key = true;
-            }
-            b'}' => {
-                depth = depth.saturating_sub(1);
-                stack.pop();
-                expect_key = false;
-            }
-            b'[' => {
-                depth += 1;
-                if depth > MAX_JSON_DEPTH {
-                    out.push(PlanError::new(C::NestingTooDeep, "plan"));
-                    return;
-                }
-            }
-            b']' => {
-                depth = depth.saturating_sub(1);
-            }
-            b',' => {
-                expect_key = !stack.is_empty() && depth == stack.len();
-            }
-            _ => {}
-        }
+/// Reject duplicate **decoded** object keys before any map insertion can hide one,
+/// and bound nesting, at every object depth including objects nested inside arrays.
+///
+/// Never deserialize straight into `serde_json::Value`: its ordinary object visitor
+/// silently keeps the last duplicate, which would let two documents with different
+/// meaning validate identically. A raw byte scan is also not enough, because JSON
+/// permits several spellings of one key — `"targets"` decodes to `targets` —
+/// and because container kinds, not a single depth counter, decide which strings
+/// are keys. `helm-app-spec` bounds its own untrusted JSON the same way.
+struct StrictScan<'a> {
+    failure: &'a mut Option<C>,
+    depth: usize,
+}
+
+impl StrictScan<'_> {
+    fn reject<E: serde::de::Error>(failure: &mut Option<C>, code: C) -> E {
+        *failure = Some(code);
+        E::custom("bounded JSON rejected")
     }
 }
 
-use serde::Deserialize as _;
+impl<'de> serde::de::DeserializeSeed<'de> for StrictScan<'_> {
+    type Value = ();
+    fn deserialize<D: serde::Deserializer<'de>>(self, parser: D) -> Result<(), D::Error> {
+        parser.deserialize_any(self)
+    }
+}
+
+impl<'de> serde::de::Visitor<'de> for StrictScan<'_> {
+    type Value = ();
+
+    fn expecting(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str("a bounded observation plan document")
+    }
+
+    fn visit_unit<E: serde::de::Error>(self) -> Result<(), E> {
+        Ok(())
+    }
+    fn visit_none<E: serde::de::Error>(self) -> Result<(), E> {
+        Ok(())
+    }
+    fn visit_bool<E: serde::de::Error>(self, _v: bool) -> Result<(), E> {
+        Ok(())
+    }
+    fn visit_i64<E: serde::de::Error>(self, _v: i64) -> Result<(), E> {
+        Ok(())
+    }
+    fn visit_u64<E: serde::de::Error>(self, _v: u64) -> Result<(), E> {
+        Ok(())
+    }
+    fn visit_i128<E: serde::de::Error>(self, _v: i128) -> Result<(), E> {
+        Ok(())
+    }
+    fn visit_u128<E: serde::de::Error>(self, _v: u128) -> Result<(), E> {
+        Ok(())
+    }
+    fn visit_f64<E: serde::de::Error>(self, _v: f64) -> Result<(), E> {
+        Ok(())
+    }
+    fn visit_str<E: serde::de::Error>(self, _v: &str) -> Result<(), E> {
+        Ok(())
+    }
+
+    fn visit_map<M: serde::de::MapAccess<'de>>(self, mut input: M) -> Result<(), M::Error> {
+        if self.depth >= MAX_JSON_DEPTH {
+            return Err(Self::reject(self.failure, C::NestingTooDeep));
+        }
+        // Decoded keys, so two spellings of one key collide. A set, so a large
+        // document cannot make the check quadratic.
+        let mut seen: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+        while let Some(key) = input.next_key::<String>()? {
+            if !seen.insert(key) {
+                return Err(Self::reject(self.failure, C::DuplicateKey));
+            }
+            input.next_value_seed(StrictScan {
+                failure: &mut *self.failure,
+                depth: self.depth + 1,
+            })?;
+        }
+        Ok(())
+    }
+
+    fn visit_seq<S: serde::de::SeqAccess<'de>>(self, mut input: S) -> Result<(), S::Error> {
+        if self.depth >= MAX_JSON_DEPTH {
+            return Err(Self::reject(self.failure, C::NestingTooDeep));
+        }
+        while input
+            .next_element_seed(StrictScan {
+                failure: &mut *self.failure,
+                depth: self.depth + 1,
+            })?
+            .is_some()
+        {}
+        Ok(())
+    }
+}
+
+/// Structural admission for untrusted plan bytes. Retains nothing.
+fn scan_strict(bytes: &[u8]) -> Result<(), C> {
+    let mut failure: Option<C> = None;
+    let mut parser = serde_json::Deserializer::from_slice(bytes);
+    let scanned = serde::de::DeserializeSeed::deserialize(
+        StrictScan {
+            failure: &mut failure,
+            depth: 0,
+        },
+        &mut parser,
+    );
+    if scanned.is_err() {
+        return Err(failure.unwrap_or(C::MalformedJson));
+    }
+    if parser.end().is_err() {
+        return Err(C::MalformedJson);
+    }
+    Ok(())
+}
 
 fn expect_str<'a>(
     obj: &'a serde_json::Map<String, Value>,
@@ -349,15 +387,14 @@ pub fn parse_plan(bytes: &[u8]) -> Result<ValidatedPlan, PlanErrors> {
     if bytes.len() > MAX_PLAN_BYTES {
         return Err(PlanErrors::single(C::InputTooLarge, "plan"));
     }
-    let mut errors: Vec<PlanError> = Vec::new();
-    scan_raw(bytes, &mut errors);
-    if errors
-        .iter()
-        .any(|e| matches!(e.code(), C::MalformedJson | C::NestingTooDeep))
-    {
-        return Err(PlanErrors::new(errors));
+    // Structural admission first. A malformed, over-deep or duplicate-keyed
+    // document has no reliable meaning to report field findings against, so it
+    // returns one document-level finding, as `helm-app-spec` also does.
+    if let Err(code) = scan_strict(bytes) {
+        return Err(PlanErrors::single(code, "plan"));
     }
 
+    let mut errors: Vec<PlanError> = Vec::new();
     let value: Value = match serde_json::from_slice(bytes) {
         Ok(v) => v,
         Err(_) => return Err(PlanErrors::single(C::MalformedJson, "plan")),

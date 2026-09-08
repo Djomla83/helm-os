@@ -46,6 +46,31 @@ jobs:
           rustup toolchain install 1.95.0 --profile minimal --component rustfmt,clippy
           rustup default 1.95.0
 
+      # ------------------------------------------------------ syscall-level regression
+      # Deliberately first: the syscall evidence is the least reproducible artifact
+      # of this review, so it is collected before any step that could abort the job.
+      - name: Build the review driver around the public API
+        run: cargo build --manifest-path tools/helm-observe-review-driver/Cargo.toml --locked --release
+
+      - name: Syscall-level regression on the compiled implementation
+        run: |
+          python3 tools/helm_observe_syscall_review.py \
+            --driver tools/helm-observe-review-driver/target/release/helm-observe-review-driver \
+            --out target/helm-observe-review/syscall-evidence.json
+
+      # ------------------------------------------------- independent adversarial review
+      - name: Independent plan-contract adversarial tests
+        run: cargo test -p helm-observe --locked --test independent_review_plan -- --nocapture
+
+      - name: Independent Linux adversarial tests, including procfs foreign-process cases
+        run: cargo test -p helm-observe --locked --test independent_review_linux -- --nocapture
+
+      - name: Author Linux suite, with the cohort line printed
+        run: cargo test -p helm-observe --locked -- --nocapture
+
+      - name: Budget ceiling tests that stream real bytes
+        run: cargo test -p helm-observe --locked --release --test independent_review_linux -- --ignored --nocapture
+
       # ---------------------------------------------------------- repository validation
       - run: cargo fmt --check
       - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
@@ -61,30 +86,7 @@ jobs:
       - name: Independent app-spec properties and cross-crate comparison
         run: python3 tools/helm_app_spec_independent_review.py --output target/helm-app-spec-independent/linux.json
 
-      # ------------------------------------------------- independent adversarial review
-      - name: Independent plan-contract adversarial tests
-        run: cargo test -p helm-observe --locked --test independent_review_plan -- --nocapture
-
-      - name: Independent Linux adversarial tests, including procfs foreign-process cases
-        run: cargo test -p helm-observe --locked --test independent_review_linux -- --nocapture
-
-      - name: Author Linux suite, with the cohort line printed
-        run: cargo test -p helm-observe --locked -- --nocapture
-
-      - name: Budget ceiling tests that stream real bytes
-        run: cargo test -p helm-observe --locked --release --test independent_review_linux -- --ignored --nocapture
-
-      # ---------------------------------------------------- syscall-level regression
-      - name: Build the review driver around the public API
-        run: cargo build --manifest-path tools/helm-observe-review-driver/Cargo.toml --locked --release
-
-      - name: Syscall-level regression on the compiled implementation
-        run: |
-          python3 tools/helm_observe_syscall_review.py \
-            --driver tools/helm-observe-review-driver/target/release/helm-observe-review-driver \
-            --out target/helm-observe-review/syscall-evidence.json
-
-      # The evidence JSON is printed to the log by the step above, so the review
+      # The evidence JSON is printed to the log by the regression step, so the review
       # record needs no additional action and no new pinned third-party action.
       - name: Restate the syscall evidence in the log
         if: always()

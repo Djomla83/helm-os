@@ -31,11 +31,19 @@
 //! # Supported cohort
 //!
 //! Linux x86_64 on local ext4, anchored by the OBS-FS-01 evidence cohort. Other
-//! filesystems, architectures and kernels are **not** claimed. Target paths
-//! whose correctness claim depends specifically on rejecting a bind mount
-//! created as a descendant of an authorised ext4 root are outside the
-//! empirically validated 0.1 cohort; `RESOLVE_NO_XDEV` remains mandatory and
-//! such crossings are conservatively rejected, but no validation is claimed.
+//! filesystems, architectures and kernels are **not** claimed, and the
+//! observation backend does not compile outside Linux x86_64.
+//!
+//! What admission actually establishes is narrower than the cohort name. The
+//! `0xEF53` superblock magic is shared by ext2, ext3 and ext4, so root admission
+//! refuses every non-ext-family filesystem but **cannot** prove ext4 specifically,
+//! and "local" is assumed rather than established. That gap is recorded for owner
+//! architecture review, not resolved by widening the cohort.
+//!
+//! Target paths whose correctness claim depends specifically on rejecting a bind
+//! mount created as a descendant of an authorised ext4 root are outside the
+//! empirically validated 0.1 cohort; `RESOLVE_NO_XDEV` remains mandatory and such
+//! crossings are conservatively rejected, but no validation is claimed.
 //!
 //! # Consistency
 //!
@@ -43,20 +51,23 @@
 //! digest identifies the bytes actually supplied through the retained descriptor
 //! during that observed read sequence.
 
-// The Linux backend is the only consumer of a few model and error helpers.
-// On a non-Linux developer host those modules are cfg'd out, so the helpers
-// are legitimately unreachable there. Linux CI still reports real dead code.
-#![cfg_attr(not(target_os = "linux"), allow(dead_code))]
+// The observation backend is the only consumer of a few model and error helpers.
+// Outside the supported cohort those modules are cfg'd out, so the helpers are
+// legitimately unreachable there. Cohort CI still reports real dead code.
+#![cfg_attr(
+    not(all(target_os = "linux", target_arch = "x86_64")),
+    allow(dead_code)
+)]
 
 pub mod error;
 pub mod model;
 pub mod plan;
 
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 mod authority;
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 mod linux;
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 mod observe;
 
 pub use error::{
@@ -71,10 +82,10 @@ pub use plan::{
     MAX_PLAN_BYTES, MAX_ROOTS, MAX_TARGETS, Observable, Target, ValidatedPlan, parse_plan,
 };
 
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 pub use authority::{
     AuthorizedScope, ProcFdCapability, RootCapability, authorize,
     proc_fd_from_trusted_current_process, root_from_fd,
 };
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 pub use observe::{MAX_FILE_BYTES, MAX_TOTAL_BYTES, READ_BUFFER_BYTES, observe};

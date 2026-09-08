@@ -14,7 +14,7 @@ use std::os::fd::OwnedFd;
 use crate::error::{AdmissionError, AdmissionErrorCode as A, AdmissionErrors};
 use crate::plan::{Digest, ValidatedPlan};
 
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 use crate::linux;
 
 /// An already-open directory descriptor the trusted caller chose to grant,
@@ -67,7 +67,7 @@ impl ProcFdCapability {
 /// # Errors
 /// Fails when the descriptor is not a directory, its metadata is unavailable, or
 /// its filesystem is outside the supported local-ext4 0.1 cohort.
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 pub fn root_from_fd(id: &str, fd: OwnedFd) -> Result<RootCapability, AdmissionError> {
     let tuple = linux::admit_root(&fd)?;
     Ok(RootCapability {
@@ -85,7 +85,7 @@ pub fn root_from_fd(id: &str, fd: OwnedFd) -> Result<RootCapability, AdmissionEr
 /// # Errors
 /// Fails for a non-procfs decoy, a foreign process's descriptor directory, or an
 /// otherwise unusable capability.
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 pub fn proc_fd_from_trusted_current_process(
     fd: OwnedFd,
 ) -> Result<ProcFdCapability, AdmissionError> {

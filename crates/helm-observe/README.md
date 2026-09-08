@@ -21,18 +21,33 @@ No process execution, no Wine invocation, no registry semantics, no PATH/HOME/cw
 lookup, no installation discovery, no recursive inventory, no directory enumeration, no
 file search, no network, and no interpretation of a `helm-app-spec` requirement. The crate
 depends on neither HELM crate; artifact identities, not Cargo types, connect the modules.
-Observation code performs no filesystem writes.
+
+Observation code performs no filesystem **writes**. That is not the same as being
+side-effect free, and nothing here claims it is: a permitted regular-file read may update
+atime depending on mount options, populates the page cache, causes real I/O, and can block
+in the kernel despite finite byte limits. Procfs admission creates one anonymous memory
+object as its self-identity probe, which touches no observed filesystem.
 
 ## Supported cohort
 
 Linux x86_64 on **local ext4**, anchored by the
-[OBS-FS-01](../../docs/experiments/OBS-FS-01-EXECUTION-REPORT.md) evidence cohort. Root
-admission refuses anything else rather than degrading. Other filesystems, architectures
-and kernels are not claimed and need their own evidence.
+[OBS-FS-01](../../docs/experiments/OBS-FS-01-EXECUTION-REPORT.md) evidence cohort. Other
+filesystems, architectures and kernels are not claimed and need their own evidence.
 
 Pure plan and model code compiles on any platform so the contract can be tested and
-reviewed anywhere. The observation backend and the capability types are gated to Linux;
-there are no fake Windows observation semantics.
+reviewed anywhere. The observation backend and the capability types are gated to **Linux
+x86_64**, so an unsupported architecture gets no observation authority at all rather than
+unvalidated authority. There are no fake Windows observation semantics.
+
+**What root admission actually establishes.** It reads the superblock magic of the
+supplied descriptor and refuses every filesystem that is not ext-family, without
+degrading. It cannot go further: the Linux UAPI gives ext2, ext3 and ext4 the **same**
+`0xEF53` magic, so the check is a necessary but not a sufficient condition for ext4, an
+ext2 or ext3 root is not distinguished from an ext4 one, and "local" is assumed rather
+than established — the same magic is reported for an ext filesystem on network-backed
+block storage. Nothing reachable inside the accepted explicit-capability, no-ambient-scan
+boundary can close that gap. It is recorded for owner architecture review; the cohort is
+not renamed and admission is not weakened.
 
 ### Descendant bind mounts are excluded
 
@@ -75,10 +90,26 @@ Per-file and aggregate budgets are enforced **before** any reopen. Only a descri
 already classified as a regular file can reach the procfs reopen, which re-verifies device,
 inode and type against the pin before a single byte is read.
 
+The per-file constant bounds the bytes **hashed**: never more than the length observed
+before the read enters the digest. One byte beyond that length may still be *read*, as the
+end-of-file and growth sentinel, so a file sitting exactly at the per-file ceiling can cost
+one extra read byte. That byte is charged to the aggregate budget, which the accounting
+keeps exact, and it never reaches a digest.
+
 Flags are never weakened and there is no `openat` fallback for target resolution. If
 `openat2` is unavailable the outcome is explicit, never a degraded resolver. The procfs
 capability is supplied by the caller; the crate never opens `/proc/self/fd` itself, never
 searches for another procfs mount, and never falls back to reopening a pathname.
+
+**Procfs admission.** Two metadata-only checks. The supplied directory must report the
+procfs filesystem type, and it must map *this* process's descriptor numbers. The
+self-identity probe creates a fresh anonymous memory object, opens that object's own
+descriptor number under the supplied directory, and requires device, inode and kind to
+match. The probe object is created at admission time and is never shared or inherited, so
+a foreign process cannot present a matching object at that number — which reusing the
+supplied capability as its own probe would allow, because a process that keeps its own
+`/proc/self/fd` open across low descriptor numbers makes those numbers resolve back to the
+very directory supplied.
 
 **Symlinks.** A trailing symlink may be pinned and is rejected at classification with its
 kind established; a non-final symlink is rejected at resolution and yields no descriptor.

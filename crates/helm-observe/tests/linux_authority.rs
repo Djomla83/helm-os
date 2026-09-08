@@ -1,6 +1,6 @@
 //! Obligations A, B and C from Accepted ADR-0022, plus the Linux filesystem
 //! contract. Synthetic fixtures only; never touches A0 or any application.
-#![cfg(target_os = "linux")]
+#![cfg(all(target_os = "linux", target_arch = "x86_64"))]
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use std::fs;
@@ -248,10 +248,25 @@ fn obligation_b_root_set_is_bound_by_id_not_position() {
         proc_cap(),
     )
     .unwrap();
+    // Independent review correction: comparing only artifact *lengths* would also
+    // pass for two different root bindings. Compare the bytes, and the bound root
+    // identities, so the assertion really tests binding by ID rather than position.
+    let a = observe(&forward);
+    let b = observe(&reversed);
     assert_eq!(
-        observe(&forward).exact_bytes().len(),
-        observe(&reversed).exact_bytes().len()
+        a.exact_bytes(),
+        b.exact_bytes(),
+        "root order must not change the observation at all"
     );
+    let ids = |art: &helm_observe::ObservationArtifact| -> Vec<String> {
+        art.record().roots.iter().map(|(i, _)| i.clone()).collect()
+    };
+    assert_eq!(
+        ids(&a),
+        ["alpha".to_owned(), "beta".to_owned()],
+        "the artifact lists roots in plan declaration order"
+    );
+    assert_eq!(ids(&a), ids(&b));
 }
 
 #[test]
@@ -261,11 +276,19 @@ fn root_admission_requires_a_directory_and_rejects_a_file() {
     fs::write(&f, b"x").unwrap();
     let err = root_from_fd("r", OwnedFd::from(fs::File::open(&f).unwrap())).unwrap_err();
     assert_eq!(err.code(), A::RootNotDirectory);
+    // Independent review correction: the previous line here asserted
+    // `is_ext(base) || !is_ext(base)`, a tautology that could never fail.
     // Report, do not weaken, if the runner is not on the supported cohort.
-    assert!(
-        is_ext(&base) || !is_ext(&base),
-        "filesystem type is recorded by the harness"
-    );
+    let admitted = root_from_fd("r", dir_fd(&base));
+    if is_ext(&base) {
+        assert!(admitted.is_ok(), "an ext-family root must be admitted");
+    } else {
+        assert_eq!(
+            admitted.unwrap_err().code(),
+            A::RootUnsupportedFilesystem,
+            "a non-cohort filesystem is refused, never silently accepted"
+        );
+    }
 }
 
 // ---------------------------------------------------------------- obligation C
@@ -733,9 +756,15 @@ fn retained_root_descriptor_survives_pathname_replacement() {
 }
 
 /// Supported-cohort check. The cohort is Linux x86_64 on local ext4. If the
-/// runner is not ext4 this test does **not** weaken admission to pass: it
-/// asserts that admission correctly refuses, and prints the filesystem so the
-/// report can record the ext4 cohort as BLOCKED rather than claimed.
+/// runner is not on an ext-family filesystem this test does **not** weaken
+/// admission to pass: it asserts that admission correctly refuses, and prints the
+/// filesystem so the report records what was actually measured.
+///
+/// Independent review correction: this test previously printed
+/// `HELM-OBSERVE-COHORT: ext4 PASS` on the strength of the `0xEF53` magic alone.
+/// That magic is shared by ext2, ext3 and ext4, so it is a necessary but not a
+/// sufficient condition and cannot support an ext4 identity. The assertions are
+/// unchanged and admission is not weakened; only the claim is.
 #[test]
 fn ext4_cohort_admission_is_reported_not_weakened() {
     let base = temp_root("cohort");
@@ -751,9 +780,11 @@ fn ext4_cohort_admission_is_reported_not_weakened() {
     if is_ext(&base) {
         assert!(
             admitted.is_ok(),
-            "ext4 fixture root must be admitted: {magic}"
+            "an ext-family fixture root must be admitted: {magic}"
         );
-        println!("HELM-OBSERVE-COHORT: ext4 PASS ({magic})");
+        println!(
+            "HELM-OBSERVE-COHORT: ext-family magic 0xEF53 admitted ({magic});              this is necessary but NOT sufficient for ext4, which the mechanism              cannot establish"
+        );
     } else {
         let err = admitted.unwrap_err();
         assert_eq!(
@@ -761,6 +792,6 @@ fn ext4_cohort_admission_is_reported_not_weakened() {
             A::RootUnsupportedFilesystem,
             "a non-cohort filesystem must be refused, never silently accepted: {magic}"
         );
-        println!("HELM-OBSERVE-COHORT: BLOCKED, fixture filesystem is not ext4 ({magic})");
+        println!("HELM-OBSERVE-COHORT: BLOCKED, fixture filesystem is not ext-family ({magic})");
     }
 }

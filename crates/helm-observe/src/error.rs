@@ -200,7 +200,9 @@ impl std::error::Error for PlanErrors {}
 pub enum AdmissionErrorCode {
     /// The descriptor is not a directory.
     RootNotDirectory,
-    /// The root filesystem is outside the supported local-ext4 0.1 cohort.
+    /// The root filesystem does not report the ext-family superblock magic the
+    /// supported local-ext4 0.1 cohort requires. That magic is a necessary but not
+    /// a sufficient condition: it cannot distinguish ext4 from ext2 or ext3.
     RootUnsupportedFilesystem,
     /// Root metadata could not be established.
     RootMetadataUnavailable,

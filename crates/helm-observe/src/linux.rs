@@ -8,16 +8,23 @@ use std::io::Read as _;
 use std::os::fd::{AsFd as _, OwnedFd};
 
 use rustix::fs::{
-    AtFlags, FileType, Mode, OFlags, PROC_SUPER_MAGIC, ResolveFlags, StatxFlags, fstatfs, openat,
-    openat2, statx,
+    AtFlags, FileType, MemfdFlags, Mode, OFlags, PROC_SUPER_MAGIC, ResolveFlags, StatxFlags,
+    fstatfs, memfd_create, openat, openat2, statx,
 };
 use rustix::io::Errno;
 
 use crate::error::{AdmissionError, AdmissionErrorCode as A};
 use crate::model::{Failure, ObjectKind, ObjectTuple, Rejection};
 
-/// Filesystem magic for ext4 (shared with ext2/ext3).
-const EXT_SUPER_MAGIC: i64 = 0xEF53;
+/// The ext-family superblock magic. `include/uapi/linux/magic.h` gives the **same**
+/// `0xEF53` to `EXT2_SUPER_MAGIC`, `EXT3_SUPER_MAGIC` and `EXT4_SUPER_MAGIC`, so
+/// this value is a **necessary but not sufficient** condition for the accepted
+/// local-ext4 cohort: it refuses every other filesystem, and it cannot tell ext4
+/// apart from ext2 or ext3. Nothing reachable inside the accepted
+/// explicit-capability boundary can. See the independent review of 0.1; narrowing
+/// this to a proven ext4 identity is an owner architecture decision, and widening
+/// the claim to "ext-family" would be a scope change, so neither is done here.
+const EXT_FAMILY_SUPER_MAGIC: i64 = 0xEF53;
 
 /// The reviewed constraint set, applied to every target resolution.
 ///
@@ -88,7 +95,7 @@ pub(crate) fn admit_root(fd: &OwnedFd) -> Result<ObjectTuple, AdmissionError> {
         return Err(AdmissionError::new(A::RootNotDirectory));
     }
     let fs = fstatfs(fd.as_fd()).map_err(|_| AdmissionError::new(A::RootMetadataUnavailable))?;
-    if fs.f_type != EXT_SUPER_MAGIC {
+    if fs.f_type != EXT_FAMILY_SUPER_MAGIC {
         return Err(AdmissionError::new(A::RootUnsupportedFilesystem));
     }
     Ok(meta.tuple)
@@ -96,28 +103,45 @@ pub(crate) fn admit_root(fd: &OwnedFd) -> Result<ObjectTuple, AdmissionError> {
 
 /// Admit the procfs descriptor-directory capability.
 ///
-/// Check A, filesystem type. Check B, self-identity: open the decimal name of a
-/// descriptor this process already controls and require it to identify that same
-/// object. A tmpfs or ext4 decoy fails A; another process's descriptor directory
-/// fails B. Neither check probes a plan-controlled path.
+/// Check A, filesystem type: a tmpfs or ext4 decoy fails here.
+///
+/// Check B, self-identity, exactly as the reviewed definition requires it: the
+/// observer **creates** a descriptor it already controls, opens that decimal name
+/// under the supplied directory, and requires device, inode and kind to match that
+/// created object.
+///
+/// The created object must be one no other process can hold, or the check is
+/// circular. Reusing the supplied capability as its own probe is **not** safe: a
+/// foreign process that keeps its own `/proc/self/fd` open across the low
+/// descriptor numbers makes `/proc/<foreign>/fd/<n>` resolve to exactly the
+/// directory that was supplied, so device and inode match and a foreign
+/// descriptor namespace is admitted. An anonymous memory file is created here
+/// instead: it is created after any process that already exists, it is never
+/// shared or inherited, its inode lives on an internal kernel mount, and it
+/// writes nothing to any observed filesystem.
+///
+/// Neither check probes a plan-controlled path.
 pub(crate) fn admit_procfs(fd: &OwnedFd) -> Result<(), AdmissionError> {
     let fs = fstatfs(fd.as_fd()).map_err(|_| AdmissionError::new(A::ProcfsWrongFilesystem))?;
     if fs.f_type != PROC_SUPER_MAGIC {
         return Err(AdmissionError::new(A::ProcfsWrongFilesystem));
     }
-    let known = describe(fd).map_err(|_| AdmissionError::new(A::ProcfsForeignOrUnusable))?;
-    let number = rustix::fd::AsRawFd::as_raw_fd(&fd.as_fd()).to_string();
+    let probe = memfd_create("helm-observe-procfs-probe", MemfdFlags::CLOEXEC)
+        .map_err(|_| AdmissionError::new(A::ProcfsForeignOrUnusable))?;
+    let known = describe(&probe).map_err(|_| AdmissionError::new(A::ProcfsForeignOrUnusable))?;
+    let number = rustix::fd::AsRawFd::as_raw_fd(&probe.as_fd()).to_string();
     // Deliberately without NO_SYMLINKS/NO_NOFOLLOW: this magic link must be
     // traversed so the probe observes the pinned object rather than the link.
-    let probe = openat(
+    let seen_fd = openat(
         fd.as_fd(),
         number.as_str(),
         OFlags::PATH | OFlags::CLOEXEC,
         Mode::empty(),
     )
     .map_err(|_| AdmissionError::new(A::ProcfsForeignOrUnusable))?;
-    let seen = describe(&probe).map_err(|_| AdmissionError::new(A::ProcfsForeignOrUnusable))?;
-    if seen.tuple.inode != known.tuple.inode
+    let seen = describe(&seen_fd).map_err(|_| AdmissionError::new(A::ProcfsForeignOrUnusable))?;
+    if seen.kind != known.kind
+        || seen.tuple.inode != known.tuple.inode
         || seen.tuple.device_major != known.tuple.device_major
         || seen.tuple.device_minor != known.tuple.device_minor
     {

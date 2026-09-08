@@ -344,3 +344,61 @@ impl ObservationArtifact {
 fn sha256_of(bytes: &[u8]) -> [u8; 32] {
     Sha256::digest(bytes).into()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        DirectoryFacts, FileFacts, MAX_ARTIFACT_BYTES, ObjectTuple, ObservationArtifact,
+        ObservationRecord, TargetObservation, TargetOutcome,
+    };
+    use crate::plan::{Digest, MAX_ID_BYTES, MAX_ROOTS, MAX_TARGETS};
+
+    /// The serializer truncates at [`MAX_ARTIFACT_BYTES`], which would emit invalid
+    /// JSON whose digest still matched. That branch must be unreachable, so prove it
+    /// numerically from the actual schema and the actual declared limits rather than
+    /// leaving boundedness implicit.
+    #[test]
+    fn the_largest_expressible_artifact_stays_inside_the_ceiling() {
+        let widest = ObjectTuple {
+            device_major: u32::MAX,
+            device_minor: u32::MAX,
+            inode: u64::MAX,
+            mount_id: Some(u64::MAX),
+        };
+        let longest = "d".repeat(MAX_ID_BYTES);
+        let file = TargetOutcome::ObservedFile(FileFacts {
+            tuple: widest,
+            link_count: u64::MAX,
+            bytes_read: u64::MAX,
+            sha256: Digest::from_raw([0xff; 32]),
+        });
+        let record = ObservationRecord {
+            subject_spec_sha256: Digest::from_raw([0xff; 32]),
+            plan_sha256: Digest::from_raw([0xff; 32]),
+            roots: (0..MAX_ROOTS)
+                .map(|_| (longest.clone(), Some(widest)))
+                .collect(),
+            targets: (0..MAX_TARGETS)
+                .map(|_| TargetObservation {
+                    target_id: longest.clone(),
+                    root_id: longest.clone(),
+                    outcome: file,
+                })
+                .collect(),
+        };
+        let artifact = ObservationArtifact::new(record);
+        assert!(
+            artifact.exact_bytes().len() < MAX_ARTIFACT_BYTES,
+            "the widest artifact is {} bytes, against a {MAX_ARTIFACT_BYTES} byte ceiling",
+            artifact.exact_bytes().len()
+        );
+        // `ObservedFile` is the widest outcome; a directory record is strictly smaller.
+        assert!(
+            matches!(
+                TargetOutcome::ObservedDirectory(DirectoryFacts { tuple: widest }),
+                TargetOutcome::ObservedDirectory(_)
+            ),
+            "directory facts carry no digest, link count or byte count"
+        );
+    }
+}

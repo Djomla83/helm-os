@@ -87,26 +87,52 @@ fn plan_identity_is_exact_bytes_not_semantics() {
     assert_ne!(x.sha256(), y.sha256(), "field order changes exact identity");
 }
 
+// Independent review correction: this test previously flipped bytes in a *copy of
+// the digest array* and compared it with the original array, which tests `[u8; 32]`
+// equality rather than the crate. It now checks the digest against an independent
+// oracle and attacks the document instead.
 #[test]
 fn every_digest_byte_participates_in_identity() {
-    let plan = parse_plan(&bytes(&plan_value())).unwrap();
+    let raw = bytes(&plan_value());
+    let plan = parse_plan(&raw).unwrap();
     let d = plan.sha256();
-    let raw = *d.as_bytes();
-    assert_eq!(raw.len(), 32);
-    for i in 0..32 {
-        let mut flipped = raw;
-        flipped[i] ^= 0x01;
-        assert_ne!(
-            &flipped,
-            d.as_bytes(),
-            "byte {i} must participate in equality"
+
+    let expected: [u8; 32] = {
+        use sha2::Digest as _;
+        sha2::Sha256::digest(&raw).into()
+    };
+    assert_eq!(
+        d.as_bytes(),
+        &expected,
+        "the plan digest must be SHA-256 over the exact accepted bytes"
+    );
+    let hex = d.to_hex();
+    assert_eq!(hex.len(), 64);
+    assert!(
+        hex.chars()
+            .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c))
+    );
+    for (i, b) in expected.iter().enumerate() {
+        assert_eq!(
+            &hex[2 * i..2 * i + 2],
+            format!("{b:02x}"),
+            "digest byte {i} must be rendered in place, with no truncation"
         );
     }
-    assert_eq!(d.to_hex().len(), 64);
+
+    // A one-byte change anywhere in the document is a different authorisation.
+    let mut survived = 0usize;
+    for i in 0..raw.len() {
+        let mut v = raw.clone();
+        v[i] ^= 0x20;
+        if let Ok(other) = parse_plan(&v) {
+            survived += 1;
+            assert_ne!(other.sha256(), d, "input byte {i} did not change identity");
+        }
+    }
     assert!(
-        d.to_hex()
-            .chars()
-            .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c))
+        survived > 8,
+        "expected several still-valid one-byte variants"
     );
 }
 
