@@ -1,0 +1,906 @@
+{
+  "candidate": "18c7aa5e80617483b6f5afd0fea4affeb62f926c",
+  "base": "e32ab269fbe7c4151186d9257e0aff67c0c70197",
+  "platform": {
+    "system": "Windows",
+    "release": "11",
+    "machine": "AMD64",
+    "python": "3.14.3"
+  },
+  "commands": [
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": "<repo>",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 0.024533300020266324,
+      "stdout": "c9d6c42b331c65805a256514dcd3e0d83a7189f3\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "rustc",
+        "-Vv"
+      ],
+      "cwd": "<repo>",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 0.038370000023860484,
+      "stdout": "rustc 1.95.0 (59807616e 2026-04-14)\nbinary: rustc\ncommit-hash: 59807616e1fa2540724bfbac14d7976d7e4a3860\ncommit-date: 2026-04-14\nhost: x86_64-pc-windows-msvc\nrelease: 1.95.0\nLLVM version: 22.1.2\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cargo",
+        "tree",
+        "--workspace",
+        "--locked",
+        "-e",
+        "features",
+        "-i",
+        "sha2"
+      ],
+      "cwd": "<repo>",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 0.08006870001554489,
+      "stdout": "sha2 v0.10.9\n\u251c\u2500\u2500 sha2 feature \"default\"\n\u2502   \u251c\u2500\u2500 helm-app-spec v0.1.0 (<repo>\\crates\\helm-app-spec)\n\u2502   \u2502   \u2514\u2500\u2500 helm-app-spec feature \"default\" (command-line)\n\u2502   \u2514\u2500\u2500 helm-evidence v0.1.0 (<repo>\\crates\\helm-evidence)\n\u2502       \u2514\u2500\u2500 helm-evidence feature \"default\" (command-line)\n\u251c\u2500\u2500 sha2 feature \"force-soft\"\n\u2502   \u2514\u2500\u2500 helm-app-spec v0.1.0 (<repo>\\crates\\helm-app-spec) (*)\n\u2514\u2500\u2500 sha2 feature \"std\"\n    \u2514\u2500\u2500 sha2 feature \"default\" (*)\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cargo",
+        "tree",
+        "-p",
+        "helm-evidence",
+        "--locked",
+        "-e",
+        "features",
+        "-i",
+        "sha2"
+      ],
+      "cwd": "<repo>",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 0.07509009999921545,
+      "stdout": "sha2 v0.10.9\n\u251c\u2500\u2500 sha2 feature \"default\"\n\u2502   \u2514\u2500\u2500 helm-evidence v0.1.0 (<repo>\\crates\\helm-evidence)\n\u2502       \u2514\u2500\u2500 helm-evidence feature \"default\" (command-line)\n\u2514\u2500\u2500 sha2 feature \"std\"\n    \u2514\u2500\u2500 sha2 feature \"default\" (*)\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "helm-app-spec",
+        "--test",
+        "independent_review",
+        "--locked",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "<repo>",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 2.9409449999802746,
+      "stdout": "\nrunning 8 tests\ntest sibling_errors_survive_parent_and_constructor_failures ... ok\nREVIEW_IDENTITIES=[\"d95e95764fb28de00e96be76867c1d0e9a11144250c3705322eb74044dde1314\",\"7febb99d15eabbd2b785da620cf7afbcbdade34f9db7d6cd3a393dfde408203a\",\"4e859896808f40b8ff0373d965b38a4b914891c5ad5a9616ec6e7cee72a39a4a\",\"c967421ca2681519fc42901a5c178e904a3790c155f8a158e0b97e39d0049a2c\",\"23cec700d02fc215fcb5ca9d2a2584677961f9e57beb99bac1e979442c7c49de\"]\ntest exact_byte_variants_preserve_all_desired_views ... ok\ntest decoded_set_duplicates_and_case_variants_never_validate ... ok\ntest exact_parser_boundaries_and_rejection_precedence ... ok\ntest diagnostics_never_echo_private_values_and_cap_output ... ok\ntest number_representation_errors_are_distinguished_from_semantics ... ok\ntest path_grammar_edges_and_device_case_variants ... ok\nREVIEW_PROPERTIES={\"seed\":\"00212026090851a7\",\"cases\":20000,\"valid\":4087,\"rejected\":15913,\"transcript_sha256\":\"0464894558755ebfe5cc3c5e263e46a85b7fb7c7ab5e7d4953de922027616744\"}\ntest independent_seeded_properties_and_platform_fingerprint ... ok\n\ntest result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.84s\n\n",
+      "stderr": "    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.04s\n     Running tests\\independent_review.rs (target\\debug\\deps\\independent_review-e3bfa7efd7446ab7.exe)\n"
+    },
+    {
+      "argv": [
+        "C:\\Python314\\python.exe",
+        "tools/helm_app_spec_purity_probe.py",
+        "--output",
+        "<repo>\\target\\helm-app-spec-independent\\purity-after.json"
+      ],
+      "cwd": "<repo>",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 3.891533599991817,
+      "stdout": "PURITY_PROBE={\"candidate\": \"18c7aa5e80617483b6f5afd0fea4affeb62f926c\", \"platform\": \"Windows\", \"memchr_version\": \"2.8.3\", \"instrumented_function\": \"memchr::arch::x86_64::memchr::unsafe_ifunc!::detect\", \"source_copy_sha256\": \"4cf0611c926c3016d1b640880ef14e5654a8d1c1b480fe9a5965956be7eeeeef\", \"instrumented_sha256\": \"fb6f49a161e2650d1fd659168d5dc25312a0c5313ecf07dca29c9723a4d7741f\", \"results\": [{\"case\": \"original-candidate\", \"exit_code\": 101, \"dispatch_sentinel_reached\": true, \"completed\": false, \"parse_rs_sha256\": \"101451ba1442e6f8229b952d31e7822530ad034517b91c04a02da334d9abff2d\"}, {\"case\": \"current\", \"exit_code\": 0, \"dispatch_sentinel_reached\": false, \"completed\": true, \"parse_rs_sha256\": \"59d4f07e63f1132f782f0d6a3a8ca15610645e2cc0d15c6ac58d9f251d6c64c1\"}]}\r\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cargo",
+        "test",
+        "--workspace",
+        "--locked"
+      ],
+      "cwd": "<repo>\\target\\helm-app-spec-independent\\purity\\original",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 4.67525279999245,
+      "stdout": "\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 30 tests\ntest a0_declares_only_frozen_desired_inputs ... ok\ntest empty_malformed_utf8_surrogates_bom_and_trailing_input_reject ... ok\ntest conflicting_runtime_roles_still_reject ... ok\ntest byte_different_whitespace_has_distinct_exact_document_identity ... ok\ntest field_order_changes_identity_but_preserves_desired_values ... ok\ntest structural_budgets_bound_unknown_subtrees ... ok\ntest optional_fields_must_be_omitted_instead_of_null ... ok\ntest error_count_limit_is_explicit_and_repeatable ... ok\ntest duplicate_roles_and_dlls_reject_in_declaration_order ... ok\ntest combined_collection_maxima_fit_the_parser_budget ... ok\ntest path_spelling_is_preserved_without_case_normalization_or_resolution ... ok\ntest same_labels_with_changed_artifact_identity_remain_distinct_requirements ... ok\ntest second_application_and_arbitrary_valid_ids_use_same_contract ... ok\ntest path_depth_component_and_total_length_boundaries ... ok\ntest byte_limit_is_inclusive_and_checked_before_content ... ok\ntest collection_minima_maxima_and_excess_reject ... ok\ntest unknown_schema_version_and_typed_vocabulary_reject ... ok\ntest duplicate_decoded_keys_are_rejected_before_map_insertion_everywhere ... ok\ntest disabled_dll_grammar_has_no_override_language_or_case_aliases ... ok\ntest observed_state_execution_and_evidence_result_fields_are_unknown ... ok\ntest metadata_is_bounded_but_shell_like_text_stays_inert ... ok\ntest digests_require_exact_lowercase_hex_in_all_identity_locations ... ok\ntest every_required_field_is_really_required ... ok\ntest artifact_source_and_definition_sizes_are_positive_bounded_integers ... ok\ntest errors_are_fixed_bounded_private_and_deterministic ... ok\ntest entry_point_rejects_absolute_traversal_ambiguous_and_shell_spellings ... ok\ntest invalid_ids_and_long_identifiers_reject ... ok\ntest unknown_fields_and_wrong_object_types_reject_at_every_schema_level ... ok\ntest identical_bytes_repeat_equal_model_and_exact_digest ... ok\ntest malformed_corpus_and_mutations_never_panic_and_repeat_identically ... ok\n\ntest result: ok. 30 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.72s\n\n\nrunning 3 tests\ntest bundle::tests::identity_syntax_is_bounded ... ok\ntest bundle::tests::rejects_portable_escape_and_device_spellings ... ok\ntest oracle::tests::unicode_archive_names_are_data ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 2 tests\ntest workflow_cannot_shadow_builtin_report_sections ... ok\ntest duplicate_content_expectations_are_invalid ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s\n\n\nrunning 10 tests\ntest manifest_symlink_outside_is_rejected ... ok\ntest directories_cannot_masquerade_as_files ... ok\ntest file_symlink_outside_cannot_supply_artifact ... ok\ntest diagnostics_do_not_echo_host_paths_or_bundle_text ... ok\ntest directory_symlink_outside_cannot_supply_artifact ... ok\ntest opaque_shell_text_is_never_executed ... ok\ntest contained_and_dangling_symlinks_are_rejected ... ok\ntest traversal_absolute_url_and_windows_device_paths_are_rejected ... ok\ntest windows_junction_outside_is_rejected ... ok\ntest manifest_artifact_and_total_size_limits ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.86s\n\n\nrunning 30 tests\ntest fully_complete_bundle ... ok\ntest a0_preserves_failure_and_w2_independent_success ... ok\ntest local_output_reference_cannot_declare_a_different_destination ... ok\ntest equivalent_file_elsewhere_does_not_replace_missing_destination ... ok\ntest unknown_schema_version_rejected ... ok\ntest content_pass_cannot_override_wrong_destination ... ok\ntest broken_control_incorrectly_accepted ... ok\ntest broken_control_must_evidence_content_defect ... ok\ntest unknown_mandatory_field_rejected ... ok\ntest invalid_takes_precedence_over_incomplete ... ok\ntest missing_required_artifact ... ok\ntest missing_known_good_control ... ok\ntest missing_broken_control ... ok\ntest restart_evidence_missing ... ok\ntest missing_step_is_incomplete ... ok\ntest missing_output_observation_does_not_infer_from_content ... ok\ntest unchanged_boot_is_invalid ... ok\ntest unexpected_optional_artifact_ignored ... ok\ntest missing_workflow_boot_is_incomplete ... ok\ntest wrong_artifact_hash ... ok\ntest oracle_hash_must_bind_the_actual_output ... ok\ntest oracle_pass_with_wrong_content_is_invalid ... ok\ntest workflow_on_wrong_boot_is_invalid ... ok\ntest complete_evidence_can_record_experimental_fail ... ok\ntest known_good_rejected_is_invalid ... ok\ntest verification_is_read_only ... ok\ntest duplicate_step_or_artifact_id_rejected ... ok\ntest not_run_and_blocked_steps_are_incomplete ... ok\ntest cli_json_deterministic_and_exit_codes ... ok\ntest malformed_inputs_fail_without_panic ... ok\n\ntest result: ok. 30 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s\n\n\nrunning 1 test\ntest crates\\helm-app-spec\\src\\lib.rs - parse_spec (line 36) ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n\nrunning 2 tests\ntest crates\\helm-app-spec\\src\\model.rs - model::ValidatedAppSpec (line 216) - compile fail ... ok\ntest crates\\helm-app-spec\\src\\model.rs - model::Digest (line 5) - compile fail ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s\n\nall doctests ran in 0.46s; merged doctests compilation took 0.33s\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+      "stderr": "    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.10s\n     Running unittests src\\lib.rs (target\\debug\\deps\\helm_app_spec-c8a1c2ac53471e6c.exe)\n     Running tests\\contract.rs (target\\debug\\deps\\contract-ddd3735b697f4ae3.exe)\n     Running unittests src\\lib.rs (target\\debug\\deps\\helm_evidence-c3a9a063bdcb666c.exe)\n     Running unittests src\\main.rs (target\\debug\\deps\\helm_evidence-8d3708b709d0bf1c.exe)\n     Running tests\\linux_filesystem.rs (target\\debug\\deps\\linux_filesystem-5f73237b812f1c2e.exe)\n     Running tests\\review_regressions.rs (target\\debug\\deps\\review_regressions-8693e11f3899a8fd.exe)\n     Running tests\\security.rs (target\\debug\\deps\\security-fe1c206edc25e46a.exe)\n     Running tests\\verification.rs (target\\debug\\deps\\verification-741291507a4c0f4e.exe)\nUsage: helm-evidence verify <bundle-directory> [--json]\nUsage: helm-evidence verify <bundle-directory> [--json]\nUsage: helm-evidence verify <bundle-directory> [--json]\nUsage: helm-evidence verify <bundle-directory> [--json]\n   Doc-tests helm_app_spec\n   Doc-tests helm_evidence\n"
+    },
+    {
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "helm-app-spec",
+        "--test",
+        "independent_review",
+        "--locked",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "<repo>\\target\\helm-app-spec-independent\\purity\\original",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 2.9750944999977946,
+      "stdout": "\nrunning 8 tests\ntest sibling_errors_survive_parent_and_constructor_failures ... ok\nREVIEW_IDENTITIES=[\"d95e95764fb28de00e96be76867c1d0e9a11144250c3705322eb74044dde1314\",\"7febb99d15eabbd2b785da620cf7afbcbdade34f9db7d6cd3a393dfde408203a\",\"4e859896808f40b8ff0373d965b38a4b914891c5ad5a9616ec6e7cee72a39a4a\",\"c967421ca2681519fc42901a5c178e904a3790c155f8a158e0b97e39d0049a2c\",\"23cec700d02fc215fcb5ca9d2a2584677961f9e57beb99bac1e979442c7c49de\"]\ntest exact_byte_variants_preserve_all_desired_views ... ok\ntest exact_parser_boundaries_and_rejection_precedence ... ok\ntest decoded_set_duplicates_and_case_variants_never_validate ... ok\ntest diagnostics_never_echo_private_values_and_cap_output ... ok\ntest number_representation_errors_are_distinguished_from_semantics ... ok\ntest path_grammar_edges_and_device_case_variants ... ok\nREVIEW_PROPERTIES={\"seed\":\"00212026090851a7\",\"cases\":20000,\"valid\":4087,\"rejected\":15913,\"transcript_sha256\":\"0464894558755ebfe5cc3c5e263e46a85b7fb7c7ab5e7d4953de922027616744\"}\ntest independent_seeded_properties_and_platform_fingerprint ... ok\n\ntest result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.27s\n\n",
+      "stderr": "   Compiling helm-app-spec v0.1.0 (<repo>\\target\\helm-app-spec-independent\\purity\\original\\crates\\helm-app-spec)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.57s\n     Running tests\\independent_review.rs (target\\debug\\deps\\independent_review-e3bfa7efd7446ab7.exe)\n"
+    },
+    {
+      "argv": [
+        "cargo",
+        "check",
+        "--offline"
+      ],
+      "cwd": "<repo>\\target\\helm-app-spec-independent\\api-rejection",
+      "exit_code": 101,
+      "expected_exit": 101,
+      "wall_seconds": 0.15519649995258078,
+      "stdout": "",
+      "stderr": "    Checking review-api-rejection v0.0.0 (<repo>\\target\\helm-app-spec-independent\\api-rejection)\nwarning: function `forge` is never used\n --> src\\main.rs:2:4\n  |\n2 | fn forge(s: ValidatedAppSpec) -> ValidatedAppSpec { ValidatedAppSpec {\n  |    ^^^^^\n  |\n  = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default\n\nerror[E0451]: fields `spec_sha256`, `application`, `runtime`, `environment`, `entry_point` and `verification` of struct `helm_app_spec::ValidatedAppSpec` are private\n --> src\\main.rs:3:1\n  |\n2 | fn forge(s: ValidatedAppSpec) -> ValidatedAppSpec { ValidatedAppSpec {\n  |                                                     ---------------- in this type\n3 | spec_sha256:s.spec_sha256().clone(), application:s.application().clone(),\n  | ^^^^^^^^^^^ private field            ^^^^^^^^^^^ private field\n4 | runtime:RuntimeRequirement {family:RuntimeFamily::Wine,artifacts:vec![]},\n  | ^^^^^^^ private field\n5 | environment:s.environment().clone(),entry_point:s.entry_point().clone(),verification:vec![] } }\n  | ^^^^^^^^^^^ private field           ^^^^^^^^^^^ private field           ^^^^^^^^^^^^ private field\n\nerror[E0451]: fields `family` and `artifacts` of struct `helm_app_spec::RuntimeRequirement` are private\n --> src\\main.rs:4:29\n  |\n4 | runtime:RuntimeRequirement {family:RuntimeFamily::Wine,artifacts:vec![]},\n  |                             ^^^^^^ private field       ^^^^^^^^^ private field\n\nFor more information about this error, try `rustc --explain E0451`.\nwarning: `review-api-rejection` (bin \"review-api-rejection\") generated 1 warning\nerror: could not compile `review-api-rejection` (bin \"review-api-rejection\") due to 2 previous errors; 1 warning emitted\n"
+    },
+    {
+      "argv": [
+        "cargo",
+        "check",
+        "--offline"
+      ],
+      "cwd": "<repo>\\target\\helm-app-spec-independent\\api-rejection",
+      "exit_code": 101,
+      "expected_exit": 101,
+      "wall_seconds": 0.1528251999989152,
+      "stdout": "",
+      "stderr": "    Checking review-api-rejection v0.0.0 (<repo>\\target\\helm-app-spec-independent\\api-rejection)\nerror[E0423]: cannot initialize a tuple struct which contains private fields\n --> src\\main.rs:1:43\n  |\n1 | use helm_app_spec::*; fn main() { let _ = Digest(\"!\".into()); let _ = Identifier(\"!\".into()); let _ = RelativeEntryPoint(\"../escape\"....\n  |                                           ^^^^^^\n  |\nnote: constructor is not visible here due to private fields\n --> <repo>\\crates\\helm-app-spec\\src\\model.rs:9:19\n  |\n9 | pub struct Digest(pub(crate) String);\n  |                   ^^^^^^^^^^^^^^^^^ private field\n\nerror[E0423]: cannot initialize a tuple struct which contains private fields\n  --> src\\main.rs:1:71\n   |\n 1 | use helm_app_spec::*; fn main() { let _ = Digest(\"!\".into()); let _ = Identifier(\"!\".into()); let _ = RelativeEntryPoint(\"../escape\"...\n   |                                                                       ^^^^^^^^^^\n   |\nnote: constructor is not visible here due to private fields\n  --> <repo>\\crates\\helm-app-spec\\src\\model.rs:19:23\n   |\n19 | pub struct Identifier(pub(crate) String);\n   |                       ^^^^^^^^^^^^^^^^^ private field\n\nerror[E0423]: cannot initialize a tuple struct which contains private fields\n  --> src\\main.rs:1:103\n   |\n 1 | use helm_app_spec::*; fn main() { let _ = Digest(\"!\".into()); let _ = Identifier(\"!\".into()); let _ = RelativeEntryPoint(\"../escape\"...\n   |                                                                                                       ^^^^^^^^^^^^^^^^^^\n   |\nnote: constructor is not visible here due to private fields\n  --> <repo>\\crates\\helm-app-spec\\src\\model.rs:29:31\n   |\n29 | pub struct RelativeEntryPoint(pub(crate) String);\n   |                               ^^^^^^^^^^^^^^^^^ private field\n\nFor more information about this error, try `rustc --explain E0423`.\nerror: could not compile `review-api-rejection` (bin \"review-api-rejection\") due to 3 previous errors\n"
+    },
+    {
+      "argv": [
+        "cargo",
+        "check",
+        "--offline"
+      ],
+      "cwd": "<repo>\\target\\helm-app-spec-independent\\api-rejection",
+      "exit_code": 101,
+      "expected_exit": 101,
+      "wall_seconds": 0.14394000003812835,
+      "stdout": "",
+      "stderr": "    Checking review-api-rejection v0.0.0 (<repo>\\target\\helm-app-spec-independent\\api-rejection)\nerror[E0599]: no method named `clear` found for reference `&[ArtifactRequirement]` in the current scope\n --> src\\main.rs:1:85\n  |\n1 | use helm_app_spec::*; fn mutate(s: &mut ValidatedAppSpec) { s.runtime().artifacts().clear(); s.verification().clear(); } fn main() {}\n  |                                                                                     ^^^^^ method not found in `&[ArtifactRequirement]`\n\nerror[E0599]: no method named `clear` found for reference `&[VerificationDefinitionRef]` in the current scope\n --> src\\main.rs:1:111\n  |\n1 | use helm_app_spec::*; fn mutate(s: &mut ValidatedAppSpec) { s.runtime().artifacts().clear(); s.verification().clear(); } fn main() {}\n  |                                                                                                               ^^^^^ method not found in `&[VerificationDefinitionRef]`\n\nFor more information about this error, try `rustc --explain E0599`.\nerror: could not compile `review-api-rejection` (bin \"review-api-rejection\") due to 2 previous errors\n"
+    },
+    {
+      "argv": [
+        "cargo",
+        "check",
+        "--offline"
+      ],
+      "cwd": "<repo>\\target\\helm-app-spec-independent\\api-rejection",
+      "exit_code": 101,
+      "expected_exit": 101,
+      "wall_seconds": 0.13260740000987425,
+      "stdout": "",
+      "stderr": "    Checking review-api-rejection v0.0.0 (<repo>\\target\\helm-app-spec-independent\\api-rejection)\nerror[E0277]: the trait bound `ValidatedAppSpec: serde::Deserialize<'de>` is not satisfied\n    --> src\\main.rs:1:44\n     |\n   1 | fn main() { let _ = serde_json::from_str::<helm_app_spec::ValidatedAppSpec>(\"{}\"); }\n     |                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `serde_core::de::Deserialize<'_>` is not implemented for `ValidatedAppSpec`\n     |\n     = note: for local types consider adding `#[derive(serde::Deserialize)]` to your `ValidatedAppSpec` type\n     = note: for types from other crates check whether the crate offers a `serde` feature flag\n     = help: the following other types implement trait `serde_core::de::Deserialize<'de>`:\n               &'a Path\n               &'a [u8]\n               &'a str\n               ()\n               (T,)\n               (T0, T1)\n               (T0, T1, T2)\n               (T0, T1, T2, T3)\n             and 141 others\nnote: required by a bound in `serde_json::from_str`\n    --> <home>\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\serde_json-1.0.149\\src\\de.rs:2701:8\n     |\n2699 | pub fn from_str<'a, T>(s: &'a str) -> Result<T>\n     |        -------- required by a bound in this function\n2700 | where\n2701 |     T: de::Deserialize<'a>,\n     |        ^^^^^^^^^^^^^^^^^^^ required by this bound in `from_str`\n\nFor more information about this error, try `rustc --explain E0277`.\nerror: could not compile `review-api-rejection` (bin \"review-api-rejection\") due to 1 previous error\n"
+    },
+    {
+      "argv": [
+        "cargo",
+        "check",
+        "--offline"
+      ],
+      "cwd": "<repo>\\target\\helm-app-spec-independent\\api-rejection",
+      "exit_code": 101,
+      "expected_exit": 101,
+      "wall_seconds": 0.13629980001132935,
+      "stdout": "",
+      "stderr": "    Checking review-api-rejection v0.0.0 (<repo>\\target\\helm-app-spec-independent\\api-rejection)\nerror[E0603]: module `parse` is private\n  --> src\\main.rs:1:36\n   |\n 1 | fn main() { let _ = helm_app_spec::parse::Value::Other; }\n   |                                    ^^^^^         ----- unit variant `Other` is not publicly re-exported\n   |                                    |\n   |                                    private module\n   |\nnote: the module `parse` is defined here\n  --> <repo>\\crates\\helm-app-spec\\src\\lib.rs:16:1\n   |\n16 | mod parse;\n   | ^^^^^^^^^\n\nFor more information about this error, try `rustc --explain E0603`.\nerror: could not compile `review-api-rejection` (bin \"review-api-rejection\") due to 1 previous error\n"
+    },
+    {
+      "argv": [
+        "cargo",
+        "test",
+        "--workspace",
+        "--locked"
+      ],
+      "cwd": "<repo>\\target\\helm-app-spec-independent\\base",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 2.0363291000248864,
+      "stdout": "\nrunning 3 tests\ntest bundle::tests::identity_syntax_is_bounded ... ok\ntest bundle::tests::rejects_portable_escape_and_device_spellings ... ok\ntest oracle::tests::unicode_archive_names_are_data ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 2 tests\ntest workflow_cannot_shadow_builtin_report_sections ... ok\ntest duplicate_content_expectations_are_invalid ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s\n\n\nrunning 10 tests\ntest manifest_symlink_outside_is_rejected ... ok\ntest directories_cannot_masquerade_as_files ... ok\ntest file_symlink_outside_cannot_supply_artifact ... ok\ntest opaque_shell_text_is_never_executed ... ok\ntest directory_symlink_outside_cannot_supply_artifact ... ok\ntest diagnostics_do_not_echo_host_paths_or_bundle_text ... ok\ntest contained_and_dangling_symlinks_are_rejected ... ok\ntest traversal_absolute_url_and_windows_device_paths_are_rejected ... ok\ntest windows_junction_outside_is_rejected ... ok\ntest manifest_artifact_and_total_size_limits ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.51s\n\n\nrunning 30 tests\ntest fully_complete_bundle ... ok\ntest a0_preserves_failure_and_w2_independent_success ... ok\ntest missing_required_artifact ... ok\ntest local_output_reference_cannot_declare_a_different_destination ... ok\ntest invalid_takes_precedence_over_incomplete ... ok\ntest broken_control_incorrectly_accepted ... ok\ntest missing_broken_control ... ok\ntest known_good_rejected_is_invalid ... ok\ntest missing_known_good_control ... ok\ntest unknown_schema_version_rejected ... ok\ntest unknown_mandatory_field_rejected ... ok\ntest broken_control_must_evidence_content_defect ... ok\ntest restart_evidence_missing ... ok\ntest equivalent_file_elsewhere_does_not_replace_missing_destination ... ok\ntest workflow_on_wrong_boot_is_invalid ... ok\ntest wrong_artifact_hash ... ok\ntest oracle_hash_must_bind_the_actual_output ... ok\ntest unexpected_optional_artifact_ignored ... ok\ntest missing_workflow_boot_is_incomplete ... ok\ntest missing_step_is_incomplete ... ok\ntest oracle_pass_with_wrong_content_is_invalid ... ok\ntest unchanged_boot_is_invalid ... ok\ntest missing_output_observation_does_not_infer_from_content ... ok\ntest content_pass_cannot_override_wrong_destination ... ok\ntest complete_evidence_can_record_experimental_fail ... ok\ntest verification_is_read_only ... ok\ntest duplicate_step_or_artifact_id_rejected ... ok\ntest not_run_and_blocked_steps_are_incomplete ... ok\ntest cli_json_deterministic_and_exit_codes ... ok\ntest malformed_inputs_fail_without_panic ... ok\n\ntest result: ok. 30 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+      "stderr": "    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.09s\n     Running unittests src\\lib.rs (target\\debug\\deps\\helm_evidence-f1030a35aa3861bf.exe)\n     Running unittests src\\main.rs (target\\debug\\deps\\helm_evidence-45548ac6ee2b4e15.exe)\n     Running tests\\linux_filesystem.rs (target\\debug\\deps\\linux_filesystem-5a4353f43e189186.exe)\n     Running tests\\review_regressions.rs (target\\debug\\deps\\review_regressions-530b19fd11fcbaf2.exe)\n     Running tests\\security.rs (target\\debug\\deps\\security-57d4704c4fafb1c2.exe)\n     Running tests\\verification.rs (target\\debug\\deps\\verification-9a4240b47d366b49.exe)\nUsage: helm-evidence verify <bundle-directory> [--json]\nUsage: helm-evidence verify <bundle-directory> [--json]\nUsage: helm-evidence verify <bundle-directory> [--json]\nUsage: helm-evidence verify <bundle-directory> [--json]\n   Doc-tests helm_evidence\n"
+    },
+    {
+      "argv": [
+        "cargo",
+        "build",
+        "--release",
+        "--offline"
+      ],
+      "cwd": "<repo>\\target\\helm-app-spec-independent\\base-probe",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 0.7072456000023521,
+      "stdout": "",
+      "stderr": "   Compiling review-evidence-bench v0.0.0 (<repo>\\target\\helm-app-spec-independent\\base-probe)\n    Finished `release` profile [optimized] target(s) in 0.66s\n"
+    },
+    {
+      "argv": [
+        "cargo",
+        "tree",
+        "--locked",
+        "-e",
+        "features",
+        "-i",
+        "sha2"
+      ],
+      "cwd": "<repo>\\target\\helm-app-spec-independent\\base-probe",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 0.08284879999700934,
+      "stdout": "sha2 v0.10.9\n\u251c\u2500\u2500 sha2 feature \"default\"\n\u2502   \u251c\u2500\u2500 helm-evidence v0.1.0 (<repo>\\target\\helm-app-spec-independent\\base\\crates\\helm-evidence)\n\u2502   \u2502   \u2514\u2500\u2500 helm-evidence feature \"default\"\n\u2502   \u2502       \u2514\u2500\u2500 review-evidence-bench v0.0.0 (<repo>\\target\\helm-app-spec-independent\\base-probe)\n\u2502   \u2502           \u2514\u2500\u2500 review-evidence-bench feature \"default\" (command-line)\n\u2502   \u2514\u2500\u2500 review-evidence-bench v0.0.0 (<repo>\\target\\helm-app-spec-independent\\base-probe) (*)\n\u2514\u2500\u2500 sha2 feature \"std\"\n    \u2514\u2500\u2500 sha2 feature \"default\" (*)\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "<repo>\\target\\helm-app-spec-independent\\base-probe\\target\\release\\review-evidence-bench.exe",
+        "<repo>\\crates\\helm-evidence\\tests\\fixtures\\a0-7zip",
+        "<repo>\\crates\\helm-evidence\\tests\\fixtures\\synthetic",
+        "<repo>\\target\\helm-app-spec-independent\\synthetic-large"
+      ],
+      "cwd": "<repo>",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 2.9448485000175424,
+      "stdout_sha256": "64606311a1a8729f1d5e2deef5d57a8cb12ba3b813fde782cca3bc799df464c5",
+      "stdout_bytes": 52830,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    },
+    {
+      "argv": [
+        "cargo",
+        "build",
+        "--release",
+        "--offline"
+      ],
+      "cwd": "<repo>\\target\\helm-app-spec-independent\\candidate-combined",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 0.7097502999822609,
+      "stdout": "",
+      "stderr": "   Compiling review-evidence-bench v0.0.0 (<repo>\\target\\helm-app-spec-independent\\candidate-combined)\n    Finished `release` profile [optimized] target(s) in 0.67s\n"
+    },
+    {
+      "argv": [
+        "cargo",
+        "tree",
+        "--locked",
+        "-e",
+        "features",
+        "-i",
+        "sha2"
+      ],
+      "cwd": "<repo>\\target\\helm-app-spec-independent\\candidate-combined",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 0.07910850003827363,
+      "stdout": "sha2 v0.10.9\n\u251c\u2500\u2500 sha2 feature \"default\"\n\u2502   \u251c\u2500\u2500 helm-app-spec v0.1.0 (<repo>\\crates\\helm-app-spec)\n\u2502   \u2502   \u2514\u2500\u2500 helm-app-spec feature \"default\"\n\u2502   \u2502       \u2514\u2500\u2500 review-evidence-bench v0.0.0 (<repo>\\target\\helm-app-spec-independent\\candidate-combined)\n\u2502   \u2502           \u2514\u2500\u2500 review-evidence-bench feature \"default\" (command-line)\n\u2502   \u251c\u2500\u2500 helm-evidence v0.1.0 (<repo>\\crates\\helm-evidence)\n\u2502   \u2502   \u2514\u2500\u2500 helm-evidence feature \"default\"\n\u2502   \u2502       \u2514\u2500\u2500 review-evidence-bench v0.0.0 (<repo>\\target\\helm-app-spec-independent\\candidate-combined) (*)\n\u2502   \u2514\u2500\u2500 review-evidence-bench v0.0.0 (<repo>\\target\\helm-app-spec-independent\\candidate-combined) (*)\n\u251c\u2500\u2500 sha2 feature \"force-soft\"\n\u2502   \u2514\u2500\u2500 helm-app-spec v0.1.0 (<repo>\\crates\\helm-app-spec) (*)\n\u2514\u2500\u2500 sha2 feature \"std\"\n    \u2514\u2500\u2500 sha2 feature \"default\" (*)\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "<repo>\\target\\helm-app-spec-independent\\candidate-combined\\target\\release\\review-evidence-bench.exe",
+        "<repo>\\crates\\helm-evidence\\tests\\fixtures\\a0-7zip",
+        "<repo>\\crates\\helm-evidence\\tests\\fixtures\\synthetic",
+        "<repo>\\target\\helm-app-spec-independent\\synthetic-large"
+      ],
+      "cwd": "<repo>",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 6.056336799985729,
+      "stdout_sha256": "c70d64eaa046dbaf33fcb1c876671f8e5e096536f0315d048e03d5d8209b9977",
+      "stdout_bytes": 52844,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    },
+    {
+      "argv": [
+        "cargo",
+        "build",
+        "--release",
+        "--offline"
+      ],
+      "cwd": "<repo>\\target\\helm-app-spec-independent\\candidate-standalone",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 0.6983552000019699,
+      "stdout": "",
+      "stderr": "   Compiling review-evidence-bench v0.0.0 (<repo>\\target\\helm-app-spec-independent\\candidate-standalone)\n    Finished `release` profile [optimized] target(s) in 0.66s\n"
+    },
+    {
+      "argv": [
+        "cargo",
+        "tree",
+        "--locked",
+        "-e",
+        "features",
+        "-i",
+        "sha2"
+      ],
+      "cwd": "<repo>\\target\\helm-app-spec-independent\\candidate-standalone",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 0.0810405999654904,
+      "stdout": "sha2 v0.10.9\n\u251c\u2500\u2500 sha2 feature \"default\"\n\u2502   \u251c\u2500\u2500 helm-evidence v0.1.0 (<repo>\\crates\\helm-evidence)\n\u2502   \u2502   \u2514\u2500\u2500 helm-evidence feature \"default\"\n\u2502   \u2502       \u2514\u2500\u2500 review-evidence-bench v0.0.0 (<repo>\\target\\helm-app-spec-independent\\candidate-standalone)\n\u2502   \u2502           \u2514\u2500\u2500 review-evidence-bench feature \"default\" (command-line)\n\u2502   \u2514\u2500\u2500 review-evidence-bench v0.0.0 (<repo>\\target\\helm-app-spec-independent\\candidate-standalone) (*)\n\u2514\u2500\u2500 sha2 feature \"std\"\n    \u2514\u2500\u2500 sha2 feature \"default\" (*)\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "<repo>\\target\\helm-app-spec-independent\\candidate-standalone\\target\\release\\review-evidence-bench.exe",
+        "<repo>\\crates\\helm-evidence\\tests\\fixtures\\a0-7zip",
+        "<repo>\\crates\\helm-evidence\\tests\\fixtures\\synthetic",
+        "<repo>\\target\\helm-app-spec-independent\\synthetic-large"
+      ],
+      "cwd": "<repo>",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 2.986114399973303,
+      "stdout_sha256": "5ba74160fb4077c14effa99e76712885b7d0ebb3ef1be1b6b91cd3095bd7d364",
+      "stdout_bytes": 52828,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    }
+  ],
+  "head_at_check": "c9d6c42b331c65805a256514dcd3e0d83a7189f3",
+  "rustc": "rustc 1.95.0 (59807616e 2026-04-14)\nbinary: rustc\ncommit-hash: 59807616e1fa2540724bfbac14d7976d7e4a3860\ncommit-date: 2026-04-14\nhost: x86_64-pc-windows-msvc\nrelease: 1.95.0\nLLVM version: 22.1.2\n",
+  "workspace_sha2_features": "sha2 v0.10.9\n\u251c\u2500\u2500 sha2 feature \"default\"\n\u2502   \u251c\u2500\u2500 helm-app-spec v0.1.0 (<repo>\\crates\\helm-app-spec)\n\u2502   \u2502   \u2514\u2500\u2500 helm-app-spec feature \"default\" (command-line)\n\u2502   \u2514\u2500\u2500 helm-evidence v0.1.0 (<repo>\\crates\\helm-evidence)\n\u2502       \u2514\u2500\u2500 helm-evidence feature \"default\" (command-line)\n\u251c\u2500\u2500 sha2 feature \"force-soft\"\n\u2502   \u2514\u2500\u2500 helm-app-spec v0.1.0 (<repo>\\crates\\helm-app-spec) (*)\n\u2514\u2500\u2500 sha2 feature \"std\"\n    \u2514\u2500\u2500 sha2 feature \"default\" (*)\n",
+  "standalone_sha2_features": "sha2 v0.10.9\n\u251c\u2500\u2500 sha2 feature \"default\"\n\u2502   \u2514\u2500\u2500 helm-evidence v0.1.0 (<repo>\\crates\\helm-evidence)\n\u2502       \u2514\u2500\u2500 helm-evidence feature \"default\" (command-line)\n\u2514\u2500\u2500 sha2 feature \"std\"\n    \u2514\u2500\u2500 sha2 feature \"default\" (*)\n",
+  "identities": [
+    "d95e95764fb28de00e96be76867c1d0e9a11144250c3705322eb74044dde1314",
+    "7febb99d15eabbd2b785da620cf7afbcbdade34f9db7d6cd3a393dfde408203a",
+    "4e859896808f40b8ff0373d965b38a4b914891c5ad5a9616ec6e7cee72a39a4a",
+    "c967421ca2681519fc42901a5c178e904a3790c155f8a158e0b97e39d0049a2c",
+    "23cec700d02fc215fcb5ca9d2a2584677961f9e57beb99bac1e979442c7c49de"
+  ],
+  "properties": {
+    "seed": "00212026090851a7",
+    "cases": 20000,
+    "valid": 4087,
+    "rejected": 15913,
+    "transcript_sha256": "0464894558755ebfe5cc3c5e263e46a85b7fb7c7ab5e7d4953de922027616744"
+  },
+  "exact_byte_python_hashlib_comparison": "PASS: whitespace, field order, escaped string, final newline",
+  "purity_probe": {
+    "candidate": "18c7aa5e80617483b6f5afd0fea4affeb62f926c",
+    "platform": "Windows",
+    "memchr_version": "2.8.3",
+    "instrumented_function": "memchr::arch::x86_64::memchr::unsafe_ifunc!::detect",
+    "source_copy_sha256": "4cf0611c926c3016d1b640880ef14e5654a8d1c1b480fe9a5965956be7eeeeef",
+    "instrumented_sha256": "fb6f49a161e2650d1fd659168d5dc25312a0c5313ecf07dca29c9723a4d7741f",
+    "results": [
+      {
+        "case": "original-candidate",
+        "exit_code": 101,
+        "dispatch_sentinel_reached": true,
+        "completed": false,
+        "parse_rs_sha256": "101451ba1442e6f8229b952d31e7822530ad034517b91c04a02da334d9abff2d"
+      },
+      {
+        "case": "current",
+        "exit_code": 0,
+        "dispatch_sentinel_reached": false,
+        "completed": true,
+        "parse_rs_sha256": "59d4f07e63f1132f782f0d6a3a8ca15610645e2cc0d15c6ac58d9f251d6c64c1"
+      }
+    ]
+  },
+  "candidate_corrected_semantics": "PASS: identities and complete 20000-case transcript identical",
+  "public_api_rejections": [
+    {
+      "attempt": "private validated fields and empty collections",
+      "rustc_code": "E0451",
+      "result": "rejected"
+    },
+    {
+      "attempt": "unchecked newtypes",
+      "rustc_code": "E0423",
+      "result": "rejected"
+    },
+    {
+      "attempt": "mutation through borrowed views",
+      "rustc_code": "E0599",
+      "result": "rejected"
+    },
+    {
+      "attempt": "deserialization bypass",
+      "rustc_code": "E0277",
+      "result": "rejected"
+    },
+    {
+      "attempt": "raw tree exposure",
+      "rustc_code": "E0603",
+      "result": "rejected"
+    }
+  ],
+  "measurements": {
+    "base": [
+      {
+        "fixture": "a0-7zip",
+        "iterations": 50,
+        "kind": "verify",
+        "ns_per_call": [
+          2245200.0,
+          2263816.0,
+          2294338.0,
+          2242874.0,
+          2345682.0
+        ],
+        "report_sha256": "aba8a63eff4e0444c4a892214e62fdd46941cbd8c9f10c62e693319d6e5fde5c",
+        "median_ns": 2263816.0,
+        "report_summary": {
+          "verdict": "INCOMPLETE",
+          "experimental_verdict": "FAIL",
+          "sections": [
+            {
+              "id": "contract",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "artifacts",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "restart",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W1",
+              "verdict": "INCOMPLETE"
+            },
+            {
+              "id": "W2",
+              "verdict": "COMPLETE"
+            }
+          ]
+        }
+      },
+      {
+        "fixture": "synthetic",
+        "iterations": 50,
+        "kind": "verify",
+        "ns_per_call": [
+          1272360.0,
+          1274094.0,
+          1279210.0,
+          1298044.0,
+          1269806.0
+        ],
+        "report_sha256": "faef69251e93dd074ee2c3516c6713ea840c2f3d7eebc9c339fefb424cd9190a",
+        "median_ns": 1274094.0,
+        "report_summary": {
+          "verdict": "COMPLETE",
+          "experimental_verdict": "PASS",
+          "sections": [
+            {
+              "id": "contract",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "artifacts",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "restart",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W1",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W2",
+              "verdict": "COMPLETE"
+            }
+          ]
+        }
+      },
+      {
+        "fixture": "synthetic-large",
+        "iterations": 50,
+        "kind": "verify",
+        "ns_per_call": [
+          6618418.0,
+          6763180.0,
+          6632132.0,
+          6899220.0,
+          6793904.0
+        ],
+        "report_sha256": "3b91cf8aa95e5bf895b695fda15de9dfe8a875853355fb5705eaceda70a6b8c5",
+        "median_ns": 6763180.0,
+        "report_summary": {
+          "verdict": "COMPLETE",
+          "experimental_verdict": "PASS",
+          "sections": [
+            {
+              "id": "contract",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "artifacts",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "restart",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W1",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W2",
+              "verdict": "COMPLETE"
+            }
+          ]
+        }
+      },
+      {
+        "bytes": 65536,
+        "iterations": 16,
+        "kind": "hash",
+        "ns_per_call": [
+          27468.75,
+          27468.75,
+          27718.75,
+          27318.75,
+          27318.75
+        ],
+        "sha256": "4b640d85ab3ba30fd02c9fc9db4a8928f416322ad27022ea58a65aaee68a4df2",
+        "median_ns": 27468.75
+      },
+      {
+        "bytes": 4194304,
+        "iterations": 16,
+        "kind": "hash",
+        "ns_per_call": [
+          1757637.5,
+          1756925.0,
+          1760600.0,
+          1779568.75,
+          1782643.75
+        ],
+        "sha256": "a117210941a0b00dcb2d8577e680d84b6fa0eaf760d2afc654c953b9859d54fa",
+        "median_ns": 1760600.0
+      }
+    ],
+    "candidate-combined": [
+      {
+        "fixture": "a0-7zip",
+        "iterations": 50,
+        "kind": "verify",
+        "ns_per_call": [
+          2382446.0,
+          2356414.0,
+          2400790.0,
+          2351696.0,
+          2345484.0
+        ],
+        "report_sha256": "aba8a63eff4e0444c4a892214e62fdd46941cbd8c9f10c62e693319d6e5fde5c",
+        "median_ns": 2356414.0,
+        "report_summary": {
+          "verdict": "INCOMPLETE",
+          "experimental_verdict": "FAIL",
+          "sections": [
+            {
+              "id": "contract",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "artifacts",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "restart",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W1",
+              "verdict": "INCOMPLETE"
+            },
+            {
+              "id": "W2",
+              "verdict": "COMPLETE"
+            }
+          ]
+        }
+      },
+      {
+        "fixture": "synthetic",
+        "iterations": 50,
+        "kind": "verify",
+        "ns_per_call": [
+          1283402.0,
+          1276918.0,
+          1293648.0,
+          1275160.0,
+          1278788.0
+        ],
+        "report_sha256": "faef69251e93dd074ee2c3516c6713ea840c2f3d7eebc9c339fefb424cd9190a",
+        "median_ns": 1278788.0,
+        "report_summary": {
+          "verdict": "COMPLETE",
+          "experimental_verdict": "PASS",
+          "sections": [
+            {
+              "id": "contract",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "artifacts",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "restart",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W1",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W2",
+              "verdict": "COMPLETE"
+            }
+          ]
+        }
+      },
+      {
+        "fixture": "synthetic-large",
+        "iterations": 50,
+        "kind": "verify",
+        "ns_per_call": [
+          15462210.0,
+          15448672.0,
+          15533278.0,
+          15469164.0,
+          15453826.0
+        ],
+        "report_sha256": "3b91cf8aa95e5bf895b695fda15de9dfe8a875853355fb5705eaceda70a6b8c5",
+        "median_ns": 15462210.0,
+        "report_summary": {
+          "verdict": "COMPLETE",
+          "experimental_verdict": "PASS",
+          "sections": [
+            {
+              "id": "contract",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "artifacts",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "restart",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W1",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W2",
+              "verdict": "COMPLETE"
+            }
+          ]
+        }
+      },
+      {
+        "bytes": 65536,
+        "iterations": 16,
+        "kind": "hash",
+        "ns_per_call": [
+          163856.25,
+          163343.75,
+          165487.5,
+          162556.25,
+          162575.0
+        ],
+        "sha256": "4b640d85ab3ba30fd02c9fc9db4a8928f416322ad27022ea58a65aaee68a4df2",
+        "median_ns": 163343.75
+      },
+      {
+        "bytes": 4194304,
+        "iterations": 16,
+        "kind": "hash",
+        "ns_per_call": [
+          10536593.75,
+          10583775.0,
+          10539800.0,
+          10500456.25,
+          10503193.75
+        ],
+        "sha256": "a117210941a0b00dcb2d8577e680d84b6fa0eaf760d2afc654c953b9859d54fa",
+        "median_ns": 10536593.75
+      }
+    ],
+    "candidate-standalone": [
+      {
+        "fixture": "a0-7zip",
+        "iterations": 50,
+        "kind": "verify",
+        "ns_per_call": [
+          2297682.0,
+          2310404.0,
+          2299098.0,
+          2358784.0,
+          2292326.0
+        ],
+        "report_sha256": "aba8a63eff4e0444c4a892214e62fdd46941cbd8c9f10c62e693319d6e5fde5c",
+        "median_ns": 2299098.0,
+        "report_summary": {
+          "verdict": "INCOMPLETE",
+          "experimental_verdict": "FAIL",
+          "sections": [
+            {
+              "id": "contract",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "artifacts",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "restart",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W1",
+              "verdict": "INCOMPLETE"
+            },
+            {
+              "id": "W2",
+              "verdict": "COMPLETE"
+            }
+          ]
+        }
+      },
+      {
+        "fixture": "synthetic",
+        "iterations": 50,
+        "kind": "verify",
+        "ns_per_call": [
+          1279916.0,
+          1270792.0,
+          1279124.0,
+          1269570.0,
+          1271222.0
+        ],
+        "report_sha256": "faef69251e93dd074ee2c3516c6713ea840c2f3d7eebc9c339fefb424cd9190a",
+        "median_ns": 1271222.0,
+        "report_summary": {
+          "verdict": "COMPLETE",
+          "experimental_verdict": "PASS",
+          "sections": [
+            {
+              "id": "contract",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "artifacts",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "restart",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W1",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W2",
+              "verdict": "COMPLETE"
+            }
+          ]
+        }
+      },
+      {
+        "fixture": "synthetic-large",
+        "iterations": 50,
+        "kind": "verify",
+        "ns_per_call": [
+          6561234.0,
+          6973248.0,
+          7385470.0,
+          6576680.0,
+          6890282.0
+        ],
+        "report_sha256": "3b91cf8aa95e5bf895b695fda15de9dfe8a875853355fb5705eaceda70a6b8c5",
+        "median_ns": 6890282.0,
+        "report_summary": {
+          "verdict": "COMPLETE",
+          "experimental_verdict": "PASS",
+          "sections": [
+            {
+              "id": "contract",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "artifacts",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "restart",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W1",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W2",
+              "verdict": "COMPLETE"
+            }
+          ]
+        }
+      },
+      {
+        "bytes": 65536,
+        "iterations": 16,
+        "kind": "hash",
+        "ns_per_call": [
+          29818.75,
+          27900.0,
+          27762.5,
+          27893.75,
+          27750.0
+        ],
+        "sha256": "4b640d85ab3ba30fd02c9fc9db4a8928f416322ad27022ea58a65aaee68a4df2",
+        "median_ns": 27893.75
+      },
+      {
+        "bytes": 4194304,
+        "iterations": 16,
+        "kind": "hash",
+        "ns_per_call": [
+          1779212.5,
+          1769518.75,
+          1763993.75,
+          1766806.25,
+          1762462.5
+        ],
+        "sha256": "a117210941a0b00dcb2d8577e680d84b6fa0eaf760d2afc654c953b9859d54fa",
+        "median_ns": 1766806.25
+      }
+    ]
+  },
+  "evidence_semantic_comparison": "PASS: complete reports identical across base/combined/standalone; source unchanged",
+  "source_sha256": {
+    "crates/helm-app-spec/benches/parse.rs": "0ba45e4024399069bc51b2f15f8293324a16f71fa07eb3a4d82a5cea367ec48b",
+    "crates/helm-app-spec/src/error.rs": "125a65efef6682332ef4cc05908398a9c29076d6b1db928b6b7397a88b7e3b93",
+    "crates/helm-app-spec/src/lib.rs": "554f6588ad15d6f9f1ba13b09966bab679b66bc6c4b88f7acd08959df577142e",
+    "crates/helm-app-spec/src/model.rs": "8ccc7ecc1a5797e866e13ec5909640beb206eb88ce08550e21a68aac1d4729c3",
+    "crates/helm-app-spec/src/parse.rs": "59d4f07e63f1132f782f0d6a3a8ca15610645e2cc0d15c6ac58d9f251d6c64c1",
+    "crates/helm-app-spec/src/validate.rs": "2a691eb47e7d02f46bc350b5a1c4f9c7cc6bdf7be28ac5ffd874e79f1cf2070c",
+    "crates/helm-app-spec/tests/contract.rs": "d64a1d42b05a29a66b90dc80430bd385e690f5dc1cd9766770bc310b766d4d0b",
+    "crates/helm-app-spec/tests/independent_review.rs": "aed1285df5715b86fff90d6624ac108d47f697faea046348486ff1e0fce40235",
+    "crates/helm-app-spec/tests/fixtures/a0-7zip.json": "b60672385dc371a79b78f90636206bc1a0a7e0f5e017c4bdec323c545b74521e",
+    "crates/helm-app-spec/tests/fixtures/provenance.json": "27856623a1077c6486cb3545bfde762afbe78ade6b075859ba551e660b249600",
+    "crates/helm-app-spec/tests/fixtures/synthetic-notes.json": "d95e95764fb28de00e96be76867c1d0e9a11144250c3705322eb74044dde1314",
+    "Cargo.toml": "37e60c93d57cd518ba74ad8f57806f10d98015cfa4ffe94323f8b95b08410106",
+    "Cargo.lock": "68e8f5df3a75a0b0c16e348cdf4db0c9fecb452886dfc25db7df46af3a3aa468",
+    "crates/helm-app-spec/Cargo.toml": "fc6f64c23ba9914bf80c6c5b42d2d78bac4dc03bf86bc2c38eee3a202db794a0",
+    "tools/helm_app_spec_independent_review.py": "05176e587b29d3b28a041090f7fb23947e55d268d07dc29caa85ab4563ca5352",
+    "tools/helm_app_spec_review_bench.rs": "3e46c94a3c057b420f05051806d72e0b191ea70534f087e8ed1b64208f1b7549",
+    ".github/workflows/helm-evidence.yml": "e3b1f18ac55e142fe8f95f90b775eb999d4ce3729b80d35e0288df4c89df4114"
+  },
+  "status": "PASS",
+  "full_local_receipt_sha256": "c706653aae1092618b687942337bffe3f2370eefe876469ba59925d587f4e4a2",
+  "receipt_scope": "Compact public receipt. Full reports compared before compaction; benchmark stdout represented by byte count/SHA and reports by verdict/section summary. Full receipt remains under ignored target/; Linux full receipt is also reconstructible from the cited CI log chunks."
+}

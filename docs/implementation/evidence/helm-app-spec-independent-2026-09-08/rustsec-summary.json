@@ -1,0 +1,14 @@
+{
+  "source": "https://github.com/RustSec/advisory-db",
+  "tree_sha": "bf25f6575a93a35f30796c65c0ed91bee7fa19fd",
+  "truncated": false,
+  "package_advisory_files": {
+    "serde": [],
+    "serde_json": [],
+    "sha2": [
+      "crates/sha2/RUSTSEC-2021-0100.md"
+    ],
+    "memchr": []
+  },
+  "scope": "Bounded exact direct dependency and reachable memchr check; not comprehensive transitive security audit"
+}

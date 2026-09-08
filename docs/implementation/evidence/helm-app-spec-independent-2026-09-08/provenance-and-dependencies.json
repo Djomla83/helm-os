@@ -1,0 +1,329 @@
+{
+  "definition_commit": "5a83f8cb2fbb5a3597ddff6b5cae9cb813f1c5ae",
+  "frozen_references": [
+    {
+      "path": "docs/experiments/EXP-009.md",
+      "role": "protocol",
+      "size": 34585,
+      "sha256": "bd55677cc1724d078ee25dfbcbbc966350b20c129475bdcad28d2603785a2240"
+    },
+    {
+      "path": "tools/app_baseline.py",
+      "role": "oracle",
+      "size": 9093,
+      "sha256": "2ffec610149ad7aee94ed891af48c2c6623062937d3a5087449523a6d81e57e2"
+    },
+    {
+      "path": "tools/fixtures/exp009-7zip.json",
+      "role": "content-fixture",
+      "size": 1290,
+      "sha256": "75d78bc6bc0f539df5ca8d54df34f406e44f2aa5ceb8a07bf3d856ce72747c8f"
+    }
+  ],
+  "source_and_four_runtime_archive_requirements": "match original pre-execution pins",
+  "configuration_and_entry_point": "match frozen protocol; path syntax projected to prefix-relative spelling",
+  "historical_A0": "FAIL; boot and output identities excluded",
+  "lock_delta": "only helm-app-spec and its three dependency edges; all old entries identical by full package records",
+  "dependency_license_inventory": [
+    {
+      "name": "ambient-authority",
+      "version": "0.0.2",
+      "license_metadata": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+    },
+    {
+      "name": "bitflags",
+      "version": "2.13.1",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "block-buffer",
+      "version": "0.10.4",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "cap-fs-ext",
+      "version": "4.0.2",
+      "license_metadata": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+    },
+    {
+      "name": "cap-primitives",
+      "version": "4.0.3",
+      "license_metadata": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+    },
+    {
+      "name": "cap-std",
+      "version": "4.0.2",
+      "license_metadata": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+    },
+    {
+      "name": "cfg-if",
+      "version": "1.0.4",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "cpufeatures",
+      "version": "0.2.17",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "crypto-common",
+      "version": "0.1.7",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "digest",
+      "version": "0.10.7",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "errno",
+      "version": "0.3.14",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "fs-set-times",
+      "version": "0.20.3",
+      "license_metadata": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+    },
+    {
+      "name": "generic-array",
+      "version": "0.14.7",
+      "license_metadata": "MIT"
+    },
+    {
+      "name": "io-extras",
+      "version": "0.19.0",
+      "license_metadata": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+    },
+    {
+      "name": "io-lifetimes",
+      "version": "2.0.4",
+      "license_metadata": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+    },
+    {
+      "name": "io-lifetimes",
+      "version": "3.0.1",
+      "license_metadata": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+    },
+    {
+      "name": "ipnet",
+      "version": "2.12.2",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "itoa",
+      "version": "1.0.18",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "libc",
+      "version": "0.2.189",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "linux-raw-sys",
+      "version": "0.12.1",
+      "license_metadata": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+    },
+    {
+      "name": "maybe-owned",
+      "version": "0.3.4",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "memchr",
+      "version": "2.8.3",
+      "license_metadata": "Unlicense OR MIT"
+    },
+    {
+      "name": "once_cell",
+      "version": "1.21.4",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "proc-macro2",
+      "version": "1.0.107",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "quote",
+      "version": "1.0.47",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "rustix",
+      "version": "1.1.4",
+      "license_metadata": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+    },
+    {
+      "name": "rustix-linux-procfs",
+      "version": "0.1.1",
+      "license_metadata": "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+    },
+    {
+      "name": "serde",
+      "version": "1.0.228",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "serde_core",
+      "version": "1.0.228",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "serde_derive",
+      "version": "1.0.228",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "serde_json",
+      "version": "1.0.149",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "sha2",
+      "version": "0.10.9",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "syn",
+      "version": "2.0.119",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "typenum",
+      "version": "1.20.1",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "unicode-ident",
+      "version": "1.0.24",
+      "license_metadata": "(MIT OR Apache-2.0) AND Unicode-3.0"
+    },
+    {
+      "name": "version_check",
+      "version": "0.9.5",
+      "license_metadata": "MIT/Apache-2.0"
+    },
+    {
+      "name": "windows-link",
+      "version": "0.2.1",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "windows-sys",
+      "version": "0.59.0",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "windows-sys",
+      "version": "0.60.2",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "windows-sys",
+      "version": "0.61.2",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "windows-targets",
+      "version": "0.52.6",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "windows-targets",
+      "version": "0.53.5",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "windows_aarch64_gnullvm",
+      "version": "0.52.6",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "windows_aarch64_gnullvm",
+      "version": "0.53.1",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "windows_aarch64_msvc",
+      "version": "0.52.6",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "windows_aarch64_msvc",
+      "version": "0.53.1",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "windows_i686_gnu",
+      "version": "0.52.6",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "windows_i686_gnu",
+      "version": "0.53.1",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "windows_i686_gnullvm",
+      "version": "0.52.6",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "windows_i686_gnullvm",
+      "version": "0.53.1",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "windows_i686_msvc",
+      "version": "0.52.6",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "windows_i686_msvc",
+      "version": "0.53.1",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "windows_x86_64_gnu",
+      "version": "0.52.6",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "windows_x86_64_gnu",
+      "version": "0.53.1",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "windows_x86_64_gnullvm",
+      "version": "0.52.6",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "windows_x86_64_gnullvm",
+      "version": "0.53.1",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "windows_x86_64_msvc",
+      "version": "0.52.6",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "windows_x86_64_msvc",
+      "version": "0.53.1",
+      "license_metadata": "MIT OR Apache-2.0"
+    },
+    {
+      "name": "winx",
+      "version": "0.36.4",
+      "license_metadata": "Apache-2.0 WITH LLVM-exception"
+    },
+    {
+      "name": "zmij",
+      "version": "1.0.23",
+      "license_metadata": "MIT"
+    }
+  ]
+}

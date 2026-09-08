@@ -1,5 +1,8 @@
 # helm-app-spec implementation candidate review
 
+> Subsequent independent review: [findings, corrections and final validation](HELM-APP-SPEC-INDEPENDENT-REVIEW.md).
+> The authoring record below preserves its original claims, failures and status.
+
 **Date:** 2026-09-08. **Disposition:** **READY_FOR_INDEPENDENT_REVIEW**.
 Local author checks passed; hosted CI is recorded separately below. Independent
 review has not occurred. The author must not merge this module.

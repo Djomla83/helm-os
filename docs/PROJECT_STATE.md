@@ -1,5 +1,26 @@
 # Stanje projekta
 
+## Independent review, 2026-09-08 — helm-app-spec 0.1
+
+The [independent review](implementation/HELM-APP-SPEC-INDEPENDENT-REVIEW.md) checked
+candidate implementation `7d1de4cd02268cf29ea1e4f13136336ce0c2c36f` and documentation
+tip `18c7aa5e80617483b6f5afd0fea4affeb62f926c` against authoritative base
+`e32ab269fbe7c4151186d9257e0aff67c0c70197`. It found and corrected parser error-path
+CPU discovery and the unintended evidence release-build SHA performance change.
+The in-memory reader preserves purity; separate release builds preserve the
+standalone evidence backend. Combined consumers still use software SHA, now
+explicitly documented and measured. No evidence semantic regression was found.
+
+Correction `c9d6c42b331c65805a256514dcd3e0d83a7189f3` passed Windows validation and
+[independent hosted Linux CI](https://github.com/Djomla83/helm-os/actions/runs/34224397648).
+Original/corrected Windows/Linux results match for 20,000 independent seeded cases,
+exact-byte identities and complete evidence reports. Disposition:
+**READY_FOR_OWNER_MERGE** on `review/helm-app-spec-independent`; no merge or release
+has occurred. Main and the authoring branch remain untouched, and historical
+**A0-7ZIP experimental FAIL remains unchanged**. No helm-observe or further module
+is implemented or authorized. Next decision: owner review and merge decision for
+this corrected branch. Earlier entries preserve their then-current status.
+
 ## Implementation candidate, 2026-09-08 — helm-app-spec 0.1
 
 The owner separately authorised the pure application-specification validation

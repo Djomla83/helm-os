@@ -1,0 +1,67 @@
+{
+  "status": "PASS",
+  "tested_correction": "c9d6c42b331c65805a256514dcd3e0d83a7189f3",
+  "candidate": "18c7aa5e80617483b6f5afd0fea4affeb62f926c",
+  "base": "e32ab269fbe7c4151186d9257e0aff67c0c70197",
+  "equal_fields": [
+    "candidate",
+    "base",
+    "head_at_check",
+    "identities",
+    "properties",
+    "candidate_corrected_semantics",
+    "public_api_rejections",
+    "source_sha256",
+    "status"
+  ],
+  "properties": {
+    "seed": "00212026090851a7",
+    "cases": 20000,
+    "valid": 4087,
+    "rejected": 15913,
+    "transcript_sha256": "0464894558755ebfe5cc3c5e263e46a85b7fb7c7ab5e7d4953de922027616744"
+  },
+  "identities": [
+    "d95e95764fb28de00e96be76867c1d0e9a11144250c3705322eb74044dde1314",
+    "7febb99d15eabbd2b785da620cf7afbcbdade34f9db7d6cd3a393dfde408203a",
+    "4e859896808f40b8ff0373d965b38a4b914891c5ad5a9616ec6e7cee72a39a4a",
+    "c967421ca2681519fc42901a5c178e904a3790c155f8a158e0b97e39d0049a2c",
+    "23cec700d02fc215fcb5ca9d2a2584677961f9e57beb99bac1e979442c7c49de"
+  ],
+  "evidence_reports": [
+    {
+      "fixture": "a0-7zip",
+      "sha256": "aba8a63eff4e0444c4a892214e62fdd46941cbd8c9f10c62e693319d6e5fde5c"
+    },
+    {
+      "fixture": "synthetic",
+      "sha256": "faef69251e93dd074ee2c3516c6713ea840c2f3d7eebc9c339fefb424cd9190a"
+    },
+    {
+      "fixture": "synthetic-large",
+      "sha256": "3b91cf8aa95e5bf895b695fda15de9dfe8a875853355fb5705eaceda70a6b8c5"
+    }
+  ],
+  "evidence_comparison": "Complete reports compare equal across Windows/Linux and base/combined/standalone, before compaction.",
+  "workspace_precommit_byte_identity": "All overlapping app-spec/test/fixture/manifest/workflow hashes match published correction.",
+  "source_sha256": {
+    "crates/helm-app-spec/benches/parse.rs": "0ba45e4024399069bc51b2f15f8293324a16f71fa07eb3a4d82a5cea367ec48b",
+    "crates/helm-app-spec/src/error.rs": "125a65efef6682332ef4cc05908398a9c29076d6b1db928b6b7397a88b7e3b93",
+    "crates/helm-app-spec/src/lib.rs": "554f6588ad15d6f9f1ba13b09966bab679b66bc6c4b88f7acd08959df577142e",
+    "crates/helm-app-spec/src/model.rs": "8ccc7ecc1a5797e866e13ec5909640beb206eb88ce08550e21a68aac1d4729c3",
+    "crates/helm-app-spec/src/parse.rs": "59d4f07e63f1132f782f0d6a3a8ca15610645e2cc0d15c6ac58d9f251d6c64c1",
+    "crates/helm-app-spec/src/validate.rs": "2a691eb47e7d02f46bc350b5a1c4f9c7cc6bdf7be28ac5ffd874e79f1cf2070c",
+    "crates/helm-app-spec/tests/contract.rs": "d64a1d42b05a29a66b90dc80430bd385e690f5dc1cd9766770bc310b766d4d0b",
+    "crates/helm-app-spec/tests/independent_review.rs": "aed1285df5715b86fff90d6624ac108d47f697faea046348486ff1e0fce40235",
+    "crates/helm-app-spec/tests/fixtures/a0-7zip.json": "b60672385dc371a79b78f90636206bc1a0a7e0f5e017c4bdec323c545b74521e",
+    "crates/helm-app-spec/tests/fixtures/provenance.json": "27856623a1077c6486cb3545bfde762afbe78ade6b075859ba551e660b249600",
+    "crates/helm-app-spec/tests/fixtures/synthetic-notes.json": "d95e95764fb28de00e96be76867c1d0e9a11144250c3705322eb74044dde1314",
+    "Cargo.toml": "37e60c93d57cd518ba74ad8f57806f10d98015cfa4ffe94323f8b95b08410106",
+    "Cargo.lock": "68e8f5df3a75a0b0c16e348cdf4db0c9fecb452886dfc25db7df46af3a3aa468",
+    "crates/helm-app-spec/Cargo.toml": "fc6f64c23ba9914bf80c6c5b42d2d78bac4dc03bf86bc2c38eee3a202db794a0",
+    "tools/helm_app_spec_independent_review.py": "05176e587b29d3b28a041090f7fb23947e55d268d07dc29caa85ab4563ca5352",
+    "tools/helm_app_spec_review_bench.rs": "3e46c94a3c057b420f05051806d72e0b191ea70534f087e8ed1b64208f1b7549",
+    ".github/workflows/helm-evidence.yml": "e3b1f18ac55e142fe8f95f90b775eb999d4ce3729b80d35e0288df4c89df4114"
+  },
+  "scope": "Host-independent semantics for both fixtures, targeted negatives and seeded corpus; no universal platform or fuzz proof."
+}
