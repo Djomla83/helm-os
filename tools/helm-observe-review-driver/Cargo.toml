@@ -1,0 +1,17 @@
+# Independent-review-only driver around the public helm-observe API.
+#
+# Deliberately outside the product workspace: it adds no member, no product
+# target and no dependency to `crates/helm-observe`. It exists so the reviewer
+# can run the compiled implementation under a syscall tracer.
+[workspace]
+
+[package]
+name = "helm-observe-review-driver"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.95"
+publish = false
+description = "Independent-review syscall-trace driver for helm-observe 0.1"
+
+[dependencies]
+helm-observe = { path = "../../crates/helm-observe" }

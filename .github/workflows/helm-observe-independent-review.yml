@@ -1,0 +1,91 @@
+name: helm-observe independent review
+
+# Review-only workflow, added by the independent reviewer of helm-observe 0.1 on
+# `review/helm-observe-independent`. It does not replace the product workflow; it
+# records what the hosted runner actually provides and executes the adversarial
+# checks that Accepted ADR-0022 requires before an owner merge.
+
+on:
+  push:
+    branches:
+      - 'review/helm-observe-**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  independent-review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Record the hosted runner environment and tool inventory
+        run: |
+          echo "== identity =="
+          uname -a
+          cat /etc/os-release | head -3
+          echo "arch=$(uname -m)"
+          echo "== tools =="
+          for tool in rustc cargo gcc cc strace ltrace python3 mkfs.ext4 stat mkfifo; do
+            printf '%-12s %s\n' "$tool" "$(command -v "$tool" || echo MISSING)"
+          done
+          echo "== ptrace =="
+          cat /proc/sys/kernel/yama/ptrace_scope 2>/dev/null || echo "yama absent"
+          echo "== filesystem of the workspace and of /tmp =="
+          stat -f -c '%n type=%T magic=%t' . /tmp
+          echo "== mounted filesystem types (primary source: /proc/self/mountinfo) =="
+          awk '{for(i=1;i<=NF;i++) if($i=="-") {print $5, $(i+1); break}}' /proc/self/mountinfo | sort -u
+
+      - name: Install Rust 1.95.0
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal --component rustfmt,clippy
+          rustup default 1.95.0
+
+      # ---------------------------------------------------------- repository validation
+      - run: cargo fmt --check
+      - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - run: cargo test --workspace --locked
+      - run: cargo test -p helm-evidence --locked
+      - run: cargo build -p helm-app-spec --release --locked
+      - run: cargo build -p helm-evidence --release --locked
+      - run: python3 -m unittest discover -s tools/tests -v
+      - run: python3 tools/validate_docs.py
+      - run: python3 tools/helm_app_spec_fixture.py
+      - run: python3 tools/helm_evidence_fixture.py
+      - run: git diff --check
+      - name: Independent app-spec properties and cross-crate comparison
+        run: python3 tools/helm_app_spec_independent_review.py --output target/helm-app-spec-independent/linux.json
+
+      # ------------------------------------------------- independent adversarial review
+      - name: Independent plan-contract adversarial tests
+        run: cargo test -p helm-observe --locked --test independent_review_plan -- --nocapture
+
+      - name: Independent Linux adversarial tests, including procfs foreign-process cases
+        run: cargo test -p helm-observe --locked --test independent_review_linux -- --nocapture
+
+      - name: Author Linux suite, with the cohort line printed
+        run: cargo test -p helm-observe --locked -- --nocapture
+
+      - name: Budget ceiling tests that stream real bytes
+        run: cargo test -p helm-observe --locked --release --test independent_review_linux -- --ignored --nocapture
+
+      # ---------------------------------------------------- syscall-level regression
+      - name: Build the review driver around the public API
+        run: cargo build --manifest-path tools/helm-observe-review-driver/Cargo.toml --locked --release
+
+      - name: Syscall-level regression on the compiled implementation
+        run: |
+          python3 tools/helm_observe_syscall_review.py \
+            --driver tools/helm-observe-review-driver/target/release/helm-observe-review-driver \
+            --out target/helm-observe-review/syscall-evidence.json
+
+      # The evidence JSON is printed to the log by the step above, so the review
+      # record needs no additional action and no new pinned third-party action.
+      - name: Restate the syscall evidence in the log
+        if: always()
+        run: cat target/helm-observe-review/syscall-evidence.json || echo "no evidence file"
