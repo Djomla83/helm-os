@@ -307,6 +307,13 @@ printed `HELM-OBSERVE-COHORT: ext4 PASS` on the strength of the magic alone; and
 `PROJECT_STATE` recorded "the ext4 cohort execution is recorded as PASS". Admission is
 *stricter than nothing* and *weaker than the claim*.
 
+**Independent corroboration from the runner itself.** The author's cohort test asks
+coreutils for the human name of the fixture filesystem type. On the hosted runner it answers
+**`ext2/ext3`** for magic `ef53` — coreutils will not name that magic "ext4" either — while
+`/proc/self/mountinfo` separately reports the mounted type name `ext4`. Two independent
+sources on the same directory, disagreeing exactly where the magic stops carrying
+information. The crate sees only the first of them.
+
 **"Local" is likewise assumed, not established.** The same magic is reported for an ext
 filesystem on network-backed block storage — iSCSI, NBD, a loop device over a network file.
 Nothing in the crate distinguishes those.
@@ -391,6 +398,17 @@ around the public API traced with the frozen OBS-FS-01 ptrace tracer, imported r
 Runner: Ubuntu 24.04, kernel `6.17.0-1022-azure`, `x86_64`, fixture on a filesystem whose
 mounted type name is `ext4`. Every `openat2` in every case carried flags `0o12400000` and
 `resolve = 15`; every case had zero `getdents64` and zero `connect`.
+
+The evidence was collected on the corrected tip. It carries over to the candidate itself
+without qualification, because none of the corrections touches this path: the whole
+`e2a62081..41f6c4e` diff of `linux.rs` is confined to imports, the filesystem-magic
+constant's name and comment, and `admit_procfs`, leaving `resolve`, `describe` and
+`reopen_and_stream` byte-identical, and the only change in `observe.rs` is the root ordering
+of M10, leaving `observe_one`, `reject_for` and `stream_regular` byte-identical. That is
+checkable with `git diff e2a62081..41f6c4e -- crates/helm-observe/src/`. No syscall trace was
+captured against the candidate before correction, because the reproduction runs aborted at
+the failing test step before reaching that stage; the review workflow now runs the trace
+first for exactly that reason.
 
 | Case | `openat2` result | procfs data reopen | target reads | statx | outcome | seconds |
 |---|---|---|---|---|---|---|
@@ -503,8 +521,9 @@ Exercised, with sparse fixtures so no ceiling-sized file is ever materialised: c
 one refused on metadata alone; exactly ceiling accepted and streamed to `bytes_read ==
 MAX_FILE_BYTES`; aggregate ceiling exact, so a second ceiling-sized file is refused with
 `total_limit`; and the target after exhaustion explicitly `not_attempted_total_limit`. The
-heavy cases are `#[ignore]`d and run in release mode in the review workflow, so no public
-constant was reduced to make a test cheap.
+heavy case is `#[ignore]`d and runs in release mode in the review workflow, where it streams
+a real 512 MiB and passes, so no public constant was reduced to make a test cheap and no
+internal budget was substituted.
 
 **Artifact boundedness, proved numerically rather than assumed.** The widest artifact the
 schema and the declared limits can express — 8 roots and 64 targets, every identifier at
@@ -656,11 +675,45 @@ writer control exists precisely so that "did not block" is distinguished from "d
 | Commit | Content |
 |---|---|
 | `a1726f3` | First-pass findings recorded **before** any correction, with the failing reproductions, the review-only driver, the syscall regression and the review workflow |
+| `81aec01` | Test-harness fix: the shell-based foreign helper held two descriptors rather than the attacked range, because POSIX shells need only honour single-digit descriptor numbers in redirections. The helper is now this test binary re-executed in helper mode |
 | `834322b` | BLOCKER-1, IMPORTANT-2, IMPORTANT-3 claims, IMPORTANT-4, M1, M2, M4, M5, M6, M7, M10 |
-| this commit | dead-code removal exposed by the M10 correction, the built-commit field in the syscall evidence, this report and the `PROJECT_STATE` entry |
+| `41f6c4e` | Dead-code removal exposed by the M10 correction, the built-commit field in the syscall evidence, this report and the `PROJECT_STATE` entry |
 
 `e2a62081` is preserved unchanged. No history was rewritten, nothing was force-pushed, main
 was not touched and no merge of main was performed.
+
+## 20a. Validation on the corrected tip
+
+Both workflows are green on `41f6c4e8371324abd2dc4983694b843d0f9b378d`, hosted
+`ubuntu-24.04`, kernel `6.17.0-1022-azure`, `x86_64`: the unchanged product workflow
+(run `34281472783`) and the review workflow (run `34281472724`).
+
+| Check | Result |
+|---|---|
+| `cargo fmt --check` | pass |
+| `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings` | pass |
+| `cargo test --workspace --locked` | pass |
+| `cargo test -p helm-evidence --locked` | pass, standalone `sha2` backend still exercised |
+| `cargo build -p helm-app-spec --release --locked`, `-p helm-evidence` | pass |
+| `python3 -m unittest discover -s tools/tests` | pass |
+| `python3 tools/validate_docs.py` | pass |
+| app-spec frozen fixture, `tools/helm_app_spec_fixture.py` | pass |
+| evidence frozen fixture, `tools/helm_evidence_fixture.py` | pass |
+| `git diff --check` | pass |
+| independent app-spec properties and cross-crate comparison | pass |
+| independent plan-contract adversarial suite, 7 tests | pass |
+| independent Linux adversarial suite, 13 tests plus 1 opt-in | pass |
+| author suites, 12 pure and 16 Linux | pass |
+| release-mode budget ceiling test, streams 512 MiB | pass |
+| syscall-level regression, 9 cases | `HELM-OBSERVE-SYSCALL-REVIEW: PASS`, **0 violations** |
+| privacy and artifact checks | pass, inside the suites above |
+| supported-cohort check | admission behaves correctly; the *claim* is the open question of section 6 |
+
+**Runner tool inventory**, recorded by the workflow before anything is concluded from it:
+`rustc`, `cargo`, `gcc`, `cc`, `python3`, `stat`, `mkfifo` and `mkfs.ext4` present;
+**`strace` and `ltrace` absent**; `yama/ptrace_scope` permitting a traced own child. The
+syscall obligation was therefore met by importing the frozen OBS-FS-01 ptrace tracer
+read-only, not by installing anything and not by weakening the requirement.
 
 ## 21. Residual limitations
 
