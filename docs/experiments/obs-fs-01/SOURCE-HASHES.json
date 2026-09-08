@@ -1,0 +1,15 @@
+{
+  "amendment_1": "63ac6796296894945dff520423cb1a93351e8524",
+  "original_freeze": "b4ed2e108134eb58a2561403f5da3509aed955ee",
+  "preflight_halt": "90e025890a32b36ccc55a4dc223bbb85046ba152",
+  "scope": "Execution definition frozen before the first preregistered OBS-FS-01 trial",
+  "sha256": {
+    "README.md": "2e035fbac9e35ad2eed6e6629dc6d04f2b8762e5cc18295a9ca83a5bc6d4b41a",
+    "checker.py": "5e2f2de89e216b21db09b6fefa71d349b337b179e49a52b8e996a8e499e36fcd",
+    "frozen_cases.py": "2338eacf977a7dd0ca639f17ad1fd7a7d084774e62fac25bc96f00e57cbbc91f",
+    "harness.py": "db40a60fa470d5d894d01316a67c8247f5388b05991b1c9af7a620349dd33a3b",
+    "oracles.py": "d990cca6e61454e6c82f9388fe518b529aadbe76f60b0c33eb9ec92825605354",
+    "run_obs_fs_01.py": "9a5536661f7b29a78fe53adeb31cffd2e0686d7cec3813d887334c3ce96a9e73",
+    "spike.c": "782dae2d94eaf863a55d0a5d6fa4f2f357854ecafa280d32bca0a35f6f521a9f"
+  }
+}
