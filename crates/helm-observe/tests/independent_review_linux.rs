@@ -25,10 +25,6 @@ use helm_observe::{
 
 const SUBJECT: &str = "b60672385dc371a79b78f90636206bc1a0a7e0f5e017c4bdec323c545b74521e";
 
-/// Highest descriptor number a foreign helper saturates. The reviewer's capability
-/// descriptor must land inside this range for the attack to be meaningful.
-const HOARD_MAX: i32 = 255;
-
 fn temp_root(name: &str) -> PathBuf {
     let base = std::env::temp_dir().join(format!("helm-observe-ir-{name}-{}", std::process::id()));
     let _ = fs::remove_dir_all(&base);
@@ -98,45 +94,87 @@ fn run_with_deadline(root_dir: &Path, plan_bytes: &[u8], secs: u64) -> Vec<Targe
 
 // ------------------------------------------------- foreign-process procfs attacks
 
-fn spawn_ready(script: &str) -> Child {
-    let mut child = Command::new("/bin/sh")
-        .arg("-c")
-        .arg(script)
+/// Selects helper mode when this test binary is re-executed as a foreign process.
+/// Shell redirection cannot express the attack portably, because POSIX shells are
+/// only required to honour single-digit descriptor numbers, so the reviewer
+/// re-executes this same binary instead.
+const HELPER_ENV: &str = "HELM_OBSERVE_REVIEW_HELPER";
+/// How many descriptors a foreign helper holds open.
+const HOARD_COUNT: usize = 320;
+
+/// Foreign-helper entry point. It does nothing at all in an ordinary test run and
+/// only becomes a helper when the reviewer sets `HELM_OBSERVE_REVIEW_HELPER`.
+#[test]
+fn foreign_helper_process_entry_point() {
+    let Ok(mode) = std::env::var(HELPER_ENV) else {
+        return;
+    };
+    let path = match mode.strip_prefix("shared:") {
+        Some(shared) => shared.to_owned(),
+        None => "/proc/self/fd".to_owned(),
+    };
+    let mut held: Vec<fs::File> = Vec::new();
+    for _ in 0..HOARD_COUNT {
+        match fs::File::open(&path) {
+            Ok(f) => held.push(f),
+            Err(_) => break,
+        }
+    }
+    let highest = held.iter().map(|f| f.as_raw_fd()).max().unwrap_or(0);
+    println!("HELPER-READY held={} highest={highest}", held.len());
+    std::io::Write::flush(&mut std::io::stdout()).unwrap();
+    std::thread::sleep(Duration::from_secs(120));
+}
+
+/// Re-execute this test binary as a foreign process holding `HOARD_COUNT`
+/// descriptors on `mode`'s object, and wait until it says it is ready.
+fn spawn_foreign_helper(mode: &str) -> Child {
+    let exe = std::env::current_exe().unwrap();
+    let mut child = Command::new(exe)
+        .args([
+            "--exact",
+            "foreign_helper_process_entry_point",
+            "--nocapture",
+        ])
+        .env(HELPER_ENV, mode)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()
         .unwrap();
     let out = child.stdout.take().unwrap();
-    let mut line = String::new();
-    BufReader::new(out).read_line(&mut line).unwrap();
-    assert_eq!(line.trim(), "ready", "foreign helper failed to start");
-    child
+    let mut reader = BufReader::new(out);
+    for _ in 0..40 {
+        let mut line = String::new();
+        if reader.read_line(&mut line).unwrap_or(0) == 0 {
+            break;
+        }
+        if let Some(rest) = line.trim().strip_prefix("HELPER-READY") {
+            assert!(
+                rest.contains(&format!("held={HOARD_COUNT}")),
+                "foreign helper could not hold enough descriptors:{rest}"
+            );
+            return child;
+        }
+    }
+    let _ = child.kill();
+    let _ = child.wait();
+    panic!("foreign helper never reported readiness");
 }
 
-/// A foreign process that saturates descriptors 3..=`HOARD_MAX` with its **own**
+/// A foreign process that saturates its low descriptor numbers with its **own**
 /// `/proc/self/fd` directory. Every one of those numeric names then resolves,
 /// through `/proc/<child>/fd/<n>`, to the very directory the caller supplied, so a
 /// self-identity probe that reuses the supplied capability as its own probe object
 /// sees a matching device and inode.
 fn spawn_self_fd_hoarder() -> Child {
-    let mut script = String::from("exec");
-    for n in 3..=HOARD_MAX {
-        script.push_str(&format!(" {n}</proc/self/fd"));
-    }
-    script.push_str("\necho ready\nexec sleep 60\n");
-    spawn_ready(&script)
+    spawn_foreign_helper("self_fd")
 }
 
 /// A foreign process holding one shared regular file at the same descriptor
 /// numbers, standing in for descriptors inherited from the caller.
 fn spawn_shared_object_hoarder(shared: &Path) -> Child {
-    let mut script = String::from("exec");
-    for n in 3..=HOARD_MAX {
-        script.push_str(&format!(" {n}<{}", shared.display()));
-    }
-    script.push_str("\necho ready\nexec sleep 60\n");
-    spawn_ready(&script)
+    spawn_foreign_helper(&format!("shared:{}", shared.display()))
 }
 
 fn foreign_fd_dir(child: &Child) -> OwnedFd {
@@ -156,7 +194,7 @@ fn procfs_admission_refuses_a_foreign_self_fd_hoarding_process() {
     let _ = child.kill();
     let _ = child.wait();
     assert!(
-        number <= HOARD_MAX,
+        number >= 0 && (number as usize) < HOARD_COUNT,
         "capability landed at fd {number}, outside the attacked range; test is inconclusive"
     );
     match result {
@@ -222,9 +260,13 @@ fn procfs_admission_refuses_a_tmpfs_decoy() {
 #[test]
 fn procfs_admission_accepts_the_real_current_process_capability() {
     assert!(proc_fd_from_trusted_current_process(procfs()).is_ok());
-    match proc_fd_from_trusted_current_process(dir_fd(Path::new("/proc/1/fd"))) {
-        Err(e) => assert_eq!(e.code(), A::ProcfsForeignOrUnusable),
-        Ok(_) => panic!("/proc/1/fd was admitted"),
+    // An unprivileged runner is normally refused `/proc/1/fd` by the kernel, in
+    // which case the crate never sees it and the case proves nothing either way.
+    if let Ok(init) = fs::File::open("/proc/1/fd") {
+        match proc_fd_from_trusted_current_process(OwnedFd::from(init)) {
+            Err(e) => assert_eq!(e.code(), A::ProcfsForeignOrUnusable),
+            Ok(_) => panic!("/proc/1/fd was admitted"),
+        }
     }
 }
 
