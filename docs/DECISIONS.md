@@ -3,8 +3,10 @@
 ADR-0020 is Accepted for documentation language. ADR-0021 is Accepted on 2026-09-08
 by repository owner Djomla83 only for building a pure, non-executable application
 specification/validation library before observation or lifecycle execution.
-Its schema/API remain experimental; a later separate owner instruction authorised
-the [bounded implementation candidate](implementation/HELM-APP-SPEC-REVIEW.md), not a merge.
+Its schema/API remain experimental; a later separate owner instruction approved the
+[independently corrected implementation](implementation/HELM-APP-SPEC-INDEPENDENT-REVIEW.md),
+which is now merged as helm-app-spec 0.1. This records product-module acceptance,
+not another architecture decision.
 ADR-0001 through ADR-0019 remain Proposed. No other architecture acceptance follows
 from this decision.
 
@@ -48,4 +50,4 @@ Proces je u [master planu](../HELM_MASTER_PLAN.md#s31). Licencna odluka ostaje z
 
 | ID | Decision | Status |
 |---|---|---|
-| ADR-0021 | [Make the second product module an inert application contract](adr/ADR-0021-second-product-module.md) — [selection analysis and owner refinements](research/SECOND-PRODUCT-MODULE-SELECTION.md); bounded selection only, no implementation authorisation | **Accepted 2026-09-08** |
+| ADR-0021 | [Make the second product module an inert application contract](adr/ADR-0021-second-product-module.md) — [selection analysis and owner refinements](research/SECOND-PRODUCT-MODULE-SELECTION.md); bounded architectural authority, with experimental helm-app-spec 0.1 now accepted on main | **Accepted 2026-09-08** |

@@ -1,5 +1,43 @@
 # Stanje projekta
 
+## Owner acceptance, 2026-09-08 — helm-app-spec 0.1 merged
+
+The repository owner approved reviewed tip
+`8ada80a286b91251998d8a35487dc5f020b2473c` for merge. Main was fast-forwarded
+from `e32ab269fbe7c4151186d9257e0aff67c0c70197` to that exact tip and published
+with a normal push. A subsequent fetch verified origin/main, and
+[main CI run 34229008234](https://github.com/Djomla83/helm-os/actions/runs/34229008234)
+completed successfully. **helm-app-spec 0.1 is merged as HELM's second
+experimental product module.**
+
+[ADR-0021](adr/ADR-0021-second-product-module.md) remains the architectural
+authority. The schema and API remain experimental. Exact-byte document identity
+semantics also remain experimental, but are accepted for 0.1: semantically
+equivalent byte-different documents may have different SHA-256 identities.
+helm-app-spec represents desired state only. It performs no observation or
+execution and establishes no runtime, installation, entry-point, compatibility or
+verification outcome.
+
+[Independent review](implementation/HELM-APP-SPEC-INDEPENDENT-REVIEW.md) found one
+BLOCKER (parser error-path CPU discovery) and one IMPORTANT issue (cross-crate SHA
+feature coupling). Both were corrected before merge in
+`c9d6c42b331c65805a256514dcd3e0d83a7189f3`. Independent Windows and hosted Linux
+validation passed for that correction, and the approved tip is its direct
+documentation/evidence-only child.
+
+One build-composition limitation remains open. When helm-app-spec and
+helm-evidence participate in the same Cargo build graph, `sha2/force-soft` feature
+unification can select the software SHA backend for both crates. This is currently
+a documented performance/build-composition limitation, not an evidence-semantic
+failure. Standalone release builds preserve the reviewed helm-evidence baseline.
+The issue must be revisited before HELM depends on a performance-sensitive
+executable that links both modules into one Cargo dependency graph; it is not
+permanently accepted or solved.
+
+**A0-7ZIP remains experimental FAIL and was not rerun.** No new architecture ADR
+was accepted. `helm-observe` remains unauthorised, and no observation, execution or
+further subsystem work is included in this acceptance.
+
 ## Independent review, 2026-09-08 — helm-app-spec 0.1
 
 The [independent review](implementation/HELM-APP-SPEC-INDEPENDENT-REVIEW.md) checked
