@@ -1,5 +1,8 @@
 # Stanje projekta
 
+> **Decision analysis, 2026-09-08:** the [second-product-module selection report](research/SECOND-PRODUCT-MODULE-SELECTION.md)
+> exists and awaits owner review; [ADR-0021](adr/ADR-0021-second-product-module.md) is Proposed.
+
 <a id="helm-evidence-owner-acceptance"></a>
 
 ## Owner acceptance, 2026-09-08 — helm-evidence 0.1 merged

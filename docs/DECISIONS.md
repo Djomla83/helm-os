@@ -41,3 +41,7 @@ The original G0-3 criterion remains BLOCKED; the separate mechanics subtest does
 See the [current Gate 0 assessment](experiments/EXP-009-GATE0-REPORT.md#current-assessment).
 
 Proces je u [master planu](../HELM_MASTER_PLAN.md#s31). Licencna odluka ostaje zaseban uslov javnog open-source izdanja.
+
+| ID | Decision | Status |
+|---|---|---|
+| ADR-0021 | [Make the second product module an inert application contract](adr/ADR-0021-second-product-module.md) — [selection analysis](research/SECOND-PRODUCT-MODULE-SELECTION.md), awaiting owner review | Proposed |
