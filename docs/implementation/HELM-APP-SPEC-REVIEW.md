@@ -175,7 +175,7 @@ semantics. Existing standalone helm-evidence manifest/source/API are unchanged.
 Dependency licence metadata is an inventory, not acceptance of a HELM licence.
 
 The existing `.github/workflows/helm-evidence.yml` is kept at its stable path and
-renamed in the UI to HELM Rust workspace Linux. Same GitHub-hosted Ubuntu 24.04,
+declares the name HELM Rust workspace Linux. Same GitHub-hosted Ubuntu 24.04,
 Rust 1.95.0, immutable checkout action, read-only permission, no stored credentials,
 15-minute deadline. Commands now cover the workspace and repository Python/docs
 checks. Full Git checkout supplies frozen definition blobs for provenance tests.
@@ -185,7 +185,8 @@ No deployment, release, signing, self-hosted runner or secret input.
 
 Windows 11 build 26200; AMD Ryzen 9 5950X, 16 physical/32 logical cores confirmed
 read-only. Rust/Cargo 1.95.0, LLVM 22.1.2, x86_64-pc-windows-msvc; Python 3.14.3.
-Linux validation will use the hosted CI job; no VM/WSL lab is started for this task.
+Linux validation passed on the hosted Ubuntu 24.04 job with Rust 1.95.0 and runner
+image ubuntu24/20260831.293. No VM/WSL lab was started for this task.
 
 The [Windows validation receipt](evidence/helm-app-spec-2026-09-08/validation.json)
 records 14 successful commands and the complete output/source identity inventory.
@@ -206,7 +207,7 @@ the included per-file SHA-256 values bind the actual new source/test/fixture byt
 | Privacy / forbidden-artifact / historical audit | PASS: changed/new unignored UTF-8 files and decoded streams scanned, all 153 historical publication hashes match, no tracked target output; bounded scan, not comprehensive secret detection |
 | Malformed-input safety | All 10,310 deterministic corpus cases returned without parser panic; each result repeated identically; not exhaustive fuzzing or a formal proof |
 | Determinism | 100 repeated equal models per valid fixture; 100 equal ordered multi-error results, stable raw hashes and independent whitespace-hash expectations |
-| Hosted Ubuntu CI | Pending first branch push; no Linux execution claimed at this checkpoint |
+| Hosted Ubuntu CI | PASS at implementation commit `7d1de4cd02268cf29ea1e4f13136336ce0c2c36f`: workspace fmt, Clippy, tests, release build, 37 Python tests, docs and frozen-fixture check; [run 34219988167](https://github.com/Djomla83/helm-os/actions/runs/34219988167) |
 
 Physical Rust LOC includes comments and blank lines: **1,129 product**, **874 test**,
 **37 benchmark** (nonblank: 1,075 / 841 / 36). Before this module, workspace product
@@ -254,6 +255,35 @@ test compilation found a wrongly escaped lone-surrogate test literal and a
 temporary-reference lifetime error. Those test/tooling errors were corrected before
 the first passing test run. No expected rejection was removed or weakened. No
 application experiment failed or ran in this task.
+
+## Publication and independent-review boundary
+
+Implementation commit `7d1de4cd02268cf29ea1e4f13136336ce0c2c36f` was pushed normally
+to `product/helm-app-spec`. Local main and origin/main remained the authorized
+starting commit `e32ab269fbe7c4151186d9257e0aff67c0c70197`. The complete staged
+implementation diff was inspected; all 23 recorded source/fixture/manifest
+identities matched the validation receipt. The publication audit scanned 22
+candidate files, verified 29 indexed fixture artifacts and all 153 historical
+publication hashes. The working tree was clean after the implementation push.
+
+The [CI receipt](evidence/helm-app-spec-2026-09-08/ci-result.json) records successful
+Ubuntu validation of that implementation commit, completed at 11:19:20 UTC on
+2026-09-08. All 30 new contract tests, three new doctests and 45 existing
+helm-evidence tests passed, including its Linux filesystem regressions. GitHub's
+run metadata still shows the workflow's default-branch name, helm-evidence Linux;
+the receipt's actual job steps demonstrate the expanded workspace checks.
+
+The follow-up publication report changes only this review, PROJECT_STATE and the
+CI receipt. Product code, tests, fixtures, manifests, tools and workflow remain
+identical to the passing CI commit. Documentation validation passed (88 Markdown,
+230 JSON files, 882 local link targets), as did diff checks and the bounded
+publication audit (23 candidate files, 153 historical hashes) for this update; the
+Rust CI result applies to the implementation commit, not a claimed rerun at the
+report-only tip. The complete CI log is retained in ignored local target output;
+its digest and selected result lines are recorded in the receipt.
+
+This is **READY_FOR_INDEPENDENT_REVIEW**. No independent reviewer has approved
+the module, no merge was performed, and no production release is authorized.
 
 ## Limits, data/permission impact and next decision
 
