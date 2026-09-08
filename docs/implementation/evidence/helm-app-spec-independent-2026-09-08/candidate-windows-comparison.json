@@ -1,0 +1,738 @@
+{
+  "candidate": "18c7aa5e80617483b6f5afd0fea4affeb62f926c",
+  "base": "e32ab269fbe7c4151186d9257e0aff67c0c70197",
+  "platform": {
+    "system": "Windows",
+    "release": "11",
+    "machine": "AMD64",
+    "python": "3.14.3"
+  },
+  "commands": [
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "cwd": "<repo>",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 0.024219099956098944,
+      "stdout": "18c7aa5e80617483b6f5afd0fea4affeb62f926c\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "rustc",
+        "-Vv"
+      ],
+      "cwd": "<repo>",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 0.03846800001338124,
+      "stdout": "rustc 1.95.0 (59807616e 2026-04-14)\nbinary: rustc\ncommit-hash: 59807616e1fa2540724bfbac14d7976d7e4a3860\ncommit-date: 2026-04-14\nhost: x86_64-pc-windows-msvc\nrelease: 1.95.0\nLLVM version: 22.1.2\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cargo",
+        "tree",
+        "--workspace",
+        "--locked",
+        "-e",
+        "features",
+        "-i",
+        "sha2"
+      ],
+      "cwd": "<repo>",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 0.09064199996646494,
+      "stdout": "sha2 v0.10.9\n\u251c\u2500\u2500 sha2 feature \"default\"\n\u2502   \u251c\u2500\u2500 helm-app-spec v0.1.0 (<repo>\\crates\\helm-app-spec)\n\u2502   \u2502   \u2514\u2500\u2500 helm-app-spec feature \"default\" (command-line)\n\u2502   \u2514\u2500\u2500 helm-evidence v0.1.0 (<repo>\\crates\\helm-evidence)\n\u2502       \u2514\u2500\u2500 helm-evidence feature \"default\" (command-line)\n\u251c\u2500\u2500 sha2 feature \"force-soft\"\n\u2502   \u2514\u2500\u2500 helm-app-spec v0.1.0 (<repo>\\crates\\helm-app-spec) (*)\n\u2514\u2500\u2500 sha2 feature \"std\"\n    \u2514\u2500\u2500 sha2 feature \"default\" (*)\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cargo",
+        "tree",
+        "-p",
+        "helm-evidence",
+        "--locked",
+        "-e",
+        "features",
+        "-i",
+        "sha2"
+      ],
+      "cwd": "<repo>",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 0.07705620001070201,
+      "stdout": "sha2 v0.10.9\n\u251c\u2500\u2500 sha2 feature \"default\"\n\u2502   \u2514\u2500\u2500 helm-evidence v0.1.0 (<repo>\\crates\\helm-evidence)\n\u2502       \u2514\u2500\u2500 helm-evidence feature \"default\" (command-line)\n\u2514\u2500\u2500 sha2 feature \"std\"\n    \u2514\u2500\u2500 sha2 feature \"default\" (*)\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "helm-app-spec",
+        "--test",
+        "independent_review",
+        "--locked",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "<repo>",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 2.336807699990459,
+      "stdout": "\nrunning 8 tests\ntest sibling_errors_survive_parent_and_constructor_failures ... ok\nREVIEW_IDENTITIES=[\"d95e95764fb28de00e96be76867c1d0e9a11144250c3705322eb74044dde1314\",\"7febb99d15eabbd2b785da620cf7afbcbdade34f9db7d6cd3a393dfde408203a\",\"4e859896808f40b8ff0373d965b38a4b914891c5ad5a9616ec6e7cee72a39a4a\",\"c967421ca2681519fc42901a5c178e904a3790c155f8a158e0b97e39d0049a2c\",\"23cec700d02fc215fcb5ca9d2a2584677961f9e57beb99bac1e979442c7c49de\"]\ntest exact_byte_variants_preserve_all_desired_views ... ok\ntest exact_parser_boundaries_and_rejection_precedence ... ok\ntest decoded_set_duplicates_and_case_variants_never_validate ... ok\ntest diagnostics_never_echo_private_values_and_cap_output ... ok\ntest number_representation_errors_are_distinguished_from_semantics ... ok\ntest path_grammar_edges_and_device_case_variants ... ok\nREVIEW_PROPERTIES={\"seed\":\"00212026090851a7\",\"cases\":20000,\"valid\":4087,\"rejected\":15913,\"transcript_sha256\":\"0464894558755ebfe5cc3c5e263e46a85b7fb7c7ab5e7d4953de922027616744\"}\ntest independent_seeded_properties_and_platform_fingerprint ... ok\n\ntest result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.24s\n\n",
+      "stderr": "    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.04s\n     Running tests\\independent_review.rs (target\\debug\\deps\\independent_review-e3bfa7efd7446ab7.exe)\n"
+    },
+    {
+      "argv": [
+        "cargo",
+        "test",
+        "--workspace",
+        "--locked"
+      ],
+      "cwd": "<repo>\\target\\helm-app-spec-independent\\base",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 10.939927800034638,
+      "stdout": "\nrunning 3 tests\ntest bundle::tests::identity_syntax_is_bounded ... ok\ntest oracle::tests::unicode_archive_names_are_data ... ok\ntest bundle::tests::rejects_portable_escape_and_device_spellings ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 2 tests\ntest workflow_cannot_shadow_builtin_report_sections ... ok\ntest duplicate_content_expectations_are_invalid ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s\n\n\nrunning 10 tests\ntest manifest_symlink_outside_is_rejected ... ok\ntest directories_cannot_masquerade_as_files ... ok\ntest file_symlink_outside_cannot_supply_artifact ... ok\ntest directory_symlink_outside_cannot_supply_artifact ... ok\ntest opaque_shell_text_is_never_executed ... ok\ntest contained_and_dangling_symlinks_are_rejected ... ok\ntest diagnostics_do_not_echo_host_paths_or_bundle_text ... ok\ntest traversal_absolute_url_and_windows_device_paths_are_rejected ... ok\ntest windows_junction_outside_is_rejected ... ok\ntest manifest_artifact_and_total_size_limits ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.56s\n\n\nrunning 30 tests\ntest fully_complete_bundle ... ok\ntest local_output_reference_cannot_declare_a_different_destination ... ok\ntest a0_preserves_failure_and_w2_independent_success ... ok\ntest equivalent_file_elsewhere_does_not_replace_missing_destination ... ok\ntest content_pass_cannot_override_wrong_destination ... ok\ntest broken_control_must_evidence_content_defect ... ok\ntest missing_broken_control ... ok\ntest missing_known_good_control ... ok\ntest invalid_takes_precedence_over_incomplete ... ok\ntest missing_required_artifact ... ok\ntest restart_evidence_missing ... ok\ntest unknown_mandatory_field_rejected ... ok\ntest unknown_schema_version_rejected ... ok\ntest broken_control_incorrectly_accepted ... ok\ntest missing_step_is_incomplete ... ok\ntest complete_evidence_can_record_experimental_fail ... ok\ntest known_good_rejected_is_invalid ... ok\ntest unexpected_optional_artifact_ignored ... ok\ntest wrong_artifact_hash ... ok\ntest missing_output_observation_does_not_infer_from_content ... ok\ntest missing_workflow_boot_is_incomplete ... ok\ntest workflow_on_wrong_boot_is_invalid ... ok\ntest verification_is_read_only ... ok\ntest oracle_hash_must_bind_the_actual_output ... ok\ntest unchanged_boot_is_invalid ... ok\ntest oracle_pass_with_wrong_content_is_invalid ... ok\ntest duplicate_step_or_artifact_id_rejected ... ok\ntest not_run_and_blocked_steps_are_incomplete ... ok\ntest malformed_inputs_fail_without_panic ... ok\ntest cli_json_deterministic_and_exit_codes ... ok\n\ntest result: ok. 30 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+      "stderr": "   Compiling windows_x86_64_msvc v0.52.6\n   Compiling windows_x86_64_msvc v0.53.1\n   Compiling version_check v0.9.5\n   Compiling io-lifetimes v3.0.1\n   Compiling io-lifetimes v2.0.4\n   Compiling proc-macro2 v1.0.107\n   Compiling quote v1.0.47\n   Compiling unicode-ident v1.0.24\n   Compiling io-extras v0.19.0\n   Compiling typenum v1.20.1\n   Compiling bitflags v2.13.1\n   Compiling windows-link v0.2.1\n   Compiling serde_core v1.0.228\n   Compiling cap-primitives v4.0.3\n   Compiling ambient-authority v0.0.2\n   Compiling ipnet v2.12.2\n   Compiling cap-std v4.0.2\n   Compiling maybe-owned v0.3.4\n   Compiling zmij v1.0.23\n   Compiling serde_json v1.0.149\n   Compiling serde v1.0.228\n   Compiling cap-fs-ext v4.0.2\n   Compiling cpufeatures v0.2.17\n   Compiling itoa v1.0.18\n   Compiling cfg-if v1.0.4\n   Compiling memchr v2.8.3\n   Compiling windows-sys v0.61.2\n   Compiling generic-array v0.14.7\n   Compiling windows-targets v0.52.6\n   Compiling windows-targets v0.53.5\n   Compiling windows-sys v0.59.0\n   Compiling windows-sys v0.60.2\n   Compiling crypto-common v0.1.7\n   Compiling block-buffer v0.10.4\n   Compiling syn v2.0.119\n   Compiling digest v0.10.7\n   Compiling sha2 v0.10.9\n   Compiling winx v0.36.4\n   Compiling fs-set-times v0.20.3\n   Compiling serde_derive v1.0.228\n   Compiling helm-evidence v0.1.0 (<repo>\\target\\helm-app-spec-independent\\base\\crates\\helm-evidence)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 8.49s\n     Running unittests src\\lib.rs (target\\debug\\deps\\helm_evidence-f1030a35aa3861bf.exe)\n     Running unittests src\\main.rs (target\\debug\\deps\\helm_evidence-45548ac6ee2b4e15.exe)\n     Running tests\\linux_filesystem.rs (target\\debug\\deps\\linux_filesystem-5a4353f43e189186.exe)\n     Running tests\\review_regressions.rs (target\\debug\\deps\\review_regressions-530b19fd11fcbaf2.exe)\n     Running tests\\security.rs (target\\debug\\deps\\security-57d4704c4fafb1c2.exe)\n     Running tests\\verification.rs (target\\debug\\deps\\verification-9a4240b47d366b49.exe)\nUsage: helm-evidence verify <bundle-directory> [--json]\nUsage: helm-evidence verify <bundle-directory> [--json]\nUsage: helm-evidence verify <bundle-directory> [--json]\nUsage: helm-evidence verify <bundle-directory> [--json]\n   Doc-tests helm_evidence\n"
+    },
+    {
+      "argv": [
+        "cargo",
+        "build",
+        "--release",
+        "--offline"
+      ],
+      "cwd": "<repo>\\target\\helm-app-spec-independent\\base-probe",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 8.647561499965377,
+      "stdout": "",
+      "stderr": "   Compiling windows_x86_64_msvc v0.52.6\n   Compiling windows_x86_64_msvc v0.53.1\n   Compiling version_check v0.9.5\n   Compiling io-lifetimes v3.0.1\n   Compiling io-lifetimes v2.0.4\n   Compiling proc-macro2 v1.0.107\n   Compiling unicode-ident v1.0.24\n   Compiling io-extras v0.19.0\n   Compiling typenum v1.20.1\n   Compiling quote v1.0.47\n   Compiling cap-primitives v4.0.3\n   Compiling serde_core v1.0.228\n   Compiling bitflags v2.13.1\n   Compiling windows-link v0.2.1\n   Compiling ipnet v2.12.2\n   Compiling ambient-authority v0.0.2\n   Compiling zmij v1.0.23\n   Compiling cap-std v4.0.2\n   Compiling maybe-owned v0.3.4\n   Compiling serde_json v1.0.149\n   Compiling cap-fs-ext v4.0.2\n   Compiling serde v1.0.228\n   Compiling cfg-if v1.0.4\n   Compiling cpufeatures v0.2.17\n   Compiling itoa v1.0.18\n   Compiling memchr v2.8.3\n   Compiling windows-sys v0.61.2\n   Compiling generic-array v0.14.7\n   Compiling windows-targets v0.52.6\n   Compiling windows-targets v0.53.5\n   Compiling windows-sys v0.59.0\n   Compiling windows-sys v0.60.2\n   Compiling syn v2.0.119\n   Compiling crypto-common v0.1.7\n   Compiling block-buffer v0.10.4\n   Compiling digest v0.10.7\n   Compiling sha2 v0.10.9\n   Compiling fs-set-times v0.20.3\n   Compiling winx v0.36.4\n   Compiling serde_derive v1.0.228\n   Compiling helm-evidence v0.1.0 (<repo>\\target\\helm-app-spec-independent\\base\\crates\\helm-evidence)\n   Compiling review-evidence-bench v0.0.0 (<repo>\\target\\helm-app-spec-independent\\base-probe)\n    Finished `release` profile [optimized] target(s) in 8.60s\n"
+    },
+    {
+      "argv": [
+        "cargo",
+        "tree",
+        "--locked",
+        "-e",
+        "features",
+        "-i",
+        "sha2"
+      ],
+      "cwd": "<repo>\\target\\helm-app-spec-independent\\base-probe",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 0.08284950000233948,
+      "stdout": "sha2 v0.10.9\n\u251c\u2500\u2500 sha2 feature \"default\"\n\u2502   \u251c\u2500\u2500 helm-evidence v0.1.0 (<repo>\\target\\helm-app-spec-independent\\base\\crates\\helm-evidence)\n\u2502   \u2502   \u2514\u2500\u2500 helm-evidence feature \"default\"\n\u2502   \u2502       \u2514\u2500\u2500 review-evidence-bench v0.0.0 (<repo>\\target\\helm-app-spec-independent\\base-probe)\n\u2502   \u2502           \u2514\u2500\u2500 review-evidence-bench feature \"default\" (command-line)\n\u2502   \u2514\u2500\u2500 review-evidence-bench v0.0.0 (<repo>\\target\\helm-app-spec-independent\\base-probe) (*)\n\u2514\u2500\u2500 sha2 feature \"std\"\n    \u2514\u2500\u2500 sha2 feature \"default\" (*)\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "<repo>\\target\\helm-app-spec-independent\\base-probe\\target\\release\\review-evidence-bench.exe",
+        "<repo>\\crates\\helm-evidence\\tests\\fixtures\\a0-7zip",
+        "<repo>\\crates\\helm-evidence\\tests\\fixtures\\synthetic",
+        "<repo>\\target\\helm-app-spec-independent\\synthetic-large"
+      ],
+      "cwd": "<repo>",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 3.0455451000016183,
+      "stdout_sha256": "e16a927fc48914b51029867eb97345064670e08350407d47878f1c800b06dd2b",
+      "stdout_bytes": 52829,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    },
+    {
+      "argv": [
+        "cargo",
+        "build",
+        "--release",
+        "--offline"
+      ],
+      "cwd": "<repo>\\target\\helm-app-spec-independent\\candidate-combined",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 8.677201400045305,
+      "stdout": "",
+      "stderr": "   Compiling windows_x86_64_msvc v0.52.6\n   Compiling version_check v0.9.5\n   Compiling windows_x86_64_msvc v0.53.1\n   Compiling proc-macro2 v1.0.107\n   Compiling typenum v1.20.1\n   Compiling io-lifetimes v3.0.1\n   Compiling unicode-ident v1.0.24\n   Compiling io-lifetimes v2.0.4\n   Compiling quote v1.0.47\n   Compiling io-extras v0.19.0\n   Compiling serde_core v1.0.228\n   Compiling zmij v1.0.23\n   Compiling cap-primitives v4.0.3\n   Compiling bitflags v2.13.1\n   Compiling windows-link v0.2.1\n   Compiling serde_json v1.0.149\n   Compiling serde v1.0.228\n   Compiling cap-std v4.0.2\n   Compiling ipnet v2.12.2\n   Compiling ambient-authority v0.0.2\n   Compiling maybe-owned v0.3.4\n   Compiling cfg-if v1.0.4\n   Compiling cpufeatures v0.2.17\n   Compiling itoa v1.0.18\n   Compiling memchr v2.8.3\n   Compiling cap-fs-ext v4.0.2\n   Compiling windows-sys v0.61.2\n   Compiling generic-array v0.14.7\n   Compiling windows-targets v0.52.6\n   Compiling windows-targets v0.53.5\n   Compiling windows-sys v0.59.0\n   Compiling windows-sys v0.60.2\n   Compiling syn v2.0.119\n   Compiling crypto-common v0.1.7\n   Compiling block-buffer v0.10.4\n   Compiling digest v0.10.7\n   Compiling sha2 v0.10.9\n   Compiling winx v0.36.4\n   Compiling fs-set-times v0.20.3\n   Compiling serde_derive v1.0.228\n   Compiling helm-app-spec v0.1.0 (<repo>\\crates\\helm-app-spec)\n   Compiling helm-evidence v0.1.0 (<repo>\\crates\\helm-evidence)\n   Compiling review-evidence-bench v0.0.0 (<repo>\\target\\helm-app-spec-independent\\candidate-combined)\n    Finished `release` profile [optimized] target(s) in 8.63s\n"
+    },
+    {
+      "argv": [
+        "cargo",
+        "tree",
+        "--locked",
+        "-e",
+        "features",
+        "-i",
+        "sha2"
+      ],
+      "cwd": "<repo>\\target\\helm-app-spec-independent\\candidate-combined",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 0.0809865000192076,
+      "stdout": "sha2 v0.10.9\n\u251c\u2500\u2500 sha2 feature \"default\"\n\u2502   \u251c\u2500\u2500 helm-app-spec v0.1.0 (<repo>\\crates\\helm-app-spec)\n\u2502   \u2502   \u2514\u2500\u2500 helm-app-spec feature \"default\"\n\u2502   \u2502       \u2514\u2500\u2500 review-evidence-bench v0.0.0 (<repo>\\target\\helm-app-spec-independent\\candidate-combined)\n\u2502   \u2502           \u2514\u2500\u2500 review-evidence-bench feature \"default\" (command-line)\n\u2502   \u251c\u2500\u2500 helm-evidence v0.1.0 (<repo>\\crates\\helm-evidence)\n\u2502   \u2502   \u2514\u2500\u2500 helm-evidence feature \"default\"\n\u2502   \u2502       \u2514\u2500\u2500 review-evidence-bench v0.0.0 (<repo>\\target\\helm-app-spec-independent\\candidate-combined) (*)\n\u2502   \u2514\u2500\u2500 review-evidence-bench v0.0.0 (<repo>\\target\\helm-app-spec-independent\\candidate-combined) (*)\n\u251c\u2500\u2500 sha2 feature \"force-soft\"\n\u2502   \u2514\u2500\u2500 helm-app-spec v0.1.0 (<repo>\\crates\\helm-app-spec) (*)\n\u2514\u2500\u2500 sha2 feature \"std\"\n    \u2514\u2500\u2500 sha2 feature \"default\" (*)\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "<repo>\\target\\helm-app-spec-independent\\candidate-combined\\target\\release\\review-evidence-bench.exe",
+        "<repo>\\crates\\helm-evidence\\tests\\fixtures\\a0-7zip",
+        "<repo>\\crates\\helm-evidence\\tests\\fixtures\\synthetic",
+        "<repo>\\target\\helm-app-spec-independent\\synthetic-large"
+      ],
+      "cwd": "<repo>",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 6.0531591000035405,
+      "stdout_sha256": "ec1991430cbc334639d800ee8fc07aa46d08808c74410007156abdc5ea6d799b",
+      "stdout_bytes": 52841,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    },
+    {
+      "argv": [
+        "cargo",
+        "build",
+        "--release",
+        "--offline"
+      ],
+      "cwd": "<repo>\\target\\helm-app-spec-independent\\candidate-standalone",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 8.637177199998405,
+      "stdout": "",
+      "stderr": "   Compiling windows_x86_64_msvc v0.52.6\n   Compiling windows_x86_64_msvc v0.53.1\n   Compiling version_check v0.9.5\n   Compiling proc-macro2 v1.0.107\n   Compiling io-lifetimes v2.0.4\n   Compiling io-lifetimes v3.0.1\n   Compiling io-extras v0.19.0\n   Compiling typenum v1.20.1\n   Compiling unicode-ident v1.0.24\n   Compiling quote v1.0.47\n   Compiling windows-link v0.2.1\n   Compiling serde_core v1.0.228\n   Compiling bitflags v2.13.1\n   Compiling cap-primitives v4.0.3\n   Compiling maybe-owned v0.3.4\n   Compiling cap-std v4.0.2\n   Compiling ambient-authority v0.0.2\n   Compiling zmij v1.0.23\n   Compiling ipnet v2.12.2\n   Compiling serde v1.0.228\n   Compiling cap-fs-ext v4.0.2\n   Compiling serde_json v1.0.149\n   Compiling memchr v2.8.3\n   Compiling cfg-if v1.0.4\n   Compiling cpufeatures v0.2.17\n   Compiling itoa v1.0.18\n   Compiling windows-sys v0.61.2\n   Compiling generic-array v0.14.7\n   Compiling windows-targets v0.52.6\n   Compiling windows-targets v0.53.5\n   Compiling windows-sys v0.59.0\n   Compiling windows-sys v0.60.2\n   Compiling syn v2.0.119\n   Compiling block-buffer v0.10.4\n   Compiling crypto-common v0.1.7\n   Compiling digest v0.10.7\n   Compiling sha2 v0.10.9\n   Compiling winx v0.36.4\n   Compiling fs-set-times v0.20.3\n   Compiling serde_derive v1.0.228\n   Compiling helm-evidence v0.1.0 (<repo>\\crates\\helm-evidence)\n   Compiling review-evidence-bench v0.0.0 (<repo>\\target\\helm-app-spec-independent\\candidate-standalone)\n    Finished `release` profile [optimized] target(s) in 8.59s\n"
+    },
+    {
+      "argv": [
+        "cargo",
+        "tree",
+        "--locked",
+        "-e",
+        "features",
+        "-i",
+        "sha2"
+      ],
+      "cwd": "<repo>\\target\\helm-app-spec-independent\\candidate-standalone",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 0.08208139997441322,
+      "stdout": "sha2 v0.10.9\n\u251c\u2500\u2500 sha2 feature \"default\"\n\u2502   \u251c\u2500\u2500 helm-evidence v0.1.0 (<repo>\\crates\\helm-evidence)\n\u2502   \u2502   \u2514\u2500\u2500 helm-evidence feature \"default\"\n\u2502   \u2502       \u2514\u2500\u2500 review-evidence-bench v0.0.0 (<repo>\\target\\helm-app-spec-independent\\candidate-standalone)\n\u2502   \u2502           \u2514\u2500\u2500 review-evidence-bench feature \"default\" (command-line)\n\u2502   \u2514\u2500\u2500 review-evidence-bench v0.0.0 (<repo>\\target\\helm-app-spec-independent\\candidate-standalone) (*)\n\u2514\u2500\u2500 sha2 feature \"std\"\n    \u2514\u2500\u2500 sha2 feature \"default\" (*)\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "<repo>\\target\\helm-app-spec-independent\\candidate-standalone\\target\\release\\review-evidence-bench.exe",
+        "<repo>\\crates\\helm-evidence\\tests\\fixtures\\a0-7zip",
+        "<repo>\\crates\\helm-evidence\\tests\\fixtures\\synthetic",
+        "<repo>\\target\\helm-app-spec-independent\\synthetic-large"
+      ],
+      "cwd": "<repo>",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "wall_seconds": 3.0266038000117987,
+      "stdout_sha256": "35e6a54e938c406407e7effafc630c2e2c08183029ac5d8416fcb81a64196bca",
+      "stdout_bytes": 52826,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_bytes": 0
+    }
+  ],
+  "head_at_check": "18c7aa5e80617483b6f5afd0fea4affeb62f926c",
+  "rustc": "rustc 1.95.0 (59807616e 2026-04-14)\nbinary: rustc\ncommit-hash: 59807616e1fa2540724bfbac14d7976d7e4a3860\ncommit-date: 2026-04-14\nhost: x86_64-pc-windows-msvc\nrelease: 1.95.0\nLLVM version: 22.1.2\n",
+  "workspace_sha2_features": "sha2 v0.10.9\n\u251c\u2500\u2500 sha2 feature \"default\"\n\u2502   \u251c\u2500\u2500 helm-app-spec v0.1.0 (<repo>\\crates\\helm-app-spec)\n\u2502   \u2502   \u2514\u2500\u2500 helm-app-spec feature \"default\" (command-line)\n\u2502   \u2514\u2500\u2500 helm-evidence v0.1.0 (<repo>\\crates\\helm-evidence)\n\u2502       \u2514\u2500\u2500 helm-evidence feature \"default\" (command-line)\n\u251c\u2500\u2500 sha2 feature \"force-soft\"\n\u2502   \u2514\u2500\u2500 helm-app-spec v0.1.0 (<repo>\\crates\\helm-app-spec) (*)\n\u2514\u2500\u2500 sha2 feature \"std\"\n    \u2514\u2500\u2500 sha2 feature \"default\" (*)\n",
+  "standalone_sha2_features": "sha2 v0.10.9\n\u251c\u2500\u2500 sha2 feature \"default\"\n\u2502   \u2514\u2500\u2500 helm-evidence v0.1.0 (<repo>\\crates\\helm-evidence)\n\u2502       \u2514\u2500\u2500 helm-evidence feature \"default\" (command-line)\n\u2514\u2500\u2500 sha2 feature \"std\"\n    \u2514\u2500\u2500 sha2 feature \"default\" (*)\n",
+  "identities": [
+    "d95e95764fb28de00e96be76867c1d0e9a11144250c3705322eb74044dde1314",
+    "7febb99d15eabbd2b785da620cf7afbcbdade34f9db7d6cd3a393dfde408203a",
+    "4e859896808f40b8ff0373d965b38a4b914891c5ad5a9616ec6e7cee72a39a4a",
+    "c967421ca2681519fc42901a5c178e904a3790c155f8a158e0b97e39d0049a2c",
+    "23cec700d02fc215fcb5ca9d2a2584677961f9e57beb99bac1e979442c7c49de"
+  ],
+  "properties": {
+    "seed": "00212026090851a7",
+    "cases": 20000,
+    "valid": 4087,
+    "rejected": 15913,
+    "transcript_sha256": "0464894558755ebfe5cc3c5e263e46a85b7fb7c7ab5e7d4953de922027616744"
+  },
+  "exact_byte_python_hashlib_comparison": "PASS: whitespace, field order, escaped string, final newline",
+  "measurements": {
+    "base": [
+      {
+        "fixture": "a0-7zip",
+        "iterations": 50,
+        "kind": "verify",
+        "ns_per_call": [
+          2227516.0,
+          2230642.0,
+          2273922.0,
+          2285326.0,
+          2340130.0
+        ],
+        "report_sha256": "aba8a63eff4e0444c4a892214e62fdd46941cbd8c9f10c62e693319d6e5fde5c",
+        "median_ns": 2273922.0,
+        "report_summary": {
+          "verdict": "INCOMPLETE",
+          "experimental_verdict": "FAIL",
+          "sections": [
+            {
+              "id": "contract",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "artifacts",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "restart",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W1",
+              "verdict": "INCOMPLETE"
+            },
+            {
+              "id": "W2",
+              "verdict": "COMPLETE"
+            }
+          ]
+        }
+      },
+      {
+        "fixture": "synthetic",
+        "iterations": 50,
+        "kind": "verify",
+        "ns_per_call": [
+          1339234.0,
+          1584692.0,
+          1403014.0,
+          1296702.0,
+          1273692.0
+        ],
+        "report_sha256": "faef69251e93dd074ee2c3516c6713ea840c2f3d7eebc9c339fefb424cd9190a",
+        "median_ns": 1339234.0,
+        "report_summary": {
+          "verdict": "COMPLETE",
+          "experimental_verdict": "PASS",
+          "sections": [
+            {
+              "id": "contract",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "artifacts",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "restart",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W1",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W2",
+              "verdict": "COMPLETE"
+            }
+          ]
+        }
+      },
+      {
+        "fixture": "synthetic-large",
+        "iterations": 50,
+        "kind": "verify",
+        "ns_per_call": [
+          6617520.0,
+          7009488.0,
+          7453798.0,
+          6702086.0,
+          7069808.0
+        ],
+        "report_sha256": "3b91cf8aa95e5bf895b695fda15de9dfe8a875853355fb5705eaceda70a6b8c5",
+        "median_ns": 7009488.0,
+        "report_summary": {
+          "verdict": "COMPLETE",
+          "experimental_verdict": "PASS",
+          "sections": [
+            {
+              "id": "contract",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "artifacts",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "restart",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W1",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W2",
+              "verdict": "COMPLETE"
+            }
+          ]
+        }
+      },
+      {
+        "bytes": 65536,
+        "iterations": 16,
+        "kind": "hash",
+        "ns_per_call": [
+          27475.0,
+          27468.75,
+          27731.25,
+          27462.5,
+          27512.5
+        ],
+        "sha256": "4b640d85ab3ba30fd02c9fc9db4a8928f416322ad27022ea58a65aaee68a4df2",
+        "median_ns": 27475.0
+      },
+      {
+        "bytes": 4194304,
+        "iterations": 16,
+        "kind": "hash",
+        "ns_per_call": [
+          1763556.25,
+          1764093.75,
+          1763143.75,
+          1770256.25,
+          1771037.5
+        ],
+        "sha256": "a117210941a0b00dcb2d8577e680d84b6fa0eaf760d2afc654c953b9859d54fa",
+        "median_ns": 1764093.75
+      }
+    ],
+    "candidate-combined": [
+      {
+        "fixture": "a0-7zip",
+        "iterations": 50,
+        "kind": "verify",
+        "ns_per_call": [
+          2395108.0,
+          2348702.0,
+          2326872.0,
+          2281500.0,
+          2302324.0
+        ],
+        "report_sha256": "aba8a63eff4e0444c4a892214e62fdd46941cbd8c9f10c62e693319d6e5fde5c",
+        "median_ns": 2326872.0,
+        "report_summary": {
+          "verdict": "INCOMPLETE",
+          "experimental_verdict": "FAIL",
+          "sections": [
+            {
+              "id": "contract",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "artifacts",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "restart",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W1",
+              "verdict": "INCOMPLETE"
+            },
+            {
+              "id": "W2",
+              "verdict": "COMPLETE"
+            }
+          ]
+        }
+      },
+      {
+        "fixture": "synthetic",
+        "iterations": 50,
+        "kind": "verify",
+        "ns_per_call": [
+          1275734.0,
+          1271786.0,
+          1285188.0,
+          1277122.0,
+          1273246.0
+        ],
+        "report_sha256": "faef69251e93dd074ee2c3516c6713ea840c2f3d7eebc9c339fefb424cd9190a",
+        "median_ns": 1275734.0,
+        "report_summary": {
+          "verdict": "COMPLETE",
+          "experimental_verdict": "PASS",
+          "sections": [
+            {
+              "id": "contract",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "artifacts",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "restart",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W1",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W2",
+              "verdict": "COMPLETE"
+            }
+          ]
+        }
+      },
+      {
+        "fixture": "synthetic-large",
+        "iterations": 50,
+        "kind": "verify",
+        "ns_per_call": [
+          15357912.0,
+          15684880.0,
+          15497466.0,
+          15526116.0,
+          15357852.0
+        ],
+        "report_sha256": "3b91cf8aa95e5bf895b695fda15de9dfe8a875853355fb5705eaceda70a6b8c5",
+        "median_ns": 15497466.0,
+        "report_summary": {
+          "verdict": "COMPLETE",
+          "experimental_verdict": "PASS",
+          "sections": [
+            {
+              "id": "contract",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "artifacts",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "restart",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W1",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W2",
+              "verdict": "COMPLETE"
+            }
+          ]
+        }
+      },
+      {
+        "bytes": 65536,
+        "iterations": 16,
+        "kind": "hash",
+        "ns_per_call": [
+          167525.0,
+          183537.5,
+          164312.5,
+          162187.5,
+          162456.25
+        ],
+        "sha256": "4b640d85ab3ba30fd02c9fc9db4a8928f416322ad27022ea58a65aaee68a4df2",
+        "median_ns": 164312.5
+      },
+      {
+        "bytes": 4194304,
+        "iterations": 16,
+        "kind": "hash",
+        "ns_per_call": [
+          10552637.5,
+          10588918.75,
+          10594906.25,
+          10586150.0,
+          10564237.5
+        ],
+        "sha256": "a117210941a0b00dcb2d8577e680d84b6fa0eaf760d2afc654c953b9859d54fa",
+        "median_ns": 10586150.0
+      }
+    ],
+    "candidate-standalone": [
+      {
+        "fixture": "a0-7zip",
+        "iterations": 50,
+        "kind": "verify",
+        "ns_per_call": [
+          2328572.0,
+          2329424.0,
+          2291990.0,
+          2281562.0,
+          2247848.0
+        ],
+        "report_sha256": "aba8a63eff4e0444c4a892214e62fdd46941cbd8c9f10c62e693319d6e5fde5c",
+        "median_ns": 2291990.0,
+        "report_summary": {
+          "verdict": "INCOMPLETE",
+          "experimental_verdict": "FAIL",
+          "sections": [
+            {
+              "id": "contract",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "artifacts",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "restart",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W1",
+              "verdict": "INCOMPLETE"
+            },
+            {
+              "id": "W2",
+              "verdict": "COMPLETE"
+            }
+          ]
+        }
+      },
+      {
+        "fixture": "synthetic",
+        "iterations": 50,
+        "kind": "verify",
+        "ns_per_call": [
+          1283936.0,
+          1319882.0,
+          1307372.0,
+          1304720.0,
+          1286132.0
+        ],
+        "report_sha256": "faef69251e93dd074ee2c3516c6713ea840c2f3d7eebc9c339fefb424cd9190a",
+        "median_ns": 1304720.0,
+        "report_summary": {
+          "verdict": "COMPLETE",
+          "experimental_verdict": "PASS",
+          "sections": [
+            {
+              "id": "contract",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "artifacts",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "restart",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W1",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W2",
+              "verdict": "COMPLETE"
+            }
+          ]
+        }
+      },
+      {
+        "fixture": "synthetic-large",
+        "iterations": 50,
+        "kind": "verify",
+        "ns_per_call": [
+          6620766.0,
+          6640838.0,
+          7153572.0,
+          7325420.0,
+          7336034.0
+        ],
+        "report_sha256": "3b91cf8aa95e5bf895b695fda15de9dfe8a875853355fb5705eaceda70a6b8c5",
+        "median_ns": 7153572.0,
+        "report_summary": {
+          "verdict": "COMPLETE",
+          "experimental_verdict": "PASS",
+          "sections": [
+            {
+              "id": "contract",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "artifacts",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "restart",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W1",
+              "verdict": "COMPLETE"
+            },
+            {
+              "id": "W2",
+              "verdict": "COMPLETE"
+            }
+          ]
+        }
+      },
+      {
+        "bytes": 65536,
+        "iterations": 16,
+        "kind": "hash",
+        "ns_per_call": [
+          28662.5,
+          28650.0,
+          28650.0,
+          29031.25,
+          28743.75
+        ],
+        "sha256": "4b640d85ab3ba30fd02c9fc9db4a8928f416322ad27022ea58a65aaee68a4df2",
+        "median_ns": 28662.5
+      },
+      {
+        "bytes": 4194304,
+        "iterations": 16,
+        "kind": "hash",
+        "ns_per_call": [
+          1807706.25,
+          1817262.5,
+          1791037.5,
+          1812987.5,
+          1809262.5
+        ],
+        "sha256": "a117210941a0b00dcb2d8577e680d84b6fa0eaf760d2afc654c953b9859d54fa",
+        "median_ns": 1809262.5
+      }
+    ]
+  },
+  "evidence_semantic_comparison": "PASS: complete reports identical across base/combined/standalone; source unchanged",
+  "source_sha256": {
+    "crates/helm-app-spec/benches/parse.rs": "0ba45e4024399069bc51b2f15f8293324a16f71fa07eb3a4d82a5cea367ec48b",
+    "crates/helm-app-spec/src/error.rs": "125a65efef6682332ef4cc05908398a9c29076d6b1db928b6b7397a88b7e3b93",
+    "crates/helm-app-spec/src/lib.rs": "554f6588ad15d6f9f1ba13b09966bab679b66bc6c4b88f7acd08959df577142e",
+    "crates/helm-app-spec/src/model.rs": "8ccc7ecc1a5797e866e13ec5909640beb206eb88ce08550e21a68aac1d4729c3",
+    "crates/helm-app-spec/src/parse.rs": "101451ba1442e6f8229b952d31e7822530ad034517b91c04a02da334d9abff2d",
+    "crates/helm-app-spec/src/validate.rs": "2a691eb47e7d02f46bc350b5a1c4f9c7cc6bdf7be28ac5ffd874e79f1cf2070c",
+    "crates/helm-app-spec/tests/contract.rs": "d64a1d42b05a29a66b90dc80430bd385e690f5dc1cd9766770bc310b766d4d0b",
+    "crates/helm-app-spec/tests/independent_review.rs": "aed1285df5715b86fff90d6624ac108d47f697faea046348486ff1e0fce40235",
+    "Cargo.toml": "37e60c93d57cd518ba74ad8f57806f10d98015cfa4ffe94323f8b95b08410106",
+    "Cargo.lock": "68e8f5df3a75a0b0c16e348cdf4db0c9fecb452886dfc25db7df46af3a3aa468",
+    "crates/helm-app-spec/Cargo.toml": "fc6f64c23ba9914bf80c6c5b42d2d78bac4dc03bf86bc2c38eee3a202db794a0",
+    "tools/helm_app_spec_independent_review.py": "bee2889e2cecbb74722ea4aa431259a070d077d6e40090739e164b871b3f360a",
+    "tools/helm_app_spec_review_bench.rs": "42978d42dceeaee604d80d7c4de1b026831feac58c47ee1fecc882b4c1e6a507"
+  },
+  "status": "PASS",
+  "full_local_receipt_sha256": "840d0cf6da2a3409fcc65302cbc826976d257db36a1f41c0713bcbde9f8b730f",
+  "receipt_scope": "Compact receipt; complete equal reports asserted by the tool. Full local receipt retained in target/helm-app-spec-independent/independent-windows.json."
+}

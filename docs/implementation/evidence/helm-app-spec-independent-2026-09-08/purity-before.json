@@ -1,0 +1,24 @@
+{
+  "candidate": "18c7aa5e80617483b6f5afd0fea4affeb62f926c",
+  "platform": "Windows",
+  "memchr_version": "2.8.3",
+  "instrumented_function": "memchr::arch::x86_64::memchr::unsafe_ifunc!::detect",
+  "source_copy_sha256": "4cf0611c926c3016d1b640880ef14e5654a8d1c1b480fe9a5965956be7eeeeef",
+  "instrumented_sha256": "fb6f49a161e2650d1fd659168d5dc25312a0c5313ecf07dca29c9723a4d7741f",
+  "results": [
+    {
+      "case": "original-candidate",
+      "exit_code": 101,
+      "dispatch_sentinel_reached": true,
+      "completed": false,
+      "parse_rs_sha256": "101451ba1442e6f8229b952d31e7822530ad034517b91c04a02da334d9abff2d"
+    },
+    {
+      "case": "current",
+      "exit_code": 101,
+      "dispatch_sentinel_reached": true,
+      "completed": false,
+      "parse_rs_sha256": "101451ba1442e6f8229b952d31e7822530ad034517b91c04a02da334d9abff2d"
+    }
+  ]
+}
