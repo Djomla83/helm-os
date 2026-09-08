@@ -1,5 +1,46 @@
 # Stanje projekta
 
+## Owner acceptance, 2026-09-08 — ADR-0022 Accepted with bounded 0.1 scope
+
+The repository owner accepted [ADR-0022](adr/ADR-0022-observation-authority.md) on evidence
+from [OBS-FS-01 PASS](experiments/OBS-FS-01-EXECUTION-REPORT.md). Main was fast-forwarded
+from `63ac6796296894945dff520423cb1a93351e8524` through the
+[execution definition](experiments/obs-fs-01/) `2496f68cccbf70ac04288992a9945cb34f046b98`
+to evidence tip `1bd9c0a75abb0c4acccae352960f42ead96fcacb`, preserving Amendment 1, the
+pre-trial freeze and the evidence as separate commits. No squash, rebase, cherry-pick or
+force-push occurred.
+
+**Accepted decision:** build `helm-observe` 0.1 as an explicit-target, Linux-only
+observation library that reports actual facts only and does not interpret desired state or
+execute applications. The evidence basis is the original architecture candidate, the
+independent review, Amendment 1, the frozen execution definition and the OBS-FS-01 PASS
+with its exact conditional BLOCKED bind-mount claim.
+
+**Accepted cohort:** Linux x86_64 and local ext4, anchored by the tested mechanism and
+kernel cohort. Experimental evidence is not generalised into arbitrary Linux filesystem
+support.
+
+**Excluded and unverified:** target paths whose claim depends on rejecting a bind mount
+created as a descendant of an authorized ext4 root. `RESOLVE_NO_XDEV` stays mandatory and
+mount crossings stay conservatively rejectable, but 0.1 claims no empirical validation of
+that case, and future support depending on it needs new evidence.
+
+**Three mandatory implementation obligations** block any future owner merge of
+helm-observe 0.1: exact plan SHA-256 binding; root logical-ID, set and count binding by ID
+rather than position; and prevention of plan substitution after authorisation, with
+explicit adversarial tests for authorise-A-then-execute-B and for root
+addition, removal and substitution.
+
+**helm-observe is not implemented and its implementation is not accepted.** Acceptance
+implies no package provenance, archive-to-loader binding, prefix dedication, effective DLL
+policy, desired-state satisfaction, general compatibility, safe launch, atomic snapshot,
+network or FUSE safety, arbitrary kernel safety, or Windows semantics. Future `helm-bind`
+owns comparison; future `helm-launch` owns execution; neither is accepted. No product code
+or Cargo member was added in this acceptance, and **A0-7ZIP remains experimental FAIL**.
+
+The next product task is to implement experimental helm-observe 0.1 under accepted
+ADR-0022, which requires a separate owner instruction.
+
 ## Experiment executed, 2026-09-08 — OBS-FS-01 PASS, bind-mount case BLOCKED
 
 The owner authorised OBS-FS-01 execution against Amendment 1. The

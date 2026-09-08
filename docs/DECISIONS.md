@@ -1,6 +1,8 @@
 # Indeks arhitektonskih odluka
 
-ADR-0020 is Accepted for documentation language. ADR-0021 is Accepted on 2026-09-08
+ADR-0020 is Accepted for documentation language. ADR-0022 is Accepted on 2026-09-08
+with a bounded 0.1 scope on evidence from OBS-FS-01; it accepts an architecture boundary,
+not an implementation, and excludes the descendant bind-mount case as unverified. ADR-0021 is Accepted on 2026-09-08
 by repository owner Djomla83 only for building a pure, non-executable application
 specification/validation library before observation or lifecycle execution.
 Its schema/API remain experimental; a later separate owner instruction approved the
@@ -51,4 +53,4 @@ Proces je u [master planu](../HELM_MASTER_PLAN.md#s31). Licencna odluka ostaje z
 | ID | Decision | Status |
 |---|---|---|
 | ADR-0021 | [Make the second product module an inert application contract](adr/ADR-0021-second-product-module.md) — [selection analysis and owner refinements](research/SECOND-PRODUCT-MODULE-SELECTION.md); bounded architectural authority, with experimental helm-app-spec 0.1 now accepted on main | **Accepted 2026-09-08** |
-| ADR-0022 | [Observe explicit targets without interpreting desired state](adr/ADR-0022-observation-authority.md) — [architecture analysis and proposed falsification experiment](research/HELM-OBSERVE-ARCHITECTURE.md), with an [independent experiment-definition review](implementation/HELM-OBSERVE-INDEPENDENT-REVIEW.md) that corrects the preregistration and is **owner-accepted and frozen as the experiment definition only**, originally at `b4ed2e108134eb58a2561403f5da3509aed955ee` and now superseded for execution by [Amendment 1](PROJECT_STATE.md#obs-fs-01-amendment-1) after a pre-execution symlink-mechanism defect; the ADR itself awaits owner review, and OBS-FS-01 remains NOT_RUN with no implementation or experiment executed | Proposed |
+| ADR-0022 | [Observe explicit targets without interpreting desired state](adr/ADR-0022-observation-authority.md) — [architecture analysis](research/HELM-OBSERVE-ARCHITECTURE.md), [independent review with Amendment 1](implementation/HELM-OBSERVE-INDEPENDENT-REVIEW.md), [execution definition](experiments/obs-fs-01/) and [OBS-FS-01 PASS](experiments/OBS-FS-01-EXECUTION-REPORT.md). **Bounded acceptance**: Linux x86_64 and local ext4 cohort only; descendant bind mounts excluded and unverified; three implementation-binding obligations outstanding; **helm-observe is not implemented** | **Accepted 2026-09-08** |
