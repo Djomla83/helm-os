@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/helm-evidence", "crates/helm-app-spec"]
+members = ["crates/helm-evidence", "crates/helm-app-spec", "crates/helm-observe"]
 resolver = "3"
 
 [workspace.lints.rust]

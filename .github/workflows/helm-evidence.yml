@@ -7,6 +7,7 @@ on:
       - 'Cargo.lock'
       - 'crates/helm-evidence/**'
       - 'crates/helm-app-spec/**'
+      - 'crates/helm-observe/**'
       - 'tools/helm_evidence_linux_probe.py'
       - 'tools/helm_app_spec_fixture.py'
       - 'tools/helm_app_spec_independent_review.py'
@@ -20,6 +21,7 @@ on:
       - 'Cargo.lock'
       - 'crates/helm-evidence/**'
       - 'crates/helm-app-spec/**'
+      - 'crates/helm-observe/**'
       - 'tools/helm_evidence_linux_probe.py'
       - 'tools/helm_app_spec_fixture.py'
       - 'tools/helm_app_spec_independent_review.py'
@@ -55,6 +57,8 @@ jobs:
       - run: cargo test -p helm-evidence --locked
       - run: cargo build -p helm-app-spec --release --locked
       - run: cargo build -p helm-evidence --release --locked
+      # Linux-only observation backend; prints the fixture filesystem cohort.
+      - run: cargo test -p helm-observe --locked -- --nocapture
       - run: python3 -m unittest discover -s tools/tests -v
       - run: python3 tools/validate_docs.py
       - run: python3 tools/helm_app_spec_fixture.py
