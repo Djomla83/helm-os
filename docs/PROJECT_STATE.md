@@ -1,5 +1,52 @@
 # Stanje projekta
 
+<a id="obs-fs-01-preregistration-acceptance"></a>
+
+## Owner acceptance, 2026-09-08 — OBS-FS-01 preregistration frozen
+
+The repository owner accepted the corrected OBS-FS-01 preregistration at exact commit
+`b4ed2e108134eb58a2561403f5da3509aed955ee`. Main was fast-forwarded from
+`e69abdfc55646dff6073befaeb843a18d6c7975f` to that exact tip and published with a
+normal push; no squash, rebase, cherry-pick, history rewrite or force-push occurred.
+That commit's [independent review](implementation/HELM-OBSERVE-INDEPENDENT-REVIEW.md)
+is now the owner's **frozen reference experiment definition**.
+
+**This acceptance covers the experiment definition only.** It accepts no architecture
+decision and authorises no execution.
+
+| Question | Status after this acceptance |
+|---|---|
+| ADR-0022 | **Proposed.** Not accepted, not superseded, unmodified |
+| OBS-FS-01 | **NOT_RUN.** Execution requires a separate owner authorisation |
+| VM boot/access, harness execution, syscall spike | Not authorised |
+| helm-observe implementation | Not authorised |
+| A0 access or rerun | Not authorised; **A0-7ZIP remains experimental FAIL** |
+| helm-launch, binder, licence, release | Not authorised |
+
+Expectations are frozen **before** execution. Material expectations are: mandatory and
+optional case membership; expected safe outcome sets; race schedules and
+proof-of-injection requirements; the D1–D3 direct-open comparison arm; the special-file
+zero-data-open policy; instrumentation requirements; independent oracles; procfs
+admission checks; mount preflight and fallback behaviour; resource budgets; the
+repetition policy; and the PASS/FAIL/INCONCLUSIVE/BLOCKED rules. **No material
+expectation may change after this acceptance without a new owner review before
+execution, and post-execution goalpost changes are forbidden.** Changing a material
+expectation after execution invalidates the original preregistration and requires a new
+experiment definition, not an amended verdict.
+
+A later OBS-FS-01 **PASS would not** automatically accept ADR-0022 and would **not**
+authorise helm-observe implementation; both remain separate owner decisions. A PASS is
+evidence for one kernel/filesystem/toolchain/mechanism cohort only. If the unprivileged
+descendant bind-mount case is BLOCKED, exactly one claim remains explicitly unverified —
+**that `RESOLVE_NO_XDEV` rejects a bind mount created as a descendant of an authorized
+ext4 root** — and it must be carried as unverified rather than softened.
+
+The separately tracked implementation-test obligations (exact plan SHA binding, root
+logical-ID and count binding, and rejection of an authorized-then-substituted plan) are
+**not** OBS-FS-01 execution cases and are not authorised by this acceptance. The next
+owner decision is whether to authorise OBS-FS-01 execution against this frozen
+definition. Earlier entries retain their then-current authorisation status.
+
 ## Independent review, 2026-09-08 — helm-observe experiment definition
 
 An [independent experiment-definition review](implementation/HELM-OBSERVE-INDEPENDENT-REVIEW.md)

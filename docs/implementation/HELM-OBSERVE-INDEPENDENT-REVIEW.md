@@ -6,8 +6,21 @@ was written, and ADR-0022 was not accepted.\
 **Reviewed candidate:** `6d9e4d8c0dacb09c7f4833a4fda6c4ba50d6e9dc`
 (`docs/helm-observe-architecture`).\
 **Authoritative base:** `e69abdfc55646dff6073befaeb843a18d6c7975f`.\
-**Disposition:** **NEEDS_EXPECTATION_FIXES.** The architectural boundary is coherent;
-the preregistered experiment is not yet closed against post-hoc goalpost movement.
+**Disposition:** **NEEDS_EXPECTATION_FIXES** for the reviewed candidate. The
+architectural boundary is coherent; the candidate's preregistered experiment was not yet
+closed against post-hoc goalpost movement.
+
+> **Owner acceptance, 2026-09-08 — this preregistration is frozen.** The repository owner
+> accepted the corrected preregistration below at exact commit
+> `b4ed2e108134eb58a2561403f5da3509aed955ee`, which is the citable frozen reference; this
+> banner adds no expectation and changes no table. The acceptance covers the **experiment
+> definition only**. [ADR-0022](../adr/ADR-0022-observation-authority.md) remains
+> **Proposed** and OBS-FS-01 remains **NOT_RUN**; execution, VM access, harness
+> execution, helm-observe implementation and A0 access each require a separate owner
+> authorisation. No material expectation may change without a new owner review **before**
+> execution; changing one after execution invalidates this preregistration and requires a
+> new experiment definition. See the
+> [acceptance record](../PROJECT_STATE.md#obs-fs-01-preregistration-acceptance).
 
 This review checks the [architecture proposal](../research/HELM-OBSERVE-ARCHITECTURE.md)
 and [ADR-0022](../adr/ADR-0022-observation-authority.md) as an *experiment definition*.
