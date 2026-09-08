@@ -1,5 +1,27 @@
 # Stanje projekta
 
+## Execution halted, 2026-09-08 — OBS-FS-01 preflight complete, no trial run
+
+OBS-FS-01 execution was authorised and **halted at the preregistration before the first
+trial**; see the [preflight and halt record](experiments/OBS-FS-01-PREFLIGHT-AND-HALT.md).
+Preflight passed on the recorded lab and measured two things: the unprivileged
+descendant bind-mount case is **BLOCKED** by Ubuntu's AppArmor user-namespace restriction
+(confirming review finding I8, not bypassed), and a **material frozen expectation is
+factually wrong** — a trailing symlink under the mandated flag set returns an `O_PATH`
+descriptor to the link rather than failing with `ELOOP`, so rejection is a classification
+step, not a resolution step. The safety property held in every observation: no link was
+resolved, opened or read, and nothing escaped the authorised root.
+
+The error originates in the independent review (finding M3 and the expectations derived
+from it), **not** in the architecture proposal, which stated the correct behaviour. No
+preregistered case was executed, so no goalpost moved. Correcting a material expectation
+requires a new owner review **before** execution; that decision is pending.
+
+No A0 file was read, no Wine or 7-Zip ran, no sudo, sysctl or AppArmor change was made,
+no package was installed, and no helm-observe product code exists. The VM was booted and
+shut down normally with 0 checkpoints. ADR-0022 remains Proposed, OBS-FS-01 remains
+NOT_RUN, and **A0-7ZIP remains experimental FAIL**.
+
 <a id="obs-fs-01-preregistration-acceptance"></a>
 
 ## Owner acceptance, 2026-09-08 — OBS-FS-01 preregistration frozen
