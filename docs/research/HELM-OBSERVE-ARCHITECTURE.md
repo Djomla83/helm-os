@@ -690,6 +690,18 @@ program, Rust product code, synthetic filesystem attack, VM boot or A0 read is
 created/executed by this task. Authorising this experiment would still not authorise
 helm-observe implementation, A0 rerun, DLL execution or launch.
 
+> **Independent review, 2026-09-08.** The
+> [independent experiment-definition review](../implementation/HELM-OBSERVE-INDEPENDENT-REVIEW.md)
+> of this exact commit found one BLOCKER and eight IMPORTANT issues in the
+> expectations below, and supplies a corrected preregistration: mandatory versus
+> optional cases, expected outcome sets defined over errno classes rather than
+> unattributable codes, a mandatory direct-open comparison arm, per-property
+> instrumentation authority, a mount preflight with a non-namespace fallback, and
+> experiment verdict rules. **If OBS-FS-01 is authorised, execute the corrected
+> preregistration; the case table below is superseded where the two differ.** This
+> paragraph is the only change to the original proposal, which is otherwise preserved
+> as published.
+
 Smallest useful experiment: a disposable Linux syscall/API spike for the exact
 O_PATH -> native procfs FD reopen -> bounded read sequence, plus a parent harness
 that creates and mutates only synthetic files. It need not implement JSON, an app

@@ -1,5 +1,15 @@
 # Stanje projekta
 
+## Independent review, 2026-09-08 — helm-observe experiment definition
+
+An [independent experiment-definition review](implementation/HELM-OBSERVE-INDEPENDENT-REVIEW.md)
+of candidate `6d9e4d8c0dacb09c7f4833a4fda6c4ba50d6e9dc` exists and **awaits owner
+authorisation**. It found one BLOCKER and eight IMPORTANT issues in the preregistered
+expectations, none of which invalidates the architecture, and supplies a corrected
+preregistration. Disposition: **NEEDS_EXPECTATION_FIXES**. Nothing was executed:
+ADR-0022 remains Proposed, OBS-FS-01 remains NOT_RUN, no observer code exists, no VM
+was booted, and **A0-7ZIP remains experimental FAIL**.
+
 ## Architecture analysis, 2026-09-08 — helm-observe awaits owner review
 
 The [helm-observe architecture analysis](research/HELM-OBSERVE-ARCHITECTURE.md) exists
