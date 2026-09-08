@@ -169,9 +169,39 @@ pub(crate) struct ContentIdentity {
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct ContentManifest {
+    #[serde(deserialize_with = "unique_content_files")]
     pub files: std::collections::BTreeMap<String, ContentIdentity>,
     pub required_directories: Vec<String>,
     pub allowed_directories: Vec<String>,
+}
+
+fn unique_content_files<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<std::collections::BTreeMap<String, ContentIdentity>, D::Error> {
+    struct UniqueFiles;
+    impl<'de> serde::de::Visitor<'de> for UniqueFiles {
+        type Value = std::collections::BTreeMap<String, ContentIdentity>;
+
+        fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.write_str("a bounded map of distinct content paths")
+        }
+
+        fn visit_map<M: serde::de::MapAccess<'de>>(
+            self,
+            mut map: M,
+        ) -> Result<Self::Value, M::Error> {
+            let mut files = Self::Value::new();
+            while let Some((path, identity)) = map.next_entry::<String, ContentIdentity>()? {
+                if files.len() == 32 || files.insert(path, identity).is_some() {
+                    return Err(serde::de::Error::custom(
+                        "duplicate or excessive content paths",
+                    ));
+                }
+            }
+            Ok(files)
+        }
+    }
+    deserializer.deserialize_map(UniqueFiles)
 }
 
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]

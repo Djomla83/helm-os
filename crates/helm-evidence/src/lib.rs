@@ -190,6 +190,7 @@ fn validate_contract(contract: &Contract, report: &mut Report) -> bool {
     let mut workflows = BTreeSet::new();
     for workflow in &contract.workflows {
         let declared = identifier(&workflow.id)
+            && !matches!(workflow.id.as_str(), "contract" | "artifacts" | "restart")
             && workflows.insert(workflow.id.as_str())
             && reference(&workflow.record)
             && (1..=32).contains(&workflow.steps.len());
@@ -201,7 +202,7 @@ fn validate_contract(contract: &Contract, report: &mut Report) -> bool {
                 Some(public_id(&workflow.id)),
                 None,
                 "workflow",
-                "Workflow needs a unique ID, a declared record reference, and 1-32 required steps.",
+                "Workflow needs a unique non-reserved ID, a declared record reference, and 1-32 required steps.",
             );
         }
         let mut steps = BTreeSet::new();

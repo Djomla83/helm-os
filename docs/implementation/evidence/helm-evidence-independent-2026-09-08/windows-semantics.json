@@ -1,0 +1,797 @@
+{
+  "system": "Windows",
+  "machine": "AMD64",
+  "privacy": "No raw absolute fixture path or synthetic private marker in human/JSON output",
+  "canonicalization": "Entire parsed report serialized with sorted keys and compact separators",
+  "binary_sha256": "05f0d291b2c2b92a768685483608b96a93f37e8d90911d5254344d99c14d54a6",
+  "cases": {
+    "synthetic": {
+      "exit_code": 0,
+      "verdict": "COMPLETE",
+      "experimental_verdict": "PASS",
+      "report_sha256": "b4bedee3d819e77fad61b4d127969ec82b01440403060706601b09ecbafe671b",
+      "sections": [
+        {
+          "id": "contract",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "artifacts",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "restart",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "W1",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "W2",
+          "verdict": "COMPLETE"
+        }
+      ],
+      "failures": []
+    },
+    "a0-7zip": {
+      "exit_code": 1,
+      "verdict": "INCOMPLETE",
+      "experimental_verdict": "FAIL",
+      "report_sha256": "584e5b6ae96dae304b587a9248b415426127ca1ca47e15f12c17c54d55d6242d",
+      "sections": [
+        {
+          "id": "contract",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "artifacts",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "restart",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "W1",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "id": "W2",
+          "verdict": "COMPLETE"
+        }
+      ],
+      "failures": [
+        {
+          "code": "OUTPUT_DESTINATION",
+          "status": "INCOMPLETE",
+          "workflow": "W1",
+          "artifact": "before-workflow",
+          "requirement": "V1"
+        }
+      ]
+    },
+    "missing": {
+      "exit_code": 1,
+      "verdict": "INCOMPLETE",
+      "experimental_verdict": "PASS",
+      "report_sha256": "966e060783f8f12184a5b5428cb67cb24967c5366642a960d83d1532fd0d6562",
+      "sections": [
+        {
+          "id": "contract",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "artifacts",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "id": "restart",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "W1",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "id": "W2",
+          "verdict": "INCOMPLETE"
+        }
+      ],
+      "failures": [
+        {
+          "code": "ARTIFACT_MISSING",
+          "status": "INCOMPLETE",
+          "workflow": null,
+          "artifact": "good",
+          "requirement": "good"
+        },
+        {
+          "code": "EVIDENCE_UNAVAILABLE",
+          "status": "INCOMPLETE",
+          "workflow": "W1",
+          "artifact": "good",
+          "requirement": "output-before"
+        },
+        {
+          "code": "KNOWN_GOOD_CONTROL",
+          "status": "INCOMPLETE",
+          "workflow": "W1",
+          "artifact": "good",
+          "requirement": "output-before"
+        },
+        {
+          "code": "EVIDENCE_UNAVAILABLE",
+          "status": "INCOMPLETE",
+          "workflow": "W2",
+          "artifact": "good",
+          "requirement": "output-after"
+        },
+        {
+          "code": "KNOWN_GOOD_CONTROL",
+          "status": "INCOMPLETE",
+          "workflow": "W2",
+          "artifact": "good",
+          "requirement": "output-after"
+        }
+      ]
+    },
+    "wrong-hash": {
+      "exit_code": 2,
+      "verdict": "INVALID",
+      "experimental_verdict": "PASS",
+      "report_sha256": "b5a874032461dfab3144553f52a96be473da178092eb9c348ae8c75b7af621a0",
+      "sections": [
+        {
+          "id": "contract",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "artifacts",
+          "verdict": "INVALID"
+        },
+        {
+          "id": "restart",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "W1",
+          "verdict": "INVALID"
+        },
+        {
+          "id": "W2",
+          "verdict": "INVALID"
+        }
+      ],
+      "failures": [
+        {
+          "code": "ARTIFACT_HASH",
+          "status": "INVALID",
+          "workflow": null,
+          "artifact": "good",
+          "requirement": "good"
+        },
+        {
+          "code": "EVIDENCE_UNAVAILABLE",
+          "status": "INVALID",
+          "workflow": "W1",
+          "artifact": "good",
+          "requirement": "output-before"
+        },
+        {
+          "code": "KNOWN_GOOD_CONTROL",
+          "status": "INCOMPLETE",
+          "workflow": "W1",
+          "artifact": "good",
+          "requirement": "output-before"
+        },
+        {
+          "code": "EVIDENCE_UNAVAILABLE",
+          "status": "INVALID",
+          "workflow": "W2",
+          "artifact": "good",
+          "requirement": "output-after"
+        },
+        {
+          "code": "KNOWN_GOOD_CONTROL",
+          "status": "INCOMPLETE",
+          "workflow": "W2",
+          "artifact": "good",
+          "requirement": "output-after"
+        }
+      ]
+    },
+    "wrong-destination": {
+      "exit_code": 1,
+      "verdict": "INCOMPLETE",
+      "experimental_verdict": "PASS",
+      "report_sha256": "56775c90187ffbffd86a9bf9bb06a3eeede720583d9ced35b97f11a5fcc6255d",
+      "sections": [
+        {
+          "id": "contract",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "artifacts",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "restart",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "W1",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "id": "W2",
+          "verdict": "COMPLETE"
+        }
+      ],
+      "failures": [
+        {
+          "code": "OUTPUT_DESTINATION",
+          "status": "INCOMPLETE",
+          "workflow": "W1",
+          "artifact": "before",
+          "requirement": "output-before"
+        }
+      ]
+    },
+    "blocked": {
+      "exit_code": 1,
+      "verdict": "INCOMPLETE",
+      "experimental_verdict": "PASS",
+      "report_sha256": "a47380289ee277c841b9680d338b1507dcce815ad1da3e4eebae3448d3439151",
+      "sections": [
+        {
+          "id": "contract",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "artifacts",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "restart",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "W1",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "id": "W2",
+          "verdict": "COMPLETE"
+        }
+      ],
+      "failures": [
+        {
+          "code": "STEP_EXECUTED",
+          "status": "INCOMPLETE",
+          "workflow": "W1",
+          "artifact": "before",
+          "requirement": "W1"
+        }
+      ]
+    },
+    "experimental-fail": {
+      "exit_code": 0,
+      "verdict": "COMPLETE",
+      "experimental_verdict": "FAIL",
+      "report_sha256": "b111f03ebbcc9bd247436951155509ad17f96b86777318cf679202091de6ffcb",
+      "sections": [
+        {
+          "id": "contract",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "artifacts",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "restart",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "W1",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "W2",
+          "verdict": "COMPLETE"
+        }
+      ],
+      "failures": []
+    },
+    "traversal": {
+      "exit_code": 2,
+      "verdict": "INVALID",
+      "experimental_verdict": null,
+      "report_sha256": "1a9a572430920ec4fa396b78d3bd3775bfd41d41f6d145daff765179225e4d45",
+      "sections": [],
+      "failures": [
+        {
+          "code": "PATH_UNSAFE",
+          "status": "INVALID",
+          "workflow": null,
+          "artifact": "good",
+          "requirement": "path"
+        },
+        {
+          "code": "CONTRACT_RULES",
+          "status": "INVALID",
+          "workflow": null,
+          "artifact": null,
+          "requirement": "contract"
+        }
+      ]
+    },
+    "case-collision": {
+      "exit_code": 2,
+      "verdict": "INVALID",
+      "experimental_verdict": null,
+      "report_sha256": "28dc522e226fd4160ae40efbeba4c7b312709dc74c4d63ce7f2b049d11214778",
+      "sections": [],
+      "failures": [
+        {
+          "code": "ARTIFACT_DECLARATION",
+          "status": "INVALID",
+          "workflow": null,
+          "artifact": "good",
+          "requirement": "artifact"
+        },
+        {
+          "code": "CONTRACT_RULES",
+          "status": "INVALID",
+          "workflow": null,
+          "artifact": null,
+          "requirement": "contract"
+        }
+      ]
+    },
+    "duplicate-field": {
+      "exit_code": 2,
+      "verdict": "INVALID",
+      "experimental_verdict": null,
+      "report_sha256": "49d1a29313600d67a2a34ce953bbb920da0e4767d50dd0aa68966c113b7f4977",
+      "sections": [],
+      "failures": [
+        {
+          "code": "CONTRACT_FORMAT",
+          "status": "INVALID",
+          "workflow": null,
+          "artifact": null,
+          "requirement": "contract"
+        }
+      ]
+    },
+    "invalid-utf8": {
+      "exit_code": 2,
+      "verdict": "INVALID",
+      "experimental_verdict": null,
+      "report_sha256": "49d1a29313600d67a2a34ce953bbb920da0e4767d50dd0aa68966c113b7f4977",
+      "sections": [],
+      "failures": [
+        {
+          "code": "CONTRACT_FORMAT",
+          "status": "INVALID",
+          "workflow": null,
+          "artifact": null,
+          "requirement": "contract"
+        }
+      ]
+    },
+    "overflow-u64": {
+      "exit_code": 2,
+      "verdict": "INVALID",
+      "experimental_verdict": "PASS",
+      "report_sha256": "2a7f3aed6119dee880776b36254fe130996931e3baeb9ceda65b66296a4f03ee",
+      "sections": [
+        {
+          "id": "contract",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "artifacts",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "restart",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "W1",
+          "verdict": "INVALID"
+        },
+        {
+          "id": "W2",
+          "verdict": "INVALID"
+        }
+      ],
+      "failures": [
+        {
+          "code": "RECORD_FORMAT",
+          "status": "INVALID",
+          "workflow": "W1",
+          "artifact": "result",
+          "requirement": "output-before"
+        },
+        {
+          "code": "CONTENT_VERIFIER",
+          "status": "INCOMPLETE",
+          "workflow": "W1",
+          "artifact": "result",
+          "requirement": "output-before"
+        },
+        {
+          "code": "RECORD_FORMAT",
+          "status": "INVALID",
+          "workflow": "W2",
+          "artifact": "result",
+          "requirement": "output-after"
+        },
+        {
+          "code": "CONTENT_VERIFIER",
+          "status": "INCOMPLETE",
+          "workflow": "W2",
+          "artifact": "result",
+          "requirement": "output-after"
+        }
+      ]
+    },
+    "invalid-surrogate": {
+      "exit_code": 2,
+      "verdict": "INVALID",
+      "experimental_verdict": null,
+      "report_sha256": "49d1a29313600d67a2a34ce953bbb920da0e4767d50dd0aa68966c113b7f4977",
+      "sections": [],
+      "failures": [
+        {
+          "code": "CONTRACT_FORMAT",
+          "status": "INVALID",
+          "workflow": null,
+          "artifact": null,
+          "requirement": "contract"
+        }
+      ]
+    },
+    "deep-json": {
+      "exit_code": 0,
+      "verdict": "COMPLETE",
+      "experimental_verdict": "PASS",
+      "report_sha256": "b4bedee3d819e77fad61b4d127969ec82b01440403060706601b09ecbafe671b",
+      "sections": [
+        {
+          "id": "contract",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "artifacts",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "restart",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "W1",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "W2",
+          "verdict": "COMPLETE"
+        }
+      ],
+      "failures": []
+    },
+    "unicode-storage": {
+      "exit_code": 2,
+      "verdict": "INVALID",
+      "experimental_verdict": null,
+      "report_sha256": "1a9a572430920ec4fa396b78d3bd3775bfd41d41f6d145daff765179225e4d45",
+      "sections": [],
+      "failures": [
+        {
+          "code": "PATH_UNSAFE",
+          "status": "INVALID",
+          "workflow": null,
+          "artifact": "good",
+          "requirement": "path"
+        },
+        {
+          "code": "CONTRACT_RULES",
+          "status": "INVALID",
+          "workflow": null,
+          "artifact": null,
+          "requirement": "contract"
+        }
+      ]
+    },
+    "case-lookup": {
+      "exit_code": 0,
+      "verdict": "COMPLETE",
+      "experimental_verdict": "PASS",
+      "report_sha256": "b4bedee3d819e77fad61b4d127969ec82b01440403060706601b09ecbafe671b",
+      "sections": [
+        {
+          "id": "contract",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "artifacts",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "restart",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "W1",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "W2",
+          "verdict": "COMPLETE"
+        }
+      ],
+      "failures": []
+    },
+    "output-case": {
+      "exit_code": 1,
+      "verdict": "INCOMPLETE",
+      "experimental_verdict": "PASS",
+      "report_sha256": "56775c90187ffbffd86a9bf9bb06a3eeede720583d9ced35b97f11a5fcc6255d",
+      "sections": [
+        {
+          "id": "contract",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "artifacts",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "restart",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "W1",
+          "verdict": "INCOMPLETE"
+        },
+        {
+          "id": "W2",
+          "verdict": "COMPLETE"
+        }
+      ],
+      "failures": [
+        {
+          "code": "OUTPUT_DESTINATION",
+          "status": "INCOMPLETE",
+          "workflow": "W1",
+          "artifact": "before",
+          "requirement": "output-before"
+        }
+      ]
+    },
+    "file-link": {
+      "exit_code": 2,
+      "verdict": "INVALID",
+      "experimental_verdict": "PASS",
+      "report_sha256": "4b6dd5466502114c2453b8928aeb272c6d0edfa4b0658c78bed239674cc48d53",
+      "sections": [
+        {
+          "id": "contract",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "artifacts",
+          "verdict": "INVALID"
+        },
+        {
+          "id": "restart",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "W1",
+          "verdict": "INVALID"
+        },
+        {
+          "id": "W2",
+          "verdict": "INVALID"
+        }
+      ],
+      "failures": [
+        {
+          "code": "PATH_UNSAFE",
+          "status": "INVALID",
+          "workflow": null,
+          "artifact": "good",
+          "requirement": "good"
+        },
+        {
+          "code": "EVIDENCE_UNAVAILABLE",
+          "status": "INVALID",
+          "workflow": "W1",
+          "artifact": "good",
+          "requirement": "output-before"
+        },
+        {
+          "code": "KNOWN_GOOD_CONTROL",
+          "status": "INCOMPLETE",
+          "workflow": "W1",
+          "artifact": "good",
+          "requirement": "output-before"
+        },
+        {
+          "code": "EVIDENCE_UNAVAILABLE",
+          "status": "INVALID",
+          "workflow": "W2",
+          "artifact": "good",
+          "requirement": "output-after"
+        },
+        {
+          "code": "KNOWN_GOOD_CONTROL",
+          "status": "INCOMPLETE",
+          "workflow": "W2",
+          "artifact": "good",
+          "requirement": "output-after"
+        }
+      ]
+    },
+    "directory-link": {
+      "exit_code": 2,
+      "verdict": "INVALID",
+      "experimental_verdict": "PASS",
+      "report_sha256": "2c59253ce5eb6fed48b0540ce0e1038c8896438ac8509b2c6a40e496feb3798e",
+      "sections": [
+        {
+          "id": "contract",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "artifacts",
+          "verdict": "INVALID"
+        },
+        {
+          "id": "restart",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "W1",
+          "verdict": "INVALID"
+        },
+        {
+          "id": "W2",
+          "verdict": "COMPLETE"
+        }
+      ],
+      "failures": [
+        {
+          "code": "PATH_UNSAFE",
+          "status": "INVALID",
+          "workflow": null,
+          "artifact": "output-before",
+          "requirement": "output-before"
+        },
+        {
+          "code": "EVIDENCE_UNAVAILABLE",
+          "status": "INVALID",
+          "workflow": "W1",
+          "artifact": "output-before",
+          "requirement": "output-before"
+        }
+      ]
+    },
+    "dangling": {
+      "exit_code": 2,
+      "verdict": "INVALID",
+      "experimental_verdict": "PASS",
+      "report_sha256": "4b6dd5466502114c2453b8928aeb272c6d0edfa4b0658c78bed239674cc48d53",
+      "sections": [
+        {
+          "id": "contract",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "artifacts",
+          "verdict": "INVALID"
+        },
+        {
+          "id": "restart",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "W1",
+          "verdict": "INVALID"
+        },
+        {
+          "id": "W2",
+          "verdict": "INVALID"
+        }
+      ],
+      "failures": [
+        {
+          "code": "PATH_UNSAFE",
+          "status": "INVALID",
+          "workflow": null,
+          "artifact": "good",
+          "requirement": "good"
+        },
+        {
+          "code": "EVIDENCE_UNAVAILABLE",
+          "status": "INVALID",
+          "workflow": "W1",
+          "artifact": "good",
+          "requirement": "output-before"
+        },
+        {
+          "code": "KNOWN_GOOD_CONTROL",
+          "status": "INCOMPLETE",
+          "workflow": "W1",
+          "artifact": "good",
+          "requirement": "output-before"
+        },
+        {
+          "code": "EVIDENCE_UNAVAILABLE",
+          "status": "INVALID",
+          "workflow": "W2",
+          "artifact": "good",
+          "requirement": "output-after"
+        },
+        {
+          "code": "KNOWN_GOOD_CONTROL",
+          "status": "INCOMPLETE",
+          "workflow": "W2",
+          "artifact": "good",
+          "requirement": "output-after"
+        }
+      ]
+    },
+    "manifest-link": {
+      "exit_code": 2,
+      "verdict": "INVALID",
+      "experimental_verdict": null,
+      "report_sha256": "550a04e01bb9f57adcce32c633531b3e781915bea6f2edfc5c0de9c6e12a3630",
+      "sections": [],
+      "failures": [
+        {
+          "code": "PATH_UNSAFE",
+          "status": "INVALID",
+          "workflow": null,
+          "artifact": "bundle",
+          "requirement": "contract"
+        }
+      ]
+    },
+    "hardlink": {
+      "exit_code": 0,
+      "verdict": "COMPLETE",
+      "experimental_verdict": "PASS",
+      "report_sha256": "b4bedee3d819e77fad61b4d127969ec82b01440403060706601b09ecbafe671b",
+      "sections": [
+        {
+          "id": "contract",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "artifacts",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "restart",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "W1",
+          "verdict": "COMPLETE"
+        },
+        {
+          "id": "W2",
+          "verdict": "COMPLETE"
+        }
+      ],
+      "failures": []
+    }
+  }
+}

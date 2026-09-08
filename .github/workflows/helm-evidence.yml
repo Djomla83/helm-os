@@ -1,0 +1,39 @@
+name: helm-evidence Linux
+
+on:
+  pull_request:
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'crates/helm-evidence/**'
+      - 'tools/helm_evidence_linux_probe.py'
+      - '.github/workflows/helm-evidence.yml'
+  push:
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'crates/helm-evidence/**'
+      - 'tools/helm_evidence_linux_probe.py'
+      - '.github/workflows/helm-evidence.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      # Pin the stable version independently validated on Windows and Ubuntu.
+      # Toolchain updates require a reviewed change and rerun of this module.
+      - name: Install Rust 1.95.0
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal --component rustfmt,clippy
+          rustup default 1.95.0
+      - run: cargo fmt --check
+      - run: cargo clippy -p helm-evidence --all-targets --all-features --locked -- -D warnings
+      - run: cargo test -p helm-evidence --locked
+      - run: cargo build -p helm-evidence --release --locked

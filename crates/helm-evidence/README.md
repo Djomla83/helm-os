@@ -11,6 +11,8 @@ The package is `publish = false`. No project licence or architecture ADR is acce
 by this implementation. [Starting state and reuse decisions](../../docs/implementation/HELM-EVIDENCE-START.md)
 and the [implementation review](../../docs/implementation/HELM-EVIDENCE-REVIEW.md) record authority,
 validation, measurements and limitations.
+The [independent review](../../docs/implementation/HELM-EVIDENCE-INDEPENDENT-REVIEW.md)
+records subsequent corrections and Linux validation; owner merge review remains required.
 
 ## Invocation
 
@@ -99,6 +101,10 @@ A restart requirement needs both before- and after-restart workflows in the
 contract. A workflow on either side needs a boot identity matching that side of
 the restart record and all declared restart evidence. A standalone workflow needs
 no restart. There is exactly one optional output per workflow; this is enough for A0.
+
+Workflow IDs cannot use the built-in report section IDs `contract`, `artifacts` or
+`restart`. Content-manifest file keys must be distinct after JSON escape decoding;
+conflicting or identical duplicate keys are rejected, without Unicode normalization.
 
 Identifiers, including version labels and boot IDs, are 1–80 ASCII letters, digits,
 dot, underscore or hyphen. Digests are exactly 64 lowercase hex digits. Workflow
@@ -196,6 +202,18 @@ separators; each component is nonempty and cannot be `.` or `..`. A caller may
 select a root through its own symlink: that explicitly selected directory defines
 the capability. Unlisted files and links are never read.
 
+Each parent component is opened with no-follow semantics and retained as a directory
+capability. Leaf opens also prohibit following links; Unix leaf opens are nonblocking
+so a swapped-in FIFO cannot wait for a writer. Opened handles are checked for type
+and Windows reparse attributes before reading. Metadata prechecks provide stable
+diagnostics for quiescent unsafe objects; the open operations enforce the policy.
+
+Artifact lookup uses the filesystem's case behavior (case-insensitive on the tested
+Windows NTFS volume, case-sensitive on the tested Linux ext4 filesystem). A single
+mis-cased stored reference may therefore exist only on Windows. Use exact stored
+spelling for portable bundles. Duplicate case-folded declarations and recorded output
+destination mismatches are rejected/classified identically on both platforms.
+
 | Bound | Limit |
 |---|---:|
 | Contract bytes | 256 KiB |
@@ -209,7 +227,9 @@ the capability. Unlisted files and links are never read.
 
 Reads enforce limits on both metadata and actual bytes, including partial failed
 reads and one extra byte to detect overflow. Serde's ordinary recursion
-limit stays enabled. The verifier does not execute bundle contents, fetch supplied
+limit stays enabled for typed deserialization; ignored auxiliary oracle metadata
+is skipped iteratively and can be deeper, within the input byte bounds.
+The verifier does not execute bundle contents, fetch supplied
 URLs, write into the bundle, decompress archives, interpret commands, use a shell,
 or request host privileges. Library and CLI forbid authored unsafe Rust.
 
@@ -224,9 +244,12 @@ Use a quiescent local bundle. This is not an atomic snapshot of concurrent file
 changes, a hardlink-origin detector, a mount-point/hostile-filesystem sandbox or
 a guaranteed wall-clock deadline. Concurrent mutation can cause rejection or an
 inconsistent snapshot; confinement relies on cap-std even if a path changes between
-checks. No claim covers a compromised kernel, hostile filesystem implementation,
-resource exhaustion outside the documented bounds, or a security audit. Only the
-Windows toolchain/platform in the review report was executed for this task.
+checks. An opened directory remains the same capability after a rename, including
+when it is detached from its original pathname; this is not live pathname ancestry
+verification. Hashes identify bytes actually read, not the precheck's inode or a
+whole-tree snapshot. No claim covers a compromised kernel, hostile filesystem implementation,
+resource exhaustion outside the documented bounds, or a comprehensive security audit.
+The independent review records the executed Windows and Ubuntu platforms.
 
 ## A0-7ZIP regression and history
 
@@ -264,6 +287,7 @@ git diff --check
 | Direct dependency | Why it is needed |
 |---|---|
 | `cap-std 4.0.2` | Existing portable, capability-confined filesystem operations; avoids inventing security-sensitive OS wrappers. |
+| `cap-fs-ext 4.0.2` | Matching upstream extension API for no-follow directory/file opens and Unix nonblocking opens; added to correct reproduced read/open races without replacing cap-std. |
 | `serde 1.0.228` with derive | Typed, non-executable JSON contracts and deterministic reports. |
 | `serde_json 1.0.149` | JSON reader/writer with bounded input and normal recursion protection. |
 | `sha2 0.10.9` | RustCrypto SHA-256 instead of a new cryptographic implementation. |
@@ -272,6 +296,15 @@ No dev-only dependencies, CLI framework, async runtime, database, server, daemon
 RPC, plugins, GUI or workflow engine. Transitive/platform dependencies and their
 licence metadata are inventoried in the review artifacts; a dependency's own licence
 does not select HELM's licence. No dependency source is vendored or modified.
+
+Linux x86_64 development tests also require Python 3 and permission to trace their
+own child process with ptrace. They run without root and do not skip failures if
+tracing is unavailable. Each verifier subprocess has a five-second deadline.
+The [Linux workflow](../../.github/workflows/helm-evidence.yml) runs this module on
+GitHub-hosted Ubuntu 24.04 with stable Rust 1.95.0 pinned explicitly. Updating that
+pin requires review and rerunning the module checks. It uses `pull_request`/`push`,
+read-only repository permission and no persisted checkout credentials, secrets,
+self-hosted runners, deployment, release or artifact publication.
 
 Primary references checked for the containment decision:
 [cap-std design](https://github.com/bytecodealliance/cap-std/blob/main/README.md),

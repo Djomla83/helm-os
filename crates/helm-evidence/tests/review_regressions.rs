@@ -18,10 +18,16 @@ fn duplicate_content_expectations_are_invalid() -> TestResult {
         fs::write(f.root.join("manifest.json"), raw.as_bytes())?;
         f.repin("manifest.json")?;
         for name in ["result.json", "good.json", "bad.json"] {
-            f.edit(name, |r| r["fixture_manifest_sha256"] = sha256(raw.as_bytes()).into())?;
+            f.edit(name, |r| {
+                r["fixture_manifest_sha256"] = sha256(raw.as_bytes()).into()
+            })?;
         }
         let report = verify(&f.root);
-        assert_eq!(report.verdict, Verdict::Invalid, "duplicate {second_key}: {report:?}");
+        assert_eq!(
+            report.verdict,
+            Verdict::Invalid,
+            "duplicate {second_key}: {report:?}"
+        );
         assert!(report.checks.iter().any(|c| c.code == "RECORD_FORMAT"));
     }
     Ok(())
@@ -34,8 +40,17 @@ fn workflow_cannot_shadow_builtin_report_sections() -> TestResult {
         f.edit("bundle.json", |b| b["workflows"][0]["id"] = id.into())?;
         f.edit("before.json", |r| r["workflow"] = id.into())?;
         let report = verify(&f.root);
-        assert_eq!(report.verdict, Verdict::Invalid, "reserved {id}: {report:?}");
-        assert!(report.checks.iter().any(|c| c.code == "WORKFLOW_DECLARATION"));
+        assert_eq!(
+            report.verdict,
+            Verdict::Invalid,
+            "reserved {id}: {report:?}"
+        );
+        assert!(
+            report
+                .checks
+                .iter()
+                .any(|c| c.code == "WORKFLOW_DECLARATION")
+        );
     }
     Ok(())
 }

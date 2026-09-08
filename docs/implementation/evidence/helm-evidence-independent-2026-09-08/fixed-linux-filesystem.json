@@ -1,0 +1,400 @@
+{
+  "scope": "Synthetic Linux filesystem objects and deterministic syscall-boundary races",
+  "binary_sha256": "917875a8144e18d509a0033d42d44bfb323de1cb392fec6c1f95781ae65eb016",
+  "uid": 1001,
+  "cases": [
+    {
+      "case": "file-internal",
+      "exit_code": 2,
+      "verdict": "INVALID",
+      "failures": [
+        "EVIDENCE_UNAVAILABLE",
+        "KNOWN_GOOD_CONTROL",
+        "PATH_UNSAFE"
+      ],
+      "stderr_empty": true,
+      "private_absolute_path_leaked": false,
+      "passed": true
+    },
+    {
+      "case": "file-escape",
+      "exit_code": 2,
+      "verdict": "INVALID",
+      "failures": [
+        "EVIDENCE_UNAVAILABLE",
+        "KNOWN_GOOD_CONTROL",
+        "PATH_UNSAFE"
+      ],
+      "stderr_empty": true,
+      "private_absolute_path_leaked": false,
+      "passed": true
+    },
+    {
+      "case": "directory-internal",
+      "exit_code": 2,
+      "verdict": "INVALID",
+      "failures": [
+        "EVIDENCE_UNAVAILABLE",
+        "PATH_UNSAFE"
+      ],
+      "stderr_empty": true,
+      "private_absolute_path_leaked": false,
+      "passed": true
+    },
+    {
+      "case": "directory-escape",
+      "exit_code": 2,
+      "verdict": "INVALID",
+      "failures": [
+        "EVIDENCE_UNAVAILABLE",
+        "PATH_UNSAFE"
+      ],
+      "stderr_empty": true,
+      "private_absolute_path_leaked": false,
+      "passed": true
+    },
+    {
+      "case": "dangling",
+      "exit_code": 2,
+      "verdict": "INVALID",
+      "failures": [
+        "EVIDENCE_UNAVAILABLE",
+        "KNOWN_GOOD_CONTROL",
+        "PATH_UNSAFE"
+      ],
+      "stderr_empty": true,
+      "private_absolute_path_leaked": false,
+      "passed": true
+    },
+    {
+      "case": "fifo",
+      "exit_code": 2,
+      "verdict": "INVALID",
+      "failures": [
+        "EVIDENCE_UNAVAILABLE",
+        "KNOWN_GOOD_CONTROL",
+        "PATH_UNSAFE"
+      ],
+      "stderr_empty": true,
+      "private_absolute_path_leaked": false,
+      "passed": true
+    },
+    {
+      "case": "socket",
+      "exit_code": 2,
+      "verdict": "INVALID",
+      "failures": [
+        "EVIDENCE_UNAVAILABLE",
+        "KNOWN_GOOD_CONTROL",
+        "PATH_UNSAFE"
+      ],
+      "stderr_empty": true,
+      "private_absolute_path_leaked": false,
+      "passed": true
+    },
+    {
+      "case": "directory-as-file",
+      "exit_code": 2,
+      "verdict": "INVALID",
+      "failures": [
+        "EVIDENCE_UNAVAILABLE",
+        "KNOWN_GOOD_CONTROL",
+        "PATH_UNSAFE"
+      ],
+      "stderr_empty": true,
+      "private_absolute_path_leaked": false,
+      "passed": true
+    },
+    {
+      "case": "device-symlink",
+      "exit_code": 2,
+      "verdict": "INVALID",
+      "failures": [
+        "EVIDENCE_UNAVAILABLE",
+        "KNOWN_GOOD_CONTROL",
+        "PATH_UNSAFE"
+      ],
+      "stderr_empty": true,
+      "private_absolute_path_leaked": false,
+      "passed": true
+    },
+    {
+      "case": "hardlink",
+      "exit_code": 0,
+      "verdict": "COMPLETE",
+      "failures": [],
+      "stderr_empty": true,
+      "private_absolute_path_leaked": false,
+      "passed": true
+    },
+    {
+      "case": "hardlink-modified",
+      "exit_code": 2,
+      "verdict": "INVALID",
+      "failures": [
+        "ARTIFACT_HASH",
+        "EVIDENCE_UNAVAILABLE",
+        "KNOWN_GOOD_CONTROL"
+      ],
+      "stderr_empty": true,
+      "private_absolute_path_leaked": false,
+      "passed": true
+    },
+    {
+      "case": "file-swap-internal",
+      "injected": true,
+      "timeout": false,
+      "exit_code": 2,
+      "open_results": [
+        {
+          "syscall": 437,
+          "result": -40
+        }
+      ],
+      "stderr_empty": true,
+      "verdict": "INVALID",
+      "failures": [
+        "ARTIFACT_UNREADABLE",
+        "EVIDENCE_UNAVAILABLE",
+        "KNOWN_GOOD_CONTROL"
+      ],
+      "seconds": 0.8950497639999639,
+      "passed": true
+    },
+    {
+      "case": "file-swap-escape",
+      "injected": true,
+      "timeout": false,
+      "exit_code": 2,
+      "open_results": [
+        {
+          "syscall": 437,
+          "result": -40
+        }
+      ],
+      "stderr_empty": true,
+      "verdict": "INVALID",
+      "failures": [
+        "ARTIFACT_UNREADABLE",
+        "EVIDENCE_UNAVAILABLE",
+        "KNOWN_GOOD_CONTROL"
+      ],
+      "seconds": 0.8875428180000426,
+      "passed": true
+    },
+    {
+      "case": "manifest-swap-internal",
+      "injected": true,
+      "timeout": false,
+      "exit_code": 2,
+      "open_results": [
+        {
+          "syscall": 437,
+          "result": -40
+        }
+      ],
+      "stderr_empty": true,
+      "verdict": "INVALID",
+      "failures": [
+        "ARTIFACT_UNREADABLE"
+      ],
+      "seconds": 0.10287188100005551,
+      "passed": true
+    },
+    {
+      "case": "manifest-swap-escape",
+      "injected": true,
+      "timeout": false,
+      "exit_code": 2,
+      "open_results": [
+        {
+          "syscall": 437,
+          "result": -40
+        }
+      ],
+      "stderr_empty": true,
+      "verdict": "INVALID",
+      "failures": [
+        "ARTIFACT_UNREADABLE"
+      ],
+      "seconds": 0.10332508900000903,
+      "passed": true
+    },
+    {
+      "case": "directory-swap-internal",
+      "injected": true,
+      "timeout": false,
+      "exit_code": 2,
+      "open_results": [
+        {
+          "syscall": 437,
+          "result": -20
+        }
+      ],
+      "stderr_empty": true,
+      "verdict": "INVALID",
+      "failures": [
+        "ARTIFACT_UNREADABLE",
+        "EVIDENCE_UNAVAILABLE"
+      ],
+      "seconds": 0.9018955080000524,
+      "passed": true
+    },
+    {
+      "case": "directory-swap-escape",
+      "injected": true,
+      "timeout": false,
+      "exit_code": 2,
+      "open_results": [
+        {
+          "syscall": 437,
+          "result": -20
+        }
+      ],
+      "stderr_empty": true,
+      "verdict": "INVALID",
+      "failures": [
+        "ARTIFACT_UNREADABLE",
+        "EVIDENCE_UNAVAILABLE"
+      ],
+      "seconds": 0.9062429489999886,
+      "passed": true
+    },
+    {
+      "case": "fifo-swap",
+      "injected": true,
+      "timeout": false,
+      "exit_code": 2,
+      "open_results": [
+        {
+          "syscall": 437,
+          "result": 5
+        }
+      ],
+      "stderr_empty": true,
+      "verdict": "INVALID",
+      "failures": [
+        "EVIDENCE_UNAVAILABLE",
+        "KNOWN_GOOD_CONTROL",
+        "PATH_UNSAFE"
+      ],
+      "seconds": 0.8908491669999421,
+      "passed": true
+    },
+    {
+      "case": "delete",
+      "injected": true,
+      "timeout": false,
+      "exit_code": 1,
+      "open_results": [
+        {
+          "syscall": 437,
+          "result": -2
+        }
+      ],
+      "stderr_empty": true,
+      "verdict": "INCOMPLETE",
+      "failures": [
+        "ARTIFACT_MISSING",
+        "EVIDENCE_UNAVAILABLE",
+        "KNOWN_GOOD_CONTROL"
+      ],
+      "seconds": 0.8903271189999487,
+      "passed": true
+    },
+    {
+      "case": "replace-wrong",
+      "injected": true,
+      "timeout": false,
+      "exit_code": 2,
+      "open_results": [
+        {
+          "syscall": 437,
+          "result": 5
+        }
+      ],
+      "stderr_empty": true,
+      "verdict": "INVALID",
+      "failures": [
+        "ARTIFACT_HASH",
+        "EVIDENCE_UNAVAILABLE",
+        "KNOWN_GOOD_CONTROL"
+      ],
+      "seconds": 0.9025143869999965,
+      "passed": true
+    },
+    {
+      "case": "replace-matching",
+      "injected": true,
+      "timeout": false,
+      "exit_code": 0,
+      "open_results": [
+        {
+          "syscall": 437,
+          "result": 5
+        }
+      ],
+      "stderr_empty": true,
+      "verdict": "COMPLETE",
+      "failures": [],
+      "seconds": 0.925069121999968,
+      "passed": true
+    },
+    {
+      "case": "manifest-replace",
+      "injected": true,
+      "timeout": false,
+      "exit_code": 0,
+      "open_results": [
+        {
+          "syscall": 437,
+          "result": 5
+        }
+      ],
+      "stderr_empty": true,
+      "verdict": "COMPLETE",
+      "failures": [],
+      "seconds": 0.922942130000024,
+      "passed": true
+    },
+    {
+      "case": "directory-replace",
+      "injected": true,
+      "timeout": false,
+      "exit_code": 2,
+      "open_results": [
+        {
+          "syscall": 437,
+          "result": 4
+        }
+      ],
+      "stderr_empty": true,
+      "verdict": "INVALID",
+      "failures": [
+        "ARTIFACT_HASH",
+        "EVIDENCE_UNAVAILABLE"
+      ],
+      "seconds": 0.9274672839999312,
+      "passed": true
+    },
+    {
+      "case": "directory-pinned-replace",
+      "injected": true,
+      "timeout": false,
+      "exit_code": 0,
+      "open_results": [
+        {
+          "syscall": 437,
+          "result": 5
+        }
+      ],
+      "stderr_empty": true,
+      "verdict": "COMPLETE",
+      "failures": [],
+      "seconds": 0.9313667069999383,
+      "passed": true
+    }
+  ],
+  "device_limit": "Unprivileged reference via symlink to /dev/null; no mknod or device creation",
+  "all_passed": true
+}

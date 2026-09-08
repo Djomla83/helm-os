@@ -1,5 +1,11 @@
 //! The only product filesystem access. Ambient authority is used once, for the caller's root.
-use cap_std::{ambient_authority, fs::Dir};
+#[cfg(unix)]
+use cap_fs_ext::OpenOptionsSyncExt;
+use cap_fs_ext::{DirExt, FollowSymlinks, OpenOptionsFollowExt};
+use cap_std::{
+    ambient_authority,
+    fs::{Dir, Metadata, OpenOptions},
+};
 use std::{
     io::{self, Read},
     path::Path,
@@ -44,35 +50,34 @@ impl Bundle {
         if !safe_path(path) {
             return Err(ReadError::Unsafe);
         }
-        // Reject even contained symlinks/reparse points: the contract names exact files.
-        // cap-std's handle-relative open also enforces containment if a link is swapped in.
-        let mut prefix = String::new();
-        for part in path.split('/') {
-            if !prefix.is_empty() {
-                prefix.push('/');
-            }
-            prefix.push_str(part);
-            let meta = self.dir.symlink_metadata(&prefix)?;
-            if meta.file_type().is_symlink() {
+        // No-follow applies to the LAST component, so open one component at a time.
+        // Keep the opened parent capability: never re-resolve a checked ancestor.
+        let (parents, name) = path.rsplit_once('/').unwrap_or(("", path));
+        let mut dir = self.dir.try_clone()?;
+        for part in parents.split('/').filter(|p| !p.is_empty()) {
+            let meta = dir.symlink_metadata(part)?;
+            reject_links(&meta)?;
+            if !meta.is_dir() {
                 return Err(ReadError::Unsafe);
             }
-            #[cfg(windows)]
-            {
-                use cap_std::fs::MetadataExt;
-                if meta.file_attributes() & 0x400 != 0 {
-                    return Err(ReadError::Unsafe);
-                }
-            }
-            if prefix == path {
-                if !meta.is_file() {
-                    return Err(ReadError::Unsafe);
-                }
-            } else if !meta.is_dir() {
-                return Err(ReadError::Unsafe);
-            }
+            dir = dir.open_dir_nofollow(part)?;
+            reject_links(&dir.dir_metadata()?)?;
         }
-        let file = self.dir.open(path)?;
+        // Prechecks give stable diagnostics for quiescent unsafe objects; they are
+        // not the security boundary. No-follow and the opened handle close the race.
+        let meta = dir.symlink_metadata(name)?;
+        reject_links(&meta)?;
+        if !meta.is_file() {
+            return Err(ReadError::Unsafe);
+        }
+        let mut options = OpenOptions::new();
+        options.read(true).follow(FollowSymlinks::No);
+        // A swapped-in FIFO must not wait for a writer before we can reject its type.
+        #[cfg(unix)]
+        options.nonblock(true);
+        let file = dir.open_with(name, &options)?;
         let meta = file.metadata()?;
+        reject_links(&meta)?;
         if !meta.is_file() {
             return Err(ReadError::Unsafe);
         }
@@ -93,6 +98,20 @@ impl Bundle {
         }
         Ok(bytes)
     }
+}
+
+fn reject_links(meta: &Metadata) -> Result<(), ReadError> {
+    if meta.file_type().is_symlink() {
+        return Err(ReadError::Unsafe);
+    }
+    #[cfg(windows)]
+    {
+        use cap_std::fs::MetadataExt;
+        if meta.file_attributes() & 0x400 != 0 {
+            return Err(ReadError::Unsafe);
+        }
+    }
+    Ok(())
 }
 
 /// Portable, deliberately narrow path spelling. Also used for experiment-relative destinations.

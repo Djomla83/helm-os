@@ -211,7 +211,7 @@ def main():
         for name in ['file-swap-internal', 'file-swap-escape', 'manifest-swap-internal',
                      'manifest-swap-escape', 'directory-swap-internal', 'directory-swap-escape',
                      'fifo-swap', 'delete', 'replace-wrong', 'replace-matching',
-                     'manifest-replace', 'directory-replace']:
+                     'manifest-replace', 'directory-replace', 'directory-pinned-replace']:
             root = fresh(name)
             is_dir = name.startswith('directory-')
             is_manifest = name.startswith('manifest-')
@@ -221,7 +221,7 @@ def main():
             # Match leaf opens on both original whole-path and corrected component traversal.
             # For a directory swap stop before opening that directory, not after pinning it.
             def trigger(path, flags):
-                if is_dir and path == 'before':
+                if is_dir and name != 'directory-pinned-replace' and path == 'before':
                     return bool(flags & os.O_DIRECTORY)
                 return path in (rel, Path(rel).name) and not (flags & os.O_PATH)
 
@@ -230,7 +230,7 @@ def main():
                     folder = root/'outputs/before'
                     moved = (base/(name+'-outside') if name.endswith('escape') else root/'saved-directory')
                     folder.rename(moved)
-                    if name == 'directory-replace':
+                    if name in ('directory-replace', 'directory-pinned-replace'):
                         folder.mkdir()
                         (folder/'output.dat').write_bytes(b'synthetic wrong replacement')
                     else:
@@ -251,7 +251,7 @@ def main():
 
             result = traced(binary, root, trigger, mutate)
             expected = ('INCOMPLETE' if name == 'delete' else
-                        'COMPLETE' if name in ('replace-matching', 'manifest-replace') else 'INVALID')
+                        'COMPLETE' if name in ('replace-matching', 'manifest-replace', 'directory-pinned-replace') else 'INVALID')
             passed = result['injected'] and not result['timeout'] and result['verdict'] == expected
             rows.append({'case': name, **result, 'passed': passed})
 
