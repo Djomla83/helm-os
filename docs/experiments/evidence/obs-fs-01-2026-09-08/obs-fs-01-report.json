@@ -1,0 +1,5342 @@
+{
+  "experiment": "OBS-FS-01",
+  "amendment_1": "63ac6796296894945dff520423cb1a93351e8524",
+  "original_freeze": "b4ed2e108134eb58a2561403f5da3509aed955ee",
+  "preflight_halt": "90e025890a32b36ccc55a4dc223bbb85046ba152",
+  "verdict": "PASS",
+  "verdict_detail": {
+    "conditional_blocked": [
+      "bind_mount_descendant_namespace"
+    ]
+  },
+  "counts": {
+    "PASS": 41,
+    "BLOCKED": 1
+  },
+  "mandatory_case_count": 41,
+  "trials": [
+    {
+      "case": "regular_nonempty",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "plain",
+          "stage": "post_check",
+          "outcome": "observed_file",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "regular",
+          "size": 26,
+          "nlink": 1,
+          "ino": 1840347,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 26,
+          "reopened": true,
+          "identity_match": true,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.025,
+      "trace_checks": {
+        "one_pin": {
+          "ok": true,
+          "detail": "1 target openat2"
+        },
+        "one_reopen": {
+          "ok": true,
+          "detail": "1 procfs reopen"
+        },
+        "reads_match_bytes": {
+          "ok": true,
+          "detail": "26 bytes returned across 2 reads"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "plain",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "5",
+          "o_path": false,
+          "result": 6
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "<WORK>/dumps/plain.bin",
+          "o_path": false,
+          "result": 7
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 27,
+          "result": 26
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 1,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 7,
+          "result": 0
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 6,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "expected_digest": "294d8d16fc03da3bc2eb3567cc61ebb9e0701c3dcdc2b13fa1a475fe215709a4",
+      "actual_digest": "294d8d16fc03da3bc2eb3567cc61ebb9e0701c3dcdc2b13fa1a475fe215709a4",
+      "expected_stage": null,
+      "expected_kind": null
+    },
+    {
+      "case": "regular_empty",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "empty",
+          "stage": "post_check",
+          "outcome": "observed_file",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "regular",
+          "size": 0,
+          "nlink": 1,
+          "ino": 1840348,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 0,
+          "reopened": true,
+          "identity_match": true,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.023,
+      "trace_checks": {
+        "one_pin": {
+          "ok": true,
+          "detail": "1 target openat2"
+        },
+        "one_reopen": {
+          "ok": true,
+          "detail": "1 procfs reopen"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "empty",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "5",
+          "o_path": false,
+          "result": 6
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "<WORK>/dumps/empty.bin",
+          "o_path": false,
+          "result": 7
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 1,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 7,
+          "result": 0
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 6,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "expected_digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "actual_digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "expected_stage": null,
+      "expected_kind": null
+    },
+    {
+      "case": "missing_leaf",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "missingleaf",
+          "stage": "resolve",
+          "outcome": "absent",
+          "errno": 2,
+          "errno_name": "ENOENT",
+          "kind": "none",
+          "size": 0,
+          "nlink": 0,
+          "ino": 0,
+          "dev_major": 0,
+          "dev_minor": 0,
+          "mnt_id": 0,
+          "mnt_id_unique_supported": false,
+          "bytes_read": 0,
+          "reopened": false,
+          "identity_match": false,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.018,
+      "trace_checks": {
+        "no_reopen": {
+          "ok": true,
+          "detail": "0 procfs reopen"
+        },
+        "single_resolve": {
+          "ok": true,
+          "detail": "1 target openat2 (no sibling retry)"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "missingleaf",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": -2
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "expected_digest": null,
+      "actual_digest": null,
+      "expected_stage": null,
+      "expected_kind": null
+    },
+    {
+      "case": "missing_parent",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "missingparent",
+          "stage": "resolve",
+          "outcome": "absent",
+          "errno": 2,
+          "errno_name": "ENOENT",
+          "kind": "none",
+          "size": 0,
+          "nlink": 0,
+          "ino": 0,
+          "dev_major": 0,
+          "dev_minor": 0,
+          "mnt_id": 0,
+          "mnt_id_unique_supported": false,
+          "bytes_read": 0,
+          "reopened": false,
+          "identity_match": false,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.018,
+      "trace_checks": {
+        "no_reopen": {
+          "ok": true,
+          "detail": "0 procfs reopen"
+        },
+        "single_resolve": {
+          "ok": true,
+          "detail": "1 target openat2 (no sibling retry)"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "missingparent",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": -2
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "expected_digest": null,
+      "actual_digest": null,
+      "expected_stage": null,
+      "expected_kind": null
+    },
+    {
+      "case": "wrong_bytes_same_name",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "wrongsame",
+          "stage": "post_check",
+          "outcome": "observed_file",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "regular",
+          "size": 27,
+          "nlink": 1,
+          "ino": 1840349,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 27,
+          "reopened": true,
+          "identity_match": true,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.024,
+      "trace_checks": {
+        "one_pin": {
+          "ok": true,
+          "detail": "1 target openat2"
+        },
+        "one_reopen": {
+          "ok": true,
+          "detail": "1 procfs reopen"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "wrongsame",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "5",
+          "o_path": false,
+          "result": 6
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "<WORK>/dumps/wrongsame.bin",
+          "o_path": false,
+          "result": 7
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 28,
+          "result": 27
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 1,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 7,
+          "result": 0
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 6,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "expected_digest": "2580797859c5768e0679032750dc9acc1ef917f5b644ce1fa16c86c61255443c",
+      "actual_digest": "2580797859c5768e0679032750dc9acc1ef917f5b644ce1fa16c86c61255443c",
+      "expected_stage": null,
+      "expected_kind": null
+    },
+    {
+      "case": "trailing_symlink_internal",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "linkint",
+          "stage": "classify",
+          "outcome": "symlink_forbidden",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "symlink",
+          "size": 5,
+          "nlink": 1,
+          "ino": 1840369,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 0,
+          "reopened": false,
+          "identity_match": false,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.019,
+      "trace_checks": {
+        "no_reopen": {
+          "ok": true,
+          "detail": "0 procfs reopen"
+        },
+        "no_reads": {
+          "ok": true,
+          "detail": "0 data reads"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "no_destination_open": {
+          "ok": true,
+          "detail": "0 procfs reopen"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "linkint",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "expected_digest": null,
+      "actual_digest": null,
+      "expected_stage": [
+        "classify"
+      ],
+      "expected_kind": null
+    },
+    {
+      "case": "trailing_symlink_escaping",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "linkesc",
+          "stage": "classify",
+          "outcome": "symlink_forbidden",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "symlink",
+          "size": 53,
+          "nlink": 1,
+          "ino": 1840370,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 0,
+          "reopened": false,
+          "identity_match": false,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.019,
+      "trace_checks": {
+        "no_reopen": {
+          "ok": true,
+          "detail": "0 procfs reopen"
+        },
+        "no_reads": {
+          "ok": true,
+          "detail": "0 data reads"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "no_destination_open": {
+          "ok": true,
+          "detail": "0 procfs reopen"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "linkesc",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "expected_digest": null,
+      "actual_digest": null,
+      "expected_stage": [
+        "classify"
+      ],
+      "expected_kind": null
+    },
+    {
+      "case": "trailing_symlink_dangling",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "linkdang",
+          "stage": "classify",
+          "outcome": "symlink_forbidden",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "symlink",
+          "size": 14,
+          "nlink": 1,
+          "ino": 1840371,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 0,
+          "reopened": false,
+          "identity_match": false,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.019,
+      "trace_checks": {
+        "no_reopen": {
+          "ok": true,
+          "detail": "0 procfs reopen"
+        },
+        "no_reads": {
+          "ok": true,
+          "detail": "0 data reads"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "no_destination_open": {
+          "ok": true,
+          "detail": "0 procfs reopen"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "linkdang",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "expected_digest": null,
+      "actual_digest": null,
+      "expected_stage": [
+        "classify"
+      ],
+      "expected_kind": null
+    },
+    {
+      "case": "nonfinal_symlink",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "linkdir",
+          "stage": "resolve",
+          "outcome": "symlink_forbidden",
+          "errno": 40,
+          "errno_name": "ELOOP",
+          "kind": "none",
+          "size": 0,
+          "nlink": 0,
+          "ino": 0,
+          "dev_major": 0,
+          "dev_minor": 0,
+          "mnt_id": 0,
+          "mnt_id_unique_supported": false,
+          "bytes_read": 0,
+          "reopened": false,
+          "identity_match": false,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.018,
+      "trace_checks": {
+        "no_reopen": {
+          "ok": true,
+          "detail": "0 procfs reopen"
+        },
+        "no_reads": {
+          "ok": true,
+          "detail": "0 data reads"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "no_descriptor": {
+          "ok": true,
+          "detail": "no target openat2 returned a descriptor"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "linkdir/child",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": -40
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "expected_digest": null,
+      "actual_digest": null,
+      "expected_stage": [
+        "resolve"
+      ],
+      "expected_kind": null
+    },
+    {
+      "case": "fifo",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "fifo",
+          "stage": "classify",
+          "outcome": "special_file",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "fifo",
+          "size": 0,
+          "nlink": 1,
+          "ino": 1840375,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 0,
+          "reopened": false,
+          "identity_match": false,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.019,
+      "trace_checks": {
+        "no_reopen": {
+          "ok": true,
+          "detail": "0 procfs reopen"
+        },
+        "no_reads": {
+          "ok": true,
+          "detail": "0 data reads"
+        },
+        "no_connect": {
+          "ok": true,
+          "detail": "0 connect"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "metadata_only": {
+          "ok": true,
+          "detail": "0 data reads"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "fifo",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "expected_digest": null,
+      "actual_digest": null,
+      "expected_stage": [
+        "classify"
+      ],
+      "expected_kind": [
+        "fifo"
+      ]
+    },
+    {
+      "case": "unix_socket",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "sock",
+          "stage": "classify",
+          "outcome": "special_file",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "socket",
+          "size": 0,
+          "nlink": 1,
+          "ino": 1840376,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 0,
+          "reopened": false,
+          "identity_match": false,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.019,
+      "trace_checks": {
+        "no_reopen": {
+          "ok": true,
+          "detail": "0 procfs reopen"
+        },
+        "no_reads": {
+          "ok": true,
+          "detail": "0 data reads"
+        },
+        "no_connect": {
+          "ok": true,
+          "detail": "0 connect"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "metadata_only": {
+          "ok": true,
+          "detail": "0 data reads"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "sock",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "expected_digest": null,
+      "actual_digest": null,
+      "expected_stage": [
+        "classify"
+      ],
+      "expected_kind": [
+        "socket"
+      ]
+    },
+    {
+      "case": "directory_in_file_position",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "adir",
+          "stage": "classify",
+          "outcome": "wrong_kind",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "directory",
+          "size": 4096,
+          "nlink": 2,
+          "ino": 1840365,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 0,
+          "reopened": false,
+          "identity_match": false,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.019,
+      "trace_checks": {
+        "no_reopen": {
+          "ok": true,
+          "detail": "0 procfs reopen"
+        },
+        "no_reads": {
+          "ok": true,
+          "detail": "0 data reads"
+        },
+        "no_enumeration": {
+          "ok": true,
+          "detail": "0 getdents64"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "adir",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "expected_digest": null,
+      "actual_digest": null,
+      "expected_stage": [
+        "classify"
+      ],
+      "expected_kind": [
+        "directory"
+      ]
+    },
+    {
+      "case": "regular_in_parent_position",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "plain",
+          "stage": "resolve",
+          "outcome": "wrong_kind",
+          "errno": 20,
+          "errno_name": "ENOTDIR",
+          "kind": "none",
+          "size": 0,
+          "nlink": 0,
+          "ino": 0,
+          "dev_major": 0,
+          "dev_minor": 0,
+          "mnt_id": 0,
+          "mnt_id_unique_supported": false,
+          "bytes_read": 0,
+          "reopened": false,
+          "identity_match": false,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.017,
+      "trace_checks": {
+        "no_reopen": {
+          "ok": true,
+          "detail": "0 procfs reopen"
+        },
+        "no_reads": {
+          "ok": true,
+          "detail": "0 data reads"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "plain/child",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": -20
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "expected_digest": null,
+      "actual_digest": null,
+      "expected_stage": [
+        "resolve"
+      ],
+      "expected_kind": null
+    },
+    {
+      "case": "permission_denied_leaf",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "permleaf",
+          "stage": "reopen",
+          "outcome": "permission_denied",
+          "errno": 13,
+          "errno_name": "EACCES",
+          "kind": "regular",
+          "size": 23,
+          "nlink": 1,
+          "ino": 1840377,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 0,
+          "reopened": false,
+          "identity_match": false,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.019,
+      "trace_checks": {
+        "no_reads": {
+          "ok": true,
+          "detail": "0 data reads"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "permleaf",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "5",
+          "o_path": false,
+          "result": -13
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "expected_digest": null,
+      "actual_digest": null,
+      "expected_stage": null,
+      "expected_kind": null
+    },
+    {
+      "case": "permission_denied_parent",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "permdir",
+          "stage": "resolve",
+          "outcome": "permission_denied",
+          "errno": 13,
+          "errno_name": "EACCES",
+          "kind": "none",
+          "size": 0,
+          "nlink": 0,
+          "ino": 0,
+          "dev_major": 0,
+          "dev_minor": 0,
+          "mnt_id": 0,
+          "mnt_id_unique_supported": false,
+          "bytes_read": 0,
+          "reopened": false,
+          "identity_match": false,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.018,
+      "trace_checks": {
+        "no_reopen": {
+          "ok": true,
+          "detail": "0 procfs reopen"
+        },
+        "no_reads": {
+          "ok": true,
+          "detail": "0 data reads"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "permdir/child",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": -13
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "expected_digest": null,
+      "actual_digest": null,
+      "expected_stage": [
+        "resolve"
+      ],
+      "expected_kind": null
+    },
+    {
+      "case": "sparse_file",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "sparse",
+          "stage": "post_check",
+          "outcome": "observed_file",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "regular",
+          "size": 1048576,
+          "nlink": 1,
+          "ino": 1840366,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 1048576,
+          "reopened": true,
+          "identity_match": true,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.042,
+      "trace_checks": {
+        "one_pin": {
+          "ok": true,
+          "detail": "1 target openat2"
+        },
+        "one_reopen": {
+          "ok": true,
+          "detail": "1 procfs reopen"
+        },
+        "no_seek_hole": {
+          "ok": true,
+          "detail": "no lseek/SEEK_HOLE skipping observed"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "sparse",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "5",
+          "o_path": false,
+          "result": 6
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "<WORK>/dumps/sparse.bin",
+          "o_path": false,
+          "result": 7
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 1,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 7,
+          "result": 0
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 6,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "expected_digest": "e1848b8a2819bdb49d8e9630a3b967c6e5466a3000d9b31bdd0a6af732b6ef14",
+      "actual_digest": "e1848b8a2819bdb49d8e9630a3b967c6e5466a3000d9b31bdd0a6af732b6ef14",
+      "expected_stage": null,
+      "expected_kind": null
+    },
+    {
+      "case": "metadata_over_limit",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "overlimit",
+          "stage": "budget",
+          "outcome": "file_limit",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "regular",
+          "size": 536875008,
+          "nlink": 1,
+          "ino": 1840367,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 0,
+          "reopened": false,
+          "identity_match": false,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.019,
+      "trace_checks": {
+        "no_reopen": {
+          "ok": true,
+          "detail": "0 procfs reopen"
+        },
+        "no_reads": {
+          "ok": true,
+          "detail": "0 data reads"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "overlimit",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "expected_digest": null,
+      "actual_digest": null,
+      "expected_stage": [
+        "budget"
+      ],
+      "expected_kind": null
+    },
+    {
+      "case": "hardlink",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "hardlink",
+          "stage": "post_check",
+          "outcome": "observed_file",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "regular",
+          "size": 24,
+          "nlink": 2,
+          "ino": 1840368,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 24,
+          "reopened": true,
+          "identity_match": true,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.025,
+      "trace_checks": {
+        "one_pin": {
+          "ok": true,
+          "detail": "1 target openat2"
+        },
+        "one_reopen": {
+          "ok": true,
+          "detail": "1 procfs reopen"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "no_alias_enumeration": {
+          "ok": true,
+          "detail": "0 getdents64"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "hardlink",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "5",
+          "o_path": false,
+          "result": 6
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "<WORK>/dumps/hardlink.bin",
+          "o_path": false,
+          "result": 7
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 25,
+          "result": 24
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 1,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 7,
+          "result": 0
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 6,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "expected_digest": "5eaf492701688be6332b144b8ef88fd0975fbdfaf6bb8a5107f7a3cd4da3ff07",
+      "actual_digest": "5eaf492701688be6332b144b8ef88fd0975fbdfaf6bb8a5107f7a3cd4da3ff07",
+      "expected_stage": null,
+      "expected_kind": null
+    },
+    {
+      "case": "directory_metadata",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "adir",
+          "stage": "classify",
+          "outcome": "observed_directory",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "directory",
+          "size": 4096,
+          "nlink": 2,
+          "ino": 1840365,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 0,
+          "reopened": false,
+          "identity_match": false,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.019,
+      "trace_checks": {
+        "no_reopen": {
+          "ok": true,
+          "detail": "0 procfs reopen"
+        },
+        "no_reads": {
+          "ok": true,
+          "detail": "0 data reads"
+        },
+        "no_enumeration": {
+          "ok": true,
+          "detail": "0 getdents64"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "adir",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "expected_digest": null,
+      "actual_digest": null,
+      "expected_stage": null,
+      "expected_kind": [
+        "directory"
+      ]
+    },
+    {
+      "case": "two_file_changing_environment",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "filea",
+          "stage": "post_check",
+          "outcome": "observed_file",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "regular",
+          "size": 23,
+          "nlink": 1,
+          "ino": 1840350,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 23,
+          "reopened": true,
+          "identity_match": true,
+          "change_detected": false
+        },
+        {
+          "target": "fileb",
+          "stage": "post_check",
+          "outcome": "observed_file",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "regular",
+          "size": 23,
+          "nlink": 1,
+          "ino": 1840351,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 23,
+          "reopened": true,
+          "identity_match": true,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.035,
+      "trace_checks": {
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "2 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/plan-two_file_changing_environment.txt",
+          "o_path": false,
+          "result": 3
+        },
+        {
+          "syscall": "read",
+          "fd": 3,
+          "count": 4096,
+          "result": 48
+        },
+        {
+          "syscall": "read",
+          "fd": 3,
+          "count": 4096,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "filea",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "5",
+          "o_path": false,
+          "result": 6
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "<WORK>/dumps/filea.bin",
+          "o_path": false,
+          "result": 7
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 24,
+          "result": 23
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 1,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 7,
+          "result": 0
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 6,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "fileb",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "5",
+          "o_path": false,
+          "result": 6
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "<WORK>/dumps/fileb.bin",
+          "o_path": false,
+          "result": 7
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 24,
+          "result": 23
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 1,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 7,
+          "result": 0
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 6,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "per_target": {
+        "filea": "observed_file",
+        "fileb": "observed_file"
+      },
+      "expected_per_target": {
+        "filea": [
+          "observed_file",
+          "changed_during_read"
+        ],
+        "fileb": [
+          "observed_file",
+          "changed_during_read"
+        ]
+      }
+    },
+    {
+      "case": "budget_exhaustion",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "budgeta",
+          "stage": "post_check",
+          "outcome": "observed_file",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "regular",
+          "size": 1024,
+          "nlink": 1,
+          "ino": 1840352,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 1024,
+          "reopened": true,
+          "identity_match": true,
+          "change_detected": false
+        },
+        {
+          "target": "budgetb",
+          "stage": "budget",
+          "outcome": "total_limit",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "regular",
+          "size": 1024,
+          "nlink": 1,
+          "ino": 1840360,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 0,
+          "reopened": false,
+          "identity_match": false,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.03,
+      "trace_checks": {
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "every_target_has_outcome": {
+          "ok": true,
+          "detail": "not mechanically checked; see report narrative"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "2 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/plan-budget_exhaustion.txt",
+          "o_path": false,
+          "result": 3
+        },
+        {
+          "syscall": "read",
+          "fd": 3,
+          "count": 4096,
+          "result": 56
+        },
+        {
+          "syscall": "read",
+          "fd": 3,
+          "count": 4096,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "budgeta",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "5",
+          "o_path": false,
+          "result": 6
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "<WORK>/dumps/budgeta.bin",
+          "o_path": false,
+          "result": 7
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 1025,
+          "result": 1024
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 1,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 7,
+          "result": 0
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 6,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "budgetb",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "per_target": {
+        "budgeta": "observed_file",
+        "budgetb": "total_limit"
+      },
+      "expected_per_target": {
+        "budgeta": [
+          "observed_file"
+        ],
+        "budgetb": [
+          "total_limit"
+        ]
+      }
+    },
+    {
+      "case": "private_and_unlisted",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "plain",
+          "stage": "post_check",
+          "outcome": "observed_file",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "regular",
+          "size": 26,
+          "nlink": 1,
+          "ino": 1840347,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 26,
+          "reopened": true,
+          "identity_match": true,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.027,
+      "trace_checks": {
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "no_unlisted_open": {
+          "ok": true,
+          "detail": "0 opens naming unlisted objects"
+        },
+        "no_absolute_path_in_output": {
+          "ok": true,
+          "detail": "not mechanically checked; see report narrative"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/plan-private_and_unlisted.txt",
+          "o_path": false,
+          "result": 3
+        },
+        {
+          "syscall": "read",
+          "fd": 3,
+          "count": 4096,
+          "result": 24
+        },
+        {
+          "syscall": "read",
+          "fd": 3,
+          "count": 4096,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "plain",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "5",
+          "o_path": false,
+          "result": 6
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "<WORK>/dumps/plain.bin",
+          "o_path": false,
+          "result": 7
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 27,
+          "result": 26
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 1,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 7,
+          "result": 0
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 6,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "per_target": {
+        "plain": "observed_file"
+      },
+      "expected_per_target": {
+        "plain": [
+          "observed_file"
+        ]
+      }
+    },
+    {
+      "case": "descriptor_shaped_plan_field",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "admission": "unknown_directive",
+          "errno": 0,
+          "errno_name": "OK"
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 2,
+      "seconds": 0.015,
+      "trace_checks": {
+        "no_io_at_all": {
+          "ok": true,
+          "detail": "0 target openat2, 0 reopens, 0 target reads (1 total incl. plan file)"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "0 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/plan-bad.txt",
+          "o_path": false,
+          "result": 3
+        },
+        {
+          "syscall": "read",
+          "fd": 3,
+          "count": 4096,
+          "result": 38
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        }
+      ]
+    },
+    {
+      "case": "fake_procfs_tmpfs",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "admission": "procfs_rejected",
+          "errno": 0,
+          "errno_name": "OK"
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 6,
+      "seconds": 0.013,
+      "trace_checks": {
+        "no_target_read": {
+          "ok": true,
+          "detail": "0 reads, 0 reopens"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "0 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "<WORK>/fakeproc",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        }
+      ]
+    },
+    {
+      "case": "procfs_unavailable",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "admission": "procfs_unavailable",
+          "errno": 2,
+          "errno_name": "ENOENT"
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 6,
+      "seconds": 0.013,
+      "trace_checks": {
+        "no_target_read": {
+          "ok": true,
+          "detail": "0 reads, 0 reopens"
+        },
+        "no_pathname_fallback": {
+          "ok": true,
+          "detail": "0 reads, 0 reopens"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "0 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "<WORK>/no-such-proc-dir",
+          "o_path": true,
+          "result": -2
+        }
+      ]
+    },
+    {
+      "case": "procfs_foreign_process",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "admission": "procfs_rejected",
+          "errno": 0,
+          "errno_name": "OK"
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 6,
+      "seconds": 0.014,
+      "trace_checks": {
+        "no_target_read": {
+          "ok": true,
+          "detail": "0 reads, 0 reopens"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "0 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/1/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": -13
+        }
+      ]
+    },
+    {
+      "case": "D1_direct_fifo_blocking",
+      "status": "PASS",
+      "why": "direct O_RDONLY on a writerless FIFO blocked until the supervisor deadline, as predicted",
+      "results": [],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": true,
+      "exit_code": null,
+      "seconds": 8.0,
+      "trace_checks": {
+        "resolve_policy": {
+          "ok": true,
+          "detail": "0 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        }
+      ],
+      "blocked_until_deadline": true
+    },
+    {
+      "case": "D2_direct_fifo_nonblock",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "t1",
+          "stage": "direct_open",
+          "outcome": "direct_data_open_succeeded",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "fifo",
+          "size": 0,
+          "nlink": 0,
+          "ino": 0,
+          "dev_major": 0,
+          "dev_minor": 0,
+          "mnt_id": 0,
+          "mnt_id_unique_supported": false,
+          "bytes_read": 0,
+          "reopened": true,
+          "identity_match": false,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.015,
+      "trace_checks": {
+        "data_open_demonstrated": {
+          "ok": true,
+          "detail": "not mechanically checked; see report narrative"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat2",
+          "path": "fifo",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": false,
+          "result": 4
+        },
+        {
+          "syscall": "statx",
+          "fd": 4,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        }
+      ],
+      "expected_kind": [
+        "fifo"
+      ]
+    },
+    {
+      "case": "D3_opath_same_object",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "t1",
+          "stage": "classify",
+          "outcome": "special_file",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "fifo",
+          "size": 0,
+          "nlink": 1,
+          "ino": 1840375,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 0,
+          "reopened": false,
+          "identity_match": false,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.019,
+      "trace_checks": {
+        "no_reopen": {
+          "ok": true,
+          "detail": "0 procfs reopen"
+        },
+        "no_reads": {
+          "ok": true,
+          "detail": "0 data reads"
+        },
+        "metadata_only": {
+          "ok": true,
+          "detail": "0 data reads"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "fifo",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "expected_kind": [
+        "fifo"
+      ]
+    },
+    {
+      "case": "xdev_fallback_existing_mount",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "t1",
+          "stage": "resolve",
+          "outcome": "mount_crossing",
+          "errno": 18,
+          "errno_name": "EXDEV",
+          "kind": "none",
+          "size": 0,
+          "nlink": 0,
+          "ino": 0,
+          "dev_major": 0,
+          "dev_minor": 0,
+          "mnt_id": 0,
+          "mnt_id_unique_supported": false,
+          "bytes_read": 0,
+          "reopened": false,
+          "identity_match": false,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.018,
+      "trace_checks": {
+        "no_descriptor": {
+          "ok": true,
+          "detail": "no target openat2 returned a descriptor"
+        },
+        "no_reads": {
+          "ok": true,
+          "detail": "0 data reads"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "/run/user",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "1001",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": -18
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ]
+    },
+    {
+      "case": "xdev_control_without_flag",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "t1",
+          "stage": "classify",
+          "outcome": "observed_directory",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "directory",
+          "size": 360,
+          "nlink": 11,
+          "ino": 1,
+          "dev_major": 0,
+          "dev_minor": 55,
+          "mnt_id": 2147491991,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 0,
+          "reopened": false,
+          "identity_match": false,
+          "change_detected": false
+        }
+      ],
+      "injected": false,
+      "injection_requested": false,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.02,
+      "trace_checks": {
+        "control_no_xdev_absent": {
+          "ok": true,
+          "detail": "control arm carried BENEATH|NO_SYMLINKS|NO_MAGICLINKS without NO_XDEV"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "/run/user",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "1001",
+          "resolve_names": "NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ]
+    },
+    {
+      "case": "bind_mount_descendant_namespace",
+      "status": "BLOCKED",
+      "why": "unprivileged user+mount namespace unavailable: unshare: write failed /proc/self/uid_map: Operation not permitted",
+      "conditional": true,
+      "residual_unverified_claim": "RESOLVE_NO_XDEV rejects a bind mount created as a descendant of an authorized ext4 root"
+    },
+    {
+      "case": "leaf_regular_to_symlink_swap",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "raceleaf",
+          "stage": "classify",
+          "outcome": "symlink_forbidden",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "symlink",
+          "size": 5,
+          "nlink": 1,
+          "ino": 1840380,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 0,
+          "reopened": false,
+          "identity_match": false,
+          "change_detected": false
+        }
+      ],
+      "injected": true,
+      "injection_requested": true,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.019,
+      "trace_checks": {
+        "injection_landed": {
+          "ok": true,
+          "detail": "injected=True"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "no_destination_open": {
+          "ok": true,
+          "detail": "0 procfs reopen"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "raceleaf",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "injected_here": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "seed": 110001,
+      "stop": "openat2_target",
+      "mutation": "swap_leaf_to_symlink",
+      "allowed_digests": null,
+      "actual_digest": null,
+      "undetectable_arm": false
+    },
+    {
+      "case": "parent_to_symlink_swap",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "child",
+          "stage": "resolve",
+          "outcome": "symlink_forbidden",
+          "errno": 40,
+          "errno_name": "ELOOP",
+          "kind": "none",
+          "size": 0,
+          "nlink": 0,
+          "ino": 0,
+          "dev_major": 0,
+          "dev_minor": 0,
+          "mnt_id": 0,
+          "mnt_id_unique_supported": false,
+          "bytes_read": 0,
+          "reopened": false,
+          "identity_match": false,
+          "change_detected": false
+        }
+      ],
+      "injected": true,
+      "injection_requested": true,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.018,
+      "trace_checks": {
+        "injection_landed": {
+          "ok": true,
+          "detail": "injected=True"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "no_destination_open": {
+          "ok": true,
+          "detail": "0 procfs reopen"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "racedir/child",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "injected_here": true,
+          "result": -40
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "seed": 110002,
+      "stop": "openat2_target",
+      "mutation": "swap_parent_to_symlink",
+      "allowed_digests": null,
+      "actual_digest": null,
+      "undetectable_arm": false
+    },
+    {
+      "case": "replacement_before_pin",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "raceleaf",
+          "stage": "post_check",
+          "outcome": "observed_file",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "regular",
+          "size": 196608,
+          "nlink": 1,
+          "ino": 1840404,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 196608,
+          "reopened": true,
+          "identity_match": true,
+          "change_detected": false
+        }
+      ],
+      "injected": true,
+      "injection_requested": true,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.027,
+      "trace_checks": {
+        "injection_landed": {
+          "ok": true,
+          "detail": "injected=True"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "raceleaf",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "injected_here": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "5",
+          "o_path": false,
+          "result": 6
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "<WORK>/dumps/raceleaf.bin",
+          "o_path": false,
+          "result": 7
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 1,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 7,
+          "result": 0
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 6,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "seed": 110003,
+      "stop": "openat2_target",
+      "mutation": "replace_regular",
+      "allowed_digests": [
+        "race_old",
+        "race_new"
+      ],
+      "actual_digest": "00533417730e2c7778256ef6f587cf85b9ff0f6ac467b3a86efccff129bb586b",
+      "undetectable_arm": false
+    },
+    {
+      "case": "replacement_after_pin",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "raceleaf",
+          "stage": "post_check",
+          "outcome": "observed_file",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "regular",
+          "size": 196608,
+          "nlink": 1,
+          "ino": 1840405,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 196608,
+          "reopened": true,
+          "identity_match": true,
+          "change_detected": false
+        }
+      ],
+      "injected": true,
+      "injection_requested": true,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.027,
+      "trace_checks": {
+        "injection_landed": {
+          "ok": true,
+          "detail": "injected=True"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "injected_here": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "raceleaf",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "5",
+          "o_path": false,
+          "result": 6
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "<WORK>/dumps/raceleaf.bin",
+          "o_path": false,
+          "result": 7
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 1,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 7,
+          "result": 0
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 6,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "seed": 110004,
+      "stop": "reopen",
+      "mutation": "replace_regular",
+      "allowed_digests": [
+        "race_old",
+        "race_new",
+        "race_mixed_1"
+      ],
+      "actual_digest": "00533417730e2c7778256ef6f587cf85b9ff0f6ac467b3a86efccff129bb586b",
+      "undetectable_arm": false
+    },
+    {
+      "case": "directory_replacement_after_pin",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "child",
+          "stage": "post_check",
+          "outcome": "observed_file",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "regular",
+          "size": 196608,
+          "nlink": 1,
+          "ino": 1840406,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 196608,
+          "reopened": true,
+          "identity_match": true,
+          "change_detected": false
+        }
+      ],
+      "injected": true,
+      "injection_requested": true,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.028,
+      "trace_checks": {
+        "injection_landed": {
+          "ok": true,
+          "detail": "injected=True"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "racedir/child",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "injected_here": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "5",
+          "o_path": false,
+          "result": 6
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "<WORK>/dumps/child.bin",
+          "o_path": false,
+          "result": 7
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 1,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 7,
+          "result": 0
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 6,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "seed": 110005,
+      "stop": "openat2_target",
+      "mutation": "replace_directory",
+      "allowed_digests": null,
+      "actual_digest": "00533417730e2c7778256ef6f587cf85b9ff0f6ac467b3a86efccff129bb586b",
+      "undetectable_arm": false
+    },
+    {
+      "case": "growing_file",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "growfile",
+          "stage": "post_check",
+          "outcome": "changed_during_read",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "regular",
+          "size": 131072,
+          "nlink": 1,
+          "ino": 1840381,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 131073,
+          "reopened": true,
+          "identity_match": true,
+          "change_detected": true
+        }
+      ],
+      "injected": true,
+      "injection_requested": true,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.026,
+      "trace_checks": {
+        "injection_landed": {
+          "ok": true,
+          "detail": "injected=True"
+        },
+        "byte_ceiling_respected": {
+          "ok": true,
+          "detail": "131073 bytes read"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "growfile",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "5",
+          "o_path": false,
+          "result": 6
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "<WORK>/dumps/growfile.bin",
+          "o_path": false,
+          "result": 7
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "injected_here": true,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 1,
+          "result": 1
+        },
+        {
+          "syscall": "close",
+          "fd": 7,
+          "result": 0
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 6,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "seed": 110006,
+      "stop": "first_read",
+      "mutation": "grow_file",
+      "allowed_digests": null,
+      "actual_digest": "ab3d7a0bc4f921296719fcc2d8fd2b9a702779218944905f0f554eaea123fb4b",
+      "undetectable_arm": false
+    },
+    {
+      "case": "truncating_file",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "truncfile",
+          "stage": "post_check",
+          "outcome": "changed_during_read",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "regular",
+          "size": 196608,
+          "nlink": 1,
+          "ino": 1840382,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 65536,
+          "reopened": true,
+          "identity_match": true,
+          "change_detected": true
+        }
+      ],
+      "injected": true,
+      "injection_requested": true,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.024,
+      "trace_checks": {
+        "injection_landed": {
+          "ok": true,
+          "detail": "injected=True"
+        },
+        "no_complete_digest_after_short_read": {
+          "ok": true,
+          "detail": "not mechanically checked; see report narrative"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "truncfile",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "5",
+          "o_path": false,
+          "result": 6
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "<WORK>/dumps/truncfile.bin",
+          "o_path": false,
+          "result": 7
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "injected_here": true,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 7,
+          "result": 0
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 6,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "seed": 110007,
+      "stop": "first_read",
+      "mutation": "truncate_file",
+      "allowed_digests": null,
+      "actual_digest": "46390459e3005b037ae0f7138cbbb21828d9bec9fd53b7b70c898fa443efeca4",
+      "undetectable_arm": false
+    },
+    {
+      "case": "inplace_overwrite_deterministic",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "inplace",
+          "stage": "post_check",
+          "outcome": "changed_during_read",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "regular",
+          "size": 196608,
+          "nlink": 1,
+          "ino": 1840383,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 196608,
+          "reopened": true,
+          "identity_match": true,
+          "change_detected": true
+        }
+      ],
+      "injected": true,
+      "injection_requested": true,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.027,
+      "trace_checks": {
+        "injection_landed": {
+          "ok": true,
+          "detail": "injected=True"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "inplace",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "5",
+          "o_path": false,
+          "result": 6
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "<WORK>/dumps/inplace.bin",
+          "o_path": false,
+          "result": 7
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "injected_here": true,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 1,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 7,
+          "result": 0
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 6,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "seed": 110008,
+      "stop": "first_read",
+      "mutation": "overwrite_tail_same_length",
+      "allowed_digests": [
+        "race_old",
+        "race_new",
+        "race_mixed_1"
+      ],
+      "actual_digest": "3f2fb4be787e1a64cb1908544caee053cd1f2f046b952a6f5f0def67899f75cd",
+      "undetectable_arm": false
+    },
+    {
+      "case": "inplace_overwrite_undetectable",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "inplace2",
+          "stage": "post_check",
+          "outcome": "changed_during_read",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "regular",
+          "size": 196608,
+          "nlink": 1,
+          "ino": 1840384,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 196608,
+          "reopened": true,
+          "identity_match": true,
+          "change_detected": true
+        }
+      ],
+      "injected": true,
+      "injection_requested": true,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.027,
+      "trace_checks": {
+        "injection_landed": {
+          "ok": true,
+          "detail": "injected=True"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "no_snapshot_claim": {
+          "ok": true,
+          "detail": "not mechanically checked; see report narrative"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "inplace2",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "5",
+          "o_path": false,
+          "result": 6
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "<WORK>/dumps/inplace2.bin",
+          "o_path": false,
+          "result": 7
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "injected_here": true,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 1,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 7,
+          "result": 0
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 6,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "seed": 110009,
+      "stop": "first_read",
+      "mutation": "overwrite_mmap_same_length",
+      "allowed_digests": [
+        "race_old",
+        "race_new",
+        "race_mixed_1"
+      ],
+      "actual_digest": "3f2fb4be787e1a64cb1908544caee053cd1f2f046b952a6f5f0def67899f75cd",
+      "undetectable_arm": true
+    },
+    {
+      "case": "hardlink_alias_mutation",
+      "status": "PASS",
+      "why": "outcome and trace inside frozen expectations",
+      "results": [
+        {
+          "target": "aliasfile",
+          "stage": "post_check",
+          "outcome": "changed_during_read",
+          "errno": 0,
+          "errno_name": "OK",
+          "kind": "regular",
+          "size": 131072,
+          "nlink": 2,
+          "ino": 1840385,
+          "dev_major": 8,
+          "dev_minor": 2,
+          "mnt_id": 2147483683,
+          "mnt_id_unique_supported": true,
+          "bytes_read": 131072,
+          "reopened": true,
+          "identity_match": true,
+          "change_detected": true
+        }
+      ],
+      "injected": true,
+      "injection_requested": true,
+      "timeout": false,
+      "exit_code": 0,
+      "seconds": 0.026,
+      "trace_checks": {
+        "injection_landed": {
+          "ok": true,
+          "detail": "injected=True"
+        },
+        "no_escape": {
+          "ok": true,
+          "detail": "0 absolute target paths"
+        },
+        "no_alias_enumeration": {
+          "ok": true,
+          "detail": "0 getdents64"
+        },
+        "resolve_policy": {
+          "ok": true,
+          "detail": "1 target openat2, 0 missing required RESOLVE bits"
+        }
+      },
+      "trace_summary": [
+        {
+          "syscall": "openat",
+          "path": "<WORK>/root",
+          "o_path": true,
+          "result": 3
+        },
+        {
+          "syscall": "openat",
+          "path": "/proc/self/fd",
+          "o_path": true,
+          "result": 4
+        },
+        {
+          "syscall": "fstatfs",
+          "fd": 4,
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "3",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "openat2",
+          "path": "aliasfile",
+          "resolve_names": "NO_XDEV|NO_MAGICLINKS|NO_SYMLINKS|BENEATH",
+          "o_path": true,
+          "result": 5
+        },
+        {
+          "syscall": "statx",
+          "fd": 5,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "5",
+          "o_path": false,
+          "result": 6
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "openat",
+          "path": "<WORK>/dumps/aliasfile.bin",
+          "o_path": false,
+          "result": 7
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "injected_here": true,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 65536,
+          "result": 65536
+        },
+        {
+          "syscall": "read",
+          "fd": 6,
+          "count": 1,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 7,
+          "result": 0
+        },
+        {
+          "syscall": "statx",
+          "fd": 6,
+          "path": "",
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 6,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 5,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 3,
+          "result": 0
+        },
+        {
+          "syscall": "close",
+          "fd": 4,
+          "result": 0
+        }
+      ],
+      "seed": 110010,
+      "stop": "first_read",
+      "mutation": "mutate_alias",
+      "allowed_digests": [
+        "alias_old",
+        "alias_new",
+        "alias_mixed_1"
+      ],
+      "actual_digest": "5d1e028f4dd4d7340af7e3c777b4bd885307ee643baf32a33323137052fe13d5",
+      "undetectable_arm": false
+    }
+  ],
+  "expected_digests": {
+    "plain": "294d8d16fc03da3bc2eb3567cc61ebb9e0701c3dcdc2b13fa1a475fe215709a4",
+    "empty": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "wrongsame": "2580797859c5768e0679032750dc9acc1ef917f5b644ce1fa16c86c61255443c",
+    "canary": "5eaf492701688be6332b144b8ef88fd0975fbdfaf6bb8a5107f7a3cd4da3ff07",
+    "twofile_a": "e6ef5b438f82a114be8ab5ce784ada9d12ec675f47b5be9cc1e7ec259d59e9e1",
+    "twofile_b": "1eaf9d4c7a5229ae5c3bcd4fe43d43bfb2925f094bd8be5cfacd9404cca6ccb6",
+    "private": "81abc95c3ed58240b2fcac1b9e6c8bd3320b457df8cc6a61238fc1545b2f1bea",
+    "unlisted": "322e79c06de29574312ffafa7666b7a600d2268a9f926a03011df3b1fee18d5a",
+    "permleaf": "4d60b29dcd0f9a9542c83dbad85f19d558038b64b063bd223894ee482b358d77",
+    "permchild": "5fd530053536e0e7dbf545466fa5b6996e165c53fc526248e50799bacdcb98a6",
+    "race_old": "e89d548f5062211a848d4b55b04b8096eb4c397c1ef5e10312245cef3d00c265",
+    "race_new": "00533417730e2c7778256ef6f587cf85b9ff0f6ac467b3a86efccff129bb586b",
+    "grow_base": "ab3d7a0bc4f921296719fcc2d8fd2b9a702779218944905f0f554eaea123fb4b",
+    "trunc_base": "83f848d51102a314f80b9644a70779d35ed288f9cf73220146278cc9b01aa6a4",
+    "alias_old": "5e19a67c37e013507bf7a652ac1f2ecf5e9907a37a1b07152e250dd6a2ed1a79",
+    "alias_new": "5d1e028f4dd4d7340af7e3c777b4bd885307ee643baf32a33323137052fe13d5",
+    "budget_a": "9ea764ef654dc61f19ab23af219e5aa420b68157b1d135dc297ab0527941f951",
+    "budget_b": "eaeb456889f4b1d3024dbd844528401bc0745b08a9b5b651360c1c8b08879e82",
+    "sparse": "e1848b8a2819bdb49d8e9630a3b967c6e5466a3000d9b31bdd0a6af732b6ef14",
+    "race_mixed_1": "3f2fb4be787e1a64cb1908544caee053cd1f2f046b952a6f5f0def67899f75cd",
+    "alias_mixed_1": "fd3e5f0155cf1854e4bdb2ef7c37802a1db57a9b7a5b1a67940d216f8023bd61"
+  },
+  "scope": "Synthetic OBS-FS-01 fixtures only. No A0 access, no Wine or 7-Zip, no privilege, no product code.",
+  "sanitisation": "Private lab work directory replaced with <WORK>; home replaced with <HOME>. System paths belonging to the mechanism under test (/proc/self/fd, /proc/1/fd, /run/user) are retained verbatim because they are the subject of the procfs-admission and mount-crossing cases.",
+  "lab": {
+    "guest_os": "Ubuntu 24.04.4 LTS",
+    "kernel": "Linux 7.0.0-31-generic",
+    "arch": "x86_64",
+    "fixture_fs": "ext4 rw,relatime",
+    "uid_gid": "1001/1001, no supplementary groups",
+    "toolchain": "gcc 13.3.0, static link; rustc/cargo absent",
+    "yama_ptrace_scope": 1,
+    "proc_hidepid": "unset",
+    "apparmor_restrict_unprivileged_userns": 1,
+    "free_mib_home_before": 12909
+  }
+}

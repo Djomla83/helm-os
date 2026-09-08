@@ -1,5 +1,38 @@
 # Stanje projekta
 
+## Experiment executed, 2026-09-08 — OBS-FS-01 PASS, bind-mount case BLOCKED
+
+The owner authorised OBS-FS-01 execution against Amendment 1. The
+[execution report](experiments/OBS-FS-01-EXECUTION-REPORT.md) records **PASS**: 41 of 41
+mandatory trials satisfied their frozen safe outcome sets and trace invariants, and all
+ten mandatory race injections landed, so no trial was INVALID and none fell to
+INCONCLUSIVE. The
+[execution definition](experiments/obs-fs-01/) was committed and pushed at
+`2496f68cccbf70ac04288992a9945cb34f046b98` **before the first preregistered trial**.
+
+Amendment 1 was confirmed on both symlink variants: a trailing symlink is pinned as an
+`O_PATH` descriptor and rejected at classification, while a non-final symlink is rejected
+at resolution with `ELOOP` and yields no descriptor. Special files were classified with
+zero data reopens, zero reads and zero connects. The D1-D3 arm measured why the mechanism
+was chosen: direct `O_RDONLY` on a writerless FIFO blocked until the supervisor deadline,
+direct `O_RDONLY|O_NONBLOCK` returned a descriptor and so was already a data-open, and the
+`O_PATH` route classified the same object without reading it.
+
+The conditional descendant bind-mount case is **BLOCKED** by Ubuntu's AppArmor
+user-namespace restriction and was not bypassed. Exactly one claim stays unverified:
+**that `RESOLVE_NO_XDEV` rejects a bind mount created as a descendant of an authorized
+ext4 root.** General mount-traversal rejection is evidenced by the mandatory non-namespace
+fallback and its control arm.
+
+The result is evidence for one kernel, filesystem, toolchain and mechanism cohort only. It
+establishes no arbitrary Linux filesystem safety, no network or FUSE behaviour, no Windows
+semantics, no atomic snapshot, no provenance and no safe execution. **A PASS does not
+accept ADR-0022 and does not authorise helm-observe implementation; both remain separate
+owner decisions.** No product code exists, no Cargo member was added, no A0 file was read,
+no Wine or 7-Zip ran, no privilege or system configuration changed, and the VM was booted
+and shut down normally with 0 checkpoints. [ADR-0022](adr/ADR-0022-observation-authority.md)
+remains **Proposed** and **A0-7ZIP remains experimental FAIL**.
+
 <a id="obs-fs-01-amendment-1"></a>
 
 ## Owner approval, 2026-09-08 — OBS-FS-01 preregistration Amendment 1
