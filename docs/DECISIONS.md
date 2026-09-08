@@ -3,8 +3,10 @@
 ADR-0020 is Accepted for documentation language. ADR-0021 is Accepted on 2026-09-08
 by repository owner Djomla83 only for building a pure, non-executable application
 specification/validation library before observation or lifecycle execution.
-Its schema/API remain unsettled; implementation is not authorised. ADR-0001 through
-ADR-0019 remain Proposed. No other architecture acceptance follows from this decision.
+Its schema/API remain experimental; a later separate owner instruction authorised
+the [bounded implementation candidate](implementation/HELM-APP-SPEC-REVIEW.md), not a merge.
+ADR-0001 through ADR-0019 remain Proposed. No other architecture acceptance follows
+from this decision.
 
 | ID | Odluka | Status |
 |---|---|---|

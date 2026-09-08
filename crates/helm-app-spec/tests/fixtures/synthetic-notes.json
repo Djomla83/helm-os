@@ -1,0 +1,43 @@
+{
+  "schema": "helm-app-spec",
+  "version": "0.1",
+  "application": {
+    "id": "synthetic-notes",
+    "version": "fictional v2",
+    "source": {
+      "size": 49,
+      "sha256": "b38c422b7ce18108ae4dd639c18f85152100e01247af3020db7a4e4dd2bbb6f1",
+      "architecture": "x86_64"
+    }
+  },
+  "runtime": {
+    "family": "wine",
+    "artifacts": [
+      {
+        "role": "synthetic-runtime",
+        "size": 38,
+        "sha256": "f7898c8619b73ac421a46d781cfaf1a86c826e076959de1cbdeae59f49d3f395"
+      }
+    ]
+  },
+  "environment": {
+    "windows_architecture": "win64",
+    "prefix": {
+      "role": "dedicated"
+    },
+    "disabled_dlls": []
+  },
+  "entry_point": {
+    "path": "drive_c/Notes/notes.exe",
+    "sha256": "b83437ed8d50866d3ccb0b38d2368985807c84c9b897e8c4ab910381a158b5e0"
+  },
+  "verification": {
+    "definitions": [
+      {
+        "role": "notes-contract",
+        "size": 57,
+        "sha256": "2445650abb368fcfbd931a503404f605b6e6857ad1a9eac0652862c33e632df9"
+      }
+    ]
+  }
+}

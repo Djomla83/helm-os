@@ -1,0 +1,36 @@
+{
+  "scope": "Retrospective desired-state A0 fixture and fictional second application; no execution or observation claims",
+  "definition_commit": "5a83f8cb2fbb5a3597ddff6b5cae9cb813f1c5ae",
+  "source_pins": "docs/experiments/evidence/app-baseline-2026-09-07/artifact-pins.json",
+  "definitions": [
+    {
+      "path": "docs/experiments/EXP-009.md",
+      "role": "protocol",
+      "size": 34585,
+      "sha256": "bd55677cc1724d078ee25dfbcbbc966350b20c129475bdcad28d2603785a2240"
+    },
+    {
+      "path": "tools/app_baseline.py",
+      "role": "oracle",
+      "size": 9093,
+      "sha256": "2ffec610149ad7aee94ed891af48c2c6623062937d3a5087449523a6d81e57e2"
+    },
+    {
+      "path": "tools/fixtures/exp009-7zip.json",
+      "role": "content-fixture",
+      "size": 1290,
+      "sha256": "75d78bc6bc0f539df5ca8d54df34f406e44f2aa5ceb8a07bf3d856ce72747c8f"
+    }
+  ],
+  "a0_environment_and_entry_point": "EXP-009 registered A0 definition; prefix-relative spelling from the original Wine C-drive intent",
+  "excluded": [
+    "installed file identities",
+    "loader/server observations",
+    "workflow verdicts",
+    "output ZIP identity",
+    "boot IDs",
+    "evidence bundle",
+    "host/prefix instance paths"
+  ],
+  "synthetic_identity_recipe": "SHA-256 and lengths of the literal UTF-8 byte strings in tools/helm_app_spec_fixture.py; no real executable or runtime claimed"
+}

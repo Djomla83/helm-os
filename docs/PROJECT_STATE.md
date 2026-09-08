@@ -1,5 +1,27 @@
 # Stanje projekta
 
+## Implementation candidate, 2026-09-08 — helm-app-spec 0.1
+
+The owner separately authorised the pure application-specification validation
+library after accepting [ADR-0021](adr/ADR-0021-second-product-module.md). Starting
+local main, origin/main and HEAD were fetched and verified clean at
+`e32ab269fbe7c4151186d9257e0aff67c0c70197`. Work uses `product/helm-app-spec`.
+
+[helm-app-spec](../crates/helm-app-spec/README.md) now implements a bounded JSON
+bytes-to-immutable-desired-model API with exact-byte document SHA-256 and
+deterministic errors. Its schema/API remain experimental. Desired runtime artifact
+requirements, dedicated win64 prefix intent, typed DLL disables, inert entry point
+and frozen pre-execution definition references establish no observed state.
+The [implementation review](implementation/HELM-APP-SPEC-REVIEW.md) records the
+fixtures, validation, dependency changes, measurements and independent-review boundary.
+
+This is a branch candidate, not an owner-accepted merge or production release.
+The author must not merge it. helm-evidence source and A0 historical evidence are
+unchanged; **A0-7ZIP experimental FAIL remains unchanged**. No helm-observe,
+execution, discovery, lifecycle, recovery, App Forge, licence or further subsystem
+is implemented or authorised. Next decision: assign independent review of this
+bounded candidate. Earlier entries retain their then-current authorisation status.
+
 <a id="helm-app-spec-selection-acceptance"></a>
 
 ## Owner acceptance, 2026-09-08 — bounded helm-app-spec selection

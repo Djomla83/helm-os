@@ -1,0 +1,74 @@
+{
+  "schema": "helm-app-spec",
+  "version": "0.1",
+  "application": {
+    "id": "7zip-x64",
+    "version": "26.03",
+    "source": {
+      "size": 1661239,
+      "sha256": "0859c524b8a63551848f0c246abddcb1d0b7b656b0fbfe879f8d85e61a9e6edd",
+      "architecture": "x86_64"
+    }
+  },
+  "runtime": {
+    "family": "wine",
+    "artifacts": [
+      {
+        "role": "wine-devel-archive",
+        "size": 11586578,
+        "sha256": "eb42cc830c0e0582ecb1c5cf94cbfefe5d0a0235caae771035077b5e7b8ddd8f",
+        "label": "wine-devel 11.17~noble-1 (amd64)"
+      },
+      {
+        "role": "wine-devel-amd64-archive",
+        "size": 150150970,
+        "sha256": "9184a81f0848003460526f30a66bd470a997fa0bd43c0d59efcacce0a12adb63",
+        "label": "wine-devel-amd64 11.17~noble-1 (amd64)"
+      },
+      {
+        "role": "winehq-devel-archive",
+        "size": 1320,
+        "sha256": "62873c6d7c5b05710064bc5fa3d9e2be0595edd77bc94c2ed3ea7896fdcb7869",
+        "label": "winehq-devel 11.17~noble-1 (amd64)"
+      },
+      {
+        "role": "wine-devel-i386-archive",
+        "size": 142140490,
+        "sha256": "599a34d04fd3443a55f5700c3a919f177cdc4ab77b5ee7d6ebcfb87de03cc966",
+        "label": "wine-devel-i386 11.17~noble-1 (i386)"
+      }
+    ]
+  },
+  "environment": {
+    "windows_architecture": "win64",
+    "prefix": {
+      "role": "dedicated"
+    },
+    "disabled_dlls": [
+      "mscoree",
+      "mshtml"
+    ]
+  },
+  "entry_point": {
+    "path": "drive_c/Program Files/7-Zip/7zFM.exe"
+  },
+  "verification": {
+    "definitions": [
+      {
+        "role": "protocol",
+        "size": 34585,
+        "sha256": "bd55677cc1724d078ee25dfbcbbc966350b20c129475bdcad28d2603785a2240"
+      },
+      {
+        "role": "oracle",
+        "size": 9093,
+        "sha256": "2ffec610149ad7aee94ed891af48c2c6623062937d3a5087449523a6d81e57e2"
+      },
+      {
+        "role": "content-fixture",
+        "size": 1290,
+        "sha256": "75d78bc6bc0f539df5ca8d54df34f406e44f2aa5ceb8a07bf3d856ce72747c8f"
+      }
+    ]
+  }
+}

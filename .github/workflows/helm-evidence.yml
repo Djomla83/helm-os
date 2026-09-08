@@ -1,4 +1,4 @@
-name: helm-evidence Linux
+name: HELM Rust workspace Linux
 
 on:
   pull_request:
@@ -6,14 +6,20 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'crates/helm-evidence/**'
+      - 'crates/helm-app-spec/**'
       - 'tools/helm_evidence_linux_probe.py'
+      - 'tools/helm_app_spec_fixture.py'
+      - 'tools/tests/**'
       - '.github/workflows/helm-evidence.yml'
   push:
     paths:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'crates/helm-evidence/**'
+      - 'crates/helm-app-spec/**'
       - 'tools/helm_evidence_linux_probe.py'
+      - 'tools/helm_app_spec_fixture.py'
+      - 'tools/tests/**'
       - '.github/workflows/helm-evidence.yml'
 
 permissions:
@@ -27,13 +33,18 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
+          # Fixture provenance tests read original preregistration Git blobs.
+          fetch-depth: 0
       # Pin the stable version independently validated on Windows and Ubuntu.
-      # Toolchain updates require a reviewed change and rerun of this module.
+      # Toolchain updates require a reviewed change and workspace checks.
       - name: Install Rust 1.95.0
         run: |
           rustup toolchain install 1.95.0 --profile minimal --component rustfmt,clippy
           rustup default 1.95.0
       - run: cargo fmt --check
-      - run: cargo clippy -p helm-evidence --all-targets --all-features --locked -- -D warnings
-      - run: cargo test -p helm-evidence --locked
-      - run: cargo build -p helm-evidence --release --locked
+      - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - run: cargo test --workspace --locked
+      - run: cargo build --workspace --release --locked
+      - run: python3 -m unittest discover -s tools/tests -v
+      - run: python3 tools/validate_docs.py
+      - run: python3 tools/helm_app_spec_fixture.py
