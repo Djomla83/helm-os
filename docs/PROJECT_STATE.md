@@ -1,5 +1,11 @@
 # Stanje projekta
 
+> **Independent module review, 2026-09-08:** [source findings and Linux validation](implementation/HELM-EVIDENCE-INDEPENDENT-REVIEW.md)
+> identified and corrected three IMPORTANT findings and one MINOR finding in
+> helm-evidence. Windows/Ubuntu checks and the bounded Linux CI job pass for the
+> correction. The corrected review branch is recommended for owner merge review;
+> no merge, application rerun, ADR/licence acceptance or new subsystem occurred.
+
 > **Implementation update, 2026-09-08:** the first bounded Rust module,
 > [helm-evidence](../crates/helm-evidence/README.md), implements read-only verification
 > of declared evidence contracts. [Review and validation](implementation/HELM-EVIDENCE-REVIEW.md)

@@ -1,0 +1,22 @@
+{
+  "apt_guest_setup": {
+    "Start-Date": "2026-09-08  04:13:14",
+    "Commandline": "apt-get install -y --no-install-recommends build-essential git",
+    "Install": "libgcc-13-dev:amd64 (13.3.0-6ubuntu2~24.04.1, automatic), libstdc++-13-dev:amd64 (13.3.0-6ubuntu2~24.04.1, automatic), g++-13:amd64 (13.3.0-6ubuntu2~24.04.1, automatic), gcc-13:amd64 (13.3.0-6ubuntu2~24.04.1, automatic), build-essential:amd64 (12.10ubuntu1), libctf-nobfd0:amd64 (2.42-4ubuntu2.10, automatic), gcc-x86-64-linux-gnu:amd64 (4:13.2.0-7ubuntu1, automatic), libtsan2:amd64 (14.2.0-4ubuntu2~24.04.1, automatic), g++:amd64 (4:13.2.0-7ubuntu1, automatic), gcc:amd64 (4:13.2.0-7ubuntu1, automatic), git:amd64 (1:2.43.0-1ubuntu7.3), libhwasan0:amd64 (14.2.0-4ubuntu2~24.04.1, automatic), libbinutils:amd64 (2.42-4ubuntu2.10, automatic), binutils-x86-64-linux-gnu:amd64 (2.42-4ubuntu2.10, automatic), bzip2:amd64 (1.0.8-5.1ubuntu0.1, automatic), g++-x86-64-linux-gnu:amd64 (4:13.2.0-7ubuntu1, automatic), libcc1-0:amd64 (14.2.0-4ubuntu2~24.04.1, automatic), dpkg-dev:amd64 (1.22.6ubuntu6.6, automatic), libasan8:amd64 (14.2.0-4ubuntu2~24.04.1, automatic), make:amd64 (4.3-4.1build2, automatic), libctf0:amd64 (2.42-4ubuntu2.10, automatic), lto-disabled-list:amd64 (47, automatic), binutils-common:amd64 (2.42-4ubuntu2.10, automatic), liberror-perl:amd64 (0.17029-2, automatic), libitm1:amd64 (14.2.0-4ubuntu2~24.04.1, automatic), libdpkg-perl:amd64 (1.22.6ubuntu6.6, automatic), libsframe1:amd64 (2.42-4ubuntu2.10, automatic), g++-13-x86-64-linux-gnu:amd64 (13.3.0-6ubuntu2~24.04.1, automatic), libgprofng0:amd64 (2.42-4ubuntu2.10, automatic), libquadmath0:amd64 (14.2.0-4ubuntu2~24.04.1, automatic), libubsan1:amd64 (14.2.0-4ubuntu2~24.04.1, automatic), liblsan0:amd64 (14.2.0-4ubuntu2~24.04.1, automatic), git-man:amd64 (1:2.43.0-1ubuntu7.3, automatic), gcc-13-x86-64-linux-gnu:amd64 (13.3.0-6ubuntu2~24.04.1, automatic), binutils:amd64 (2.42-4ubuntu2.10, automatic)",
+    "End-Date": "2026-09-08  04:14:58"
+  },
+  "privilege_boundary": "Guest sudo used only for compiler/linker and git setup and orderly shutdown; all compilation and verifier tests UID 1001",
+  "rust_setup": "Official https://sh.rustup.rs, --no-modify-path --profile minimal --default-toolchain 1.95.0 --component rustfmt,clippy; isolated CARGO_HOME/RUSTUP_HOME under review directory",
+  "rustup_script_sha256": "7d0ea0f8eba7fa1ebfe998091cd7ec4501e33ec5ca6b884eb4d894d7da5170af",
+  "a0_before": {
+    "entries": 2214,
+    "inventory_sha256": "0ce8bc2747d78e2c71ccafd62a848db9eaa3efe88ff31283cc2733e6fb872bf3",
+    "scope": "A0 regular-file contents, path set, object types/modes, lengths and symlink targets; excludes atime"
+  },
+  "a0_after": {
+    "entries": 2214,
+    "inventory_sha256": "0ce8bc2747d78e2c71ccafd62a848db9eaa3efe88ff31283cc2733e6fb872bf3",
+    "scope": "A0 regular-file contents, path set, object types/modes, lengths and symlink targets; excludes atime"
+  },
+  "a0_unchanged": true
+}
