@@ -1,5 +1,48 @@
 # Stanje projekta
 
+<a id="helm-evidence-owner-acceptance"></a>
+
+## Owner acceptance, 2026-09-08 — helm-evidence 0.1 merged
+
+The repository owner explicitly approved the corrected reviewed tip
+`ab2e0d1c46933467dd1d9f9dedbcedeba8a37163` for merge. Main was fast-forwarded from
+`ae3f012fb1bfd7b20018c3faf6c71a6740a041fe` to that exact tip and published with a
+normal push; a subsequent fetch verified origin/main. **helm-evidence 0.1 is merged
+as HELM's first experimental product-code module.** Its schema and API remain
+experimental, not stable. This is owner acceptance of the bounded module, not a
+production release, licence decision or acceptance of any architecture ADR.
+
+[Independent review](implementation/HELM-EVIDENCE-INDEPENDENT-REVIEW.md) found and
+fixed three IMPORTANT issues (symlink-open races, blocking FIFO-open races and
+duplicate decoded content expectations) and one MINOR issue (reserved section IDs).
+The corrective code/test/CI commit is
+`83907b0c1d7f305b9271292e7582b4de831e2469`; the approved tip is its direct child,
+changing documentation/evidence only. Product code, manifests, lockfile, tools and
+workflow are identical between those two commits. All five commits after the old
+main were preserved; the original unfixed candidate was not merged by itself.
+
+[Correction CI run 34187102166](https://github.com/Djomla83/helm-os/actions/runs/34187102166)
+was verified completed/success for the corrective commit, without rerunning it.
+After publication, [main CI run 34192021221](https://github.com/Djomla83/helm-os/actions/runs/34192021221)
+completed successfully for the approved tip: fmt, Clippy, tests and release build
+on GitHub-hosted Ubuntu 24.04 with Rust 1.95.0. The workflow remains module-scoped.
+Pre-merge Windows checks passed with Rust/Cargo 1.95.0, Python 3.14.3 and the Ryzen
+9 5950X host: 45 Rust tests, 36 Python tests, documentation validation, the 22-file
+A0 fixture check, whitespace checks and the bounded privacy/forbidden-artifact
+audit, including all 153 historical publication hashes. Commands and local receipts
+are retained under ignored `target/helm-evidence-merge-admin/`.
+
+**A0-7ZIP experimental FAIL remains unchanged**, including W1's missing required
+destination despite correct content and W2's scoped success. No application rerun
+occurred. The [security model](../crates/helm-evidence/README.md#security-model) and
+[review limitations](implementation/HELM-EVIDENCE-INDEPENDENT-REVIEW.md#hostile-filesystem-outcomes-and-limits)
+remain limitations, not newly accepted risks: authentication/freshness/truthful
+capture, atomic snapshots, hardlink origin, hostile filesystems, untested platform
+and race cases, and comprehensive security/advisory coverage are not established.
+No data/permission policy changed. Review branches, VM/WSL labs and private
+provenance are retained. Work stops at this acceptance boundary; any next subsystem
+requires a separate owner decision. Earlier entries below are historical snapshots.
+
 > **Independent module review, 2026-09-08:** [source findings and Linux validation](implementation/HELM-EVIDENCE-INDEPENDENT-REVIEW.md)
 > identified and corrected three IMPORTANT findings and one MINOR finding in
 > helm-evidence. Windows/Ubuntu checks and the bounded Linux CI job pass for the

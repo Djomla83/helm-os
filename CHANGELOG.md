@@ -1,5 +1,14 @@
 # Istorija promena
 
+## 2026-09-08 — helm-evidence 0.1 owner acceptance
+
+Merged the corrected review history by fast-forward as HELM's first experimental
+product-code module. Main's Linux CI passed. The authoritative
+[acceptance record](docs/PROJECT_STATE.md#helm-evidence-owner-acceptance) identifies
+the owner-approved tip, corrective commit, fixed review findings and CI runs.
+Schema/API remain experimental; A0-7ZIP FAIL and known limitations are preserved.
+No production release, architecture ADR acceptance or next subsystem is included.
+
 ## 0.4.4 — 2026-09-07
 
 Executed the separately authorised A0-7ZIP desktop baseline after verifying the owner's completed

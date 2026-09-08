@@ -6,6 +6,13 @@
 koristite [prvi agent zadatak](../AGENT_STARTER.md), [stanje projekta](PROJECT_STATE.md)
 i [otvorena pitanja](OPEN_QUESTIONS.md).
 
+## Experimental product code
+
+[helm-evidence 0.1 owner acceptance](PROJECT_STATE.md#helm-evidence-owner-acceptance)
+records the first merged module, corrected commit identities and successful main
+Linux CI. [Module documentation](../crates/helm-evidence/README.md) defines its
+experimental schema/API and limits; A0-7ZIP experimental FAIL remains unchanged.
+
 ## Odluke i istraživanja
 
 [ADR indeks](DECISIONS.md): nineteen Proposed records and ADR-0020 Accepted for documentation language.
