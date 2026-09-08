@@ -1,5 +1,41 @@
 # Stanje projekta
 
+<a id="obs-fs-01-amendment-1"></a>
+
+## Owner approval, 2026-09-08 — OBS-FS-01 preregistration Amendment 1
+
+The original frozen preregistration `b4ed2e108134eb58a2561403f5da3509aed955ee`
+encountered a **pre-execution factual mechanism defect**: it predicted that a symbolic-link
+target is rejected at path resolution with `ELOOP` and that no descriptor is produced.
+That holds only for a non-final component. For a **trailing** symlink under the mandated
+`O_PATH|O_NOFOLLOW` policy, `openat2` succeeds and returns an `O_PATH` descriptor to the
+link itself, so rejection is a classification step.
+
+Preflight and build validation found this **before any preregistered case, frozen fixture
+set, race run or experiment verdict existed**, and execution halted at
+`90e025890a32b36ccc55a4dc223bbb85046ba152`. The owner approved **Amendment 1**, a
+pre-execution correction limited to four symlink items: the section 7 object-kind row, the
+withdrawal of finding M3, the section 12 static-symlink outcome, and the section 8 and 12
+symlink-race outcomes. Two sentences restating the same falsified claim were corrected for
+coherence and add no expectation.
+
+The [amended independent review](implementation/HELM-OBSERVE-INDEPENDENT-REVIEW.md) is now
+the **authoritative frozen OBS-FS-01 definition** and supersedes `b4ed2e1` for all future
+execution. `b4ed2e1` remains immutable in history with its original role intact, the
+preflight observation is preserved, and the error is recorded rather than erased.
+
+Verified unchanged by the amendment: mandatory and optional case membership; the D1–D3
+direct-open arm; procfs admission rules; mount preflight and fallback rules; resource
+ceilings; instrumentation requirements; oracle definitions; repetition and seed policy;
+and the verdict rules and their precedence. The measured preflight fact is not
+reinterpreted: **the unprivileged descendant bind-mount case remains a BLOCKED
+prerequisite on this lab**, and the non-namespace `NO_XDEV` fallback arm remains mandatory.
+
+**OBS-FS-01 remains NOT_RUN and execution again requires a separate owner authorisation;
+this task authorises none.** No VM was booted or accessed, no experiment case ran, no
+helm-observe code exists, [ADR-0022](adr/ADR-0022-observation-authority.md) remains
+**Proposed**, and **A0-7ZIP remains experimental FAIL**.
+
 ## Execution halted, 2026-09-08 — OBS-FS-01 preflight complete, no trial run
 
 OBS-FS-01 execution was authorised and **halted at the preregistration before the first

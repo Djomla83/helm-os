@@ -12,8 +12,7 @@ closed against post-hoc goalpost movement.
 
 > **Owner acceptance, 2026-09-08 — this preregistration is frozen.** The repository owner
 > accepted the corrected preregistration below at exact commit
-> `b4ed2e108134eb58a2561403f5da3509aed955ee`, which is the citable frozen reference; this
-> banner adds no expectation and changes no table. The acceptance covers the **experiment
+> `b4ed2e108134eb58a2561403f5da3509aed955ee`. The acceptance covers the **experiment
 > definition only**. [ADR-0022](../adr/ADR-0022-observation-authority.md) remains
 > **Proposed** and OBS-FS-01 remains **NOT_RUN**; execution, VM access, harness
 > execution, helm-observe implementation and A0 access each require a separate owner
@@ -21,6 +20,44 @@ closed against post-hoc goalpost movement.
 > execution; changing one after execution invalidates this preregistration and requires a
 > new experiment definition. See the
 > [acceptance record](../PROJECT_STATE.md#obs-fs-01-preregistration-acceptance).
+>
+> <a id="amendment-1"></a>
+> **Amendment 1, 2026-09-08 — owner-approved pre-execution correction.** This document as
+> amended is the authoritative frozen OBS-FS-01 definition and **supersedes `b4ed2e1` for
+> all future execution**. `b4ed2e1` remains immutable in history and keeps its original
+> role; nothing about it is rewritten or invalidated.
+>
+> **Why this is not goalpost movement.** The owner's acceptance already required a new
+> owner review **before** execution if a material frozen expectation proved wrong. It did:
+> [preflight and build validation](../experiments/OBS-FS-01-PREFLIGHT-AND-HALT.md)
+> falsified a mechanism prediction **before any preregistered case, frozen fixture set,
+> race run or experiment verdict existed**. Execution stopped immediately at
+> `90e025890a32b36ccc55a4dc223bbb85046ba152`; the incorrect definition and the preflight
+> observation are both preserved in Git history; and this corrected definition is frozen
+> **before the first OBS-FS-01 trial**. No trial outcome has ever been scored against
+> either version.
+>
+> **Scope: four corrections, all confined to symlink mechanism.** (A) section 7 splits the
+> symlink row into trailing and non-final variants; (B) finding M3 is withdrawn as wrong,
+> with its original text preserved; (C) section 12 replaces the static-symlink row with
+> per-variant rows; (D) sections 8 and 12 split the symlink-race outcomes identically. Two
+> further sentences that restated the same falsified claim — the section 4 comparison row
+> and the section 6 `ELOOP` bullet — are corrected for coherence and add no expectation.
+>
+> **Supporting semantics.** `RESOLVE_NO_SYMLINKS` governs resolution of symlinks in all
+> components; `O_NOFOLLOW` governs the final component only. With both `O_PATH` and
+> `O_NOFOLLOW`, [openat2(2)](https://man7.org/linux/man-pages/man2/openat2.2.html)
+> specifies that a trailing symlink yields an `O_PATH` descriptor referring to the link
+> itself. The preflight observation agrees with the documentation; the preflight record is
+> not rewritten.
+>
+> **Unchanged by this amendment:** mandatory and optional case membership; the D1–D3
+> direct-open arm; procfs admission rules; mount preflight and fallback rules; resource
+> ceilings; instrumentation requirements; oracle definitions; repetition and seed policy;
+> verdict rules and their precedence; and every unrelated safe-outcome set. The measured
+> preflight fact stands unreinterpreted: **the unprivileged descendant bind-mount case is
+> a BLOCKED prerequisite on this lab**, and the non-namespace `NO_XDEV` fallback arm
+> remains mandatory. Execution requires a **new** owner authorisation.
 
 This review checks the [architecture proposal](../research/HELM-OBSERVE-ARCHITECTURE.md)
 and [ADR-0022](../adr/ADR-0022-observation-authority.md) as an *experiment definition*.
@@ -118,7 +155,7 @@ report's proposal. The comparison below is grounded in primary kernel documentat
 
 | Property | A: `O_PATH` pin, `statx`, procfs reopen | B: direct `openat2` with `O_RDONLY`, then `fstat` | C: any other unprivileged Linux-native route |
 |---|---|---|---|
-| Symlink race | `RESOLVE_NO_SYMLINKS` rejects before any object is opened | Same resolution guarantee, but the leaf is opened before it is classified | Same as A or B |
+| Symlink race | Rejected before any object is data-opened: a non-final symlink fails resolution, and a trailing symlink yields only an `O_PATH` pin of the link that classification then rejects | Same resolution guarantee, but the leaf is opened before it is classified | Same as A or B |
 | Parent replacement | Resolution is `RESOLVE_BENEATH` from a held root fd; a replaced parent yields rejection or resolves under the retained root | Identical | Identical |
 | Mount crossing | `RESOLVE_NO_XDEV` rejects, "including all bind mounts" | Identical | Identical |
 | Magic links | `RESOLVE_NO_SYMLINKS` "implies `RESOLVE_NO_MAGICLINKS`" | Identical for target lookup | Identical |
@@ -247,8 +284,12 @@ supplies. Under this flag set:
   detected" (`RESOLVE_BENEATH`) and for "a path component crosses a mount point"
   (`RESOLVE_NO_XDEV`).
 - `ELOOP` is returned for "one of the path components was a symbolic link (or magic
-  link)", with no indication of *which* component, so a leaf symlink and a parent symlink
-  are indistinguishable.
+  link)", with no indication of *which* component. **Corrected by Amendment 1:** this
+  applies to non-final components only, and it does not make a leaf and a parent symlink
+  indistinguishable — a trailing symlink produces no `ELOOP` at all but an `O_PATH`
+  descriptor to the link, so the two are in fact distinguishable by stage. `ELOOP`
+  remains ambiguous among the non-final components and between a symlink and a magic
+  link, which is what the finding rests on.
 
 The observer therefore cannot honestly emit `mount_crossing` as distinct from a
 beneath-escape, and cannot attribute `symlink_forbidden` to a component. It could only do
@@ -282,7 +323,8 @@ accidentally become a data access.
 |---|---|---|
 | Regular file | `openat2` with `O_PATH`, `statx` | Pin, then size and budget check, then procfs reopen, then stream |
 | Directory | `openat2` with `O_PATH`, `statx` | Metadata only; never listed |
-| Symlink | Nothing beyond the failed `openat2` | Rejected at resolution with `ELOOP`; no descriptor is produced |
+| Symlink, **trailing/final component** | `openat2` with `O_PATH`, `statx` | The pin may **succeed**, returning an `O_PATH` descriptor to the link itself. Classify it as a symlink and reject as `symlink_forbidden` before any reopen or read. The destination is never resolved, opened or read |
+| Symlink, **non-final component** | Nothing beyond the failed `openat2` | Constrained resolution rejects it; `ELOOP` is the expected kernel class; no descriptor for the destination is produced |
 | FIFO | `openat2` with `O_PATH`, `statx` | Metadata-only rejection. `O_PATH` cannot block and cannot wake a waiting writer |
 | Unix socket | `openat2` with `O_PATH`, `statx` | Metadata-only rejection; no connect |
 | Character device | `openat2` with `O_PATH`, `statx` | Metadata-only rejection; the driver open path is never entered |
@@ -291,11 +333,20 @@ accidentally become a data access.
 | Hardlinked regular file | As regular file | Permitted inside an authorized root; link count sampled, origin unestablished |
 
 The report's threat table states that "`O_PATH` link metadata can identify rejection
-without reading its destination". Under the mandated flag set this is not what happens:
-`RESOLVE_NO_SYMLINKS` fails the call, so no link handle is produced and the record cannot
-carry an observed kind of symlink. The behaviour is safe — safer, in fact — but the
-sentence describes a different flag set. Recorded as M3; the record schema's existing
-hedge, "kind included only if actually established", already accommodates the truth.
+without reading its destination". **That sentence is correct**, and post-open handle
+classification is therefore mandatory rather than merely defensive. `RESOLVE_NO_SYMLINKS`
+governs the *resolution* of symlinks in all components, whereas `O_NOFOLLOW` governs the
+final component only; a trailing symlink under `O_PATH|O_NOFOLLOW` is never resolved, so
+`RESOLVE_NO_SYMLINKS` has nothing to reject and
+[openat2(2)](https://man7.org/linux/man-pages/man2/openat2.2.html) specifies that an
+`O_PATH` descriptor referring to the symlink is returned. The record's existing hedge,
+"kind included only if actually established", accommodates both variants: the trailing
+case can carry an observed kind of symlink, the non-final case cannot.
+
+This corrects Amendment 1 item A. The independent review originally asserted the opposite
+here and recorded it as finding M3; that assertion was wrong and is withdrawn in
+section 9. See the [amendment record](#amendment-1) for why this is a pre-execution
+correction and not a moved goalpost.
 
 **Metadata-only rejection is testable from the trace**, and the corrected preregistration
 requires exactly that: for every special-file case the complete child syscall trace must
@@ -312,8 +363,8 @@ argument other than the procfs reopen path.
 
 | Race | Preregistered safe outcome set | Invariant that must hold in every trial |
 |---|---|---|
-| Leaf regular and symlink swap | Rejected in the `ELOOP` class if the swap lands before resolution; observed file with the digest of the pinned regular object if it lands after the pin | No escape; the link destination is never opened |
-| Parent directory and symlink swap | Rejected in the `ELOOP` class, or observed file from the pinned object if the swap lands after that component resolved | No escape |
+| Leaf regular and symlink swap | If the swap lands before resolution so the **final** component is a symlink: `symlink_forbidden`, by `O_PATH` pin of the link followed by classification rejection — a descriptor to the link is permitted. If the swap lands after the pin: observed file with the digest of the already-pinned regular object, where otherwise allowed by the existing race semantics | No escape; the link destination is never resolved, opened or read; injection landed |
+| Parent directory and symlink swap | If the symlink becomes a **non-final** component: `symlink_forbidden` in the `ELOOP` class. If the swap lands after that component resolved: observed file from the pinned object | No escape; injection landed |
 | Regular file replacement **before** pin | Observed file with the digest of the new object; `absent` if the replacement window left no entry | No escape; the observer must not judge the bytes |
 | Regular file replacement **after** pin | Observed file with the digest of the retained object; `changed_during_read`; `io_failure` with a partial byte count | No complete digest after a known short read; no claim that the pathname still names the object |
 | Root directory rename or replacement after the caller supplied its fd | Observed outcomes from the retained root; `absent`; rejected | No escape; no live-path-ancestry claim in the record |
@@ -335,7 +386,7 @@ sequence has more than one open per target.
 |---|---|---|
 | M1 | report section 7 | Candidate minimum Linux 5.8 gives `STATX_MNT_ID`, which is not guaranteed unique; `STATX_MNT_ID_UNIQUE` (Linux 6.8) "is guaranteed to not be reused while the system is running". Record which was used, prefer the unique ID where available, and never treat a plain mount ID as a discriminator across an unmount. The chosen lab kernel supplies the unique ID |
 | M2 | report section 7 | `RESOLVE_NO_SYMLINKS` implies `RESOLVE_NO_MAGICLINKS`; listing both is redundant but harmless. No change required, noted so a reviewer does not read it as two independent guarantees |
-| M3 | report section 7 threat table | The `O_PATH` symlink-metadata sentence does not hold under the mandated flag set. Delete it, or condition it on a flag set that is not used |
+| M3 | report section 7 threat table | **WITHDRAWN by Amendment 1 — this finding was wrong.** It originally read: *"The `O_PATH` symlink-metadata sentence does not hold under the mandated flag set. Delete it, or condition it on a flag set that is not used."* The architecture proposal was correct: under the mandated `O_PATH\|O_NOFOLLOW` policy a trailing symlink may return a metadata-capable `O_PATH` descriptor to the link itself, so post-open handle classification remains mandatory. Nothing in the proposal needs deleting or conditioning. The error is preserved here rather than erased; it was found by preflight before any preregistered trial, and its consequences are corrected in sections 7, 8 and 12 |
 | M4 | report sections 7 and 9 | State explicitly that an `ENOENT` arising from the procfs reopen stage is `reopen_unavailable`, never target `absent`. The existing definition already ties `absent` to lookup; the trap deserves one sentence because both stages can produce the same errno |
 | M5 | report section 16 | Record the deterministic consequence of the ceilings: reserving 512 MiB plus one byte per maximum file against a strict 1 GiB aggregate means a batch admits **at most one** maximum-sized file, and a second one deterministically returns a budget outcome. This is a clarification, not a defect; no constant should change without a concrete flaw |
 | M6 | report section 14 | The over-limit fixture must be **sparse**, or it cannot coexist with the 1 GiB fixture allocation. Record that the small sparse case and the over-limit case have different purposes: hole hashing versus never opening data |
@@ -404,8 +455,9 @@ every trial regardless of which result occurred.
 | Regular nonempty and empty | Observed file with the independently computed digest | Exactly one `O_PATH` `openat2`, one `statx`, one procfs reopen, the reads, one close |
 | Missing leaf and missing parent | `absent` | No sibling or alternative path is attempted |
 | Wrong file, same name | Observed file with the *actual* digest | No comparison and no mismatch code anywhere |
-| Static symlink: internal, escaping, dangling | Rejected, `ELOOP` class | No descriptor for the link; destination never opened; no escape |
-| Leaf and parent symlink swap | Rejected `ELOOP` class, or observed file from the pinned object | Injection landed; no escape |
+| Static **trailing** symlink: internal, escaping, dangling | `symlink_forbidden` | Allowed mechanism: `O_PATH` pin of the link, then classification rejection. A descriptor to the link is **permitted**. Destination never resolved, opened or read; no escape; no data reopen or read of the rejected link |
+| Static **non-final** symlink component | `symlink_forbidden` | Constrained resolution rejection, `ELOOP` class; no descriptor for the destination. Same invariants |
+| Leaf and parent symlink swap | Leaf variant: `symlink_forbidden` via `O_PATH` pin then classification. Parent variant: `symlink_forbidden` in the `ELOOP` class. Either variant: observed file from the already-pinned object if the swap lands after the pin | Injection landed; no escape; destination never resolved, opened or read |
 | FIFO, socket, character device, block device | Rejected as a special file | `O_PATH` `openat2` and `statx` only; **zero** further opens naming the object and zero reads on its descriptor |
 | Directory in file position | Rejected as wrong kind, with observed kind directory | No directory enumeration of any kind |
 | Regular file in parent position | Rejected, `ENOTDIR` class — never `absent` | — |
