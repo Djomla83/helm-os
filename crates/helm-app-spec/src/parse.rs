@@ -66,7 +66,10 @@ pub(crate) fn json(bytes: &[u8]) -> Result<Value, SpecErrors> {
         nodes: 0,
         failure: None,
     };
-    let mut parser = serde_json::Deserializer::from_slice(bytes);
+    // This reader is the supplied &[u8], never a file or caller-provided reader.
+    // SliceRead computes error positions through memchr's global CPU dispatcher;
+    // IoRead<&[u8]> instead counts line/column locally while consuming these bytes.
+    let mut parser = serde_json::Deserializer::from_reader(bytes);
     let result = Seed {
         budget: &mut budget,
         depth: 0,

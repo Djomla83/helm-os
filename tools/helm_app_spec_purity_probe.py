@@ -25,7 +25,9 @@ def main():
     assert platform.machine().lower() in ("amd64", "x86_64"), "Probe targets the reviewed x86_64 dispatch"
     work = ROOT / "target/helm-app-spec-independent/purity"
     work.mkdir(parents=True, exist_ok=True)
-    metadata = json.loads(subprocess.check_output(["cargo", "metadata", "--locked", "--offline", "--format-version", "1"], cwd=ROOT))
+    version = subprocess.check_output(["rustc", "-Vv"], cwd=ROOT).decode()
+    host = next(line.split(": ", 1)[1] for line in version.splitlines() if line.startswith("host: "))
+    metadata = json.loads(subprocess.check_output(["cargo", "metadata", "--locked", "--offline", "--format-version", "1", "--filter-platform", host], cwd=ROOT))
     package = next(p for p in metadata["packages"] if p["name"] == "memchr")
     original = Path(package["manifest_path"]).parent
     vendor = work / "memchr"
@@ -38,10 +40,14 @@ def main():
     instrument.write_text(source, encoding="utf-8", newline="\n")
     candidate = work / "original"
     if not candidate.exists():
-        raw = subprocess.check_output(["git", "archive", CANDIDATE, "Cargo.toml", "Cargo.lock", "crates/helm-app-spec", "crates/helm-evidence"], cwd=ROOT)
+        raw = subprocess.check_output(["git", "archive", CANDIDATE, "Cargo.toml", "Cargo.lock", "crates/helm-app-spec", "crates/helm-evidence", "tools/helm_evidence_linux_probe.py"], cwd=ROOT)
         candidate.mkdir()
         with tarfile.open(fileobj=io.BytesIO(raw)) as archive:
             archive.extractall(candidate, filter="data")
+    # Older local probe directories may predate inclusion of the Linux test helper.
+    helper = candidate / "tools/helm_evidence_linux_probe.py"
+    helper.parent.mkdir(exist_ok=True)
+    helper.write_bytes(subprocess.check_output(["git", "show", CANDIDATE + ":tools/helm_evidence_linux_probe.py"], cwd=ROOT))
     results = []
     for name, repo in [("original-candidate", candidate), ("current", ROOT)]:
         project = work / name

@@ -12,6 +12,7 @@ import platform
 import shutil
 import statistics
 import subprocess
+import sys
 import tarfile
 import time
 import tomllib
@@ -48,7 +49,7 @@ def main():
         save()
         print(json.dumps({"command": [redact(str(a)) for a in argv], "exit_code": result.returncode}), flush=True)
         assert result.returncode == expected, redact(out + err)
-        return out
+        return redact(out)
 
     receipt["head_at_check"] = run(["git", "rev-parse", "HEAD"]).strip()
     receipt["rustc"] = run(["rustc", "-Vv"])
@@ -67,6 +68,20 @@ def main():
                 notes.replace("synthetic-notes", "synthetic-\\u006eotes"), notes.rstrip("\n")]
     assert receipt["identities"] == [hashlib.sha256(s.encode()).hexdigest() for s in variants]
     receipt["exact_byte_python_hashlib_comparison"] = "PASS: whitespace, field order, escaped string, final newline"
+    purity = run([sys.executable, "tools/helm_app_spec_purity_probe.py", "--output", work / "purity-after.json"])
+    receipt["purity_probe"] = json.loads(next(line.split("=", 1)[1] for line in purity.splitlines() if line.startswith("PURITY_PROBE=")))
+    original = work / "purity/original"
+    # Run unchanged candidate product/test bytes independently on this platform.
+    previous_review_test = original / "crates/helm-app-spec/tests/independent_review.rs"
+    if previous_review_test.exists():
+        previous_review_test.unlink()  # Only our generated copy inside target/.
+    run(["cargo", "test", "--workspace", "--locked"], cwd=original)
+    shutil.copyfile(ROOT / "crates/helm-app-spec/tests/independent_review.rs", original / "crates/helm-app-spec/tests/independent_review.rs")
+    original_tests = run(["cargo", "test", "-p", "helm-app-spec", "--test", "independent_review", "--locked", "--", "--nocapture"], cwd=original)
+    for label in ["IDENTITIES", "PROPERTIES"]:
+        original_result = json.loads(next(line.split("=", 1)[1] for line in original_tests.splitlines() if line.startswith("REVIEW_" + label + "=")))
+        assert original_result == receipt[label.lower()]
+    receipt["candidate_corrected_semantics"] = "PASS: identities and complete 20000-case transcript identical"
 
     api = work / "api-rejection"
     (api / "src").mkdir(parents=True, exist_ok=True)
@@ -99,6 +114,9 @@ fn main() {}'''),
         base.mkdir()
         with tarfile.open(fileobj=io.BytesIO(raw)) as archive:
             archive.extractall(base, filter="data")
+    helper = base / "tools/helm_evidence_linux_probe.py"
+    helper.parent.mkdir(exist_ok=True)
+    helper.write_bytes(subprocess.check_output(["git", "show", BASE + ":tools/helm_evidence_linux_probe.py"], cwd=ROOT))
     run(["cargo", "test", "--workspace", "--locked"], cwd=base)
     # The same executable source links either baseline evidence, candidate evidence
     # alone, or both candidate libraries. Pins/registry packages remain unchanged.

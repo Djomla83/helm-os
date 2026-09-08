@@ -9,6 +9,9 @@ on:
       - 'crates/helm-app-spec/**'
       - 'tools/helm_evidence_linux_probe.py'
       - 'tools/helm_app_spec_fixture.py'
+      - 'tools/helm_app_spec_independent_review.py'
+      - 'tools/helm_app_spec_review_bench.rs'
+      - 'tools/helm_app_spec_purity_probe.py'
       - 'tools/tests/**'
       - '.github/workflows/helm-evidence.yml'
   push:
@@ -19,6 +22,9 @@ on:
       - 'crates/helm-app-spec/**'
       - 'tools/helm_evidence_linux_probe.py'
       - 'tools/helm_app_spec_fixture.py'
+      - 'tools/helm_app_spec_independent_review.py'
+      - 'tools/helm_app_spec_review_bench.rs'
+      - 'tools/helm_app_spec_purity_probe.py'
       - 'tools/tests/**'
       - '.github/workflows/helm-evidence.yml'
 
@@ -44,7 +50,13 @@ jobs:
       - run: cargo fmt --check
       - run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
       - run: cargo test --workspace --locked
-      - run: cargo build --workspace --release --locked
+      # Separate invocations preserve helm-evidence's standalone SHA backend.
+      # Workspace tests above still exercise the unified force-soft graph.
+      - run: cargo test -p helm-evidence --locked
+      - run: cargo build -p helm-app-spec --release --locked
+      - run: cargo build -p helm-evidence --release --locked
       - run: python3 -m unittest discover -s tools/tests -v
       - run: python3 tools/validate_docs.py
       - run: python3 tools/helm_app_spec_fixture.py
+      - name: Independent app-spec properties and cross-crate comparison
+        run: python3 tools/helm_app_spec_independent_review.py --output target/helm-app-spec-independent/linux.json

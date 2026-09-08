@@ -157,6 +157,14 @@ regression test; direct Value parsing would violate this contract. No schema str
 or auxiliary maps bypass the visitor. Escaped duplicate names and identical duplicate
 values reject, including in objects that would subsequently be unknown fields.
 
+The pinned deserializer uses `from_reader(bytes)` with the concrete supplied
+`&[u8]` as its in-memory reader. No file or caller-defined reader is accepted.
+This avoids `from_slice`'s error-position scans through memchr's CPU discovery and
+global dispatch cache. Line/column tracking stays local; public diagnostics still
+collapse parser internals to the same bounded codes. The independent review's
+isolated dependency-instrumentation probe reproduces that original purity defect
+and checks the corrected path without changing the dependency cache.
+
 | Bound | Limit |
 |---|---:|
 | Exact input bytes, checked first | 65,536 |
@@ -234,8 +242,19 @@ Three direct exact pins: `serde =1.0.228`, `serde_json =1.0.149`, `sha2 =0.10.9`
 All were already locked and reviewed for helm-evidence. No new third-party package
 or version is introduced. `force-soft` is the only new dependency feature; Cargo
 feature unification also chooses that SHA-256 backend for a combined workspace
-build. No helm-evidence source, API, schema or observed behavior changes. Its
-standalone dependency declaration remains intact. There are no dev dependencies.
+build. This changes helm-evidence's SHA backend and can materially slow hashing;
+it preserves digest and verifier-result semantics, not timing. A consumer linking
+both crates also gets the software backend. Dependency renaming or resolver 3 does
+not isolate features of the same package version. Its standalone dependency
+declaration remains intact. There are no dev dependencies.
+
+Build the existing evidence CLI with a separate
+`cargo build -p helm-evidence --release --locked` invocation to retain its original
+backend. The workspace CI tests the combined graph and the standalone evidence
+crate, then builds each release crate separately. A later combined consumer must
+evaluate this performance tradeoff explicitly; the current library does not
+promise per-consumer SHA backend isolation. No local crypto implementation or shared
+crypto crate is introduced. The independent review records before/after measurements.
 
 Neither crate depends on the other. Tiny digest grammar duplication is intentional;
 immutable identities are the conceptual link and no shared-utils crate is justified.
@@ -255,7 +274,8 @@ Stable Rust 1.95.0 is the current reviewed toolchain. With cached dependencies:
 cargo fmt --check
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 cargo test --workspace --locked
-cargo build --workspace --release --locked
+cargo build -p helm-app-spec --release --locked
+cargo build -p helm-evidence --release --locked
 python -m unittest discover -s tools/tests -v
 python tools/validate_docs.py
 python tools/helm_app_spec_fixture.py
