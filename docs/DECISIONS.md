@@ -51,3 +51,4 @@ Proces je u [master planu](../HELM_MASTER_PLAN.md#s31). Licencna odluka ostaje z
 | ID | Decision | Status |
 |---|---|---|
 | ADR-0021 | [Make the second product module an inert application contract](adr/ADR-0021-second-product-module.md) — [selection analysis and owner refinements](research/SECOND-PRODUCT-MODULE-SELECTION.md); bounded architectural authority, with experimental helm-app-spec 0.1 now accepted on main | **Accepted 2026-09-08** |
+| ADR-0022 | [Observe explicit targets without interpreting desired state](adr/ADR-0022-observation-authority.md) — [architecture analysis and proposed falsification experiment](research/HELM-OBSERVE-ARCHITECTURE.md); awaits owner review, no implementation or experiment executed | Proposed |

@@ -1,5 +1,12 @@
 # Stanje projekta
 
+## Architecture analysis, 2026-09-08 — helm-observe awaits owner review
+
+The [helm-observe architecture analysis](research/HELM-OBSERVE-ARCHITECTURE.md) exists
+with [ADR-0022 Proposed](adr/ADR-0022-observation-authority.md) and awaits owner review.
+It includes an observability matrix and a proposed falsification experiment; no
+observer implementation or experiment execution is authorised by this analysis.
+
 ## Owner acceptance, 2026-09-08 — helm-app-spec 0.1 merged
 
 The repository owner approved reviewed tip
