@@ -1,5 +1,40 @@
 # Stanje projekta
 
+## Implementation candidate, 2026-09-08 — helm-observe 0.1 awaits independent review
+
+Experimental [helm-observe](../crates/helm-observe/README.md) 0.1 is implemented on
+`product/helm-observe` under Accepted
+[ADR-0022](adr/ADR-0022-observation-authority.md) and **awaits independent review**. The
+[author implementation review](implementation/HELM-OBSERVE-REVIEW.md) maps the code to
+every ADR-0022 requirement and to each merge-blocking obligation. Disposition:
+**READY_FOR_INDEPENDENT_REVIEW**. This is a branch candidate, not an owner-accepted merge
+or a release, and the author must not merge it.
+
+The crate answers only "what actually exists at explicitly authorised targets?". The three
+merge-blocking obligations are implemented and tested: the scope binds the complete plan
+SHA-256 and the artifact carries it; roots bind by logical ID, set and count rather than
+position; and plan substitution is **impossible by construction**, because `authorize`
+consumes the validated plan and `observe` takes only the authorised scope.
+
+It depends on neither HELM crate, adds no shared utility crate, and keeps the workspace
+`unsafe_code = "forbid"`: rustix's safe wrappers express the whole accepted mechanism, so
+no libc or raw-syscall unsafe block was needed. Pure plan and model code compiles
+cross-platform; the observation backend is gated to Linux with no fake Windows semantics.
+
+Hosted Ubuntu CI passed `cargo fmt --check`, workspace Clippy with warnings denied, and the
+full workspace test suite, including 12 pure contract tests and 16 Linux tests. The
+supported-cohort check reported **`HELM-OBSERVE-COHORT: ext4 PASS`** on an ext-family
+(`0xEF53`) fixture filesystem, so the ext4 cohort execution is recorded as PASS rather than
+BLOCKED. Root admission refuses a non-cohort filesystem instead of degrading.
+
+Descendant bind mounts remain outside the validated 0.1 cohort: `RESOLVE_NO_XDEV` stays
+mandatory and such crossings are conservatively rejected, with no validation claimed. No
+`helm-bind`, no `helm-launch`, no A0 access or rerun, no Wine or 7-Zip, no privilege
+change, and no modification to helm-app-spec or helm-evidence sources or features. The
+recorded `sha2/force-soft` combined-graph limitation is documented, not silently changed.
+**A0-7ZIP remains experimental FAIL.** The next decision is to assign independent review of
+this bounded candidate.
+
 ## Owner acceptance, 2026-09-08 — ADR-0022 Accepted with bounded 0.1 scope
 
 The repository owner accepted [ADR-0022](adr/ADR-0022-observation-authority.md) on evidence
