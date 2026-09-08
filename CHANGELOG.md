@@ -1,5 +1,16 @@
 # Istorija promena
 
+## 2026-09-08 — bounded helm-app-spec selection accepted
+
+Repository owner Djomla83 accepted [ADR-0021](docs/adr/ADR-0021-second-product-module.md)
+only for a pure, non-executable application specification/validation library before observation
+or lifecycle execution. Refined the [selection report](docs/research/SECOND-PRODUCT-MODULE-SELECTION.md)
+with raw-byte document identity, desired/observed separation, bounded runtime artifact requirements,
+acyclic verification references, pure validation and parser/environment limits.
+The [acceptance record](docs/PROJECT_STATE.md#helm-app-spec-selection-acceptance) preserves the
+original analysis history. Schema/API remain unsettled; implementation is not authorised.
+No product code changed. A0-7ZIP experimental FAIL and all other ADR statuses remain unchanged.
+
 ## 2026-09-08 — helm-evidence 0.1 owner acceptance
 
 Merged the corrected review history by fast-forward as HELM's first experimental

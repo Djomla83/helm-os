@@ -1,21 +1,30 @@
 # Second HELM product module — architecture selection
 
-**Status:** recommendation awaiting owner review; no implementation authorised by this report.\
+**Status:** bounded module selection accepted by owner; schema/API remain proposed and implementation is not authorised.\
 **Analysis date:** 2026-09-08.\
+**Owner acceptance/refinement date:** 2026-09-08, repository owner Djomla83.\
 **Authoritative starting main:** `0b72e14f5d6101c281a8d9823168407da3e71b9a`.\
-**Working branch:** `docs/second-product-module-selection`.\
+**Original analysis commit:** `08f29c53095a51947e9662ad2d0d7931ccb606ae`, preserved without rewriting history.\
+**Refinement branch:** `docs/app-spec-owner-acceptance`.\
 **Recommendation:** A, **`helm-app-spec`**, a pure, non-executable application contract with small runtime/environment identity types inside the same crate.
 
-This is the authoritative **selection analysis**, not an implemented specification or an accepted
-architecture. [ADR-0021](../adr/ADR-0021-second-product-module.md) records the proposed decision and
-links here for its rationale and API/schema sketch. Neither document accepts another ADR, chooses
+This is the **selection analysis**, not an implemented specification.
+[ADR-0021](../adr/ADR-0021-second-product-module.md) is authoritative for the accepted boundary:
+
+> Build a pure, non-executable application specification/validation library before observation or lifecycle execution.
+
+Acceptance does not stabilise the eventual schema/API or authorise implementation. The concrete
+schema, API, internal type placement, numeric parser limits and later-module sequence below remain
+design sketches, constrained by the owner's requirements. Neither document accepts another ADR, chooses
 HELM's product track, authorises the larger Evidence Loop PoC, or authorises module implementation.
 
-## 1. Reconstructed state and evidence classes
+## 1. Reconstructed state and evidence classes at the original main
 
 Executed `git fetch origin main`; `git rev-parse HEAD main origin/main` returned the starting SHA
 above three times. `git status --porcelain=v1` was empty. Work then branched from that exact commit.
-No reset, main edit, remote publication or history rewrite is part of this task.
+That original selection task made no main edit or remote publication. The later owner-authorised
+documentation publication is recorded separately in section 18; the original history is preserved.
+The table below describes the starting main, before the bounded ADR-0021 acceptance above.
 
 | Class | Authoritative material and conclusion |
 |---|---|
@@ -162,6 +171,21 @@ already have a tested underlying contract.
    couple all old evidence to a changing producer. Leave 0.1 intact; downstream adapters compose
    validation and evidence checks and retain each result's scope.
 
+### Identity-reference DAG required by the owner
+
+Unlike the dependency DAG above, these arrows mean **references the exact identity of**:
+
+```text
+app-spec -> frozen verification definition (including oracle/fixture definitions)
+later execution/evidence -> exact app-spec byte identity
+later execution/evidence -> observed outputs/results
+```
+
+There is no edge from the spec to its resulting evidence bundle. Definition references identify
+pre-execution contracts, never a result manifest. A future evidence adapter may bind the exact spec
+bytes alongside results; this proposes no change to helm-evidence 0.1. Raw document hashing requires
+neither resolving references nor generating evidence, so there is no spec/evidence identity cycle.
+
 ## 4. Actual A0 identities and observations
 
 The [registered A0 definition](../experiments/EXP-009.md#application-baseline), its
@@ -241,7 +265,7 @@ environment was captured, not silently use the SSH helper's environment as the G
 | A0 element | A: app specification | B: runtime/environment model | C: runner |
 |---|---|---|---|
 | 26.03 installer | Desired exact source digest; version is metadata. | External application-subject reference; source identity cannot be inferred from runtime. | Explicit install input bound to its verified source, with capture of selection/use. |
-| Wine 11.17 | Desired four-package set, explicitly limited to archive identities. | Separately supplied package, loader/server and mapping observations; missing loaded-byte binding stays UNKNOWN. | Must resolve the exact runtime without PATH fallback and capture what actually executes. Historical provisioning is imported, never regenerated as a new run. |
+| Wine 11.17 | Desired four-artifact set, explicitly limited to archive identities. | Separately supplied package, loader/server and mapping observations; missing loaded-byte binding stays UNKNOWN. | Must resolve the exact runtime without PATH fallback and capture what actually executes. Historical provisioning is imported, never regenerated as a new run. |
 | App-specific prefix | Desired application-scoped prefix role, no machine path or invented UUID. | Historical lab-scoped locator plus source record; durable instance/generation unknown. A new opaque ID could identify an imported record, not claim an A0-assigned prefix identity. | Must receive/create an explicitly owned instance through a reviewed lifecycle contract. A0 cannot supply an uncollected creation token. |
 | Three installed identities | Entry-point reference; measured hashes stay in installation evidence. Optional future expected entry-point hash needs a reviewed spec revision. | App-file observations can be attached as context; B should not expand into an installer or universal application model. | Records installed files and selected launch executable; only `7zFM.exe` is the A0 GUI entry point. |
 | W1 before restart | Reference independent A0 definition; no workflow program in spec. | Associates observations with W1/boot; does not decide destination/content success. | Records the original failed attempt and its actual destination, not a retry-until-green transition. |
@@ -251,9 +275,17 @@ environment was captured, not silently use the SSH helper's environment as the G
 
 ## 5. Desired, declared, observed and verified are different
 
+**Hard architectural boundary:** `helm-app-spec` describes desired/declared state only. It must
+never treat declarations as evidence that a runtime was installed, a particular loader executed,
+a prefix exists, installation succeeded, an entry point exists, or verification ran. Observed
+state belongs to a later module, currently expected to be `helm-observe`. Its observations cannot
+be manufactured by copying spec values, even when labels and digests happen to agree. In particular,
+A0's observed installed-loader hash is not proof of desired runtime state or a retrospective
+pre-run requirement. A later reviewed requirement would still need separate observation evidence.
+
 Keep four layers, even when their values happen to match:
 
-1. **Desired:** an app spec requests particular package/archive identities and configuration.
+1. **Desired:** an app spec requests particular artifact identities and typed configuration.
 2. **Declared observation:** a producer says it measured a file or executed a process; includes
    source record, run/boot context and measurement scope.
 3. **Verified record bytes:** helm-evidence opens/hash-checks the declared record artifacts and
@@ -269,7 +301,7 @@ B can compare already supplied observations but must report UNKNOWN when bytes o
 missing; MATCH means only “equal within the compared fields”. C must obtain observations as a
 separate capture result, not construct them by copying its input request.
 
-Example falsifying input: retain label `Wine 11.17` but change one package digest. These are different
+Example falsifying input: retain label `Wine 11.17` but change one artifact digest. These are different
 requested runtimes. A must preserve the difference; B must detect a mismatch against the old
 measured archive; C must not select the old runtime just because its version string matches.
 Even all four archive matches do not prove that unmodified installed files actually executed.
@@ -284,8 +316,8 @@ SHA-256 assumption; it does not establish publisher trust, safety, licensing or 
 | Source installer | SHA-256 of exact source bytes; expected size checked when bytes are supplied later. | Filename, product/version/vendor, origin URL, retrieval time. | Same name/version with different digest is a different source. Module 2 only validates the declaration. |
 | Application version/build | Source identity plus observed installed payload identities when known. | `7zip-x64`, `7-Zip`, `26.03`, PE version resource. | Local app ID groups records; it is neither global uniqueness nor a build digest. Self-update creates a new observed build, even if the label is unchanged. |
 | Installed executables/DLLs | Per-file digest, recorded scope and time; a complete payload manifest only if actually captured. | Prefix-relative paths, PE architecture and version. | A0 has three file identities, not a complete installation ownership manifest. A DLL and GUI entry point have different roles. |
-| Wine/Proton runtime | Exact package/archive set and/or a defined installed-file manifest with explicit coverage; keep source/build provenance when known. | Runtime family, version, packaging origin and selected loader path. | Four WineHQ archives are a partial runtime identity. A Proton version string alone would also be insufficient; its launcher, Proton and Steam runtime artifacts must stay distinct. No Proton support is implemented by naming this future requirement. |
-| Runtime packages | Digest per archive; package name/version/architecture label for role and diagnostics. | Repository/suite and URL. | Package metadata is not a hash of installed or loaded files; transitive dependencies remain a separate inventory and measurement question. |
+| Wine runtime; Proton deferred | Desired bounded artifact set, each with role/ID, size and digest. Installed-file observations require separately measured scope. | Wine label/version and artifact labels; observed loader path belongs to later records. | Four WineHQ archives are a partial runtime requirement, not proof of execution. Proton remains outside the initial schema; future support requires evidence and versioned review, not fields added now. |
+| Runtime packages in A0 | Archive byte size and digest, attached to a local artifact role/ID. | Package name/version/architecture, repository/suite and URL are metadata. | No cross-distribution package model or acquisition is proposed. Package metadata is not installed/loaded-file identity; transitive dependencies remain a separate measurement question. |
 | Prefix/environment instance | Eventually a local namespace + opaque instance ID + creation/adoption generation bound by a receipt, separate from state revision. | Lab/machine identity and path. | An ID identifies a mutable instance, not immutable contents. Same path after deletion is a new generation; a clone needs new identity. A0's durable token remains unknown. |
 | Prefix/configuration state | Immutable observation or snapshot manifest revision only for the files/properties actually measured. | Prefix locator and capture time. | No single full-prefix digest, snapshot or state equivalence is asserted for A0. A hash would not prove ownership or recovery safety. |
 | Configuration/profile | Exact app-spec document digest; later a separately defined config projection if a consumer needs it. | Profile name, author and revision label. | Initially changing any document byte creates a new spec revision. Labels do not establish equivalent configuration. Applicability ranges/precedence are deferred. |
@@ -295,8 +327,8 @@ SHA-256 assumption; it does not establish publisher trust, safety, licensing or 
 The small digest/requirement types belong inside `helm-app-spec` initially. Extract a separate crate
 only after at least two real consumers require the same nontrivial semantics and independent
 versioning avoids duplicated validation. The concrete bugs such a shared component could prevent
-are same-label/different-build aliasing, package-architecture collapse, and path-reuse being mistaken
-for prefix continuity. A type-only crate without those semantics prevents none of them. Conversely,
+are same-label/different-build aliasing, distinct artifact roles collapsing into one version label,
+and path-reuse being mistaken for prefix continuity. A type-only crate without those semantics prevents none of them. Conversely,
 filesystem observation is a substantial independent responsibility and can justify a later crate.
 
 ## 7. Smallest environment model justified now
@@ -308,11 +340,11 @@ entire home directory, immutable filesystem tree, or complete reproducible Linux
 
 | Dimension | Include now? | Desired / observed boundary and reason |
 |---|---|---|
-| Runtime | Yes: explicit Wine package-set requirement. | Four separately identified archives are evidenced. Runtime implementation/build policy remains open. |
-| Architecture | Yes: app `x86_64`, package architectures and requested `winearch: win64` are distinct. | Represents A0 exactly; does not normalize it to ADR-0013's proposed `wow64`. Other creation modes need evidence and schema review. |
+| Runtime | Yes: explicit Wine artifact-set requirement. | Four separately identified archives are evidenced. Runtime implementation/build policy remains open. |
+| Architecture | Yes: app `x86_64` and requested `winearch: win64`; archive architecture labels remain metadata. | Represents A0 exactly; does not normalize it to ADR-0013's proposed `wow64`. Other creation modes need evidence and schema review. |
 | Prefix | Yes: application-scoped role in spec; locator/instance in observations later. | A0 uses one fresh application prefix. “Application-scoped” means association, not exclusive ownership or containment. |
 | Windows compatibility version | Defer as a setting; A0 observation is unknown. | Do not invent Windows 10 from a different G0 prefix or from Wine defaults. Add only when a preregistered experiment requires setting/measuring it. |
-| Dependency set | Runtime package list now; further application dependencies deferred. | A0 used no winetricks additions. Retain the guest package inventory as evidence, not a resolver input or proof of a fully hashed closure. |
+| Dependency set | Bounded runtime artifact list now; further application dependencies deferred. | A0 used no winetricks additions. Retain the guest package inventory as evidence, not a resolver input or proof of a fully hashed closure. |
 | Environment variables | No arbitrary map. | `WINEARCH` and DLL policy have typed fields; `WINEPREFIX` is supplied by binding. Display/session variables are ephemeral observation/request inputs for a later runner, not baked-in app identity. No inherited-environment policy is silently selected. |
 | DLL overrides | Small typed list of DLL names with disabled mode, sufficient for `mscoree,mshtml=`. | Requested suppression is distinct from an independently observed effective override. No registry editing engine or full winetricks vocabulary. |
 | Graphics backend | Observation metadata only. | A0 distinguishes desktop Wayland from application XWayland. No DXVK/VKD3D/GPU selection knobs or portable backend promise follow from a ZIP workflow. |
@@ -344,6 +376,10 @@ for later measured ownership and safe recovery without committing to snapshots, 
 migrations or a rollback implementation now. No “safe_to_rollback” boolean is accepted.
 
 ## 9. Security comparison
+
+**Owner-required pure boundary:** normal validation is bytes-to-validated-model only. It performs
+no filesystem access, network access, process execution, Wine/runtime discovery, environment
+inspection, package lookup or prefix creation. Any relative paths are inert validated data.
 
 A's library can remain **pure, deterministic, local and unprivileged**, with no filesystem reads
 at all: input bytes and output values only. File selection/read is a caller responsibility; even
@@ -454,33 +490,29 @@ because the first-run definition did not know it. The real measured installed ha
   "runtime": {
     "kind": "wine",
     "label": "Wine 11.17",
-    "identity_scope": "declared_package_archives",
-    "packages": [
+    "identity_scope": "declared_artifacts",
+    "artifacts": [
       {
-        "name": "wine-devel",
-        "version_label": "11.17~noble-1",
-        "architecture": "amd64",
+        "id": "wine-devel-amd64-archive",
+        "label": "wine-devel 11.17~noble-1 (amd64)",
         "sha256": "eb42cc830c0e0582ecb1c5cf94cbfefe5d0a0235caae771035077b5e7b8ddd8f",
         "bytes": 11586578
       },
       {
-        "name": "wine-devel-amd64",
-        "version_label": "11.17~noble-1",
-        "architecture": "amd64",
+        "id": "wine-loader-amd64-archive",
+        "label": "wine-devel-amd64 11.17~noble-1 (amd64)",
         "sha256": "9184a81f0848003460526f30a66bd470a997fa0bd43c0d59efcacce0a12adb63",
         "bytes": 150150970
       },
       {
-        "name": "winehq-devel",
-        "version_label": "11.17~noble-1",
-        "architecture": "amd64",
+        "id": "winehq-devel-amd64-archive",
+        "label": "winehq-devel 11.17~noble-1 (amd64)",
         "sha256": "62873c6d7c5b05710064bc5fa3d9e2be0595edd77bc94c2ed3ea7896fdcb7869",
         "bytes": 1320
       },
       {
-        "name": "wine-devel-i386",
-        "version_label": "11.17~noble-1",
-        "architecture": "i386",
+        "id": "wine-loader-i386-archive",
+        "label": "wine-devel-i386 11.17~noble-1 (i386)",
         "sha256": "599a34d04fd3443a55f5700c3a919f177cdc4ab77b5ee7d6ebcfb87de03cc966",
         "bytes": 142140490
       }
@@ -528,22 +560,31 @@ by `parse_spec`. A future consumer must resolve and check them explicitly before
 
 ### Schema semantics and deliberately small rules
 
-- Required source and package digests are exactly 64 lowercase hex characters; byte lengths are
-  positive bounded integers. Label-only runtimes are invalid. One package per name/architecture
-  pair; same label with different digest remains a different requirement. Do not require every
-  package to have the same architecture as the application.
-- All nested objects reject unknown and duplicate decoded fields. Duplicate package identities,
+- Each runtime artifact requires a local role/identifier (`id` in this sketch), byte size and
+  SHA-256, with optional bounded human label/version metadata. Required source/artifact digests
+  are exactly 64 lowercase hex characters; byte lengths are positive bounded integers. Labels such
+  as `Wine 11.17` alone are invalid runtime identity. An unchanged label with a different digest
+  remains a different requirement. IDs identify roles within this document, not a global catalogue.
+  A0's archive package names/versions/architectures appear only as explanatory labels; validation
+  performs no package acquisition, lookup, cross-distribution modelling or dependency resolution.
+- All nested objects reject unknown and duplicate decoded fields. Duplicate artifact identifiers,
   duplicate DLL names (ASCII case-insensitive), malformed UTF-8, unsupported schema versions and
   unsupported runtime kinds/settings are errors. No extensions map, JSON expressions or includes.
-- Initial supported domain is an x86_64 app with a declared Wine package set and `win64` prefix
-  requirement. Proton, native apps, architecture variants and non-package runtime distributions
-  are explicit future schema decisions, not “accepted but ignored” values. Package labels are
-  bounded strings, not Debian resolver syntax to execute or version ranges to satisfy.
-- Proposed bounds: 64 KiB document, 1–16 packages, 0–8 disabled DLL declarations, 1–80 ASCII ID
+- Initial supported domain is an x86_64 app with a declared Wine artifact set and `win64` prefix
+  requirement. Proton, native apps and other architecture/settings support require later schema
+  review; no generic runtime-provider abstraction is included. Artifact declarations identify bytes,
+  not a package format or extraction method. The example's four archives do not freeze a Debian
+  package model. A non-archive declaration would still neither install nor attest to installed state.
+- Proposed bounds: 64 KiB document, 1–16 runtime artifacts, 0–8 disabled DLL declarations, 1–80 ASCII ID
   characters, 256-byte metadata labels, 1,024-byte/32-component relative references; no NUL/control
   text. Entry-point and repository paths use a documented narrow portable spelling, rejecting
   absolute paths, traversal, URL/drive/device spellings and expansion syntax. They are never opened.
   This limit covers A0, not every legitimate Windows filename. Keep the JSON parser's recursion bound.
+- Enforce the input byte bound before parsing. Unknown mandatory schema versions and ambiguous
+  declarations must reject; identifiers, digests and path spelling must validate deterministically.
+  Malformed untrusted input must not panic. Specify stable error codes and deterministic validation
+  and error ordering, including multiple invalid fields. These are requirements for implementation,
+  not a claim that the proposed parser exists or that its safety has been tested.
 - `expected_sha256: null` means no expected installed-entry-point bytes are specified, **not** that
   an executable is verified. A future execution gate needs an independently reviewed installation
   identity or a new spec revision with a pin. No installed identities can be invented to satisfy it.
@@ -554,8 +595,10 @@ by `parse_spec`. A future consumer must resolve and check them explicitly before
   They are inert, independently versioned resources, not tasks. A second oracle type should first
   expose a concrete limitation; do not build a generic test-provider/plugin protocol now.
 - `SpecDocumentId = SHA256(exact input bytes)`; there is no new canonical-JSON algorithm or semantic
-  configuration fingerprint. Formatting or label changes produce a new document revision while
-  individual source/package digests retain their meaning. Package order is not execution order;
+  canonicalisation in 0.1. Semantically equivalent but byte-different specifications may therefore
+  have distinct document identities. Hash the original input, never a parsed/re-serialized model.
+  Formatting or label changes produce a new document revision while individual artifact digests
+  retain their meaning. Artifact order is not execution order;
   deterministic diagnostics can retain declaration order. Consumers must not compare document IDs
   as proof of runtime equality.
 
@@ -649,10 +692,10 @@ reference expectations or the final release approver.
 | Test family | Independent expectation and useful failure caught |
 |---|---|
 | A0 representation | Parse the example without inventing a prefix ID, Windows version, installed hash or runtime attestation. Compare embedded pins and original Git-blob references to the existing records. This is an explicitly retrospective spec fixture. |
-| Identity mutation | Change a source/package digest while keeping labels: distinct identities; missing/malformed digest rejected. Same package name on different architectures can coexist; duplicate name/architecture cannot. |
+| Identity mutation | Change a source/artifact digest while keeping labels: distinct requirements; missing/malformed digest rejected. Duplicate artifact IDs, including conflicting digests for one role, reject. Two semantically equivalent valid documents differing only in whitespace/key order have their own exact-byte hashes; no canonicalization occurs. |
 | Desired/observed separation | Observation/status fields in an app spec reject. Null entry-point expectation remains unconstrained, never “verified”. Declaration validity must not yield an execution-readiness or compatibility result. |
-| Application independence | A clearly synthetic second app with different names, versions, paths and package counts uses the same code path; no real second-app compatibility claim. Prevent hardcoded `7zip`, Wine release or experiment-ID branches. |
-| Closed schema and parser | Duplicate decoded/escaped fields, malformed UTF-8, overflowing lengths, excessive lists, unsupported versions/kinds, arbitrary hooks, environment maps, unknown DLL modes and recursion/byte bounds reject deterministically. |
+| Application independence | A clearly synthetic second app with different names, versions, paths and artifact counts uses the same code path; no real second-app compatibility claim. Prevent hardcoded `7zip`, Wine release or experiment-ID branches. |
+| Closed schema and parser | Duplicate decoded/escaped fields, malformed UTF-8, overflowing lengths, excessive lists, unsupported mandatory versions/kinds, arbitrary hooks, environment maps, unknown fields/DLL modes and recursion/byte bounds reject deterministically without panic. Boundary and adversarial malformed-input cases must check stable errors and ordering. |
 | Reference boundaries | Absolute/traversal/device/URL/expansion spellings reject. Hashes/paths are inert; nonexistent external resources cannot trigger discovery or execution. Definition bytes later resolved at a different commit must not be substituted just because the path matches. |
 | Data and instance boundary | Cannot declare a prefix safe to erase/restore, turn a path into a durable environment ID, or represent unknown ownership as no user data. No global state is created by validation. |
 | Evidence coexistence | Existing A0 evidence fixture remains byte-identical. Existing verifier still reports W1 INCOMPLETE with content PASS, W2 COMPLETE in recorded scope, overall INCOMPLETE and experimental FAIL. The new spec does not patch old verdicts or retrofit a pre-run bundle hash. |
@@ -711,7 +754,8 @@ Module 3: helm-observe — bounded read-only runtime/environment observation and
 Module 4: helm-launch — one bounded launch of an explicitly bound existing installation
 ```
 
-These names/scopes beyond module 2 are advisory, **not authorisation**. Installer execution,
+Module 2 is selected, but its implementation is not authorised. Names/scopes beyond module 2 are
+advisory, **not authorisation**. Installer execution,
 runtime change, regression product, recovery, App Forge and UI remain beyond this three-module
 sequence. Module 4 can consume a separately reviewed external installation receipt; it does not
 smuggle installation into launch.
@@ -735,7 +779,10 @@ If these gates need an additional bounded experiment or contract revision, pause
 three boxes are not a commitment to force execution next. Recovery still needs its independent
 ownership/quiescence/data-preservation evidence even after all three modules exist.
 
-## 17. Documentation patch and checks performed for this analysis
+## 17. Historical checks for the original analysis commit
+
+This section records the original selection task at `08f29c53095a51947e9662ad2d0d7931ccb606ae`.
+Its pending-review status and checks are historical; section 18 records the later owner refinement.
 
 **Changed:** this selection report, one Proposed ADR and its index entry; project state receives
 only a pointer saying the analysis exists and awaits owner review. No product source, manifest,
@@ -782,3 +829,57 @@ are explicit evidence limits, not values to invent.
 
 **One recommended next decision:** review A / `helm-app-spec` as the bounded second-module proposal
 and decide whether to authorise its implementation. This task stops at the documentation commit.
+
+## 18. Owner refinement and publication review, 2026-09-08
+
+**Owner decision:** repository owner Djomla83 explicitly accepted only the decision quoted at the
+top and in ADR-0021, on 2026-09-08. This supersedes the original pending selection status, not its
+evidence, failures or analysis history. Implementation still needs separate authorisation; exact
+schema/API design remains unsettled. No other architecture ADR is accepted.
+
+**Repository verification:** `git fetch origin main` confirmed local `main` and `origin/main` at
+`0b72e14f5d6101c281a8d9823168407da3e71b9a`. The clean analysis branch pointed to
+`08f29c53095a51947e9662ad2d0d7931ccb606ae`, a direct child changing only the four documentation
+files listed in section 17. Refinement uses its descendant branch `docs/app-spec-owner-acceptance`;
+no amendment, squash or history rewrite is needed. The owner authorises publication through a
+normal fast-forward workflow only, never force-push.
+
+**Refinements:** exact-byte document hashing with explicitly distinct identities for semantically
+equivalent byte-different documents; hard desired/observed separation; small runtime artifact
+requirements with role/ID, size, digest and optional labels; acyclic frozen verification references;
+pure bytes-to-model validation; bounded typed environment vocabulary; initial Wine-only scope;
+and explicit parser bounds, closed schema, duplicate rejection, deterministic errors and no-panic
+requirements. The A0 example now uses artifact identities with package details as metadata rather
+than package-resolution fields. Historical pins, observations, W1 failure and W2 scope are unchanged.
+
+**Documentation scope:** this report, ADR-0021, DECISIONS, documentation INDEX, PROJECT_STATE and
+CHANGELOG. No product source, manifests, lockfile, tests, fixtures, tools, CI or historical evidence
+is modified. The original analysis commit is retained, including its recorded validation limits.
+
+**Actually checked:** Windows 11 build 26200, Python 3.14.3, Rust/Cargo 1.95.0,
+`x86_64-pc-windows-msvc`, LLVM 22.1.2. These checks do not test an implementation of
+`helm-app-spec`, which does not exist.
+
+| Command/check | Result for this refinement |
+|---|---|
+| `python tools/validate_docs.py` | PASS: 86 Markdown files, 225 JSON files, 854 local link targets; structure only. |
+| `python -m unittest discover -s tools/tests -v` | All 36 existing tests PASS. |
+| `cargo test --workspace --locked --offline` | All 45 applicable Windows Rust tests PASS; Linux-only tests do not execute on this host. |
+| `python tools/helm_evidence_fixture.py` | PASS: 22 files, 40,366 bytes, zero historical file changes or application executions. |
+| `cargo run --release --locked --offline -p helm-evidence -- verify crates/helm-evidence/tests/fixtures/a0-7zip --json` | Expected exit 1: overall INCOMPLETE, experimental FAIL; W1 INCOMPLETE with content PASS and missing destination; W2 COMPLETE in its recorded scope. |
+| Refinement identity/scope audit | PASS: four runtime artifact sizes/digests and all 15 displayed SHA-256 values preserved from the original analysis; three frozen definition blobs rehashed from Git; application/environment/entry-point/verification example data and original dependency DAG unchanged. Exactly six documentation files differ from starting main. |
+| `git diff --check` | PASS; staged whitespace and scope are checked again before commit. |
+
+Local command receipts and full stdout/stderr are retained under ignored
+`target/architecture-acceptance/`, separate from the original analysis receipts. The refinement
+audit checks documentation data and existing evidence; parsing the embedded JSON does not validate
+the proposed product schema. No new product tests or implementation were written. No blocking
+test failure was found. The A0 verifier's expected exit 1 remains part of its preserved failure evidence.
+
+**Not checked:** no fresh Wine/application/VM/WSL experiment, runtime observation, second application,
+recovery, Linux rerun or new module implementation. Earlier Linux evidence remains attributed to
+its original review. No claim of new compatibility or runtime attestation follows from these edits.
+
+**Next owner decision:** whether to authorise implementation within the accepted boundary after
+reviewing the proposed schema/API, independent test expectations and falsification criteria.
+This documentation task stops after fast-forward publication and remote SHA verification.

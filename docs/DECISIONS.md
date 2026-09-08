@@ -1,8 +1,10 @@
 # Indeks arhitektonskih odluka
 
-Osim ADR-0020, svi zapisi su početni predlozi, ne odobrene tehničke obaveze.
-ADR-0020 je jedina odluka sa imenovanim ljudskim odobrenjem; ono se ne odnosi ni na
-jedan arhitektonski ADR.
+ADR-0020 is Accepted for documentation language. ADR-0021 is Accepted on 2026-09-08
+by repository owner Djomla83 only for building a pure, non-executable application
+specification/validation library before observation or lifecycle execution.
+Its schema/API remain unsettled; implementation is not authorised. ADR-0001 through
+ADR-0019 remain Proposed. No other architecture acceptance follows from this decision.
 
 | ID | Odluka | Status |
 |---|---|---|
@@ -35,7 +37,7 @@ tenzije sa postojećim odlukama navedene su u
 | ADR-0019 | [Publish the unsupportable class; decide the first product with evidence](adr/ADR-0019-scope-boundary.md) | Proposed |
 | ADR-0020 | [Documentation language policy](adr/ADR-0020-documentation-language.md) | **Accepted 2026-09-07** |
 
-Current annotation, 2026-09-07: ADR-0017 was amended but remains Proposed; ADR-0015 still needs
+Historical annotation, 2026-09-07: ADR-0017 was amended but remains Proposed; ADR-0015 still needs
 review of its recorded corrections. ADR-0020 alone is Accepted, for documentation language.
 The original G0-3 criterion remains BLOCKED; the separate mechanics subtest does not complete it.
 See the [current Gate 0 assessment](experiments/EXP-009-GATE0-REPORT.md#current-assessment).
@@ -44,4 +46,4 @@ Proces je u [master planu](../HELM_MASTER_PLAN.md#s31). Licencna odluka ostaje z
 
 | ID | Decision | Status |
 |---|---|---|
-| ADR-0021 | [Make the second product module an inert application contract](adr/ADR-0021-second-product-module.md) — [selection analysis](research/SECOND-PRODUCT-MODULE-SELECTION.md), awaiting owner review | Proposed |
+| ADR-0021 | [Make the second product module an inert application contract](adr/ADR-0021-second-product-module.md) — [selection analysis and owner refinements](research/SECOND-PRODUCT-MODULE-SELECTION.md); bounded selection only, no implementation authorisation | **Accepted 2026-09-08** |

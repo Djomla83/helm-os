@@ -1,7 +1,31 @@
 # Stanje projekta
 
-> **Decision analysis, 2026-09-08:** the [second-product-module selection report](research/SECOND-PRODUCT-MODULE-SELECTION.md)
-> exists and awaits owner review; [ADR-0021](adr/ADR-0021-second-product-module.md) is Proposed.
+<a id="helm-app-spec-selection-acceptance"></a>
+
+## Owner acceptance, 2026-09-08 — bounded helm-app-spec selection
+
+Repository owner Djomla83 explicitly accepted [ADR-0021](adr/ADR-0021-second-product-module.md)
+only for: **"Build a pure, non-executable application specification/validation library before
+observation or lifecycle execution."** HELM's second selected product module is `helm-app-spec`.
+The eventual schema/API remain unsettled and **implementation is not authorised**.
+
+The [selection report](research/SECOND-PRODUCT-MODULE-SELECTION.md) now records the owner's
+requirements: raw-byte SHA-256 document identity, desired state only, bounded runtime artifact
+identities, acyclic frozen verification references, pure validation, minimal typed environment
+fields, Wine-only initial scope and parser safety. Observations belong to a later module,
+currently expected to be `helm-observe`. No later module is authorised.
+
+Original analysis commit `08f29c53095a51947e9662ad2d0d7931ccb606ae` is preserved as history.
+Main was fetched and verified at `0b72e14f5d6101c281a8d9823168407da3e71b9a` before this refinement.
+Only documentation changes are included; `helm-evidence` remains the sole implemented product
+module, and **A0-7ZIP experimental FAIL is unchanged**. No other ADR, licence, production release,
+data/permission policy or recovery design is accepted. Validation is recorded in the report's
+owner-refinement section. The next owner decision is whether to authorise the bounded implementation.
+
+Earlier entries below are historical snapshots, including their then-current acceptance status.
+
+> **Original decision analysis, 2026-09-08:** the report was submitted for owner review with
+> ADR-0021 Proposed; the bounded acceptance above supersedes that pending status.
 
 <a id="helm-evidence-owner-acceptance"></a>
 

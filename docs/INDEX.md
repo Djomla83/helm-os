@@ -15,7 +15,10 @@ experimental schema/API and limits; A0-7ZIP experimental FAIL remains unchanged.
 
 ## Odluke i istraživanja
 
-[ADR indeks](DECISIONS.md): nineteen Proposed records and ADR-0020 Accepted for documentation language.
+[ADR index](DECISIONS.md): nineteen Proposed records, ADR-0020 Accepted for documentation language,
+and [ADR-0021](adr/ADR-0021-second-product-module.md) Accepted for the bounded `helm-app-spec`
+selection. The [selection report](research/SECOND-PRODUCT-MODULE-SELECTION.md) records owner
+refinements; no schema/API stability or implementation authorisation follows.
 [RFC-0001](rfc/RFC-0001-app-evidence-model.md) definiše nacrt testne evidencije;
 [RFC-0002](rfc/RFC-0002-threat-model.md) početni threat model.
 [Mapa eksperimenata](experiments/README.md) vodi do devet planova; nijedan aplikacioni
