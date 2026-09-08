@@ -726,16 +726,25 @@ read-only, not by installing anything and not by weakening the requirement.
    source-derived, not reproduced.
 4. **Undetected concurrent mutation remains possible.** A same-length overwrite inside
    timestamp granularity is not excluded in principle.
-5. **One kernel, one runner.** All Linux evidence comes from hosted Ubuntu 24.04, kernel
+5. **Mutation-during-read races were reviewed from source, not injected.** Replacement,
+   truncation or growth between the pre-read `statx`, the reopen and the post-read `statx`
+   is analysed in section 13 and covered by the implementation's own comparison, but this
+   review built no deterministic injector for it. OBS-FS-01 exercised such races against the
+   C spike; nobody has yet exercised them against this Rust code.
+6. **Three failure mappings are source-derived only**, because none is injectable on a
+   hosted runner without privileges or an old kernel: `EXDEV` from a mount crossing,
+   `ENOSYS`/`EOPNOTSUPP` from a kernel without `openat2`, and a procfs capability that
+   becomes unusable after a successful admission.
+7. **One kernel, one runner.** All Linux evidence comes from hosted Ubuntu 24.04, kernel
    `6.17.0-1022-azure`, x86_64. Other kernels and mount topologies are unevidenced.
-6. **`strace` and `ltrace` are absent from the hosted runner.** The syscall obligation was
+8. **`strace` and `ltrace` are absent from the hosted runner.** The syscall obligation was
    met by adapting the frozen OBS-FS-01 ptrace tracer, read-only, rather than by weakening
    the requirement; the runner inventory is recorded by the workflow's first step so this is
    checkable rather than asserted.
-7. **No WSL or Hyper-V lab was used or modified**, and no A0 evidence was opened or re-run.
-8. **The 512 MiB and 1 GiB budget cases** run in release mode as opt-in tests, so an ordinary
+9. **No WSL or Hyper-V lab was used or modified**, and no A0 evidence was opened or re-run.
+10. **The 512 MiB and 1 GiB budget cases** run in release mode as opt-in tests, so an ordinary
    `cargo test` does not exercise them.
-9. `AdmissionErrorCode::UnsupportedPlatform` stays unconstructible, M9, and aggregate
+11. `AdmissionErrorCode::UnsupportedPlatform` stays unconstructible, M9, and aggregate
    exhaustion still suppresses zero-cost later targets, M3.
 
 ## 22. Recommendation
