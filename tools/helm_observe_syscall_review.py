@@ -38,6 +38,18 @@ DATA_READS = {"read", "pread64", "readv", "preadv"}
 MAX_FILE_BYTES = 512 * 1024 * 1024
 
 
+def built_commit() -> str:
+    """The commit the traced driver was actually built from."""
+    head = REPO / ".git" / "HEAD"
+    try:
+        ref = head.read_text(encoding="utf-8").strip()
+        if ref.startswith("ref: "):
+            return (REPO / ".git" / ref[5:]).read_text(encoding="utf-8").strip()
+        return ref
+    except OSError:
+        return "unknown"
+
+
 def load_frozen_tracer():
     """Import the frozen OBS-FS-01 tracer without copying or changing it."""
     spec = importlib.util.spec_from_file_location("obs_fs_01_harness", FROZEN_HARNESS)
@@ -227,7 +239,8 @@ def main() -> int:
 
     report = {
         "role": "independent review syscall regression",
-        "candidate": "e2a62081ece52391b30ede153eee139103c98e31",
+        "reviewed_candidate": "e2a62081ece52391b30ede153eee139103c98e31",
+        "built_commit": built_commit(),
         "driver": str(driver),
         "kernel": os.uname().release,
         "machine": os.uname().machine,

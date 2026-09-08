@@ -1,5 +1,50 @@
 # Stanje projekta
 
+## Independent review, 2026-09-08 — helm-observe 0.1 needs an owner architecture decision
+
+The bounded implementation candidate `e2a62081ece52391b30ede153eee139103c98e31` on
+`product/helm-observe` was independently reviewed on `review/helm-observe-independent`. The
+[independent review](implementation/HELM-OBSERVE-INDEPENDENT-REVIEW-0.1.md) records the
+reconstructed state, an independent source trace, the findings, the corrections and the
+evidence. Disposition: **NEEDS_ARCHITECTURE_OWNER_REVIEW**. The candidate is **not
+owner-merged**, and this entry records review status only.
+
+One BLOCKER and three IMPORTANT findings were raised, and the first-pass findings were
+committed before any correction so the candidate as submitted is preserved. The BLOCKER was
+**reproduced on hosted Ubuntu CI**: the procfs self-identity probe used the caller-supplied
+capability as its own probe object, so a foreign process holding its own `/proc/self/fd`
+across low descriptor numbers had its descriptor directory admitted as the trusted
+current-process capability. The later device, inode and kind re-verification still prevented
+any unauthorized read, so the damage is invariant violation and an availability surface, not
+disclosure. Admission now creates a fresh anonymous memory object as the probe, which is what
+the frozen OBS-FS-01 definition required. Duplicate JSON keys were also undetected inside
+array-nested objects and across escape spellings, and the observation backend was gated on the
+operating system only, so it carried full authority outside the accepted Linux x86_64 cohort.
+Both are corrected with regression tests, and the backend is now gated to the cohort.
+
+**The open question is the ext4 cohort itself.** `0xEF53` is the shared ext2, ext3 and ext4
+superblock magic, so root admission establishes an ext-family **necessary but not sufficient**
+condition and cannot establish ext4; "local" is likewise assumed rather than established. No
+mechanism inside the accepted explicit-capability, no-ambient-scan boundary can close that
+gap. Admission was **not** weakened and the cohort was **not** renamed: only the claims were
+corrected to state what the mechanism establishes, and the previous
+`HELM-OBSERVE-COHORT: ext4 PASS` line is withdrawn as unsupported by its own evidence. The
+owner must choose whether to restate the cohort, require a stronger discriminator with new
+evidence, or accept in writing that admission does not enforce ext4.
+
+The special-file, symlink and no-fallback negatives are now proved on the **compiled Rust
+implementation** at syscall level, by a review-only driver over the public API traced with the
+frozen OBS-FS-01 tracer imported read-only: zero data reopens, zero reads, zero `connect` and
+zero `getdents64` for the trailing symlink, non-final symlink, FIFO, socket and over-limit
+cases, with `resolve = 15` and `O_PATH|O_NOFOLLOW|O_CLOEXEC` on every resolution. A FIFO whose
+writer was blocked in `open(2)` stayed blocked throughout. Evidence cohort: hosted Ubuntu
+24.04, kernel `6.17.0-1022-azure`, x86_64.
+
+No OBS-FS-01 case was re-run and no frozen file changed; no A0 evidence was opened; no WSL or
+Hyper-V lab was touched; no Wine or 7-Zip ran; ADR-0022 was not broadened; `helm-bind` and
+`helm-launch` remain unimplemented; main was not modified. **A0-7ZIP remains experimental
+FAIL.** The next decision is the owner's, on the ext4 cohort question.
+
 ## Implementation candidate, 2026-09-08 — helm-observe 0.1 awaits independent review
 
 Experimental [helm-observe](../crates/helm-observe/README.md) 0.1 is implemented on

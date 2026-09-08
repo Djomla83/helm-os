@@ -117,12 +117,11 @@ impl AuthorizedScope {
         &self.plan
     }
 
+    /// Look a granted capability up by its logical ID. The observation walks the
+    /// plan's declared root order and resolves each ID here, so nothing downstream
+    /// depends on the order in which the caller handed the descriptors over.
     pub(crate) fn root(&self, id: &str) -> Option<&RootCapability> {
         self.roots.iter().find(|r| r.id == id)
-    }
-
-    pub(crate) fn roots(&self) -> &[RootCapability] {
-        &self.roots
     }
 
     pub(crate) const fn reopen(&self) -> &ProcFdCapability {
