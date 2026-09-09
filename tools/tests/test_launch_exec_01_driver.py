@@ -78,6 +78,16 @@ def report(**over):
     return base
 
 
+def arm(attempted=True, pidfd=3, pidfd_open_errno=0, waitid_rc=0,
+        waitid_errno=0, exit_status_observed=True, exit_status=0):
+    """A fabricated M5 rejected-acquisition arm block."""
+    return {"attempted": attempted, "pidfd": pidfd,
+            "pidfd_open_errno": pidfd_open_errno, "waitid_rc": waitid_rc,
+            "waitid_errno": waitid_errno,
+            "exit_status_observed": exit_status_observed,
+            "exit_status": exit_status}
+
+
 def argv_of(*values):
     return [{"len": len(v.encode()), "value": v} for v in values]
 
@@ -91,16 +101,21 @@ def observation(spike=_DEFAULT, rep=None, **over):
     obs = {
         "spike": receipt() if spike is _DEFAULT else spike,
         "report": rep,
+        # A report that is present is COMPLETE unless a test says otherwise;
+        # absence defaults to the DECISIVE absence, because that is the state
+        # S2/S5/S7 rest on and the one worth exercising by default.
+        "report_state": (ob.REPORT_COMPLETE if rep is not None
+                         else ob.REPORT_ABSENT),
         "launch_returned": True,
         "elapsed_ms": 12,
-        "report_channel_available": True,
         "declared_pre_exec_stall": False,
         "declared_body_length_changed": False,
         "declared_injection_modes": [],
     }
-    obs["exec_confirmation"] = ob.exec_confirmation(
-        obs["spike"], obs["report"], over.get("payload_is_recipe"))
     obs.update(over)
+    obs["exec_confirmation"] = ob.exec_confirmation(
+        obs["spike"], obs["report"], obs.get("payload_is_recipe"),
+        obs.get("report_state"))
     return obs
 
 
@@ -203,17 +218,30 @@ class EvidenceChannels(unittest.TestCase):
             self.assertTrue(info["reasons"], name)
             self.assertIn(name, fc.BY_NAME)
 
-    def test_report_channel_is_the_dominant_gap(self):
+    def test_the_report_channel_is_now_supplied(self):
+        """PRE-D7-B1 corrected: the launcher emits the retained prefix."""
+        self.assertIn(driver.CH_REPORT, driver.SPIKE_SUPPLIED_CHANNELS)
         un = driver.unposable_cases()
-        by_report = [n for n, i in un.items()
-                     if driver.CH_REPORT in i["missing_channels"]]
-        self.assertGreater(len(by_report), 30)
+        self.assertEqual(
+            [n for n, i in un.items()
+             if driver.CH_REPORT in i["missing_channels"]], [])
 
-    def test_every_case_is_posable_once_the_report_channel_exists(self):
-        """Only M2, M3 and M5 need something beyond the report channel."""
-        supplied = set(driver.SPIKE_SUPPLIED_CHANNELS) | {driver.CH_REPORT}
-        remaining = sorted(driver.unposable_cases(supplied))
-        self.assertEqual(remaining, ["M2", "M3", "M5"])
+    def test_only_m3_remains_unposable(self):
+        """M2 and M5 gained their frozen control arms; M3 is an owner question."""
+        self.assertEqual(sorted(driver.unposable_cases()), ["M3"])
+
+    def test_m3_is_unposable_for_the_acquisition_channel(self):
+        info = driver.unposable_cases()["M3"]
+        self.assertEqual(info["missing_channels"], [driver.CH_ACQUISITION])
+        self.assertIn("OWNER DECISION REQUIRED", info["reasons"][0])
+
+    def test_removing_a_channel_makes_its_cases_unposable_again(self):
+        """The gate must react to a channel loss, not to a hard-coded list."""
+        supplied = set(driver.SPIKE_SUPPLIED_CHANNELS) - {driver.CH_REPORT}
+        regressed = driver.unposable_cases(supplied)
+        self.assertGreater(len(regressed), 30)
+        self.assertIn("A1", regressed)
+        self.assertIn("S5", regressed)
 
     def test_no_case_declares_an_unknown_channel(self):
         for plan in driver._PLAN_LIST:
@@ -704,11 +732,30 @@ class LifecycleAndTraceTokens(unittest.TestCase):
             ob.derive("pidfd_acquired_atomically", observation())[0])
 
     def test_rejected_acquisition_outcomes(self):
-        for outcome in ("pidfd_open_esrch", "waitid_echild",
-                        "pidfd_open_succeeded"):
-            obs = observation(rejected_acquisition_outcome=outcome)
-            self.assertEqual(ob.derive("rejected_acquisition", obs)[0], outcome)
+        """M5 derives from the arm's RAW errnos, never from a self-named token."""
+        cases = (
+            ({"pidfd_open_errno": ob.ESRCH}, "pidfd_open_esrch"),
+            ({"pidfd_open_errno": 0, "waitid_errno": ob.ECHILD},
+             "waitid_echild"),
+            ({"pidfd_open_errno": 0, "waitid_errno": 0},
+             "pidfd_open_succeeded"),
+        )
+        for over, expected in cases:
+            obs = observation(spike=receipt(rejected_acquisition_arm=arm(**over)))
+            self.assertEqual(ob.derive("rejected_acquisition", obs)[0], expected)
+
+    def test_rejected_arm_not_run_yields_no_token(self):
+        obs = observation(spike=receipt(
+            rejected_acquisition_arm=arm(attempted=False)))
+        self.assertIsNone(ob.derive("rejected_acquisition", obs)[0])
         self.assertIsNone(ob.derive("rejected_acquisition", observation())[0])
+
+    def test_rejected_arm_unexpected_errno_yields_no_token(self):
+        obs = observation(spike=receipt(
+            rejected_acquisition_arm=arm(pidfd_open_errno=13)))
+        token, reason = ob.derive("rejected_acquisition", obs)
+        self.assertIsNone(token)
+        self.assertIn("EACCES", reason)
 
 
 # ============================================================ host conditions
@@ -970,6 +1017,392 @@ class SafetyBarriers(unittest.TestCase):
         for module in (ob, evidence, driver):
             self.assertIsNotNone(module.__doc__)
             self.assertIn("NOT_RUN", module.__doc__)
+
+
+# ================================================= PRE-D7-B1: capture channel
+def encode(raw):
+    import base64
+    return base64.b64encode(raw).decode("ascii")
+
+
+def stream_with(raw, drained=None, completeness="CompleteAtEof",
+                truncated=False, declared_length=None):
+    """A stream block carrying a retained capture prefix, as the spike emits it."""
+    drained = len(raw) if drained is None else drained
+    return {
+        "bytes_drained": drained,
+        "drained_sha256": oracles.digest_of(raw),
+        "completeness": completeness,
+        "capture_prefix_length": (len(raw) if declared_length is None
+                                  else declared_length),
+        "capture_prefix_truncated": truncated,
+        "capture_prefix_base64": encode(raw),
+    }
+
+
+def report_bytes(payload=b"", **over):
+    return payload + ob.REPORT_SENTINEL + json.dumps(report(**over)).encode()
+
+
+class CaptureChannel(unittest.TestCase):
+    def test_a_valid_capture_decodes(self):
+        self.assertEqual(ob.decode_capture(stream_with(b"hello")), b"hello")
+
+    def test_an_absent_field_is_not_an_empty_capture(self):
+        self.assertIsNone(ob.decode_capture({"bytes_drained": 0}))
+        self.assertEqual(ob.decode_capture(stream_with(b"")), b"")
+
+    def test_invalid_base64_decodes_to_nothing(self):
+        block = stream_with(b"x")
+        block["capture_prefix_base64"] = "not!valid!base64"
+        self.assertIsNone(ob.decode_capture(block))
+
+    def test_a_length_that_disagrees_with_the_bytes_is_rejected(self):
+        """The launcher's own count and its own bytes must agree."""
+        block = stream_with(b"hello", declared_length=99)
+        self.assertIsNone(ob.decode_capture(block))
+
+    def test_binary_bytes_survive_the_encoding(self):
+        raw = bytes(range(256)) * 4
+        self.assertEqual(ob.decode_capture(stream_with(raw)), raw)
+
+
+class HelperReportStates(unittest.TestCase):
+    """Section 3: the five states must stay distinguishable."""
+
+    def test_complete(self):
+        state, rep, payload = ob.helper_report_state(
+            stream_with(report_bytes()))
+        self.assertEqual(state, ob.REPORT_COMPLETE)
+        self.assertEqual(rep["marker"], "helper_report")
+        self.assertEqual(payload, b"")
+
+    def test_absent_when_the_stream_is_complete(self):
+        state, rep, _ = ob.helper_report_state(stream_with(b"payload only"))
+        self.assertEqual(state, ob.REPORT_ABSENT)
+        self.assertIsNone(rep)
+
+    def test_truncated_when_the_prefix_hit_the_bound(self):
+        raw = report_bytes()[:len(ob.REPORT_SENTINEL) + 20]
+        state, rep, _ = ob.helper_report_state(
+            stream_with(raw, drained=9999, truncated=True))
+        self.assertEqual(state, ob.REPORT_TRUNCATED)
+        self.assertIsNone(rep)
+
+    def test_malformed_when_the_stream_was_complete_and_it_did_not_parse(self):
+        raw = ob.REPORT_SENTINEL + b"{not json"
+        state, rep, _ = ob.helper_report_state(stream_with(raw))
+        self.assertEqual(state, ob.REPORT_MALFORMED)
+        self.assertIsNone(rep)
+
+    def test_a_report_without_a_marker_is_malformed(self):
+        raw = ob.REPORT_SENTINEL + json.dumps({"argv": []}).encode()
+        state, _, _ = ob.helper_report_state(stream_with(raw))
+        self.assertEqual(state, ob.REPORT_MALFORMED)
+
+    def test_stream_incomplete_when_a_writer_was_retained(self):
+        state, _, _ = ob.helper_report_state(
+            stream_with(b"payload",
+                        completeness="WriterRetainedAfterChildExit"))
+        self.assertEqual(state, ob.REPORT_STREAM_INCOMPLETE)
+
+    def test_stream_incomplete_when_bytes_were_dropped_past_the_prefix(self):
+        state, _, _ = ob.helper_report_state(
+            stream_with(b"payload", drained=100000))
+        self.assertEqual(state, ob.REPORT_STREAM_INCOMPLETE)
+
+    def test_payload_before_the_sentinel_is_separated(self):
+        _, _, payload = ob.helper_report_state(
+            stream_with(report_bytes(payload=b"ABCDEF")))
+        self.assertEqual(payload, b"ABCDEF")
+
+    def test_only_a_complete_report_produces_a_token(self):
+        """Section 3: incomplete report evidence stays non-success."""
+        for state in (ob.REPORT_TRUNCATED, ob.REPORT_MALFORMED,
+                      ob.REPORT_ABSENT, ob.REPORT_STREAM_INCOMPLETE):
+            obs = observation(rep=None, report_state=state,
+                              expected_argv=["helper_report"])
+            for rule in ("argv_exact", "environ_empty", "fds_exactly_012",
+                         "signals_reset", "no_new_privs"):
+                token, reason = ob.derive(rule, obs)
+                self.assertIsNone(token, rule + " from " + state)
+                self.assertTrue(reason)
+
+    def test_an_indecisive_stream_is_not_exec_evidence_either_way(self):
+        for state in (ob.REPORT_TRUNCATED, ob.REPORT_MALFORMED,
+                      ob.REPORT_STREAM_INCOMPLETE):
+            self.assertEqual(
+                ob.exec_confirmation(receipt(), None, None, state),
+                ob.EXEC_UNINTERPRETABLE, state)
+
+    def test_a_decisive_absence_is_death_before_exec(self):
+        self.assertEqual(
+            ob.exec_confirmation(receipt(), None, None, ob.REPORT_ABSENT),
+            ob.EXEC_DIED_BEFORE_EXEC)
+
+    def test_s5_posed_check_requires_a_decisive_absence(self):
+        check = driver.POSED_CHECKS["no_helper_report"]
+        self.assertTrue(check({"report_state": ob.REPORT_ABSENT}))
+        for state in (ob.REPORT_TRUNCATED, ob.REPORT_MALFORMED,
+                      ob.REPORT_STREAM_INCOMPLETE, ob.REPORT_COMPLETE):
+            self.assertFalse(check({"report_state": state}), state)
+
+
+class EncodedCaptureNeverEscapes(unittest.TestCase):
+    """Section 2: a secret encoded in base64 is still a secret."""
+
+    SECRETS = (
+        "ghp_" + "A" * 36,
+        "AKIAIOSFODNN7EXAMPLE",
+        "/home/someoneelse/.ssh/id_ed25519",
+        "ACTIONS_RUNTIME_TOKEN=eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ4In0.sig",
+        r"C:\Users\djoml\secret.txt",
+    )
+
+    def setUp(self):
+        self.s = evidence.Sanitiser(work="/home/runner/work/helm",
+                                    home="/home/runner", user="runner")
+        blob = ("\n".join(self.SECRETS)).encode()
+        self.raw = report_bytes(payload=blob,
+                                environ=[s for s in self.SECRETS])
+        self.spike = receipt(stdout=stream_with(self.raw))
+
+    def _assert_clean(self, text, where):
+        for secret in self.SECRETS:
+            self.assertNotIn(secret, text, where + " leaked " + secret[:12])
+        self.assertNotIn(encode(self.raw), text, where + " leaked the blob")
+        self.assertNotIn("capture_prefix_base64\": \"aGVsbG8", text)
+
+    def test_the_receipt_view_drops_the_encoded_capture(self):
+        view = evidence.receipt_view(self.spike)
+        self.assertNotIn("capture_prefix_base64", view["stdout"])
+        self.assertIn("drained_sha256", view["stdout"])
+        self._assert_clean(evidence.serialise(view), "receipt_view")
+
+    def test_the_sanitiser_withholds_the_encoded_capture_by_key(self):
+        out = self.s.record({"cases": {"V1": {"receipt": self.spike}}})
+        block = out["cases"]["V1"]["receipt"]["stdout"]
+        self.assertEqual(block["capture_prefix_base64"], evidence.WITHHELD)
+        self._assert_clean(evidence.serialise(out), "sanitiser")
+
+    def test_every_internal_key_is_withheld_at_any_depth(self):
+        payload = {k: encode(b"secret-bytes") for k in evidence.INTERNAL_ONLY_KEYS}
+        out = self.s.record({"a": {"b": [{"c": payload}]}})
+        for key in evidence.INTERNAL_ONLY_KEYS:
+            self.assertEqual(out["a"]["b"][0]["c"][key], evidence.WITHHELD, key)
+
+    def test_a_decoded_report_still_has_its_values_suppressed(self):
+        """Decoding is allowed; republishing what was decoded is not."""
+        _, rep, _ = ob.helper_report_state(stream_with(self.raw))
+        self.assertIsNotNone(rep)
+        out = self.s.record({"report": rep})
+        self._assert_clean(evidence.serialise(out), "decoded report")
+        for entry in out["report"]["environ"]:
+            self.assertIn("<VALUE:", entry + "<VALUE:"
+                          if "=" not in entry else entry)
+
+    def test_the_full_evidence_document_is_clean(self):
+        doc = evidence.evidence_document({
+            "status": "RUN", "aggregate": "MECHANISM_INCONCLUSIVE",
+            "detail": {}, "counts": {}, "preflight": {},
+            "membership": {}, "freeze": {},
+            "cases": {"V1": {"record": {"receipt": self.spike}}},
+        })
+        self._assert_clean(evidence.serialise(self.s.record(doc)), "document")
+
+
+class StraceParsing(unittest.TestCase):
+    """Fabricated tracer text only; no tracer is ever run here."""
+
+    WINDOW = (
+        "111 clone3({flags=CLONE_PIDFD, exit_signal=SIGCHLD}, 88) = 222\n"
+        "[pid   222] dup2(5, 0)                  = 0\n"
+        "[pid   222] dup2(6, 1)                  = 1\n"
+        "[pid   222] dup2(7, 2)                  = 2\n"
+        "[pid   222] fcntl(0, F_SETFD, 0)        = 0\n"
+        "[pid   222] fchdir(8)                   = 0\n"
+        "[pid   222] close_range(3, 7, 0)        = 0\n"
+        "[pid   222] setpgid(0, 0)               = 0\n"
+        "[pid   222] rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0\n"
+        "[pid   222] rt_sigaction(SIGHUP, {...}, NULL, 8) = 0\n"
+        "[pid   222] prctl(PR_SET_NO_NEW_PRIVS, 1) = 0\n"
+        "[pid   222] execveat(3, \"\", NULL, NULL, AT_EMPTY_PATH) = 0\n"
+        "111 waitid(P_PIDFD, 4, ...)             = 0\n"
+    )
+
+    def test_the_child_window_is_isolated(self):
+        out = ob.parse_strace_child_window(self.WINDOW)
+        self.assertEqual(out["child_pid"], 222)
+        self.assertEqual(out["child_syscalls"][0], "dup2")
+        self.assertEqual(out["child_syscalls"][-1], "execveat")
+        self.assertNotIn("waitid", out["child_syscalls"])
+        self.assertNotIn("clone3", out["child_syscalls"])
+
+    def test_the_stage_sequence_is_the_frozen_order(self):
+        out = ob.parse_strace_child_window(self.WINDOW)
+        self.assertEqual(out["stage_sequence"],
+                         ["DUP2", "CLEAR_CLOEXEC", "CHDIR", "CLOSE_RANGE",
+                          "SETPGID", "SIGMASK", "SIGACTION", "NO_NEW_PRIVS",
+                          "EXEC"])
+        obs = observation(observed_stage_sequence=out["stage_sequence"])
+        self.assertEqual(ob.derive("sequence_matches_frozen_stages", obs)[0],
+                         "sequence_matches_frozen_stages")
+
+    def test_a_window_within_the_frozen_syscall_set(self):
+        out = ob.parse_strace_child_window(self.WINDOW)
+        obs = observation(trace=out)
+        self.assertEqual(ob.derive("child_syscalls_within_frozen_set", obs)[0],
+                         "child_syscalls_within_frozen_set")
+
+    def test_a_stray_syscall_in_the_window_is_caught(self):
+        text = self.WINDOW.replace(
+            "[pid   222] fchdir(8)                   = 0\n",
+            "[pid   222] fchdir(8)                   = 0\n"
+            "[pid   222] mmap(NULL, 4096, PROT_READ, MAP_PRIVATE, -1, 0) = 0x7f\n")
+        out = ob.parse_strace_child_window(text)
+        self.assertIn("mmap", out["child_syscalls"])
+        obs = observation(trace=out)
+        self.assertEqual(ob.derive("child_syscalls_within_frozen_set", obs)[0],
+                         "child_syscalls_outside_frozen_set")
+
+    def test_no_clone3_means_no_window(self):
+        self.assertIsNone(ob.parse_strace_child_window("open(...) = 3\n"))
+        self.assertIsNone(ob.parse_strace_child_window(""))
+        self.assertIsNone(ob.parse_strace_child_window(None))
+
+    def test_a_resumed_line_is_still_a_syscall(self):
+        text = (self.WINDOW.replace(
+            "[pid   222] execveat(3, \"\", NULL, NULL, AT_EMPTY_PATH) = 0\n",
+            "[pid   222] <... execveat resumed>) = 0\n"))
+        out = ob.parse_strace_child_window(text)
+        self.assertEqual(out["child_syscalls"][-1], "execveat")
+
+
+class ControlArms(unittest.TestCase):
+    """M2 and M5 gained the arms their frozen contracts name."""
+
+    def test_m2_declares_the_threaded_arm_and_a_control(self):
+        plan = driver.CASE_PLANS["M2"]
+        self.assertIn("--extra-threads", plan.spike_flags)
+        self.assertEqual(plan.baseline_flags, ())
+        argv = driver.spike_argv(plan, "/x", "/w", "/b")
+        control = driver.spike_argv(plan, "/x", "/w", "/b",
+                                    flags=plan.baseline_flags)
+        self.assertIn("--extra-threads", argv)
+        self.assertNotIn("--extra-threads", control)
+
+    def test_m2_is_the_only_case_with_a_control_arm(self):
+        with_arm = [p.case for p in driver._PLAN_LIST
+                    if p.baseline_flags is not None]
+        self.assertEqual(with_arm, ["M2"])
+
+    def test_extra_threads_is_not_a_child_injection_mode(self):
+        """It changes the PARENT's shape, so M2 can still trace production."""
+        self.assertEqual(
+            driver.declared_injection_modes(driver.CASE_PLANS["M2"]), [])
+        self.assertNotIn("--extra-threads", fc.CHILD_INJECTION_MODES)
+
+    def test_parent_control_modes_are_declared_and_disjoint(self):
+        self.assertEqual(
+            set(fc.PARENT_CONTROL_MODES) & set(fc.CHILD_INJECTION_MODES), set())
+        self.assertEqual(set(fc.PARENT_CONTROL_MODES),
+                         {"--extra-threads", "--rejected-acquisition-arm"})
+
+    def test_every_control_mode_a_plan_uses_is_declared(self):
+        declared = set(fc.PARENT_CONTROL_MODES) | set(fc.CHILD_INJECTION_MODES)
+        for plan in driver._PLAN_LIST:
+            for flag in plan.spike_flags:
+                if flag.startswith("--"):
+                    self.assertIn(flag, declared, plan.case + " " + flag)
+
+    def test_no_case_but_m2_and_m5_uses_a_parent_control_mode(self):
+        users = sorted(p.case for p in driver._PLAN_LIST
+                       if set(p.spike_flags) & set(fc.PARENT_CONTROL_MODES))
+        self.assertEqual(users, ["M2", "M5"])
+
+    def test_m5_declares_the_rejected_arm(self):
+        plan = driver.CASE_PLANS["M5"]
+        self.assertIn("--rejected-acquisition-arm", plan.spike_flags)
+        self.assertEqual(fc.BY_NAME["M5"]["cls"], fc.RECORDED)
+
+    def test_m5_gate_forbids_an_unobserved_exit_status(self):
+        plan = driver.CASE_PLANS["M5"]
+        observed = driver.gates_for(plan, {"spike": receipt(
+            rejected_acquisition_arm=arm(exit_status_observed=True,
+                                         exit_status=0))})
+        self.assertTrue(observed["never_reports_unobserved_exit_status"])
+
+        honest = driver.gates_for(plan, {"spike": receipt(
+            rejected_acquisition_arm=arm(exit_status_observed=False,
+                                         exit_status=-1))})
+        self.assertTrue(honest["never_reports_unobserved_exit_status"])
+
+        lying = driver.gates_for(plan, {"spike": receipt(
+            rejected_acquisition_arm=arm(exit_status_observed=False,
+                                         exit_status=0))})
+        self.assertFalse(lying["never_reports_unobserved_exit_status"])
+
+    def test_m3_has_no_arm_and_is_returned_as_a_question(self):
+        """M3 must NOT gain a self-asserting receipt field."""
+        plan = driver.CASE_PLANS["M3"]
+        self.assertEqual(plan.spike_flags, ())
+        self.assertIn(driver.CH_ACQUISITION, plan.channels)
+        self.assertNotIn(driver.CH_ACQUISITION, driver.SPIKE_SUPPLIED_CHANNELS)
+
+    def test_helper_fd_set_is_unchanged_by_the_correction(self):
+        """No case gained an inherited helper descriptor."""
+        for plan in driver._PLAN_LIST:
+            argv = driver.spike_argv(plan, "/x", "/w", "/b")
+            for flag in argv:
+                self.assertNotIn("--report-fd", flag)
+                self.assertNotIn("--extra-fd", flag)
+
+
+class PreflightGate(unittest.TestCase):
+    """Section 7: D-7 execution halts before the first case unless posable."""
+
+    def _gates(self, supplied):
+        import run_launch_exec_01 as runner
+        real_channels = driver.SPIKE_SUPPLIED_CHANNELS
+        real_gate = runner.harness.static_link_gate
+        try:
+            driver.SPIKE_SUPPLIED_CHANNELS = frozenset(supplied)
+            # Patched so the gate check never invokes a compiler from a test.
+            runner.harness.static_link_gate = lambda _: {"ok": True}
+            return runner.preflight_gates(
+                {"clone3": {"available": True}, "strace": "/usr/bin/strace"},
+                "unused")
+        finally:
+            driver.SPIKE_SUPPLIED_CHANNELS = real_channels
+            runner.harness.static_link_gate = real_gate
+
+    def test_a_removed_channel_halts_the_trial(self):
+        halts = self._gates(set(driver.SPIKE_SUPPLIED_CHANNELS)
+                            - {driver.CH_REPORT})
+        gates = [h["gate"] for h in halts]
+        self.assertIn("evidence_channels", gates)
+
+    def test_the_current_state_halts_on_m3_alone(self):
+        halts = self._gates(driver.SPIKE_SUPPLIED_CHANNELS)
+        channel_halts = [h for h in halts if h["gate"] == "evidence_channels"]
+        self.assertEqual(len(channel_halts), 1)
+        self.assertEqual(sorted(channel_halts[0]["evidence"]), ["M3"])
+
+    def test_a_fully_posable_set_raises_no_channel_halt(self):
+        halts = self._gates(set(driver.ALL_CHANNELS))
+        self.assertEqual([h for h in halts if h["gate"] == "evidence_channels"],
+                         [])
+
+    def test_clone3_unavailable_halts_the_whole_trial(self):
+        import run_launch_exec_01 as runner
+        real_gate = runner.harness.static_link_gate
+        try:
+            runner.harness.static_link_gate = lambda _: {"ok": True}
+            halts = runner.preflight_gates(
+                {"clone3": {"available": False}}, "unused")
+        finally:
+            runner.harness.static_link_gate = real_gate
+        self.assertIn("clone3", [h["gate"] for h in halts])
 
 
 # The tokens this suite has demonstrated a derivation for. The universe test

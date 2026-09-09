@@ -118,8 +118,11 @@ report travel on "a descriptor the harness controls" — a descriptor above 2 th
 and 2 survive" was false. `/proc/self/fd` is read only in F1 and F4 as a secondary cross-check,
 and the descriptor that reading consumes is reported by number and is the only one excused.
 
-> **PRE-TRIAL FINDING (driver implementation; LAUNCH-EXEC-01 still NOT_RUN): the report channel
-> does not reach the harness.** Writing the case driver established that `launcher_spike.c`
+> **CORRECTED — see the note that follows this one.** The finding below is preserved as recorded.
+>
+> **PRE-TRIAL FINDING `PRE-D7-B1` (driver implementation; LAUNCH-EXEC-01 still NOT_RUN): the
+> report channel does not reach the harness.** Writing the case driver established that
+> `launcher_spike.c`
 > retains the capture prefix in a `malloc`'d buffer, fills it, and `free()`s it at the end of
 > `main` without ever emitting it. The receipt carries `bytes_drained`, `drained_sha256`,
 > `completeness` and the retained-prefix **counts** — never the bytes. A helper report is
@@ -131,6 +134,35 @@ and the descriptor that reading consumes is reported by number and is the only o
 > start a trial while any **mandatory** case is in it. Recorded here as a finding and **not
 > corrected here**: the correction changes the mechanism under test, which is an owner decision
 > rather than a driver detail.
+
+> **`PRE-D7-B1` CORRECTION, by owner decision: the launcher emits the prefix it already retains.**
+> Each stream block in the receipt now carries `capture_prefix_length`,
+> `capture_prefix_truncated` and `capture_prefix_base64`. The encoding is deterministic and
+> binary-safe because the frozen output recipe is binary by construction.
+>
+> **What did not change, and this is the point of choosing this shape:** `bytes_drained` and
+> `drained_sha256` are still over *every* drained byte, `completeness` is untouched, and **no
+> descriptor was added to the helper**. The report still travels on descriptor 1 behind the frozen
+> sentinel, and the executed image still sees exactly `{0, 1, 2}` — so F1, F2, F3, F4, F6 and F7
+> measure the same set they always did.
+>
+> **The retained bytes are INTERNAL observation input and are never published.** They are whatever
+> the executed image wrote, which on a hosted runner can include environment values, absolute
+> paths and credentials. The driver decodes them, derives tokens and sanitises the result;
+> `evidence.INTERNAL_ONLY_KEYS` withholds the field wholesale by key, at any depth, because a
+> secret encoded in base64 is still a secret and scanning an encoded blob is a game the scanner
+> loses.
+>
+> **Absence of a report is only evidence when the stream was complete.** Six report states are
+> distinguished — complete, truncated, malformed, absent, and stream-incomplete — and only
+> `complete` produces a token. S2, S5 and S7 rest on a *decisive* absence; a truncated prefix or a
+> retained writer is `stream_incomplete` and settles nothing.
+>
+> **Remaining gap: `M3`.** Section 4 permits a syscall record only for the seven cases declared
+> `traced: true`, and M3 is not one of them, so no frozen evidence source can show that the pidfd
+> was acquired in the *same syscall* that created the child. A receipt field naming the
+> acquisition would be a self-assertion of exactly what M3 exists to evidence, and none was added.
+> M3 is **the only unposable case** and is returned as an owner question.
 
 **Frozen output recipe.** `byte[i] = (i * 251 + tag) mod 256`, `tag = 1` for stdout and `2` for
 stderr. `oracles.py` computes every expected count and digest from this and the declared volume

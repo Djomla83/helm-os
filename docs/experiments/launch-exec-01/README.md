@@ -37,7 +37,7 @@ permission to implement.
 | `observations.py` | P-12: observation → frozen outcome token, from closed vocabularies. Absent evidence yields no token |
 | `evidence.py` | P-14: publication sanitiser and deterministic serialization. An environment value is never reproduced |
 | `make_fixtures.py` | Deterministic generator for the non-compiled fixtures |
-| `launcher_spike.c` | The mechanism under test: pin → measure → admission → `clone3(CLONE_PIDFD)` → child setup → `execveat` |
+| `launcher_spike.c` | The mechanism under test: pin → measure → admission → `clone3(CLONE_PIDFD)` → child setup → `execveat`. Emits the bounded capture prefix base64-encoded (`PRE-D7-B1`) so the helper's report reaches the harness without a second descriptor. Carries two TEST/CONTROL-ONLY parent arms, `--extra-threads` (M2) and `--rejected-acquisition-arm` (M5), neither of which is part of the candidate mechanism |
 | `helper_report.c` | Primary helper; reports its own observed process boundary from inside the executed image |
 | `helper_alt.c` | Substitution detector: different body, different digest |
 | `helper_dynamic.c` | The one deliberately dynamic helper (E7) |

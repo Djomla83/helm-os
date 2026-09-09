@@ -74,9 +74,12 @@ jobs:
         run: |
           set -eux
           mkdir -p build
-          for t in helper_report helper_alt helper_fork helper_setid launcher_spike; do
+          for t in helper_report helper_alt helper_fork helper_setid; do
             cc -O2 -Wall -Wextra -static -o "build/$t" "$t.c"
           done
+          # launcher_spike additionally links pthread: M2's control arm starts
+          # extra live threads in the PARENT. Same command otherwise.
+          cc -O2 -Wall -Wextra -static -pthread -o build/launcher_spike launcher_spike.c
 
       - name: Compile the one dynamic helper with the exact frozen command
         run: |

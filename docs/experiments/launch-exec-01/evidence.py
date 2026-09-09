@@ -39,6 +39,27 @@ DECLARED_ENV_NAMES = frozenset({
     "HELM_LEAK_CANARY", "LD_LIBRARY_PATH", "PATH", "HOME",
 })
 
+# Fields that are INTERNAL observation input and never appear in published
+# evidence, at any depth, under any encoding.
+#
+# The launcher now emits the retained capture prefix base64-encoded so the
+# helper's report can reach the driver at all (PRE-D7-B1). Those bytes are
+# whatever the executed image wrote: on a hosted runner that can include
+# environment values, absolute paths and credentials. Base64 is an encoding, not
+# a protection -- a secret in base64 is still a secret -- and the generic
+# redaction rules below cannot see inside an encoded blob. So these keys are
+# withheld wholesale rather than scanned, which is the only rule that stays
+# correct when the encoding changes.
+INTERNAL_ONLY_KEYS = frozenset({
+    "capture_prefix_base64",
+    "capture_prefix_hex",
+    "capture_prefix",
+    "raw_capture",
+    "decoded_capture",
+})
+
+WITHHELD = "<WITHHELD:internal-observation-input>"
+
 # Absolute paths that are legitimate experiment evidence and must survive
 # sanitisation: the loader E7 requires, the procfs the helper reads, the tracer
 # preflight records, /dev/fd/N which is the whole of X2c's expectation. These are
@@ -187,8 +208,16 @@ class Sanitiser:
         wherever they appear, at any depth.
         """
         if isinstance(value, dict):
-            return {self.text(k) if isinstance(k, str) else k:
-                    self.record(v, _key=k) for k, v in value.items()}
+            out = {}
+            for k, v in value.items():
+                if isinstance(k, str) and k in INTERNAL_ONLY_KEYS:
+                    # Withheld by KEY, before any content is examined. Scanning
+                    # an encoded blob for secrets is a game the scanner loses.
+                    out[k] = WITHHELD
+                    continue
+                out[self.text(k) if isinstance(k, str) else k] = self.record(
+                    v, _key=k)
+            return out
         if isinstance(value, list):
             if _key == "environ":
                 return [self.env_entry(item) for item in value]
@@ -225,8 +254,18 @@ def receipt_view(spike_receipt):
     """
     if not isinstance(spike_receipt, dict):
         return None
-    return {k: v for k, v in spike_receipt.items()
-            if not k.endswith("_not_in_receipt")}
+    out = {}
+    for key, value in spike_receipt.items():
+        if key.endswith("_not_in_receipt"):
+            continue
+        if isinstance(value, dict):
+            # Stream blocks now carry the retained capture prefix. It is
+            # observation input, not receipt content, and it is dropped here
+            # rather than redacted -- there is nothing in it a receipt needs.
+            value = {k: v for k, v in value.items()
+                     if k not in INTERNAL_ONLY_KEYS}
+        out[key] = value
+    return out
 
 
 def evidence_document(trial):

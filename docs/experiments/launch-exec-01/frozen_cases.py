@@ -94,6 +94,23 @@ CHILD_INJECTION_MODES = ["--stall-pre-exec-ms", "--die-before-exec",
                          "--exec-fd-no-cloexec", "--exec-fd-o-path",
                          "--post-fork-delay-ms"]
 
+# PARENT-side test/control arms. Deliberately a SEPARATE list from the child
+# injection modes above, because they are a different kind of thing: they change
+# the shape of the LAUNCHER, not the syscall sequence of the child. That is what
+# lets M2 carry --extra-threads and still trace a production child window; if it
+# were listed above, M1's minimality rule would refuse the trace and the case
+# could never be posed. Neither mode is part of the candidate mechanism, and
+# neither runs unless its flag is passed.
+PARENT_CONTROL_MODES = {
+    "--extra-threads": "M2 only: >=3 extra live threads in the launcher, one "
+                       "allocating continuously and one with a pthread_atfork "
+                       "handler registered",
+    "--rejected-acquisition-arm": "M5 only: the REJECTED fork+pidfd_open "
+                                  "acquisition, run before the mechanism with "
+                                  "its own fork, child and reap. Not a "
+                                  "candidate mechanism",
+}
+
 # ------------------------------------------------------------- output recipe
 # byte[i] = (i * 251 + tag) mod 256. A volume is not a recipe; oracles.py
 # computes every expected count and digest from this and the declared volume

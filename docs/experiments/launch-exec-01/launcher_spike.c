@@ -19,6 +19,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
+#include <pthread.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -49,6 +50,10 @@
 #endif
 #ifndef __NR_pidfd_send_signal
 #define __NR_pidfd_send_signal 424
+#endif
+/* Used ONLY by the M5 rejected-acquisition arm, never by the mechanism. */
+#ifndef __NR_pidfd_open
+#define __NR_pidfd_open 434
 #endif
 #ifndef AT_EMPTY_PATH
 #define AT_EMPTY_PATH 0x1000
@@ -347,6 +352,157 @@ static void child_main(struct child_plan *p)
     child_fail(p->status_w, ST_EXEC, errno);
 }
 
+/* ============================================ capture prefix, binary-safe out
+ * PRE-D7-B1. The bounded capture prefix was retained in memory and then freed
+ * without ever being emitted, so the helper's own report -- the FIRST item in
+ * the definition's evidence preference order -- never reached the harness. The
+ * prefix is now written out base64-encoded, so arbitrary bytes survive a JSON
+ * receipt without a length-changing escape and without a second descriptor.
+ *
+ * Encoding only. It changes no count, no digest and no completeness value, and
+ * it adds nothing to the child's inherited descriptor set: the report still
+ * arrives on descriptor 1 and the executed image still sees exactly {0,1,2}.
+ *
+ * The encoded bytes are INTERNAL observation input. They may contain whatever
+ * the executed image wrote, so the driver decodes them, derives tokens, and
+ * hands the result to the P-14 sanitiser; the published evidence never carries
+ * this field. A secret in base64 is still a secret. */
+static const char B64[] =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+static void emit_base64(const unsigned char *data, long n)
+{
+    long i = 0;
+    while (i + 2 < n) {
+        unsigned v = ((unsigned)data[i] << 16) | ((unsigned)data[i + 1] << 8) |
+                     (unsigned)data[i + 2];
+        putchar(B64[(v >> 18) & 63]); putchar(B64[(v >> 12) & 63]);
+        putchar(B64[(v >> 6) & 63]);  putchar(B64[v & 63]);
+        i += 3;
+    }
+    if (n - i == 1) {
+        unsigned v = (unsigned)data[i] << 16;
+        putchar(B64[(v >> 18) & 63]); putchar(B64[(v >> 12) & 63]);
+        putchar('='); putchar('=');
+    } else if (n - i == 2) {
+        unsigned v = ((unsigned)data[i] << 16) | ((unsigned)data[i + 1] << 8);
+        putchar(B64[(v >> 18) & 63]); putchar(B64[(v >> 12) & 63]);
+        putchar(B64[(v >> 6) & 63]);  putchar('=');
+    }
+}
+
+/* ====================================== M2: extra live threads in the PARENT
+ * TEST/CONTROL ONLY. Never part of the candidate mechanism, and never enabled
+ * without --extra-threads.
+ *
+ * M2's frozen note fixes this arm exactly: ">=3 extra live threads, one with an
+ * allocation in flight and one with a registered pthread_atfork handler".
+ * Nothing here runs after the clone: the threads exist so that the CHILD window
+ * is observed from a multi-threaded parent, which is the only parent shape a
+ * real HELM caller has. The child sequence must come out identical to the
+ * single-threaded arm, and M2 fails if it does not.
+ *
+ * These threads live in the parent only. clone3 without CLONE_THREAD gives the
+ * child a single thread of execution, so the post-clone window this experiment
+ * traces is unchanged by their existence -- which is precisely the claim M2
+ * exists to test rather than assume. */
+static volatile int g_threads_stop;
+static volatile int g_atfork_prepare_calls;
+
+static void atfork_prepare(void)   { g_atfork_prepare_calls++; }
+static void atfork_parent(void)    { }
+static void atfork_child(void)     { }
+
+static void *thread_allocating(void *arg)
+{
+    (void)arg;
+    /* An allocation genuinely in flight: this thread holds and releases a
+     * malloc arena continuously, so the clone lands while the allocator lock is
+     * contended rather than quiescent. */
+    while (!g_threads_stop) {
+        void *p = malloc(4096);
+        if (p) { memset(p, 0x5a, 4096); free(p); }
+    }
+    return NULL;
+}
+
+static void *thread_idle(void *arg)
+{
+    (void)arg;
+    while (!g_threads_stop) {
+        struct timespec ts = { 0, 1000000L };
+        nanosleep(&ts, NULL);
+    }
+    return NULL;
+}
+
+static int start_extra_threads(int count, pthread_t *out)
+{
+    if (pthread_atfork(atfork_prepare, atfork_parent, atfork_child) != 0) {
+        return -1;
+    }
+    for (int i = 0; i < count; i++) {
+        void *(*fn)(void *) = (i == 0) ? thread_allocating : thread_idle;
+        if (pthread_create(&out[i], NULL, fn, NULL) != 0) { return -1; }
+    }
+    return 0;
+}
+
+/* ============================ M5: the REJECTED fork + pidfd_open acquisition
+ * TEST/CONTROL ONLY, and explicitly NOT a candidate mechanism. It runs before
+ * the real mechanism, reports what it OBSERVED, and touches nothing the
+ * mechanism uses.
+ *
+ * Its whole purpose is to evidence why clone3(CLONE_PIDFD) is primary rather
+ * than asserting it: under SIGCHLD = SIG_IGN the child can be auto-reaped
+ * between fork() and pidfd_open(), which is exactly the race clone3 closes by
+ * returning the pidfd in the same syscall that creates the process.
+ *
+ * This code reports RAW observations only -- the fd, the two errno values, and
+ * whether any exit status was actually observed. It maps nothing to a token:
+ * that is observations.py's job, so the outcome vocabulary stays in one place. */
+struct rejected_arm {
+    int attempted;
+    int pidfd;
+    int pidfd_open_errno;
+    int waitid_rc;
+    int waitid_errno;
+    int exit_status_observed;
+    int exit_status;
+};
+
+static void run_rejected_acquisition_arm(struct rejected_arm *arm)
+{
+    memset(arm, 0, sizeof(*arm));
+    arm->attempted = 1;
+    arm->pidfd = -1;
+    arm->exit_status = -1;
+
+    pid_t pid = fork();
+    if (pid < 0) { arm->pidfd_open_errno = errno; return; }
+    if (pid == 0) { _exit(0); }
+
+    /* The window clone3 removes. Under SIGCHLD=SIG_IGN the kernel may reap the
+     * child before this line runs, and pidfd_open then returns ESRCH. */
+    errno = 0;
+    long fd = syscall(__NR_pidfd_open, (long)pid, 0L);
+    arm->pidfd_open_errno = (fd < 0) ? errno : 0;
+    arm->pidfd = (fd < 0) ? -1 : (int)fd;
+
+    siginfo_t info;
+    memset(&info, 0, sizeof(info));
+    errno = 0;
+    arm->waitid_rc = waitid(P_PID, (id_t)pid, &info, WEXITED);
+    arm->waitid_errno = (arm->waitid_rc < 0) ? errno : 0;
+    if (arm->waitid_rc == 0 && info.si_pid == pid && info.si_code == CLD_EXITED) {
+        /* Only a status the launcher actually observed may ever be reported.
+         * That is M5's gate, and it is enforced here rather than downstream. */
+        arm->exit_status_observed = 1;
+        arm->exit_status = info.si_status;
+    }
+    if (arm->pidfd >= 0) { close(arm->pidfd); }
+}
+
 /* ==================================================================== main */
 static void die(const char *msg)
 {
@@ -361,6 +517,7 @@ int main(int argc, char **argv)
     long post_exit_drain_ms = 2000, post_fork_delay_ms = 0, stall_pre_exec_ms = 0;
     int bypass_admission = 0, exec_fd_no_cloexec = 0, skip_nnp = 0;
     int die_before_exec = 0, exec_fd_o_path = 0;
+    int extra_threads = 0, rejected_arm_requested = 0;
     long max_capture_bytes = 64 * 1024;   /* MAX_CAPTURE_BYTES */
     char *child_argv[64];
     int child_argc = 0;
@@ -382,6 +539,10 @@ int main(int argc, char **argv)
         else if (!strcmp(a, "--exec-fd-o-path")) { exec_fd_o_path = 1; }
         else if (!strcmp(a, "--skip-no-new-privs")) { skip_nnp = 1; }
         else if (!strcmp(a, "--die-before-exec")) { die_before_exec = 1; }
+        /* Both TEST/CONTROL ONLY. Neither is part of the candidate mechanism,
+         * and neither runs unless its flag is passed. */
+        else if (!strcmp(a, "--extra-threads") && v) { extra_threads = atoi(v); i++; }
+        else if (!strcmp(a, "--rejected-acquisition-arm")) { rejected_arm_requested = 1; }
         else if (!strcmp(a, "--arg") && v) {
             if (child_argc < 63) { child_argv[child_argc++] = (char *)v; }
             i++;
@@ -392,6 +553,14 @@ int main(int argc, char **argv)
         fprintf(stderr, "launcher_spike: --exec-path is required\n");
         return 2;
     }
+
+    /* M5, TEST/CONTROL ONLY. Runs BEFORE the mechanism and shares nothing with
+     * it: its own fork, its own child, its own reap. The mechanism below is
+     * unchanged whether or not this ran, which is what keeps the rejected arm
+     * a control rather than a variant of the thing under test. */
+    struct rejected_arm rejected;
+    memset(&rejected, 0, sizeof(rejected));
+    if (rejected_arm_requested) { run_rejected_acquisition_arm(&rejected); }
 
     /* ---- the trusted caller's ONE pathname act ------------------------- */
     int open_flags = O_RDONLY | (exec_fd_no_cloexec ? 0 : O_CLOEXEC);
@@ -493,6 +662,20 @@ int main(int argc, char **argv)
      * SA_NOCLDWAIT, no other reaper -- and a LIBRARY cannot establish any of
      * them. clone3 also avoids the pthread_atfork handlers glibc's fork() runs
      * in the child before any launcher code. */
+    /* M2, TEST/CONTROL ONLY. The extra threads exist in the PARENT so the
+     * child window is observed from a multi-threaded caller. They are started
+     * as late as possible -- immediately before the clone -- so nothing else in
+     * the mechanism runs in a different process shape than it does normally. */
+    pthread_t extra[8];
+    int extra_started = 0;
+    if (extra_threads > 0) {
+        if (extra_threads > 8) { extra_threads = 8; }
+        if (start_extra_threads(extra_threads, extra) != 0) {
+            die("pthread_create");
+        }
+        extra_started = extra_threads;
+    }
+
     int pidfd = -1;
     struct helm_clone_args cargs;
     memset(&cargs, 0, sizeof(cargs));
@@ -696,15 +879,7 @@ int main(int argc, char **argv)
            "\"launcher_signal_issued\":%s,"
            "\"group_sweep_issued\":%s,"
            "\"wait_errno\":%d,"
-           "\"stdout\":{\"bytes_drained\":%ld,\"drained_sha256\":\"%s\","
-           "\"completeness\":\"%s\"},"
-           "\"stderr\":{\"bytes_drained\":%ld,\"drained_sha256\":\"%s\","
-           "\"completeness\":\"%s\"},"
-           "\"environment_mode\":\"empty\","
-           "\"retained_prefix_not_in_receipt\":{"
-           "\"stdout_kept\":%ld,\"stdout_truncated\":%s,"
-           "\"stderr_kept\":%ld,\"stderr_truncated\":%s,\"bound\":%ld},"
-           "\"elapsed_ms_not_in_receipt\":%ld}\n",
+           "\"wait_errno\":%d,",
            digest, (long long)st.st_size, (unsigned)(st.st_mode & 07777),
            disposition, timeout_disposition,
            exec_failed ? stage_name(rec.stage) : "", exec_failed ? rec.err : 0,
@@ -712,12 +887,60 @@ int main(int argc, char **argv)
            info.si_code == CLD_KILLED ? info.si_status : -1,
            timed_out ? "true" : "false",
            sweep_issued ? "true" : "false",
-           wait_errno,
-           out_bytes, out_hex, out_completeness,
-           err_bytes, err_hex, err_completeness,
+           wait_errno);
+
+    /* PRE-D7-B1: each stream carries its counts, its digest, its completeness
+     * and the RETAINED PREFIX, base64-encoded. The counts and the digest are
+     * over every drained byte and are unchanged; the prefix is bounded by
+     * max_capture_bytes and is a strict prefix of the same stream. Emitting it
+     * adds no descriptor to the child and alters no measurement -- it only
+     * stops the launcher from discarding the evidence it already collected. */
+    printf("\"stdout\":{\"bytes_drained\":%ld,\"drained_sha256\":\"%s\","
+           "\"completeness\":\"%s\",\"capture_prefix_length\":%ld,"
+           "\"capture_prefix_truncated\":%s,\"capture_prefix_base64\":\"",
+           out_bytes, out_hex, out_completeness, out_kept,
+           out_truncated ? "true" : "false");
+    emit_base64(out_prefix, out_kept);
+    printf("\"},");
+
+    printf("\"stderr\":{\"bytes_drained\":%ld,\"drained_sha256\":\"%s\","
+           "\"completeness\":\"%s\",\"capture_prefix_length\":%ld,"
+           "\"capture_prefix_truncated\":%s,\"capture_prefix_base64\":\"",
+           err_bytes, err_hex, err_completeness, err_kept,
+           err_truncated ? "true" : "false");
+    emit_base64(err_prefix, err_kept);
+    printf("\"},");
+
+    /* M5's RAW observations. No token is derived here: the outcome vocabulary
+     * lives in observations.py so that one file owns the whole mapping. The
+     * exit status appears only when the launcher actually observed it, which is
+     * M5's gate rather than a convention. */
+    printf("\"rejected_acquisition_arm\":{\"attempted\":%s,\"pidfd\":%d,"
+           "\"pidfd_open_errno\":%d,\"waitid_rc\":%d,\"waitid_errno\":%d,"
+           "\"exit_status_observed\":%s,\"exit_status\":%d},",
+           rejected.attempted ? "true" : "false", rejected.pidfd,
+           rejected.pidfd_open_errno, rejected.waitid_rc, rejected.waitid_errno,
+           rejected.exit_status_observed ? "true" : "false",
+           rejected.exit_status_observed ? rejected.exit_status : -1);
+
+    /* M2's parent shape, recorded as a fact about THIS run so a comparison
+     * between the two arms can never be made against an unknown shape. */
+    printf("\"parent_shape\":{\"extra_threads\":%d,"
+           "\"atfork_handler_registered\":%s,\"atfork_prepare_calls\":%d},",
+           extra_started, extra_started > 0 ? "true" : "false",
+           g_atfork_prepare_calls);
+
+    printf("\"environment_mode\":\"empty\","
+           "\"retained_prefix_not_in_receipt\":{"
+           "\"stdout_kept\":%ld,\"stdout_truncated\":%s,"
+           "\"stderr_kept\":%ld,\"stderr_truncated\":%s,\"bound\":%ld},"
+           "\"elapsed_ms_not_in_receipt\":%ld}\n",
            out_kept, out_truncated ? "true" : "false",
            err_kept, err_truncated ? "true" : "false", max_capture_bytes,
            now_ms() - start);
+
+    g_threads_stop = 1;
+    for (int t = 0; t < extra_started; t++) { pthread_join(extra[t], NULL); }
     free(out_prefix);
     free(err_prefix);
     return 0;

@@ -34,8 +34,16 @@ preserved rather than tidied away.
 > terms. Implementing the driver afterwards surfaced a new BLOCKER (**D-1**: the helper report
 > never leaves the launcher), which makes **43 of the 72 cases unposable, 34 of them mandatory**.
 > Sections 1–9 are preserved exactly as written; section 10 is appended, and the classification
-> of the **new** freeze is
+> of that freeze was
 > [`DRIVER_IMPLEMENTATION_NEEDS_OWNER_DECISION`](#11-classification-of-the-new-freeze).
+
+> **That BLOCKER is now corrected. Its identifier is `PRE-D7-B1`, not `D-1`** — `D-1` collides
+> with the owner decision `arm_i_scoped_unsafe_backend`, which is unchanged and unrelated. The
+> owner chose the launcher-side observation channel; see
+> [section 12](#12-pre-d7-b1-corrected-launcher-side-observation-channel). **71 of 72 cases are
+> now posable.** The one that is not is **M3**, which section 12.4 returns as an owner question
+> rather than answering with a self-assertion. Current classification:
+> [`DRIVER_CORRECTION_NEEDS_OWNER_DECISION`](#13-status-after-the-pre-d7-b1-correction).
 
 ## 1. Independently reconstructed state
 
@@ -361,6 +369,13 @@ six C digests are unchanged from Build 1 and Build 2.
 
 ### 10.1 A new BLOCKER, found by implementing rather than by reading
 
+> **Identifier correction, appended.** The finding below was labelled **D-1** when this section was
+> written. That collides with **owner decision D-1** (`arm_i_scoped_unsafe_backend`), which it has
+> nothing to do with. The finding's identifier is now **PRE-D7-B1**, in the separate
+> `PRE-D7-B<n>` review-finding namespace. The paragraph is left as written so the prior report is
+> not falsified; **owner D-1 is unchanged and is not redefined.** The correction is recorded in
+> [section 12](#12-pre-d7-b1-corrected-launcher-side-observation-channel).
+
 **D-1 — the helper report never leaves the launcher, and 40 cases depend on it.**
 
 `launcher_spike.c` allocates `out_prefix`/`err_prefix` with `malloc`, fills them under the
@@ -446,3 +461,135 @@ absent evidence, and no environment value is ever reproduced.
 **The new descendant freeze requires a bounded independent pre-trial re-review before D-7.** This
 note recommends nothing about authorisation; D-7 is not granted, ADR-0024 is still Proposed, and
 **LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of ZERO.**
+
+---
+
+## 12. PRE-D7-B1 corrected: launcher-side observation channel
+
+**Appended after sections 1–11, which are preserved unchanged.** The owner chose the
+**launcher-side** solution and ruled out the alternative explicitly: no new inherited helper
+descriptor, and no change to `helper_report.c`'s reporting channel. **LAUNCH-EXEC-01 is still
+NOT_RUN, D-7 is still not granted, and the valid trial count is still ZERO.**
+
+### 12.1 What changed in the mechanism
+
+`launcher_spike.c` already drained each stream, hashed every drained byte, and retained a bounded
+prefix under `max_capture_bytes`. It then `free()`d that prefix without emitting it. The prefix is
+now written out, base64-encoded, inside the stream block that already described it:
+
+```
+"stdout": { "bytes_drained": N, "drained_sha256": "...", "completeness": "...",
+            "capture_prefix_length": K, "capture_prefix_truncated": bool,
+            "capture_prefix_base64": "..." }
+```
+
+**What did not change.** `bytes_drained` and `drained_sha256` are still computed over *every*
+drained byte, not over the prefix. `completeness` is untouched. The drain loop, the poll loop, the
+bound and the truncation flag are untouched. **No descriptor was added to the child**: the report
+still arrives on descriptor 1, and the executed image still sees exactly `{0, 1, 2}`. A test
+asserts that no plan's invocation carries a report-descriptor flag of any kind.
+
+Base64 was chosen because the retained bytes are arbitrary — the O-series recipe is
+`byte[i] = (i*251 + tag) mod 256`, which is binary by construction — and a JSON string escape
+would be neither length-preserving nor byte-safe. A round-trip test encodes `bytes(range(256))*4`.
+
+### 12.2 The raw capture is internal, never public
+
+The retained bytes are whatever the executed image wrote. On a hosted runner that can include
+environment values, absolute paths and credentials, and the inherited environment carries
+`ACTIONS_RUNTIME_TOKEN`. **A secret encoded in base64 is still a secret.**
+
+So the boundary is drawn by **key, not by content**: `evidence.INTERNAL_ONLY_KEYS` is withheld
+wholesale, at any depth, before any content is examined. Scanning an encoded blob for secrets is a
+game the scanner loses, and a redaction rule that depends on recognising the encoding stops being
+correct the moment the encoding changes. `receipt_view()` drops the field entirely; the sanitiser
+replaces it with `<WITHHELD:internal-observation-input>`.
+
+The driver may still decode it, parse the report, derive tokens and sanitise the result — that is
+the whole point. What it may not do is republish it. Hostile synthetic tests push a GitHub PAT, an
+AWS key id, a JWT, another account's SSH key path and a Windows user path through the encoded
+capture and assert that none of them, nor the encoded blob itself, survives into the receipt view,
+the sanitised record, or the full evidence document.
+
+### 12.3 Report states, so incomplete evidence stays non-success
+
+A decoded prefix is not automatically a report. Six states are now distinguished, and only the
+first is evidence:
+
+| State | Meaning |
+|---|---|
+| `complete` | the sentinel arrived and the JSON after it parsed, with a marker |
+| `truncated` | the prefix stopped at the bound; the report was cut off |
+| `malformed` | the sentinel arrived and what followed did not parse |
+| `absent` | no sentinel, **and** the stream that would have carried it was complete |
+| `stream_incomplete` | a writer was retained, or bytes were drained past the prefix |
+
+`absent` is decisive; `stream_incomplete` is not, and the difference is load-bearing. **S2, S5 and
+S7 rest on the ABSENCE of a report**, and an absence only means something when the stream that
+would have carried it is known to be complete. The posed-check for those three accepts `absent`
+only. Every report-derived rule — `argv_exact`, `environ_empty`, `fds_exactly_012`,
+`signals_reset`, `no_new_privs_*`, `interpreter_ran_with_devfd`,
+`privilege_transition_suppressed` — goes through one guard that admits `complete` alone.
+
+### 12.4 M2 and M5 implemented; M3 returned as an owner question
+
+**M2 — implemented.** The frozen contract fixes the arm exactly: ">=3 extra live threads, one with
+an allocation in flight and one with a registered `pthread_atfork` handler". `--extra-threads N`
+is TEST/CONTROL ONLY and starts them immediately before the clone; one thread allocates
+continuously, one registers the handler. The control arm is the same plan with no threads, and the
+two child windows must match. `--extra-threads` is deliberately **not** a `CHILD_INJECTION_MODE`:
+it changes the parent's shape, not the child's syscall sequence, which is exactly why M2 can carry
+it and still trace a production child window.
+
+**M5 — implemented.** `--rejected-acquisition-arm` is TEST/CONTROL ONLY and runs before the
+mechanism with its own fork, its own child and its own reap; the mechanism below it is unchanged
+whether or not it ran. It reports **raw observations only** — the fd and the two errnos — and
+derives no token. `observations.py` maps `ESRCH` to `pidfd_open_esrch`, `ECHILD` after a successful
+open to `waitid_echild`, and otherwise `pidfd_open_succeeded`. The gate is enforced in the C
+itself: an exit status is recorded only when one was actually observed.
+
+**M3 — NOT implemented. OWNER DECISION REQUIRED.**
+
+Section 4 of the definition fixes the authoritative evidence sources, and item 2 — a syscall record
+of the launcher — is permitted **"only for the seven cases declared `traced: true` — E1, E7, F4,
+F7, M1, M2, M4"**. M3 is not among them. The helper cannot observe its parent's acquisition.
+`/proc/<pid>/fd` can show that a pidfd exists, and `fdinfo` can show which process it refers to,
+but neither shows that it was obtained *in the same syscall that created the child* — which is the
+whole of the claim. The oracles compute recipe digests only.
+
+A receipt field reading `"pidfd_acquisition": "clone3"` would be the launcher asserting exactly
+what M3 exists to evidence rather than assert, and adding a tracer for M3 would both contradict the
+frozen restriction above and invent a preregistered dependency that does not exist. **No such field
+was added.** M3 is left unposable and returned as an owner question.
+
+### 12.5 Posability after the correction
+
+| | Before | After |
+|---|---|---|
+| Driver plans | 72 | 72 (0 missing, 0 duplicate, 0 unknown) |
+| Posable | 29 | **71** |
+| Unposable | 43 (34 mandatory) | **1** — `M3`, conditional |
+
+The preflight gate is now the stricter one the owner instruction requires: the trial halts unless
+`unposable_cases() == []`, not merely unless no *mandatory* case is unposable. A conditional case
+that cannot be posed is still a hole in the preregistered set, and the first valid trial is an
+immutability boundary worth more than a partial answer. A test proves the gate reacts to a channel
+being removed rather than to a hard-coded list — which surfaced a latent defect while it was being
+written, where the supplied-channel set had been captured in a default argument and could not be
+overridden at all.
+
+**As things stand the runner halts at `HALT_PREFLIGHT` (exit 6) because of M3 alone.**
+
+## 13. Status after the PRE-D7-B1 correction
+
+**`DRIVER_CORRECTION_NEEDS_OWNER_DECISION`.**
+
+PRE-D7-B1 is corrected, P-12 and P-14 are re-verified and extended, M2 and M5 have the arms their
+frozen contracts name, and 71 of 72 cases are posable. One question remains and it is not the
+driver's to answer: **how M3's atomic acquisition may be evidenced within the frozen contract, or
+whether that contract should be amended.**
+
+This is **not** a readiness statement. The corrected descendant freeze still requires the bounded
+independent pre-trial re-review already mandated, and that review must examine the mechanism delta
+— a change to `launcher_spike.c`, which is the artefact under test. **D-7 remains not authorised
+and LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of ZERO.**

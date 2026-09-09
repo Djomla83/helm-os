@@ -99,18 +99,26 @@ def preflight_gates(preflight, build_dir):
         })
 
     # A case whose declared evidence channel the mechanism cannot supply is not
-    # posable. One that is MANDATORY makes the aggregate INCONCLUSIVE no matter
-    # what else happens, so the trial must not start.
+    # posable, and the trial must not start while ANY case is in that state --
+    # not merely while a mandatory one is.
+    #
+    # A conditional or recorded case that cannot be posed is still a hole in the
+    # preregistered set, and the first valid trial is an immutability boundary:
+    # once it starts, the frozen artefacts cannot be edited and a defect found
+    # afterwards closes the trial and forces a new preregistration. Spending
+    # that boundary on a run already known to be incomplete buys nothing.
     unposable = driver.unposable_cases()
-    mandatory_unposable = {name: info for name, info in unposable.items()
-                           if info["class"] == "mandatory"}
-    if mandatory_unposable:
+    if unposable:
+        by_class = {}
+        for name, info in unposable.items():
+            by_class.setdefault(info["class"], []).append(name)
         halts.append({
             "gate": "evidence_channels",
-            "detail": ("%d mandatory case(s) have no evidence channel; the "
-                       "aggregate would be MECHANISM_INCONCLUSIVE before the "
-                       "first case is posed" % len(mandatory_unposable)),
-            "evidence": mandatory_unposable,
+            "detail": ("%d case(s) have no evidence channel and cannot be "
+                       "posed: %s" % (len(unposable),
+                                      {k: sorted(v) for k, v in
+                                       sorted(by_class.items())})),
+            "evidence": unposable,
         })
 
     # Static linking is a precondition, not a preference: a complete trace is

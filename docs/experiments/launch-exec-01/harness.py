@@ -20,6 +20,14 @@ STATIC_PROBE = b"""int main(void) { return 0; }\n"""
 STATIC_CFLAGS = ["-O2", "-Wall", "-Wextra", "-static"]
 DYNAMIC_CFLAGS = ["-O2", "-Wall", "-Wextra"]
 
+# Per-target additions to the frozen command. Only launcher_spike needs one:
+# M2's control arm starts extra live threads in the PARENT, so the spike links
+# pthread. glibc >= 2.34 merges libpthread into libc and would probably link
+# without this, but "probably" is not a build contract -- -pthread is the
+# documented way to ask, and it also defines _REENTRANT. The helpers are
+# unchanged and still build with the frozen command exactly.
+TARGET_EXTRA_CFLAGS = {"launcher_spike": ["-pthread"]}
+
 STATIC_TARGETS = {
     "helper_report": "helper_report.c",
     "helper_alt": "helper_alt.c",
@@ -246,7 +254,8 @@ def build(build_dir):
     built = {}
     for name, source in sorted(STATIC_TARGETS.items()):
         target = build / name
-        cmd = ["cc", *STATIC_CFLAGS, "-o", str(target), str(here / source)]
+        cmd = ["cc", *STATIC_CFLAGS, *TARGET_EXTRA_CFLAGS.get(name, []),
+               "-o", str(target), str(here / source)]
         proc = subprocess.run(cmd, capture_output=True, text=True)
         if proc.returncode != 0:
             raise RuntimeError(f"{name}: static build failed\n{proc.stderr}")

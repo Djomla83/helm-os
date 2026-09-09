@@ -90,11 +90,14 @@ SIGNAL_NAMES = {
 # errno numbers to names, restricted to what execveat(2), fchdir(2) and the
 # child-setup syscalls can return in this experiment. Linux x86-64 values.
 ERRNO_NAMES = {
-    1: "EPERM", 2: "ENOENT", 4: "EINTR", 5: "EIO", 8: "ENOEXEC", 9: "EBADF",
-    12: "ENOMEM", 13: "EACCES", 14: "EFAULT", 20: "ENOTDIR", 21: "EISDIR",
-    22: "EINVAL", 24: "EMFILE", 26: "ETXTBSY", 36: "ENAMETOOLONG",
-    38: "ENOSYS", 40: "ELOOP",
+    1: "EPERM", 2: "ENOENT", 3: "ESRCH", 4: "EINTR", 5: "EIO", 8: "ENOEXEC",
+    9: "EBADF", 10: "ECHILD", 12: "ENOMEM", 13: "EACCES", 14: "EFAULT",
+    20: "ENOTDIR", 21: "EISDIR", 22: "EINVAL", 24: "EMFILE", 26: "ETXTBSY",
+    36: "ENAMETOOLONG", 38: "ENOSYS", 40: "ELOOP",
 }
+
+# Named because M5's whole outcome vocabulary turns on exactly these two.
+ESRCH, ECHILD = 3, 10
 
 # The exit-status range execveat and waitid can report. Outside it, the field is
 # not an exit status.
@@ -220,6 +223,104 @@ def parse_helper_report(payload_and_report):
     return payload, report
 
 
+# --------------------------------------------------- the retained capture
+# PRE-D7-B1. The launcher now emits the bounded capture prefix base64-encoded,
+# so the helper's own report -- the first item in the definition's evidence
+# preference order -- finally reaches the harness. These bytes are INTERNAL:
+# they may contain anything the executed image wrote, so they are decoded here,
+# reduced to structured facts, and never published. A secret in base64 is still
+# a secret, and evidence.py refuses to serialise this field at all.
+
+# The five states section 3 of the correction requires be distinguishable, plus
+# the one that says the stream itself could not settle the question.
+REPORT_COMPLETE = "complete"
+REPORT_TRUNCATED = "truncated"
+REPORT_MALFORMED = "malformed"
+REPORT_ABSENT = "absent"
+REPORT_STREAM_INCOMPLETE = "stream_incomplete"
+
+REPORT_STATES = frozenset({REPORT_COMPLETE, REPORT_TRUNCATED, REPORT_MALFORMED,
+                           REPORT_ABSENT, REPORT_STREAM_INCOMPLETE})
+
+# Only a COMPLETE report is evidence. Everything else is missing information,
+# and missing information never becomes a token.
+_USABLE_REPORT_STATES = frozenset({REPORT_COMPLETE})
+
+
+def decode_capture(stream_block):
+    """Decode one stream's retained prefix. Returns bytes, or None if absent.
+
+    ``None`` means the launcher emitted no prefix field at all -- an older spike,
+    or a receipt that is not the frozen one. It is never an empty capture: an
+    empty capture is ``b""`` and is a real observation.
+    """
+    import base64
+    if not isinstance(stream_block, dict):
+        return None
+    encoded = stream_block.get("capture_prefix_base64")
+    if encoded is None:
+        return None
+    if not isinstance(encoded, str):
+        return None
+    try:
+        raw = base64.b64decode(encoded, validate=True)
+    except Exception:                                  # noqa: BLE001
+        return None
+    declared = stream_block.get("capture_prefix_length")
+    if isinstance(declared, int) and declared != len(raw):
+        # The launcher's own count and its own bytes disagree, so neither can be
+        # trusted to describe the stream.
+        return None
+    return raw
+
+
+def _capture_is_decisive(stream_block):
+    """Whether this stream's prefix can settle a question about the whole stream.
+
+    It cannot when the prefix stopped at the bound while more bytes were drained,
+    and it cannot when a descendant retained the writer, because in both cases
+    what is missing is unknown rather than known to be nothing.
+    """
+    if not isinstance(stream_block, dict):
+        return False
+    if stream_block.get("capture_prefix_truncated") is True:
+        return False
+    if stream_block.get("completeness") != "CompleteAtEof":
+        return False
+    drained = stream_block.get("bytes_drained")
+    kept = stream_block.get("capture_prefix_length")
+    if isinstance(drained, int) and isinstance(kept, int) and kept < drained:
+        return False
+    return True
+
+
+def helper_report_state(stream_block):
+    """Classify descriptor 1's retained prefix. Returns ``(state, report, payload)``.
+
+    The distinction that matters is between "the image ran and did not report"
+    and "we cannot tell". S2, S5 and S7 rest on the ABSENCE of a report, and an
+    absence is only evidence when the stream that would have carried it is known
+    to be complete.
+    """
+    raw = decode_capture(stream_block)
+    if raw is None:
+        return REPORT_STREAM_INCOMPLETE, None, b""
+    payload, report = parse_helper_report(raw)
+    decisive = _capture_is_decisive(stream_block)
+    if report is not None:
+        return REPORT_COMPLETE, report, payload
+    if REPORT_SENTINEL in raw:
+        # The sentinel arrived and what followed did not parse. If the prefix was
+        # cut at the bound the report was truncated; otherwise it is malformed,
+        # and the two are not the same finding.
+        if decisive:
+            return REPORT_MALFORMED, None, payload
+        return REPORT_TRUNCATED, None, payload
+    if decisive:
+        return REPORT_ABSENT, None, payload
+    return REPORT_STREAM_INCOMPLETE, None, payload
+
+
 # ----------------------------------------------------------- exec confirmation
 # The four states section 11 of the trial contract requires be distinguishable.
 EXEC_PRE_EXEC_ERROR = "pre_exec_error"        # the child wrote a status record
@@ -228,7 +329,8 @@ EXEC_REACHED = "exec_reached"                 # positive evidence the image ran
 EXEC_UNINTERPRETABLE = "uninterpretable"      # a report arrived and made no sense
 
 
-def exec_confirmation(spike, report, payload_is_recipe=None):
+def exec_confirmation(spike, report, payload_is_recipe=None,
+                      report_state=None):
     """Which of the four exec states the observation actually supports.
 
     **Clean EOF is deliberately not enough.** launcher_spike.c sets
@@ -261,6 +363,12 @@ def exec_confirmation(spike, report, payload_is_recipe=None):
     if payload_is_recipe is False:
         # The case declared payload evidence and the payload did not match. The
         # image that ran, if any, is not the pinned helper.
+        return EXEC_UNINTERPRETABLE
+    if report_state in (REPORT_TRUNCATED, REPORT_MALFORMED,
+                        REPORT_STREAM_INCOMPLETE):
+        # A report may or may not have arrived; the stream cannot say. Calling
+        # that "nothing ran" would turn a gap in the evidence into a finding,
+        # which is exactly the move S5 exists to make impossible.
         return EXEC_UNINTERPRETABLE
     return EXEC_DIED_BEFORE_EXEC
 
@@ -326,6 +434,128 @@ def _timed_out(timeout_disposition, exit_code, term_signal):
 # ------------------------------------------------------------ derivation rules
 # Every case names exactly one rule. A rule returns (token, reason) with token
 # None whenever the evidence it needs is absent -- never a fallback token.
+
+# ------------------------------------------------------------ syscall records
+# Evidence item 2 in the definition's preference order, collected ONLY for the
+# seven cases declared traced: true. The parser reads a tracer's text and never
+# runs one; the driver owns invocation.
+
+# Which frozen stage each child syscall belongs to. RELOCATE is absent on
+# purpose: it happens in the PARENT before the clone, so it can never appear in
+# the child window this maps.
+_SYSCALL_STAGE = {
+    "dup2": "DUP2", "dup3": "DUP2",
+    "fcntl": "CLEAR_CLOEXEC",
+    "fchdir": "CHDIR",
+    "close_range": "CLOSE_RANGE",
+    "setpgid": "SETPGID",
+    "rt_sigprocmask": "SIGMASK",
+    "rt_sigaction": "SIGACTION",
+    "prctl": "NO_NEW_PRIVS",
+    "execveat": "EXEC",
+}
+
+# strace renders a traced process's lines in one of these shapes depending on
+# build and on whether more than one process is being followed.
+_STRACE_LINE = re.compile(
+    r"\A(?:\[pid\s+(?P<p1>\d+)\]\s*|(?P<p2>\d+)\s+)?"
+    r"(?P<call>[a-z_][a-z0-9_]*)\(")
+_STRACE_RESUMED = re.compile(
+    r"\A(?:\[pid\s+(?P<p1>\d+)\]\s*|(?P<p2>\d+)\s+)?"
+    r"<\.\.\.\s+(?P<call>[a-z_][a-z0-9_]*)\s+resumed>")
+_CLONE3_RET = re.compile(r"=\s*(\d+)\s*\Z")
+
+
+def _strace_pid_and_call(line):
+    text = line.rstrip("\n")
+    for pattern in (_STRACE_LINE, _STRACE_RESUMED):
+        match = pattern.match(text)
+        if match:
+            pid = match.group("p1") or match.group("p2")
+            return (int(pid) if pid else None), match.group("call")
+    return None, None
+
+
+def parse_strace_child_window(text):
+    """The child's syscall window, from the clone3 return to execveat.
+
+    Returns ``{"child_syscalls": [...], "stage_sequence": [...], "child_pid": N}``
+    or ``None`` when the window cannot be identified. ``None`` is not an empty
+    window: a case declared traced whose trace produced no record is INVALID, and
+    conflating the two would let a tracer failure read as a minimal child.
+    """
+    if text is None:
+        return None
+    if isinstance(text, bytes):
+        text = text.decode("utf-8", "replace")
+
+    child_pid = None
+    for line in text.splitlines():
+        _, call = _strace_pid_and_call(line)
+        if call == "clone3":
+            match = _CLONE3_RET.search(line.rstrip())
+            if match:
+                child_pid = int(match.group(1))
+                break
+    if child_pid is None:
+        return None
+
+    calls, seen_clone_return = [], False
+    for line in text.splitlines():
+        pid, call = _strace_pid_and_call(line)
+        if call is None:
+            continue
+        if not seen_clone_return:
+            if call == "clone3":
+                seen_clone_return = True
+            continue
+        if pid != child_pid:
+            continue
+        calls.append(call)
+        if call == "execveat":
+            break
+
+    if not calls:
+        return None
+    stages, last = [], None
+    for call in calls:
+        stage = _SYSCALL_STAGE.get(call)
+        # Consecutive syscalls of one stage are one stage entry: three dup2 calls
+        # are one DUP2, not three.
+        if stage is not None and stage != last:
+            stages.append(stage)
+            last = stage
+    return {"child_syscalls": calls, "stage_sequence": stages,
+            "child_pid": child_pid}
+
+
+def _usable_report(obs):
+    """The helper report, but ONLY when it is complete and interpretable.
+
+    Returns ``(report, None)`` or ``(None, reason)``. Every rule written against
+    the report goes through here, so a truncated or malformed report can never
+    be read as a partial answer: section 3 of the correction requires that
+    incomplete report evidence stays non-success, and this is where that is
+    enforced once rather than seven times.
+    """
+    state = obs.get("report_state")
+    report = obs.get("report")
+    if report is not None and state in _USABLE_REPORT_STATES:
+        return report, None
+    if state == REPORT_TRUNCATED:
+        return None, ("the helper report was cut off at the capture bound; a "
+                      "truncated report is not a partial answer")
+    if state == REPORT_MALFORMED:
+        return None, ("a helper report arrived and did not parse; the executed "
+                      "image is unidentified")
+    if state == REPORT_ABSENT:
+        return None, ("no helper report was written, and the stream that would "
+                      "have carried it was complete")
+    if state == REPORT_STREAM_INCOMPLETE:
+        return None, ("the stream could not settle whether a report was "
+                      "written; absence here is not evidence")
+    return None, "no helper report reached the harness"
+
 
 def rule_admission(obs):
     """``refused:<Refusal>`` for the admission cases: E8, X2, X5, X6, X7."""
@@ -422,9 +652,9 @@ def rule_process_disposition(obs):
 
 def rule_argv_exact(obs):
     """``argv_exact`` for A1-A4 and A6, from the report's element-wise argv."""
-    report = obs.get("report")
+    report, why = _usable_report(obs)
     if report is None:
-        return None, "no helper report; argv was never observed in the image"
+        return None, why
     expected = obs.get("expected_argv")
     if expected is None:
         return None, "the case declared no expected argv"
@@ -448,9 +678,9 @@ def rule_argv_exact(obs):
 
 def rule_environ_empty(obs):
     """``environ_empty`` for V1. Under D-10 an empty array is the only pass."""
-    report = obs.get("report")
+    report, why = _usable_report(obs)
     if report is None:
-        return None, "no helper report; environ was never observed in the image"
+        return None, why
     environ = report.get("environ")
     if not isinstance(environ, list):
         return None, "the report carries no environ array"
@@ -468,9 +698,9 @@ def rule_fds_exactly_012(obs):
     consumes is the only one excused -- by number, declared by the case, never
     by pattern.
     """
-    report = obs.get("report")
+    report, why = _usable_report(obs)
     if report is None:
-        return None, "no helper report; the descriptor set was never observed"
+        return None, why
     descriptors = report.get("descriptors")
     if not isinstance(descriptors, list):
         return None, "the report carries no descriptor array"
@@ -514,9 +744,9 @@ def rule_signals_reset(obs):
     reports the masks separately so blocked, ignored and caught are never
     conflated.
     """
-    report = obs.get("report")
+    report, why = _usable_report(obs)
     if report is None:
-        return None, "no helper report; signal state was never observed"
+        return None, why
     signals = report.get("signals")
     if not isinstance(signals, dict):
         return None, "the report carries no signals object"
@@ -543,9 +773,9 @@ def rule_no_new_privs(obs):
     inside the executed image, never inferred from the fact that the spike
     called ``prctl``.
     """
-    report = obs.get("report")
+    report, why = _usable_report(obs)
     if report is None:
-        return None, "no helper report; NoNewPrivs was never observed"
+        return None, why
     raw = report.get("no_new_privs")
     if not isinstance(raw, str):
         return None, "the report carries no NoNewPrivs field"
@@ -603,10 +833,9 @@ def rule_interpreter_ran_with_devfd(obs):
     interpreter's own argv, which only exists if the exec fd was NOT CLOEXEC --
     X2b is the same fixture with the flag, and it must produce ENOENT instead.
     """
-    report = obs.get("report")
+    report, why = _usable_report(obs)
     if report is None:
-        return None, ("no interpreter report; whether the interpreter ran "
-                      "cannot be established")
+        return None, why
     elements = report.get("argv")
     if not isinstance(elements, list) or not elements:
         return None, "the interpreter report carries no argv"
@@ -631,9 +860,9 @@ def rule_privilege_transition_suppressed(obs):
     fixture existed; the token then requires the executed image to have observed
     an unchanged effective uid alongside NoNewPrivs 1.
     """
-    report = obs.get("report")
+    report, why = _usable_report(obs)
     if report is None:
-        return None, "no helper report; no transition could be observed"
+        return None, why
     euid, uid = report.get("euid"), report.get("uid")
     if not isinstance(euid, int) or not isinstance(uid, int):
         return None, "the report carries no uid/euid pair"
@@ -814,13 +1043,36 @@ def rule_rejected_acquisition(obs):
     ``clone3(CLONE_PIDFD)`` is primary rather than asserting it, and its gate
     forbids reporting a status that was never observed.
     """
-    outcome = obs.get("rejected_acquisition_outcome")
-    if outcome is None:
-        return None, ("the harness recorded no outcome for the rejected "
-                      "acquisition arm")
-    if outcome in ("pidfd_open_esrch", "waitid_echild", "pidfd_open_succeeded"):
-        return outcome, "recorded outcome of the rejected fork+pidfd_open arm"
-    return None, "unrecognised rejected-acquisition outcome: " + repr(outcome)
+    spike = obs.get("spike")
+    if spike is None:
+        return None, "no parseable spike receipt"
+    arm = spike.get("rejected_acquisition_arm")
+    if not isinstance(arm, dict):
+        return None, "the receipt records no rejected-acquisition arm"
+    if arm.get("attempted") is not True:
+        return None, ("the rejected-acquisition arm was not run, so it has no "
+                      "outcome to record")
+    open_errno = arm.get("pidfd_open_errno")
+    wait_errno = arm.get("waitid_errno")
+    if not isinstance(open_errno, int) or not isinstance(wait_errno, int):
+        return None, "the arm's errno fields are not interpretable"
+
+    if open_errno == ESRCH:
+        # The child was reaped between fork() and pidfd_open(). This is the
+        # exact window clone3(CLONE_PIDFD) closes, observed rather than argued.
+        return ("pidfd_open_esrch",
+                "pidfd_open failed with ESRCH: the child was already reaped "
+                "between fork() and the acquisition")
+    if open_errno == 0:
+        if wait_errno == ECHILD:
+            return ("waitid_echild",
+                    "the pidfd was acquired but the exit status was "
+                    "unobservable: waitid returned ECHILD")
+        return ("pidfd_open_succeeded",
+                "the acquisition raced ahead of the reaper on this run")
+    name = _errno_name(open_errno)
+    return None, ("pidfd_open failed with " + (name or str(open_errno)) +
+                  ", which is outside this case's frozen safe set")
 
 
 # The complete rule registry. driver.py names one of these per case, and the

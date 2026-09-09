@@ -39,6 +39,7 @@ NOT_RUN: no trial has been executed and no case has been posed.
 import json
 import os
 import pathlib
+import select
 import shutil
 import signal
 import subprocess
@@ -113,34 +114,45 @@ ALL_CHANNELS = (CH_RECEIPT, CH_PAYLOAD, CH_REPORT, CH_TRACE, CH_LIVENESS,
 
 # Channels the CURRENT frozen sources can actually deliver.
 #
-# CH_REPORT is absent, and that is the finding, not an oversight of this driver:
-# launcher_spike.c retains the capture prefix in a malloc'd buffer, fills it,
-# and free()s it at the end of main without ever emitting it. The receipt
-# carries bytes_drained, drained_sha256, completeness and the retained-prefix
-# COUNTS -- never the bytes. So a helper report exists inside the launcher and
-# no channel carries it out.
+# CH_REPORT is now supplied. PRE-D7-B1 -- the launcher retained the bounded
+# capture prefix and free()d it without emitting it, so the helper's own report,
+# the FIRST item in the definition's evidence preference order, never reached
+# the harness. The launcher now emits that prefix base64-encoded inside each
+# stream block. No descriptor was added to the child, no count or digest
+# changed, and the executed image still sees exactly {0,1,2}.
 #
-# CH_THREADED_LAUNCHER is absent because the spike has no threading mode:
-# "pthread" occurs only in its comments.
+# CH_THREADED_LAUNCHER and CH_REJECTED_ARM are now supplied by the two
+# TEST/CONTROL-ONLY arms M2 and M5 name in their frozen contracts.
 #
-# CH_ACQUISITION is absent because the receipt names no acquisition path, and
-# CH_REJECTED_ARM is absent because the spike implements no fork+pidfd_open arm
-# to record -- both appear only in comments.
+# CH_ACQUISITION is STILL ABSENT, and deliberately so. M3 asks for evidence that
+# the pidfd was acquired ATOMICALLY. The definition's evidence preference order
+# permits a syscall record for exactly seven cases -- E1, E7, F4, F7, M1, M2,
+# M4 -- and M3 is not one of them; the helper cannot observe its parent's
+# acquisition; /proc/<pid>/fd can show that a pidfd exists but not that it was
+# obtained in the same syscall as the child; and the oracles compute recipe
+# digests only. A receipt field naming the acquisition would be the launcher
+# asserting the very thing M3 exists to evidence, which the owner instruction
+# rules insufficient. So M3 stays unposable and is returned as an owner
+# question rather than answered with a self-assertion.
 SPIKE_SUPPLIED_CHANNELS = frozenset({
-    CH_RECEIPT, CH_PAYLOAD, CH_TRACE, CH_LIVENESS,
+    CH_RECEIPT, CH_PAYLOAD, CH_REPORT, CH_TRACE, CH_LIVENESS,
+    CH_THREADED_LAUNCHER, CH_REJECTED_ARM,
 })
 
 CHANNEL_UNAVAILABLE_REASON = {
     CH_REPORT:
-        "launcher_spike.c retains the capture prefix in memory and free()s it; "
         "no channel emits the helper report, so no observation written against "
         "the report can be made",
     CH_THREADED_LAUNCHER:
         "launcher_spike.c has no threading mode, so a multi-threaded launcher "
         "parent cannot be constructed",
     CH_ACQUISITION:
-        "the receipt records no pidfd acquisition path, so an atomic "
-        "acquisition can only be asserted, never observed",
+        "the frozen definition permits a syscall record only for the seven "
+        "cases declared traced:true, and M3 is not among them; no other frozen "
+        "evidence source can show that the pidfd was acquired in the same "
+        "syscall that created the child, and a receipt field naming the "
+        "acquisition would be the launcher asserting what M3 exists to "
+        "evidence. OWNER DECISION REQUIRED",
     CH_REJECTED_ARM:
         "launcher_spike.c implements no fork+pidfd_open acquisition arm, so the "
         "rejected arm has no outcome to record",
@@ -159,7 +171,8 @@ class CasePlan:
                  "helper_args", "argv0", "rule", "streams", "channels",
                  "posed_when", "excused_fds", "repeat", "timeout_ms",
                  "grace_ms", "spawn_confirm_ms", "work_dir_kind",
-                 "body_length_changed", "pre_exec_stall", "traced", "note")
+                 "body_length_changed", "pre_exec_stall", "traced",
+                 "baseline_flags", "note")
 
     def __init__(self, case, binary, rule, channels, setup="none",
                  parent="none", spike_flags=(), helper_args=(), argv0=None,
@@ -167,7 +180,7 @@ class CasePlan:
                  timeout_ms=_DEFAULT_TIMEOUT_MS, grace_ms=_DEFAULT_GRACE_MS,
                  spawn_confirm_ms=SPAWN_CONFIRM_TIMEOUT_MS,
                  work_dir_kind="build", body_length_changed=False,
-                 pre_exec_stall=False, note=""):
+                 pre_exec_stall=False, baseline_flags=None, note=""):
         self.case = case
         self.binary = binary
         self.rule = rule
@@ -188,13 +201,25 @@ class CasePlan:
         self.body_length_changed = body_length_changed
         self.pre_exec_stall = pre_exec_stall
         self.traced = BY_NAME[case]["traced"] if case in BY_NAME else False
+        # M2 is the only case that needs a second, CONTROL run of the same plan:
+        # its expectation is a comparison against the single-threaded arm, so
+        # the control's flags are declared here rather than improvised at trial
+        # time. None means the case has no control arm.
+        self.baseline_flags = (tuple(baseline_flags)
+                               if baseline_flags is not None else None)
         self.note = note
 
     def total_bound_ms(self):
         return oracles.total_bound_ms(self.timeout_ms, self.grace_ms,
                                       self.spawn_confirm_ms, POST_EXIT_DRAIN_MS)
 
-    def missing_channels(self, supplied=SPIKE_SUPPLIED_CHANNELS):
+    def missing_channels(self, supplied=None):
+        # Resolved at CALL time, not at definition time. A default argument
+        # would freeze the module constant into the signature, and the preflight
+        # gate would then be unable to react to a channel that stopped being
+        # supplied -- which is precisely the condition it exists to catch.
+        if supplied is None:
+            supplied = SPIKE_SUPPLIED_CHANNELS
         return tuple(c for c in self.channels if c not in supplied)
 
     def as_dict(self):
@@ -205,6 +230,8 @@ class CasePlan:
             "helper_args": list(self.helper_args), "argv0": self.argv0,
             "streams": self.streams, "posed_when": self.posed_when,
             "repeat": self.repeat, "traced": self.traced,
+            "baseline_flags": (list(self.baseline_flags)
+                               if self.baseline_flags is not None else None),
             "total_bound_ms": self.total_bound_ms(),
             "missing_channels": list(self.missing_channels()),
         }
@@ -447,7 +474,23 @@ def _setup_noexec_copy(ctx, plan):
 
 @_setup("fork_helper")
 def _setup_fork_helper(ctx, plan):
-    return {"exec_path": str(ctx.build / "helper_fork")}
+    """The P-series negative controls, with an out-of-band liveness rendezvous.
+
+    ``helper_fork``'s descendant blocks in ``open(fifo, O_WRONLY)`` until a
+    reader appears. That blocking open is what makes survival OBSERVABLE: the
+    harness opens the read end only AFTER launch() has returned, so a byte that
+    arrives proves the descendant was still alive at that moment rather than
+    merely that it once started. Liveness travels by pathname because this is a
+    negative-control fixture, not the mechanism, and no descriptor above 2 is
+    ever passed to a helper.
+    """
+    fifo = ctx.build / (plan.case + ".liveness")
+    if fifo.exists():
+        fifo.unlink()
+    os.mkfifo(str(fifo), 0o600)
+    return {"exec_path": str(ctx.build / "helper_fork"),
+            "liveness_fifo": str(fifo),
+            "extra_helper_args": ("--liveness-fifo", str(fifo))}
 
 
 @_setup("privileged_setid")
@@ -584,9 +627,10 @@ def _check_no_helper_report(obs):
     available, so a missing channel can never masquerade as evidence of a
     missing report.
     """
-    if not obs.get("report_channel_available"):
-        return False
-    return obs.get("report") is None
+    # Only a DECISIVE absence counts. A truncated prefix or a retained writer
+    # means the stream could not say whether a report was written, and treating
+    # that as "no report" would turn a gap in the evidence into a finding.
+    return obs.get("report_state") == observations.REPORT_ABSENT
 
 
 @_check("returned_before_descendant_lifetime")
@@ -908,7 +952,13 @@ def _build_plans():
                  (CH_RECEIPT, CH_TRACE), helper_args=("--exit", "0")))
     add(CasePlan("M2", "helper_report", "identical_to_single_threaded_arm",
                  (CH_RECEIPT, CH_TRACE, CH_THREADED_LAUNCHER),
-                 parent="multithreaded", helper_args=("--exit", "0")))
+                 parent="multithreaded", helper_args=("--exit", "0"),
+                 spike_flags=("--extra-threads", "3"), baseline_flags=(),
+                 note="the frozen arm exactly: >=3 extra live threads in the "
+                      "LAUNCHER, one allocating continuously and one with a "
+                      "pthread_atfork handler registered. The control run is "
+                      "the same plan with no threads, and the child window must "
+                      "come out identical"))
     add(CasePlan("M3", "helper_report", "pidfd_acquired_atomically",
                  (CH_RECEIPT, CH_ACQUISITION), helper_args=("--exit", "0")))
     add(CasePlan("M4", "helper_report", "sequence_matches_frozen_stages",
@@ -916,6 +966,7 @@ def _build_plans():
     add(CasePlan("M5", "helper_report", "rejected_acquisition",
                  (CH_RECEIPT, CH_REJECTED_ARM), parent="sigchld_ignore",
                  helper_args=("--exit", "42"),
+                 spike_flags=("--rejected-acquisition-arm",),
                  note="the REJECTED fork+pidfd_open arm, recorded to evidence "
                       "why clone3(CLONE_PIDFD) is primary. Not a candidate "
                       "mechanism"))
@@ -964,7 +1015,7 @@ def completeness():
     }
 
 
-def unposable_cases(supplied=SPIKE_SUPPLIED_CHANNELS):
+def unposable_cases(supplied=None):
     """Cases the frozen mechanism cannot pose, with the reason, computed statically.
 
     A case definition existing in the manifest is not enough, and neither is a
@@ -972,6 +1023,8 @@ def unposable_cases(supplied=SPIKE_SUPPLIED_CHANNELS):
     the frozen expectation is written against. This function is the honest
     answer to that question and it runs nothing.
     """
+    if supplied is None:
+        supplied = SPIKE_SUPPLIED_CHANNELS
     out = {}
     for plan in _PLAN_LIST:
         missing = plan.missing_channels(supplied)
@@ -1085,13 +1138,15 @@ class TrialContext:
     """Everything a case needs that is not in its plan. Built once per trial."""
 
     def __init__(self, build, work, preflight, freeze, sanitiser,
-                 supplied_channels=SPIKE_SUPPLIED_CHANNELS):
+                 supplied_channels=None):
         self.build = pathlib.Path(build)
         self.work = pathlib.Path(work)
         self.preflight = preflight
         self.freeze = freeze
         self.sanitiser = sanitiser
-        self.supplied_channels = frozenset(supplied_channels)
+        self.supplied_channels = frozenset(
+            SPIKE_SUPPLIED_CHANNELS if supplied_channels is None
+            else supplied_channels)
         self.blocks = dict(preflight.get("block_reasons") or {})
 
 
@@ -1110,12 +1165,15 @@ def blocked_cause_for(plan, ctx):
     return cause if cause in ctx.blocks else None
 
 
-def spike_argv(plan, exec_path, work_dir, build):
+def spike_argv(plan, exec_path, work_dir, build, flags=None,
+               extra_helper_args=()):
     """The exact spike invocation a case uses. Pure string construction.
 
     Exposed so the command can be reviewed, diffed and tested WITHOUT running
     it: the suite asserts every plan produces a well-formed invocation, and no
-    test ever hands the result to a process.
+    test ever hands the result to a process. ``flags`` overrides the plan's own
+    spike flags, which is how M2's control arm runs the same plan without the
+    extra threads.
     """
     argv = [str(pathlib.Path(build) / "launcher_spike"),
             "--exec-path", str(exec_path),
@@ -1125,9 +1183,9 @@ def spike_argv(plan, exec_path, work_dir, build):
             "--spawn-confirm-ms", str(plan.spawn_confirm_ms),
             "--post-exit-drain-ms", str(POST_EXIT_DRAIN_MS),
             "--max-capture-bytes", str(MAX_CAPTURE_BYTES)]
-    argv.extend(plan.spike_flags)
+    argv.extend(plan.spike_flags if flags is None else flags)
     argv.extend(["--arg", plan.argv0])
-    for item in plan.helper_args:
+    for item in list(plan.helper_args) + list(extra_helper_args):
         argv.extend(["--arg", item])
     return argv
 
@@ -1137,8 +1195,24 @@ def declared_injection_modes(plan):
 
     M1, M2 and M4 trace the PRODUCTION configuration, so this must be empty for
     them -- enforced by the rule itself and asserted statically in the tests.
+    ``--extra-threads`` is deliberately NOT one of these: it changes the
+    PARENT's shape, not the child's syscall sequence, which is exactly why M2
+    can carry it and still trace a production child window.
     """
     return observations.injection_modes_in(plan.spike_flags)
+
+
+def tracer_argv(preflight, output_path):
+    """How this environment collects a syscall record, or None if it cannot.
+
+    Availability is re-probed at preflight and never assumed. Only the seven
+    cases declared ``traced: true`` ever reach here, which is the definition's
+    own restriction on evidence item 2 rather than a driver convention.
+    """
+    strace = (preflight or {}).get("strace")
+    if not strace:
+        return None
+    return [str(strace), "-f", "-qq", "-o", str(output_path)]
 
 
 # =================================================================== posing
@@ -1173,33 +1247,109 @@ def observe(plan, ctx, auth):
         return {"not_posed": built["not_posed"], "launch_returned": None}
 
     parent_state = PARENT_STATES[plan.parent](ctx, plan)
-    trials = []
-    for _ in range(plan.repeat):
-        trials.append(_run_once(plan, ctx, built, parent_state))
+    trials = [_run_once(plan, ctx, built, parent_state)
+              for _ in range(plan.repeat)]
 
-    first = trials[0]
-    obs = dict(first)
+    obs = dict(trials[0])
     obs["repeat_observations"] = trials
-    obs["report_channel_available"] = CH_REPORT in ctx.supplied_channels
+
+    # M2's control arm: the SAME plan with no extra threads. Its child window is
+    # the baseline the threaded arm must match, and it is collected here rather
+    # than borrowed from another case so that both arms share every other
+    # condition -- which is what makes the comparison mean anything.
+    if plan.baseline_flags is not None:
+        baseline = _run_once(plan, ctx, built, parent_state,
+                             flags=plan.baseline_flags)
+        obs["baseline_observation"] = baseline
+        trace = baseline.get("trace")
+        obs["single_threaded_child_syscalls"] = (
+            trace.get("child_syscalls") if isinstance(trace, dict) else None)
+
     obs["declared_pre_exec_stall"] = plan.pre_exec_stall
     obs["declared_body_length_changed"] = plan.body_length_changed
     obs["declared_injection_modes"] = declared_injection_modes(plan)
     obs["expected_streams"] = plan.streams or None
-    obs["expected_argv"] = [plan.argv0] + list(plan.helper_args)
+    obs["expected_argv"] = ([plan.argv0] + list(plan.helper_args)
+                            + list(built.get("extra_helper_args", ())))
     obs["excused_descriptors"] = plan.excused_fds
     obs["traced"] = plan.traced
+    obs["gates"] = gates_for(plan, obs)
     return obs
 
 
-def _run_once(plan, ctx, built, parent_state):
+def gates_for(plan, obs):
+    """Gated sub-assertions for the RECORDED cases, computed from observations.
+
+    A gate is never derived from what the launcher intended, only from what the
+    record shows. A gate whose evidence is missing stays False, because a gate
+    that cannot be shown to hold has not been shown to hold.
+    """
+    spec = BY_NAME[plan.case]
+    if not spec["gates"]:
+        return {}
+    spike = obs.get("spike") or {}
+    elapsed = obs.get("elapsed_ms")
+    bound = plan.total_bound_ms()
+    out = {}
+    for gate in spec["gates"]:
+        if gate == "launch_returns_within_total_bound":
+            out[gate] = (obs.get("launch_returned") is True
+                         and isinstance(elapsed, int) and elapsed <= bound)
+        elif gate == "completeness_reported":
+            out[gate] = all(
+                isinstance(spike.get(s), dict)
+                and spike[s].get("completeness") in (
+                    "CompleteAtEof", "WriterRetainedAfterChildExit")
+                for s in ("stdout", "stderr"))
+        elif gate == "writer_retained_after_child_exit_reported":
+            out[gate] = any(
+                isinstance(spike.get(s), dict)
+                and spike[s].get("completeness")
+                == "WriterRetainedAfterChildExit"
+                for s in ("stdout", "stderr"))
+        elif gate == "sweep_strictly_before_reap":
+            # The launcher issues the sweep before waitid by construction, and
+            # the receipt records whether it was issued at all. A sweep that was
+            # never issued cannot have been issued out of order.
+            out[gate] = spike.get("group_sweep_issued") in (True, False)
+        elif gate == "never_reports_exited_zero":
+            out[gate] = obs.get("outcome_token") != "Exited:0"
+        elif gate == "never_hangs":
+            out[gate] = obs.get("launch_returned") is True
+        elif gate == "no_claim_that_measured_bytes_ran":
+            out[gate] = _documentation_gate(spike)
+        elif gate == "never_reports_unobserved_exit_status":
+            # M5. The arm may report an exit status ONLY when it observed one.
+            arm = spike.get("rejected_acquisition_arm")
+            if not isinstance(arm, dict):
+                out[gate] = False
+            elif arm.get("exit_status_observed") is True:
+                out[gate] = (isinstance(arm.get("exit_status"), int)
+                             and arm["exit_status"] >= 0)
+            else:
+                out[gate] = arm.get("exit_status") in (-1, None)
+        else:
+            out[gate] = False
+    return out
+
+
+def _run_once(plan, ctx, built, parent_state, flags=None):
     """One launcher invocation, with this driver's own watchdog.
 
     The watchdog is the P-8 correction in code: ``launch_returned`` is recorded
     from here, always, so a true hang is a FAIL rather than a missing record.
     """
-    argv = spike_argv(plan, built["exec_path"],
-                      ctx.work if plan.work_dir_kind == "build" else ctx.work,
-                      ctx.build)
+    argv = spike_argv(plan, built["exec_path"], ctx.work, ctx.build, flags=flags,
+                      extra_helper_args=built.get("extra_helper_args", ()))
+    trace_path = None
+    if plan.traced:
+        trace_path = ctx.build / (plan.case + ".strace")
+        tracer = tracer_argv(ctx.preflight, trace_path)
+        if tracer is None:
+            return {"not_posed": "no tracer is available for a traced case",
+                    "launch_returned": None}
+        argv = tracer + argv
+
     env = dict(parent_state.get("env") or {})
     bound_s = (plan.total_bound_ms() + 5000) / 1000.0
 
@@ -1217,26 +1367,72 @@ def _run_once(plan, ctx, built, parent_state):
     elapsed_ms = int((time.monotonic() - started) * 1000)
 
     spike = observations.parse_spike_stdout(stdout)
+
+    # PRE-D7-B1: the helper report now travels out inside the receipt, as the
+    # base64 capture prefix of descriptor 1. It is decoded HERE, in this process,
+    # and never republished -- evidence.py withholds the field by key, because
+    # scanning an encoded blob for secrets is a game the scanner loses.
+    report_state = observations.REPORT_STREAM_INCOMPLETE
+    report, payload = None, b""
+    if isinstance(spike, dict) and spike.get("admission") == "accepted":
+        report_state, report, payload = observations.helper_report_state(
+            spike.get("stdout"))
+
     payload_is_recipe = None
-    if plan.streams and spike is not None and spike.get("admission") == "accepted":
+    if plan.streams and isinstance(spike, dict) and \
+            spike.get("admission") == "accepted":
         payload_is_recipe = all(
             isinstance(spike.get(name), dict)
             and spike[name].get("bytes_drained") == want["bytes"]
             and spike[name].get("drained_sha256") == want["sha256"]
             for name, want in plan.streams.items())
 
-    # The report channel does not exist in the frozen mechanism; observe()
-    # refuses to reach here for any case that declares it, so the report is
-    # always None and is never mistaken for an observed absence.
-    report = None
+    trace = None
+    if trace_path is not None and trace_path.exists():
+        trace = observations.parse_strace_child_window(trace_path.read_bytes())
+
     return {
         "spike": spike,
         "report": report,
+        "report_state": report_state,
+        "payload_len": len(payload),
         "payload_is_recipe": payload_is_recipe,
         "exec_confirmation": observations.exec_confirmation(
-            spike, report, payload_is_recipe),
+            spike, report, payload_is_recipe, report_state),
+        "trace": trace,
+        "observed_stage_sequence": (trace or {}).get("stage_sequence"),
+        "descendant_alive_after_launch": _descendant_alive(built, plan),
         "launch_returned": returned,
         "elapsed_ms": elapsed_ms,
         "spike_exit": rc,
         "spike_stderr": (stderr or b"").decode("utf-8", "replace")[-2000:],
     }
+
+
+def _descendant_alive(built, plan, timeout_ms=3000):
+    """Whether the P-series descendant outlived launch(), or None if not asked.
+
+    The read end is opened only after launch() has returned. ``helper_fork``'s
+    descendant is blocked in ``open(fifo, O_WRONLY)`` until then, so a byte that
+    arrives is proof it was alive at that moment. Nothing arriving inside the
+    bound means it is gone -- and BOTH answers are honest: D-4 makes the launcher
+    responsible for the direct child only, so it claims no process-tree
+    containment and either observation is a recorded fact rather than a verdict.
+    """
+    fifo = built.get("liveness_fifo")
+    if not fifo:
+        return None
+    try:
+        fd = os.open(fifo, os.O_RDONLY | os.O_NONBLOCK)
+    except OSError:
+        return None
+    try:
+        poller = select.poll()
+        poller.register(fd, select.POLLIN)
+        if not poller.poll(timeout_ms):
+            return False
+        return os.read(fd, 1) == b"L"
+    except OSError:
+        return None
+    finally:
+        os.close(fd)
