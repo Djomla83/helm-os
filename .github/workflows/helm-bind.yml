@@ -1,0 +1,60 @@
+name: helm-bind cross-platform purity
+
+# helm-bind claims platform-identical pure semantics, so that claim is tested on
+# three operating systems rather than asserted. The Linux workspace workflow
+# remains the full check; this one exists to falsify the portability claim.
+
+on:
+  pull_request:
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'crates/helm-bind/**'
+      - 'crates/helm-app-spec/**'
+      - 'crates/helm-observe/**'
+      - '.github/workflows/helm-bind.yml'
+  push:
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'crates/helm-bind/**'
+      - 'crates/helm-app-spec/**'
+      - 'crates/helm-observe/**'
+      - '.github/workflows/helm-bind.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  purity:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: Install Rust 1.95.0
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal --component rustfmt,clippy
+          rustup default 1.95.0
+
+      - name: Record the runner
+        run: |
+          rustc -vV
+          cargo -V
+
+      - run: cargo fmt --check
+      - run: cargo clippy -p helm-bind --all-targets --all-features --locked -- -D warnings
+      - run: cargo test -p helm-bind --locked
+
+      # The determinism anchor. The fixture report's digest is asserted inside the
+      # test itself, so a platform-dependent serializer fails here rather than
+      # producing three different "expected" values. This step prints it so the
+      # three runs can be compared by eye in the logs as well.
+      - name: Print the deterministic fixture report identity
+        run: cargo test -p helm-bind --locked --lib -- --nocapture the_fixture_report_has_one_platform_independent_identity

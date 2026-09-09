@@ -141,6 +141,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "helm-bind"
+version = "0.1.0"
+dependencies = [
+ "helm-app-spec",
+ "helm-observe",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "helm-evidence"
 version = "0.1.0"
 dependencies = [
