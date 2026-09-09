@@ -159,7 +159,7 @@ assertion, every ceiling on both sides, identifier and digest grammar, malformed
 without panic, a 1024-case seeded corpus with a reviewer-chosen seed, and bounded private
 diagnostics.
 
-**Linux x86_64, 9.** End-to-end against **genuine** observations produced by `helm-observe`
+**Linux x86_64, 11.** End-to-end against **genuine** observations produced by `helm-observe`
 over a synthetic tree whose bodies reproduce the committed fixture identities: a complete
 correct mapping, unmapped claims, typed size and digest mismatches, the no-heuristic test,
 both entry-point path rules, the unstated-digest case on the A0 fixture, every observation
@@ -167,6 +167,11 @@ outcome kept distinct, all eight refusals, the four-digest identity, and claim o
 
 Fixtures are the committed `synthetic-notes.json` and `a0-7zip.json`. Nothing branches on
 7-Zip, a Wine version or an A0 role name; A0 is used only as a regression input.
+
+**Cross-platform evidence, measured not asserted.** Run `34326971427` ran the crate on
+`ubuntu-24.04`, `windows-2025` and `macos-15`. All three produced the identical fixture
+report: **1497 bytes, `d63d04e2a55a61fa149729f48bc355fb18f28e309f8aa2c973589391bf80e923`**.
+Run `34326971463` ran the full Linux workspace, including the 11 end-to-end tests.
 
 ## 9. Purity search
 
