@@ -75,7 +75,16 @@ def elf64_header(e_machine, e_type=ET_EXEC):
 
 
 FIXTURES = {
+    # E8: refused at admission, e_machine is not in the cohort.
     "helper_foreign.elf": elf64_header(EM_AARCH64),
+    # X4: PASSES the cohort rule -- ELFCLASS64, ELFDATA2LSB, EM_X86_64, ET_EXEC
+    # -- and is therefore admitted and reaches execveat, where the loader finds
+    # e_phnum = 0 and nothing to map, giving ENOEXEC. The magic-only fixture
+    # below cannot pose X4: once admission became a 64-byte HEADER check it is
+    # refused as ElfNotInCohort and never reaches exec at all.
+    "unloadable_in_cohort.elf": elf64_header(EM_X86_64),
+    # Retained as the negative fixture for the cohort rule itself: four bytes
+    # that satisfy a magic check and nothing more.
     "magic_only.bin": MAGIC_ONLY,
     "script_fixture.sh": SCRIPT_FIXTURE,
 }

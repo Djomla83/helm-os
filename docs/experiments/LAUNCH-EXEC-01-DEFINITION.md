@@ -26,8 +26,14 @@ edited after the first valid trial.
 > [three-workstream pre-execution review](../implementation/HELM-LAUNCH-PRE-EXECUTION-REVIEW.md)
 > found sixteen BLOCKERs among 53 findings and re-froze it at 71. Owner decisions **D-9**
 > (refuse set-id objects), **D-10** (empty environment only) and **D-11** (`no_new_privs`) then
-> changed membership again, to the **72** frozen here. Every earlier commit is preserved
-> unchanged.
+> changed membership to **72**, frozen at `66bf4b6`. The
+> [independent pre-trial review](../implementation/HELM-LAUNCH-INDEPENDENT-PRETRIAL-REVIEW.md)
+> then found six further BLOCKERs in that freeze — three mandatory cases were **unposable**
+> against the frozen spike, the N2 control and `clone3` availability were both host properties
+> the freeze would have scored as mechanism defects, and the checker let any class absorb a
+> BLOCKED status. Membership is still **72**; the class partition changed to **54 / 11 / 7** and
+> the spike gained the two modes and the capture retention its own cases required. Every earlier
+> commit is preserved unchanged, `66bf4b6` included.
 
 ## 0. What this experiment answers, and what it does not
 
@@ -84,7 +90,7 @@ manifest does not hash itself, following the existing convention.
 | `checker.py` | Verdict evaluator; links nothing from the spike and never repairs a record |
 | `harness.py` | Preflight inventory, static-link gate, fixture builder, descriptor pre-loader |
 | `run_launch_exec_01.py` | Runner; refuses to pose a case without a verified freeze **and** owner authorisation |
-| `make_fixtures.py` | Deterministic generator for `helper_foreign.elf`, `magic_only.bin`, `script_fixture.sh` |
+| `make_fixtures.py` | Deterministic generator for `helper_foreign.elf`, `unloadable_in_cohort.elf`, `magic_only.bin`, `script_fixture.sh` |
 | `launcher_spike.c` | The mechanism under test: pin → measure → admission → `clone3(CLONE_PIDFD)` → child setup → `execveat` |
 | `helper_report.c` | Primary helper; reports its own observed process boundary from inside the executed image |
 | `helper_alt.c` | Substitution detector: different body, different digest, marker at a fixed length so E6's mutation can be length-preserving |
@@ -113,6 +119,30 @@ and the descriptor that reading consumes is reported by number and is the only o
 stderr. `oracles.py` computes every expected count and digest from this and the declared volume
 alone. A byte *volume* is not a byte *recipe*, and without this the O-series oracles are
 uncomputable.
+
+**The O-series runs its helper with `--no-report`, and that is load-bearing.** The report and the
+measured payload share descriptor 1, and the launcher retains only a bounded prefix, so for any
+stream larger than that bound nobody ever holds the whole stream and the sentinel cannot be used
+to split it after the fact. A stream carrying both would therefore have a `drained_sha256` over
+payload **plus** sentinel **plus** report, which can never equal the frozen-recipe digest. With
+`--no-report` the stream is exactly the recipe bytes, `bytes_drained` equals the declared volume
+and `drained_sha256` equals the oracle digest. **Exec evidence for those cases is the payload
+itself**: only the pinned helper can produce the recipe, so its presence establishes that the
+image ran, without needing the report S1 relies on.
+
+**Retained prefix.** `capture_prefix` retains the first `MAX_CAPTURE_BYTES` of each stream **in
+memory only**, and draining continues past the bound so a child that writes more is never blocked
+by a full pipe. The `truncated` flag describes **that buffer**, not the stream, which is why it
+appears in the spike's `retained_prefix_not_in_receipt` object and **never in the receipt**.
+
+**Test-only fault injection is separated from the mechanism sequence.** `frozen_cases` declares
+`CHILD_TEST_INJECTION_SYSCALLS` and `CHILD_INJECTION_MODES` alongside
+`CHILD_PERMITTED_SYSCALLS`. The child calls `nanosleep` under `--stall-pre-exec-ms` (S6) and
+`kill`/`getpid` under `--die-before-exec` (S5); none belongs to the candidate mechanism sequence.
+**M1, M2 and M4 trace the production configuration**, in which no injection mode is passed, and a
+trace containing an injection syscall in a case that declared no injection is a **FAIL**. Without
+that split M1's minimality claim would hold only because the injecting cases happen not to be
+traced — an accident of classification rather than a rule.
 
 **Frozen child-setup stage vocabulary**, in order: `RELOCATE`, `DUP2`, `CLEAR_CLOEXEC`, `CHDIR`,
 `CLOSE_RANGE`, `SETPGID`, `SIGMASK`, `SIGACTION`, `NO_NEW_PRIVS`, `EXEC`. Every post-fork
@@ -190,9 +220,9 @@ outside it is a FAIL, not a retry.
 | **X2b** | mandatory | `ExecFailed:ENOENT` | same script, admission bypassed in a frozen spike mode, exec fd O_CLOEXEC as mandated. ENOENT per execveat(2) BUGS, NOT ENOEXEC: the interpreter is never invoked and no procfs dependency is hit |
 | **X2c** | mandatory | `interpreter_ran_with_devfd` | same script without O_CLOEXEC: the interpreter runs and receives /dev/fd/N. Recording X2b without X2c would attribute a CLOEXEC artefact to scripts as a class |
 | **X3** | mandatory | `ExecFailed:EACCES` | a file that has never had an execute bit; distinct from X1 only in that no post-admission change occurred |
-| **X4** | mandatory | `ExecFailed:ENOEXEC` | a 4-byte file that is exactly the ELF magic and nothing else |
+| **X4** | mandatory | `ExecFailed:ENOEXEC` | `unloadable_in_cohort.elf`: a 64-byte ELF64 header that PASSES the cohort rule -- ELFCLASS64, ELFDATA2LSB, EM_X86_64, ET_EXEC -- but has e_phnum = 0, so it is admitted and reaches execveat with nothing for the loader to map. The earlier 4-byte magic-only fixture could not pose this case at all: once admission became a 64-byte HEADER check rather than a four-byte magic check, a 4-byte file was refused as ElfNotInCohort and could never reach execveat to produce ENOEXEC |
 | **X5** | mandatory | `refused:NotRegularFile` | capability on a directory descriptor |
-| **X6** | mandatory | `refused:DescriptorModeUnsuitable` | capability on an O_PATH descriptor. A HELM admission rule, NOT a kernel limitation: execveat(2) accepts O_PATH descriptors |
+| **X6** | mandatory | `refused:DescriptorModeUnsuitable` | capability on an O_PATH descriptor, obtained with the frozen spike mode --exec-fd-o-path. A HELM admission rule, NOT a kernel limitation: execveat(2) accepts O_PATH descriptors, and the refusal exists because the body cannot be measured through one. The mode and the DescriptorModeUnsuitable refusal both have to exist in the spike for this case to be posable at all |
 | **X7** | mandatory | `refused:SetIdBitsPresent` | D-9: a set-user-ID object is refused at admission, deterministically. No privileged fixture and no cross-UID elevation is manufactured; the fixture is chmod u+s on a file the running user already owns |
 | **X8** | conditional (BLOCKED if no_noexec_mount) | `ExecFailed:EACCES` | executable on a noexec mount; no mount is created and no sudo is used |
 
@@ -237,7 +267,7 @@ Conflating them is a FAIL.
 | # | Class | Expected | Case |
 |---|---|---|---|
 | **N1** | mandatory | `no_new_privs_1` | D-11: the executed helper observes NoNewPrivs: 1 in /proc/self/status. This is the directly observed state |
-| **N2** | mandatory | `no_new_privs_0` | CONTROL: a frozen spike mode skips the prctl, and the helper must then observe NoNewPrivs: 0. Without this arm a positive N1 would be uninformative, because the runner could already have set no_new_privs process-wide |
+| **N2** | conditional (BLOCKED if parent_no_new_privs_set) | `no_new_privs_0` | CONTROL: a frozen spike mode skips the prctl, and the helper must then observe NoNewPrivs: 0. Without this arm a positive N1 would be uninformative, because the runner could already have set no_new_privs process-wide. CONDITIONAL because that same possibility makes the control unposable: no_new_privs is inherited and CANNOT be cleared, so a parent that already has it set forces the child to observe 1. Preflight records the parent's own NoNewPrivs before any case; if it is 1, N2 is BLOCKED as a host property and N1 is then recorded as UNCONTROLLED in the report |
 | **N3** | conditional (BLOCKED if unprivileged_runner) | `privilege_transition_suppressed` | the actual suppression of a set-user-ID or file-capability privilege TRANSITION. Expected BLOCKED on an unprivileged runner, and deliberately so: no privileged fixture is created to manufacture cross-UID elevation. The report must record this as an UNTESTED privileged transition resting on primary-source kernel semantics, never as a demonstrated one |
 
 ### P - process-tree negative controls (4)
@@ -283,7 +313,7 @@ exec failure, and S5 is the case it reports as exec success.
 |---|---|---|---|
 | **M1** | conditional (BLOCKED if no_tracer) | `child_syscalls_within_frozen_set` | the traced child window from the clone3 return to execveat. This is the evidence that REPLACES the architecture's assertion of 'no allocation, no locking, no formatting, no panic path' |
 | **M2** | conditional (BLOCKED if no_tracer) | `identical_to_single_threaded_arm` | parent has >=3 extra live threads, one with an allocation in flight and one with a registered pthread_atfork handler. Without this the mechanism is evidenced only for a single-threaded parent, which no real HELM caller is |
-| **M3** | mandatory | `pidfd_acquired_atomically` | clone3(CLONE_PIDFD) is the PRIMARY acquisition: it removes the three pidfd_open caller preconditions a library cannot establish, and avoids the pthread_atfork surface glibc's fork() opens |
+| **M3** | conditional (BLOCKED if clone3_unavailable) | `pidfd_acquired_atomically` | clone3(CLONE_PIDFD) is the PRIMARY acquisition: it removes the three pidfd_open caller preconditions a library cannot establish, and avoids the pthread_atfork surface glibc's fork() opens. CONDITIONAL because a kernel version floor establishes that the syscall EXISTS, not that it is PERMITTED: a seccomp policy can reject clone3 on a supporting kernel. Preflight probes availability without creating a child; an unavailable clone3 disables the whole mechanism and is a preflight gate, so every case is then BLOCKED rather than this one case FAILing |
 | **M4** | conditional (BLOCKED if no_tracer) | `sequence_matches_frozen_stages` | the implemented child sequence is matched syscall-for-syscall against the frozen STAGES order, including that CHDIR precedes CLOSE_RANGE and NO_NEW_PRIVS precedes EXEC. A spike whose sequence differs is INVALID, not PASS |
 | **M5** | recorded; gated: `never_reports_unobserved_exit_status` | safe set: `pidfd_open_esrch`, `waitid_echild`, `pidfd_open_succeeded` | the REJECTED fork+pidfd_open acquisition under SIGCHLD=SIG_IGN, recorded to evidence why clone3(CLONE_PIDFD) is primary rather than asserting it. Not a candidate mechanism |
 
@@ -316,12 +346,20 @@ enforce this.
 FAIL, and FAIL, INVALID and BLOCKED results are preserved rather than re-run.
 
 **Freeze point.** Every artefact in section 2 is committed and hashed in `SOURCE-HASHES.json`
-before any trial. The report additionally records the SHA-256 of each **built** binary, the exact
-build command, the compiler banner, and a byte-identity re-verification on the runner. **The
-first valid trial** is the first execution of any preregistered case under the frozen definition
-on the recorded environment; every earlier run is preparation. After it, **no artefact in section
-2 may be edited**: a defect discovered afterwards ends the trial and starts a new, separately
-recorded one.
+before any trial. **The first valid trial** is the first execution of any preregistered case
+under the frozen definition on the recorded environment; every earlier run is preparation. After
+it, **no artefact in section 2 may be edited**: a defect discovered afterwards ends the trial and
+starts a new, separately recorded one.
+
+**Binary evidence lives outside the source freeze, and this is deliberate.**
+`SOURCE-HASHES.json` is **immutable once written**: writing built-binary digests into it would
+change the file, and therefore its own digest, so the artefact certifying the freeze would no
+longer be the artefact that was frozen. Build evidence is instead an **append-only** document,
+`BUILD-EVIDENCE.md` in the experiment directory, one section per build, each recording the exact
+source freeze SHA it was built from, the runner and kernel, the architecture, the compiler
+identity and version, the exact link command, the link result, the SHA-256 of every produced
+binary, the static/dynamic inspection output, and the SHA-256 of every generated fixture. **No
+binary hash is ever inserted retroactively into an earlier commit.**
 
 **Preflight halt.** If, before the first valid trial, a frozen expectation is found to be
 factually wrong about documented Linux behaviour, execution **halts** and the correction is put to
@@ -359,12 +397,32 @@ Captured stream bytes are never published: only counts, digests and completeness
 A case in the frozen membership with **no recorded status is INVALID, never absent** — absence is
 not a recorded environmental cause, and it is never silently ignored.
 
+**Only a conditional case may absorb a BLOCKED status, and only with the cause its own manifest
+entry names.** Letting any class absorb a block would retire a load-bearing gate by
+reclassification: a *recorded* case scored BLOCKED would skip its gated sub-assertions — for
+P1–P4 those are the liveness gates that close the descendant-held-pipe hole — while the run still
+reached ACCEPTED. A mandatory or recorded case recorded as BLOCKED is **INVALID**.
+
+**The harness must record whether `launch()` returned, always.** A record lacking
+`launch_returned` is **INVALID**. A hang is exactly the case where a record could otherwise be
+absent, and an absent record would understate a known result as an open question; the harness
+therefore emits `launch_returned: false` from its own watchdog, and that is a **FAIL**.
+
+**Frozen block reasons**, and nothing else may be used: `euid_zero`, `no_tracer`,
+`no_noexec_mount`, `unprivileged_runner`, `parent_no_new_privs_set`, `clone3_unavailable`. The
+last two exist because a host property must never be scored as a falsified mechanism claim:
+`no_new_privs` is inherited and irreversible, so a parent that already has it set makes N2's
+control arm unposable; and a kernel version floor establishes that `clone3` *exists*, not that
+policy *permits* it. **If N2 is BLOCKED, N1's observation is recorded as UNCONTROLLED** — the
+positive result stands, but without its control it cannot distinguish "the launcher set the bit"
+from "the bit was already set".
+
 **Class partition**, frozen in `frozen_cases.py` before the first trial and derived, not typed:
 
 | Class | Count | Members |
 |---|---|---|
-| **Mandatory** — must PASS | **56** | E1–E5, E5b, E6, E6b, E7, E8; A1–A4, A6; V1; F1–F7; X2, X2b, X2c, X3–X7; O1–O8; R1–R3; T1–T6; N1, N2; S1, S3, S4, S5, S6; M3 |
-| **Conditional** — may be BLOCKED with a frozen cause | **9** | E6d, X1, X8, S2, S7, N3, M1, M2, M4 |
+| **Mandatory** — must PASS | **54** | E1–E5, E5b, E6, E6b, E7, E8; A1–A4, A6; V1; F1–F7; X2, X2b, X2c, X3–X7; O1–O8; R1–R3; T1–T6; N1; S1, S3, S4, S5, S6 |
+| **Conditional** — may be BLOCKED with a frozen cause | **11** | E6d, X1, X8, N2, N3, S2, S7, M1, M2, M3, M4 |
 | **Recorded** — outcome not predicted; gated on named sub-assertions | **7** | E6c, R4, M5, P1, P2, P3, P4 |
 | **Total** | **72** | |
 

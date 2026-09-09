@@ -89,6 +89,22 @@ class ManifestIntegrity(unittest.TestCase):
         self.assertIn("NO_NEW_PRIVS", fc.STAGES)
         self.assertIn("prctl", fc.CHILD_PERMITTED_SYSCALLS)
 
+    def test_test_only_injections_are_separated_from_the_mechanism_sequence(self):
+        # Otherwise M1's minimality claim holds only because the injecting cases
+        # happen not to be traced, which is an accident, not a rule.
+        for name in ("nanosleep", "clock_nanosleep", "kill", "getpid"):
+            self.assertIn(name, fc.CHILD_TEST_INJECTION_SYSCALLS)
+            self.assertNotIn(name, fc.CHILD_PERMITTED_SYSCALLS)
+        for mode in ("--stall-pre-exec-ms", "--die-before-exec"):
+            self.assertIn(mode, fc.CHILD_INJECTION_MODES)
+        # The cases that use them must not be traced.
+        for name in ("S5", "S6"):
+            self.assertFalse(fc.BY_NAME[name]["traced"])
+
+    def test_host_property_block_reasons_exist(self):
+        for reason in ("parent_no_new_privs_set", "clone3_unavailable"):
+            self.assertIn(reason, fc.BLOCK_REASONS)
+
     def test_deleted_plan_parse_cases_are_recorded_not_dropped(self):
         for key in ("argv_nul_rejection", "ld_preload_refusal",
                     "explicit_env_entries"):
@@ -160,6 +176,45 @@ class AggregatePrecedence(unittest.TestCase):
         report = checker.report(records)
         self.assertEqual(report["aggregate"], checker.ACCEPTED, report["detail"])
         self.assertIn("N3", report["detail"]["conditional_blocked_with_cause"])
+
+    def test_only_a_conditional_case_may_absorb_a_block(self):
+        # Letting any class absorb a block would retire a load-bearing gate by
+        # reclassification: a recorded case scored BLOCKED would skip its gated
+        # sub-assertions while the run still reached ACCEPTED. For P1-P4 those
+        # gates are what close the descendant-held-pipe hole.
+        for name in fc.MANDATORY_CASES[:3] + fc.RECORDED_CASES:
+            records = all_passing()
+            records[name] = {"blocked": "euid_zero"}
+            with self.subTest(case=name):
+                report = checker.report(records)
+                self.assertEqual(report["statuses"][name]["status"],
+                                 checker.INVALID)
+                self.assertEqual(report["aggregate"], checker.INCONCLUSIVE)
+
+    def test_conditional_blocked_with_the_wrong_frozen_cause_is_invalid(self):
+        records = all_passing()
+        records["X8"] = {"blocked": "no_tracer"}   # X8's cause is no_noexec_mount
+        report = checker.report(records)
+        self.assertEqual(report["statuses"]["X8"]["status"], checker.INVALID)
+
+    def test_missing_launch_returned_is_invalid(self):
+        # A hang is exactly the case where a record could be absent, so the
+        # harness must always record whether launch() returned.
+        records = all_passing()
+        records["E2"] = {"outcome": fc.BY_NAME["E2"]["predict"]}
+        report = checker.report(records)
+        self.assertEqual(report["statuses"]["E2"]["status"], checker.INVALID)
+        self.assertIn("launch()", report["statuses"]["E2"]["reason"])
+
+    def test_n2_and_m3_are_blockable_host_properties(self):
+        # A host property must never be scored as a falsified mechanism claim.
+        records = all_passing()
+        records["N2"] = {"blocked": "parent_no_new_privs_set"}
+        records["M3"] = {"blocked": "clone3_unavailable"}
+        report = checker.report(records)
+        self.assertEqual(report["aggregate"], checker.ACCEPTED, report["detail"])
+        for n in ("N2", "M3"):
+            self.assertEqual(report["statuses"][n]["status"], checker.BLOCKED)
 
     def test_blocked_with_unfrozen_cause_is_invalid(self):
         records = all_passing()

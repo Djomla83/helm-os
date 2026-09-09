@@ -74,6 +74,26 @@ CHILD_FORBIDDEN_SYSCALLS = [
     "set_robust_list", "getrandom", "rt_sigreturn", "clone", "clone3",
 ]
 
+# Syscalls that appear in the child ONLY under a declared test-only fault
+# injection, never in the candidate mechanism sequence. Separating these is what
+# stops M1's minimality claim from being tautological: without the split, the
+# claim would hold only because the injecting cases happen not to be traced,
+# which is an accident of classification rather than a rule.
+CHILD_TEST_INJECTION_SYSCALLS = {
+    "clock_nanosleep": "--stall-pre-exec-ms, case S6 only",
+    "nanosleep": "--stall-pre-exec-ms, case S6 only",
+    "kill": "--die-before-exec, case S5 only",
+    "getpid": "--die-before-exec, case S5 only",
+}
+
+# The spike modes that enable those injections. M1, M2 and M4 trace the
+# PRODUCTION configuration, in which none of these flags is passed; a trace
+# containing an injection syscall in a case that declared no injection is a FAIL.
+CHILD_INJECTION_MODES = ["--stall-pre-exec-ms", "--die-before-exec",
+                         "--skip-no-new-privs", "--bypass-admission",
+                         "--exec-fd-no-cloexec", "--exec-fd-o-path",
+                         "--post-fork-delay-ms"]
+
 # ------------------------------------------------------------- output recipe
 # byte[i] = (i * 251 + tag) mod 256. A volume is not a recipe; oracles.py
 # computes every expected count and digest from this and the declared volume
@@ -99,6 +119,15 @@ BLOCK_REASONS = {
     "no_noexec_mount": "no unprivileged-writable noexec mount exists",
     "unprivileged_runner": "no privileged identity exists to attempt a real "
                            "privilege transition, and none is manufactured",
+    "parent_no_new_privs_set": "the launcher's own parent process already has "
+                               "no_new_privs set. The bit is inherited across "
+                               "fork and execve and CANNOT be cleared, so the "
+                               "N2 control arm could never observe 0. This is a "
+                               "host property, never a mechanism defect",
+    "clone3_unavailable": "clone3 is rejected by the environment (ENOSYS, or "
+                          "EPERM/EACCES from a seccomp policy) even though the "
+                          "kernel version floor is met. Syscall availability is "
+                          "not established by a version number",
 }
 
 
@@ -240,12 +269,23 @@ CASES = [
          note="a file that has never had an execute bit; distinct from X1 only "
               "in that no post-admission change occurred"),
     case("X4", "X", MANDATORY, predict="ExecFailed:ENOEXEC",
-         note="a 4-byte file that is exactly the ELF magic and nothing else"),
+         note="`unloadable_in_cohort.elf`: a 64-byte ELF64 header that PASSES "
+              "the cohort rule -- ELFCLASS64, ELFDATA2LSB, EM_X86_64, ET_EXEC "
+              "-- but has e_phnum = 0, so it is admitted and reaches execveat "
+              "with nothing for the loader to map. The earlier 4-byte "
+              "magic-only fixture could not pose this case at all: once "
+              "admission became a 64-byte HEADER check rather than a four-byte "
+              "magic check, a 4-byte file was refused as ElfNotInCohort and "
+              "could never reach execveat to produce ENOEXEC"),
     case("X5", "X", MANDATORY, predict="refused:NotRegularFile",
          note="capability on a directory descriptor"),
     case("X6", "X", MANDATORY, predict="refused:DescriptorModeUnsuitable",
-         note="capability on an O_PATH descriptor. A HELM admission rule, NOT a "
-              "kernel limitation: execveat(2) accepts O_PATH descriptors"),
+         note="capability on an O_PATH descriptor, obtained with the frozen "
+              "spike mode --exec-fd-o-path. A HELM admission rule, NOT a kernel "
+              "limitation: execveat(2) accepts O_PATH descriptors, and the "
+              "refusal exists because the body cannot be measured through one. "
+              "The mode and the DescriptorModeUnsuitable refusal both have to "
+              "exist in the spike for this case to be posable at all"),
     case("X7", "X", MANDATORY, predict="refused:SetIdBitsPresent",
          instant_reject=True,
          note="D-9: a set-user-ID object is refused at admission, "
@@ -327,11 +367,18 @@ CASES = [
     case("N1", "N", MANDATORY, predict="no_new_privs_1", instant_reject=True,
          note="D-11: the executed helper observes NoNewPrivs: 1 in "
               "/proc/self/status. This is the directly observed state"),
-    case("N2", "N", MANDATORY, predict="no_new_privs_0", instant_reject=True,
+    case("N2", "N", CONDITIONAL, blocked_if="parent_no_new_privs_set",
+         predict="no_new_privs_0", instant_reject=True,
          note="CONTROL: a frozen spike mode skips the prctl, and the helper "
               "must then observe NoNewPrivs: 0. Without this arm a positive N1 "
               "would be uninformative, because the runner could already have "
-              "set no_new_privs process-wide"),
+              "set no_new_privs process-wide. CONDITIONAL because that same "
+              "possibility makes the control unposable: no_new_privs is "
+              "inherited and CANNOT be cleared, so a parent that already has it "
+              "set forces the child to observe 1. Preflight records the "
+              "parent's own NoNewPrivs before any case; if it is 1, N2 is "
+              "BLOCKED as a host property and N1 is then recorded as "
+              "UNCONTROLLED in the report"),
     case("N3", "N", CONDITIONAL, blocked_if="unprivileged_runner",
          predict="privilege_transition_suppressed",
          note="the actual suppression of a set-user-ID or file-capability "
@@ -410,11 +457,17 @@ CASES = [
               "flight and one with a registered pthread_atfork handler. Without "
               "this the mechanism is evidenced only for a single-threaded "
               "parent, which no real HELM caller is"),
-    case("M3", "M", MANDATORY, predict="pidfd_acquired_atomically",
+    case("M3", "M", CONDITIONAL, blocked_if="clone3_unavailable",
+         predict="pidfd_acquired_atomically",
          note="clone3(CLONE_PIDFD) is the PRIMARY acquisition: it removes the "
               "three pidfd_open caller preconditions a library cannot "
               "establish, and avoids the pthread_atfork surface glibc's fork() "
-              "opens"),
+              "opens. CONDITIONAL because a kernel version floor establishes "
+              "that the syscall EXISTS, not that it is PERMITTED: a seccomp "
+              "policy can reject clone3 on a supporting kernel. Preflight "
+              "probes availability without creating a child; an unavailable "
+              "clone3 disables the whole mechanism and is a preflight gate, so "
+              "every case is then BLOCKED rather than this one case FAILing"),
     case("M4", "M", CONDITIONAL, blocked_if="no_tracer", traced=True,
          predict="sequence_matches_frozen_stages",
          note="the implemented child sequence is matched syscall-for-syscall "

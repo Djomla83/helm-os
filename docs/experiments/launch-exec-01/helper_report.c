@@ -31,6 +31,21 @@
 
 extern char **environ;
 
+/* Fixed-length, uniquely locatable self-identity marker.
+ *
+ * E6 and E6b mutate this helper's inode in place between measurement and exec
+ * and require the mutation to be LENGTH-PRESERVING and ELF-valid. That needs a
+ * region of known size at a findable offset, which a bare string literal is
+ * not: `volatile` keeps the compiler from folding or duplicating it, the array
+ * is exactly the same width as helper_alt's g_marker, and the surrounding
+ * guard bytes make the offset locatable by an unambiguous byte search rather
+ * than by hoping a 13-byte literal appears once.
+ *
+ * The harness locates HELM-MARK<16 bytes>KRAM-MLEH and pwrites 16 bytes. */
+volatile char g_marker_guard_lo[9] = "HELM-MARK";
+volatile char g_marker[16] = "helper_report\0\0\0";
+volatile char g_marker_guard_hi[9] = "KRAM-MLEH";
+
 #define SENTINEL "HELM-LAUNCH-EXEC-01-REPORT-BEGIN\n"
 #define REPORT_CAP (256 * 1024)
 #define CHUNK 4096
@@ -215,7 +230,15 @@ static long arg_long(const char *s, long fallback)
 
 int main(int argc, char **argv)
 {
-    const char *marker = "helper_report";
+    /* Read the fixed-length marker region, so E6's in-place mutation of the
+     * inode is what the report reflects. --marker overrides it for cases that
+     * need a caller-supplied value; E6 never uses that path. */
+    char marker_buf[sizeof(g_marker) + 1];
+    for (size_t mi = 0; mi < sizeof(g_marker); mi++) {
+        marker_buf[mi] = g_marker[mi];
+    }
+    marker_buf[sizeof(g_marker)] = '\0';
+    const char *marker = marker_buf;
     long out_bytes = 0, err_bytes = 0, sleep_ms = 0;
     int exit_code = 0, want_report = 1, exit_immediately = -1;
     int raise_segv = 0, core_zero = 0, close_stdout_early = 0, ignore_sigterm = 0;

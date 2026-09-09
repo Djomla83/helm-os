@@ -180,10 +180,15 @@ static long now_ms(void)
     return ts.tv_sec * 1000L + ts.tv_nsec / 1000000L;
 }
 
-static int move_above_2(int fd)
+/* Relocate a descriptor above 2 so the dup2 step and the close_range gap
+ * arithmetic have no special cases. `keep_cloexec` must be 0 for a descriptor
+ * whose whole purpose is to be non-CLOEXEC (case X2c): relocating with
+ * F_DUPFD_CLOEXEC unconditionally would silently restore the flag the case
+ * exists to remove, whenever the descriptor happened to land at 0-2. */
+static int move_above_2(int fd, int keep_cloexec)
 {
     if (fd > 2) { return fd; }
-    int moved = fcntl(fd, F_DUPFD_CLOEXEC, 3);
+    int moved = fcntl(fd, keep_cloexec ? F_DUPFD_CLOEXEC : F_DUPFD, 3);
     if (moved < 0) { return fd; }
     close(fd);
     return moved;
@@ -355,7 +360,8 @@ int main(int argc, char **argv)
     long timeout_ms = 5000, grace_ms = 2000, spawn_confirm_ms = 5000;
     long post_exit_drain_ms = 2000, post_fork_delay_ms = 0, stall_pre_exec_ms = 0;
     int bypass_admission = 0, exec_fd_no_cloexec = 0, skip_nnp = 0;
-    int die_before_exec = 0;
+    int die_before_exec = 0, exec_fd_o_path = 0;
+    long max_capture_bytes = 64 * 1024;   /* MAX_CAPTURE_BYTES */
     char *child_argv[64];
     int child_argc = 0;
 
@@ -370,8 +376,10 @@ int main(int argc, char **argv)
         else if (!strcmp(a, "--post-exit-drain-ms") && v) { post_exit_drain_ms = atol(v); i++; }
         else if (!strcmp(a, "--post-fork-delay-ms") && v) { post_fork_delay_ms = atol(v); i++; }
         else if (!strcmp(a, "--stall-pre-exec-ms") && v) { stall_pre_exec_ms = atol(v); i++; }
+        else if (!strcmp(a, "--max-capture-bytes") && v) { max_capture_bytes = atol(v); i++; }
         else if (!strcmp(a, "--bypass-admission")) { bypass_admission = 1; }
         else if (!strcmp(a, "--exec-fd-no-cloexec")) { exec_fd_no_cloexec = 1; }
+        else if (!strcmp(a, "--exec-fd-o-path")) { exec_fd_o_path = 1; }
         else if (!strcmp(a, "--skip-no-new-privs")) { skip_nnp = 1; }
         else if (!strcmp(a, "--die-before-exec")) { die_before_exec = 1; }
         else if (!strcmp(a, "--arg") && v) {
@@ -387,6 +395,12 @@ int main(int argc, char **argv)
 
     /* ---- the trusted caller's ONE pathname act ------------------------- */
     int open_flags = O_RDONLY | (exec_fd_no_cloexec ? 0 : O_CLOEXEC);
+    if (exec_fd_o_path) {
+        /* X6 only. The kernel would ACCEPT an O_PATH descriptor for execveat;
+         * HELM refuses it because the body cannot be measured through one. The
+         * mode exists so the refusal is testable rather than asserted. */
+        open_flags = O_PATH | O_CLOEXEC;
+    }
     int exec_fd = open(exec_path, open_flags);
     if (exec_fd < 0) { die("open exec_path"); }
     int dir_fd = open(work_dir, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
@@ -398,7 +412,11 @@ int main(int argc, char **argv)
 
     char refusal[64] = "";
     if (!bypass_admission) {
-        if (!S_ISREG(st.st_mode)) {
+        if (exec_fd_o_path) {
+            /* The body is unreadable through O_PATH, and an unmeasurable
+             * executable defeats the identity the receipt exists to carry. */
+            snprintf(refusal, sizeof(refusal), "DescriptorModeUnsuitable");
+        } else if (!S_ISREG(st.st_mode)) {
             snprintf(refusal, sizeof(refusal), "NotRegularFile");
         } else if (st.st_mode & (S_ISUID | S_ISGID)) {
             /* D-9: refuse, never record-and-permit. */
@@ -452,12 +470,12 @@ int main(int argc, char **argv)
     /* ST_RELOCATE, in the parent before the clone: move every preserved
      * descriptor above 2 so the dup2 step and the close_range gap arithmetic
      * have no special cases. */
-    exec_fd = move_above_2(exec_fd);
-    dir_fd = move_above_2(dir_fd);
-    stat_p[1] = move_above_2(stat_p[1]);
-    inp[0] = move_above_2(inp[0]);
-    outp[1] = move_above_2(outp[1]);
-    errp[1] = move_above_2(errp[1]);
+    exec_fd = move_above_2(exec_fd, !exec_fd_no_cloexec);
+    dir_fd = move_above_2(dir_fd, 1);
+    stat_p[1] = move_above_2(stat_p[1], 1);
+    inp[0] = move_above_2(inp[0], 1);
+    outp[1] = move_above_2(outp[1], 1);
+    errp[1] = move_above_2(errp[1], 1);
 
     char *envp_empty[1] = { NULL };   /* D-10: the environment is exactly empty */
 
@@ -516,6 +534,17 @@ int main(int argc, char **argv)
     long out_bytes = 0, err_bytes = 0;
     sha256 out_ctx, err_ctx;
     sha256_init(&out_ctx); sha256_init(&err_ctx);
+
+    /* capture_prefix: the retained prefix lives IN MEMORY ONLY and is never
+     * serialised into the receipt. Draining continues past the bound, so a
+     * child that writes more than the bound is never blocked by a full pipe --
+     * the excess is discarded, not withheld. `truncated` describes THIS BUFFER,
+     * not the stream, which is why it never appears in the receipt. */
+    unsigned char *out_prefix = malloc((size_t)max_capture_bytes);
+    unsigned char *err_prefix = malloc((size_t)max_capture_bytes);
+    if (!out_prefix || !err_prefix) { die("malloc capture buffers"); }
+    long out_kept = 0, err_kept = 0;
+    int out_truncated = 0, err_truncated = 0;
     int out_open = 1, err_open = 1, status_open = 1, pid_ready = 0;
     long child_end_ms = -1;
 
@@ -570,11 +599,33 @@ int main(int argc, char **argv)
                     else { exec_confirmed = 1; deadline = now_ms() + timeout_ms; }
                 }
             } else if (idx[i] == 1) {
-                if (got > 0) { out_bytes += got; sha256_update(&out_ctx, buf, (size_t)got); }
-                else { out_open = 0; }
+                if (got > 0) {
+                    out_bytes += got;
+                    sha256_update(&out_ctx, buf, (size_t)got);
+                    long room = max_capture_bytes - out_kept;
+                    if (room > 0) {
+                        long take = got < room ? got : room;
+                        memcpy(out_prefix + out_kept, buf, (size_t)take);
+                        out_kept += take;
+                    }
+                    if (out_kept >= max_capture_bytes && got > 0) {
+                        out_truncated = (out_bytes > max_capture_bytes);
+                    }
+                } else { out_open = 0; }
             } else {
-                if (got > 0) { err_bytes += got; sha256_update(&err_ctx, buf, (size_t)got); }
-                else { err_open = 0; }
+                if (got > 0) {
+                    err_bytes += got;
+                    sha256_update(&err_ctx, buf, (size_t)got);
+                    long room = max_capture_bytes - err_kept;
+                    if (room > 0) {
+                        long take = got < room ? got : room;
+                        memcpy(err_prefix + err_kept, buf, (size_t)take);
+                        err_kept += take;
+                    }
+                    if (err_kept >= max_capture_bytes && got > 0) {
+                        err_truncated = (err_bytes > max_capture_bytes);
+                    }
+                } else { err_open = 0; }
             }
         }
 
@@ -650,6 +701,9 @@ int main(int argc, char **argv)
            "\"stderr\":{\"bytes_drained\":%ld,\"drained_sha256\":\"%s\","
            "\"completeness\":\"%s\"},"
            "\"environment_mode\":\"empty\","
+           "\"retained_prefix_not_in_receipt\":{"
+           "\"stdout_kept\":%ld,\"stdout_truncated\":%s,"
+           "\"stderr_kept\":%ld,\"stderr_truncated\":%s,\"bound\":%ld},"
            "\"elapsed_ms_not_in_receipt\":%ld}\n",
            digest, (long long)st.st_size, (unsigned)(st.st_mode & 07777),
            disposition, timeout_disposition,
@@ -661,6 +715,10 @@ int main(int argc, char **argv)
            wait_errno,
            out_bytes, out_hex, out_completeness,
            err_bytes, err_hex, err_completeness,
+           out_kept, out_truncated ? "true" : "false",
+           err_kept, err_truncated ? "true" : "false", max_capture_bytes,
            now_ms() - start);
+    free(out_prefix);
+    free(err_prefix);
     return 0;
 }

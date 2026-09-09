@@ -54,15 +54,31 @@ def score_case(name, record):
     if spec["traced"] and record.get("trace") is None and not record.get("blocked"):
         return INVALID, "a traced case produced no syscall record"
 
-    # Environment blocks, which only a conditional case may absorb, and only
-    # with a cause named in the frozen reason set.
+    # Environment blocks. ONLY a conditional case may absorb one, and only with
+    # the cause its own manifest entry names. Letting any class absorb a block
+    # would retire a load-bearing gate by reclassification: a recorded case
+    # scored BLOCKED would skip its gated sub-assertions -- for P1-P4 those are
+    # the liveness gates that close the descendant-held-pipe hole -- while the
+    # run still reached ACCEPTED.
     blocked = record.get("blocked")
     if blocked:
         if blocked not in BLOCK_REASONS:
             return INVALID, f"BLOCKED with an unfrozen cause {blocked!r}"
+        if spec["cls"] != CONDITIONAL:
+            return INVALID, (f"a {spec['cls']} case may not be BLOCKED; only a "
+                             "conditional case may absorb an environment block")
+        if blocked != spec["blocked_if"]:
+            return INVALID, (f"BLOCKED with {blocked!r}, but this case's frozen "
+                             f"cause is {spec['blocked_if']!r}")
         return BLOCKED, BLOCK_REASONS[blocked]
 
     # A launcher-side non-return is never a recordable outcome, in any class.
+    # The harness MUST record this explicitly from its own watchdog: a hang is
+    # exactly the case where a record could otherwise be absent, and an absent
+    # record would understate a known result as an open question.
+    if "launch_returned" not in record:
+        return INVALID, ("the harness did not record whether launch() returned; "
+                         "a non-return must be recorded, never omitted")
     if record.get("launch_returned") is False:
         return FAIL, "launch() did not return within its declared total bound"
     bound = record.get("total_bound_ms")

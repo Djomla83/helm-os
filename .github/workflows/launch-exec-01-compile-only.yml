@@ -1,0 +1,133 @@
+# LAUNCH-EXEC-01 compile-only pre-trial review job.
+#
+# This workflow COMPILES and INSPECTS. It never executes a produced binary, never
+# invokes the case runner in trial mode, and never passes the D-7 flag.
+# LAUNCH-EXEC-01 remains NOT_RUN.
+#
+# Its whole purpose is that the frozen C sources have never been compiled on
+# Linux, and the independent pre-trial review must not recommend D-7 without
+# real compile evidence for the exact frozen sources.
+name: launch-exec-01 compile-only pretrial
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - docs/helm-launch-architecture
+    paths:
+      - 'docs/experiments/launch-exec-01/**'
+      - 'tools/tests/test_launch_exec_01.py'
+      - '.github/workflows/launch-exec-01-compile-only.yml'
+
+permissions:
+  contents: read
+
+# Never cancel a review job midway: a truncated compile record is worse than none.
+concurrency:
+  group: launch-exec-01-compile-only
+  cancel-in-progress: false
+
+jobs:
+  compile-only:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: docs/experiments/launch-exec-01
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Environment inventory
+        run: |
+          set -eux
+          uname -a
+          uname -m
+          cat /etc/os-release
+          id -u
+          cc --version
+          ldd --version | head -1
+          getconf PAGESIZE
+          grep -E '^(NoNewPrivs|Seccomp)' /proc/self/status || true
+          cat /proc/sys/kernel/yama/ptrace_scope || true
+          command -v strace || echo "strace: NOT INSTALLED"
+          cat /proc/sys/fs/binfmt_misc/status 2>/dev/null || echo "binfmt_misc: not mounted"
+
+      - name: Verify the source freeze before building anything
+        run: python3 run_launch_exec_01.py --verify-freeze
+
+      - name: Preflight probes (no child created, no case posed)
+        run: python3 -c "import json,harness; print(json.dumps(harness.preflight(), indent=2, default=str))"
+
+      - name: Static-link probe (frozen gate)
+        run: |
+          set -eux
+          printf 'int main(void){return 0;}\n' > /tmp/probe.c
+          cc -O2 -Wall -Wextra -static -o /tmp/probe /tmp/probe.c
+          file /tmp/probe
+          ldd /tmp/probe || true
+
+      - name: Compile static targets with the exact frozen command
+        run: |
+          set -eux
+          mkdir -p build
+          for t in helper_report helper_alt helper_fork helper_setid launcher_spike; do
+            cc -O2 -Wall -Wextra -static -o "build/$t" "$t.c"
+          done
+
+      - name: Compile the one dynamic helper with the exact frozen command
+        run: |
+          set -eux
+          cc -O2 -Wall -Wextra -o build/helper_dynamic helper_dynamic.c
+
+      - name: Generate deterministic fixtures
+        run: python3 make_fixtures.py build
+
+      - name: Inspect binaries as DATA only (never executed)
+        run: |
+          set -eux
+          for b in build/helper_report build/helper_alt build/helper_fork \
+                   build/helper_setid build/launcher_spike build/helper_dynamic; do
+            echo "=== $b ==="
+            file "$b"
+            readelf -lW "$b" | grep -E 'INTERP|Requesting' || echo "  no PT_INTERP"
+          done
+
+      - name: Assert static targets have no PT_INTERP and the dynamic one does
+        run: |
+          set -eu
+          fail=0
+          for b in helper_report helper_alt helper_fork helper_setid launcher_spike; do
+            if readelf -lW "build/$b" | grep -q INTERP; then
+              echo "FAIL: build/$b is dynamically linked but must be static"; fail=1
+            fi
+          done
+          if ! readelf -lW build/helper_dynamic | grep -q INTERP; then
+            echo "FAIL: build/helper_dynamic has no PT_INTERP but E7 requires one"; fail=1
+          fi
+          exit $fail
+
+      - name: Marker region required by E6 is locatable in helper_report
+        run: |
+          set -eu
+          if grep -c 'HELM-MARK' build/helper_report >/dev/null 2>&1; then
+            echo "marker guard present"
+          else
+            echo "FAIL: E6 marker guard not found in the built image"; exit 1
+          fi
+
+      - name: SHA-256 of every produced binary and fixture
+        run: |
+          set -eux
+          sha256sum build/* | sort -k2
+
+      - name: Non-trial Python and checker tests
+        working-directory: .
+        run: python3 -m unittest discover -s tools/tests -v
+
+      - name: Runner must refuse to pose a case
+        run: |
+          set +e
+          python3 run_launch_exec_01.py
+          code=$?
+          set -e
+          echo "runner exit code: $code (3 = refused, D-7 not granted)"
+          test "$code" -eq 3

@@ -59,6 +59,8 @@ def preflight():
         "binfmt_misc_entries": _binfmt_entries(),
         "mountinfo_noexec": _mounts_with("noexec"),
         "mountinfo_nosuid": _mounts_with("nosuid"),
+        "parent_no_new_privs": _parent_no_new_privs(),
+        "clone3": clone3_availability(),
     }
     info["block_reasons"] = _derive_blocks(info)
     return info
@@ -69,6 +71,65 @@ def _read(path):
         return pathlib.Path(path).read_text(encoding="utf-8", errors="replace").strip()
     except OSError as exc:
         return f"<unavailable: {exc}>"
+
+
+def _parent_no_new_privs():
+    """The LAUNCHER'S OWN parent bit, which decides whether N2 is posable.
+
+    no_new_privs is inherited across fork and execve and cannot be cleared once
+    set. If this process already has it, every child observes 1 and the N2
+    control arm -- which must observe 0 -- can never be posed. That is a host
+    property and must never be scored as a falsified mechanism claim, so it is
+    read BEFORE any case and mapped to the frozen block reason
+    parent_no_new_privs_set.
+    """
+    raw = _read("/proc/self/status")
+    if raw.startswith("<unavailable"):
+        return raw
+    for line in raw.splitlines():
+        if line.startswith("NoNewPrivs:"):
+            return line.split(":", 1)[1].strip()
+    return "<field absent>"
+
+
+def clone3_availability():
+    """Probe whether clone3 is PERMITTED, without creating a child.
+
+    A kernel version floor establishes that a syscall exists, not that policy
+    allows it: a seccomp profile can reject clone3 on a supporting kernel.
+
+    The probe calls clone3 with a NULL argument pointer and size 0. A kernel
+    that implements it rejects the arguments (EINVAL/EFAULT) WITHOUT forking; a
+    kernel that does not returns ENOSYS; a seccomp policy returns EPERM or
+    EACCES. So availability is distinguished with no process created, no image
+    executed, and nothing that could be mistaken for a preregistered trial.
+    """
+    try:
+        import ctypes
+        libc = ctypes.CDLL(None, use_errno=True)
+        ctypes.set_errno(0)
+        rc = libc.syscall(ctypes.c_long(435), ctypes.c_void_p(None),
+                          ctypes.c_size_t(0))
+        err = ctypes.get_errno()
+    except Exception as exc:                          # noqa: BLE001
+        return {"available": None, "detail": f"probe unavailable: {exc}"}
+    import errno as E
+    if rc >= 0:
+        return {"available": True, "errno": 0,
+                "detail": "unexpected success on a zero-size argument"}
+    name = {E.EINVAL: "EINVAL", E.EFAULT: "EFAULT", E.ENOSYS: "ENOSYS",
+            E.EPERM: "EPERM", E.EACCES: "EACCES"}.get(err, str(err))
+    if err in (E.EINVAL, E.EFAULT):
+        return {"available": True, "errno": name,
+                "detail": "clone3 is implemented and reached; arguments rejected"}
+    if err == E.ENOSYS:
+        return {"available": False, "errno": name,
+                "detail": "clone3 is not implemented on this kernel"}
+    if err in (E.EPERM, E.EACCES):
+        return {"available": False, "errno": name,
+                "detail": "clone3 is blocked by policy (seccomp or similar) "
+                          "even though the kernel floor is met"}
+    return {"available": None, "errno": name, "detail": "unclassified errno"}
 
 
 def _binfmt_entries():
@@ -122,6 +183,14 @@ def _derive_blocks(info):
     # fixture is created, and no cross-UID elevation is manufactured.
     if info.get("geteuid") != 0:
         blocks["unprivileged_runner"] = BLOCK_REASONS["unprivileged_runner"]
+    # N2's control arm is unposable if the launcher's own parent already has
+    # no_new_privs, because the bit cannot be cleared.
+    if str(info.get("parent_no_new_privs", "")).strip() == "1":
+        blocks["parent_no_new_privs_set"] = BLOCK_REASONS["parent_no_new_privs_set"]
+    # clone3 unavailability disables the whole mechanism, so it is a preflight
+    # gate like the static-link gate, not a single case result.
+    if info.get("clone3", {}).get("available") is False:
+        blocks["clone3_unavailable"] = BLOCK_REASONS["clone3_unavailable"]
     return blocks
 
 

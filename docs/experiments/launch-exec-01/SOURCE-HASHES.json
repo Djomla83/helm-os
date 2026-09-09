@@ -1,18 +1,16 @@
 {
   "authoritative_main": "5cc56384257a2ec1f2a2a9c64f7f4328da6cef2e",
-  "built_binary_sha256": {
-    "_note": "recorded by the harness at preflight of the first authorised trial; the C sources have NOT been compiled on Linux and no build has occurred"
-  },
+  "build_evidence": "BUILD-EVIDENCE.md in this directory, append-only. This manifest is immutable once written: recording binary digests here would change the artefact that certifies the freeze.",
   "case_membership": {
-    "conditional": 9,
-    "mandatory": 56,
+    "conditional": 11,
+    "mandatory": 54,
     "recorded": 7,
     "total": 72
   },
   "d7_execution_authorised": false,
   "definition_sha256": {
     "docs/adr/ADR-0024-launch-authority.md": "c1f3cce88438439aab6632a9c56450ae98d1c64adb31b13c742e2febb1476351",
-    "docs/experiments/LAUNCH-EXEC-01-DEFINITION.md": "08cc3b1059fcd577855ba7ade070b524b572fec78582c6bda6caaf1ade108f20",
+    "docs/experiments/LAUNCH-EXEC-01-DEFINITION.md": "5d41583cb8bda90491392665b90c895b5c9391fa8a16055c436203e1a8efd5f5",
     "docs/research/HELM-LAUNCH-ARCHITECTURE.md": "97fbf0d8a602c68b0cf20529c4c1bb238ae2790a6089fa8ff6818c054b443151"
   },
   "experiment": "LAUNCH-EXEC-01",
@@ -33,18 +31,20 @@
   "scope": "Execution definition and disposable experiment sources frozen before the first preregistered LAUNCH-EXEC-01 trial. NOT_RUN: no trial has been executed and no case has been posed. D-7 (execution authorisation) is NOT granted.",
   "sha256": {
     "README.md": "0ebdf9c1850ac48bc1909c33e64e1bcbb47b75c43fae8db914242077232c3bef",
-    "checker.py": "4e704dd712126cabbd59e95be8590f7f3be0edd77105046c434444c5e6d8313d",
-    "frozen_cases.py": "ed81e1421ae17d8388712f9b69eaac8f393011ef2fb9a281644f9e522028f25e",
-    "harness.py": "1679cb98e63514326519bd88409f973f184c8bd722a177ea216cac6299721407",
+    "checker.py": "b45c5a2567cc35b121c5550c19bbba1a745531e36b095c8b539e968af3c65c3b",
+    "frozen_cases.py": "7228bd1336c86235ae2e272c1487bf36f1f4e15988fd7a90f32dae60451c71ba",
+    "harness.py": "3b7f6fc2843c5218b339db377103f583c8b91ed4f8d694678b4c09fb2cc78d5d",
     "helper_alt.c": "7993aa631abdca6796171fe4ffafb2d296f2a00b61ea2322ee8e624731b99113",
     "helper_dynamic.c": "b3c398d840c16dfa4e0dbc56593b905b4019bfe2316fc339049b8a69930350a0",
     "helper_fork.c": "a62a6a1e2bbb9cc6ef8a346ae9322c7b7435b1c7f0b6c3710b3aadb9cc2ba0b0",
-    "helper_report.c": "e95a78c9d2b5159a62c4d238adde8f00f72534725b3513d767aa1e7832422c93",
+    "helper_report.c": "99770ed8cfdd4049f9bef3624e21850496b6c14a169c3895b54ab7a858d54711",
     "helper_setid.c": "c609755d105122eea304f5fe12685d8dcc24064d77659295a11a76d42b86329f",
-    "launcher_spike.c": "44fb0683b4b564f8b23f1bcf72ea49865a9544721845a5616d12a7a151b82084",
-    "make_fixtures.py": "677720c8d2edf281f0064ac1cc84468f6ea880400176fadd9638b3791a546f2f",
+    "launcher_spike.c": "743d3ddc59577c5abff5606b72a7756a6d5e40560e69064890415902d18556d9",
+    "make_fixtures.py": "19ebbb6487b412afd0ba1f17db5a329ff3a686c10b91eaf928cf3344919cec9b",
     "oracles.py": "83beb81102f9f60e3796c9469d4bd5265e8acac3d4383f7873840fb9c40b4842",
     "run_launch_exec_01.py": "e3991d4ce892e6dd76fc856d1106b7691026c0bce804c5e1db214a1ddd533d12"
   },
-  "status": "NOT_RUN"
+  "status": "NOT_RUN",
+  "supersedes": "66bf4b612733c878fe145b8c99df65a21198940a",
+  "supersession_reason": "independent pre-trial review found six BLOCKERs in that freeze: three mandatory cases were unposable against the frozen spike (X4, X6, O4), the N2 control and clone3 availability were host properties the freeze would have scored as mechanism defects, and the checker let any class absorb a BLOCKED status. The superseded freeze is preserved unchanged."
 }
