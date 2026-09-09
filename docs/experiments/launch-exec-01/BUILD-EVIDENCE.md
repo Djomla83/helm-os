@@ -144,3 +144,65 @@ fixtures. That is the independent confirmation of the claim recorded at the end 
 corrections made between the two commits touched `harness.py`, the workflow and documentation
 only, and **not one C source byte changed**. The Build 1 digests therefore remain valid evidence
 for the currently frozen C sources, and the two builds corroborate each other.
+
+## Build 3 — 2026-09-09, pre-trial validation of the case driver
+
+**Purpose:** the case-posing driver, the P-12 mapping and the P-14 sanitiser were implemented. This
+section records what was validated and, equally, what was **not rebuilt and why**.
+
+> **No binary was compiled, produced or executed in this section.** Nothing was run but Python.
+> LAUNCH-EXEC-01 remains **NOT_RUN**, D-7 is not granted, and no preregistered case has been posed.
+
+### No C source changed, so Builds 1 and 2 remain the compile evidence
+
+The driver work touched Python and documentation only. Verified by digest rather than by claim —
+all six C sources are byte-identical to the ones Build 1 and Build 2 compiled, and still equal the
+digests the superseded manifest recorded:
+
+```
+7993aa631abdca6796171fe4ffafb2d296f2a00b61ea2322ee8e624731b99113  helper_alt.c
+b3c398d840c16dfa4e0dbc56593b905b4019bfe2316fc339049b8a69930350a0  helper_dynamic.c
+a62a6a1e2bbb9cc6ef8a346ae9322c7b7435b1c7f0b6c3710b3aadb9cc2ba0b0  helper_fork.c
+99770ed8cfdd4049f9bef3624e21850496b6c14a169c3895b54ab7a858d54711  helper_report.c
+c609755d105122eea304f5fe12685d8dcc24064d77659295a11a76d42b86329f  helper_setid.c
+743d3ddc59577c5abff5606b72a7756a6d5e40560e69064890415902d18556d9  launcher_spike.c
+```
+
+`git diff --stat 262a983 -- '*.c'` is empty. The Build 1 binary digests therefore remain valid
+evidence for the currently frozen C, and **no new compile run is required to keep them valid**.
+
+### Local Linux compile capability, recorded honestly
+
+A fresh compile was attempted anyway and **could not be performed locally**. The ordinary personal
+`Ubuntu` WSL distribution has **no C compiler**: `gcc`, `cc`, `clang`, `gcc-13` and `musl-gcc` are
+all absent, and only `gcc-14-base` is installed — the base package, not the compiler driver.
+Installing one is **not authorised** for this task, and the preserved `helm-lab-g0*` distributions
+were not touched, entered or modified. `readelf`, `objdump`, `sha256sum` and `file` are present,
+but with nothing newly built there was nothing to inspect. **No generated ELF was `ldd`'d,
+executed, traced or loaded.**
+
+### What was validated, on Linux
+
+| Check | Environment | Result |
+|---|---|---|
+| Byte-compile every experiment module | Ubuntu 24.04 WSL2, kernel `6.6.87.2-microsoft-standard-WSL2` x86_64, Python 3.12.3 | **pass**, syntax only, no import |
+| Full non-trial suite | as above | **201 tests, all pass** |
+| Driver suite alone | as above | **116 tests, all pass** |
+| Driver completeness | as above | `complete: true`, 72/72, 0 missing, 0 duplicate, 0 unknown |
+| Unposable-case analysis | as above | **43** cases, computed statically |
+| Runner must refuse to pose a case | as above | **exit 3**, `"status": "NOT_RUN"` |
+
+The same 201 tests also pass on the Windows host. Every observation in the suite is fabricated
+in-process; no test constructs a `driver.Authorisation`, and a test asserts that the suite file
+contains no such construction.
+
+### The finding this validation produced
+
+Implementing the driver established that **`launcher_spike.c` never emits the capture prefix it
+retains** — it is `malloc`'d, filled, and `free()`d at the end of `main`. The helper report is
+therefore produced inside the launcher and no channel carries it out, which makes 40 cases
+unposable, plus M2, M3 and M5 for separate reasons. Full analysis in
+[section 10 of the pre-trial review](../../implementation/HELM-LAUNCH-INDEPENDENT-PRETRIAL-REVIEW.md#10-post-review-note-the-case-driver-was-implemented-still-not_run).
+
+**Successful validation does not constitute trial evidence.** No preregistered case ran, so no
+experiment verdict of any kind exists.

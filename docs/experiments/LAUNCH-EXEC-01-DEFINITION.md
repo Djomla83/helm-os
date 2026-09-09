@@ -90,6 +90,9 @@ manifest does not hash itself, following the existing convention.
 | `checker.py` | Verdict evaluator; links nothing from the spike and never repairs a record |
 | `harness.py` | Preflight inventory, static-link gate, fixture builder, descriptor pre-loader |
 | `run_launch_exec_01.py` | Runner; refuses to pose a case without a verified freeze **and** owner authorisation |
+| `driver.py` | **Case-posing driver**: a concrete plan per frozen case — pinned object, forced state, spike mode, argv, oracle expectation, evidence channel, outcome rule. `completeness()` proves the plan table is exactly the membership; `unposable_cases()` reports, statically, every case whose declared evidence channel the mechanism cannot supply |
+| `observations.py` | **P-12**: the frozen function from observation to outcome token, built from closed vocabularies. Missing evidence yields no token, never a plausible one |
+| `evidence.py` | **P-14**: the publication sanitiser and deterministic evidence serialization. An environment value is never reproduced |
 | `make_fixtures.py` | Deterministic generator for `helper_foreign.elf`, `unloadable_in_cohort.elf`, `magic_only.bin`, `script_fixture.sh` |
 | `launcher_spike.c` | The mechanism under test: pin → measure → admission → `clone3(CLONE_PIDFD)` → child setup → `execveat` |
 | `helper_report.c` | Primary helper; reports its own observed process boundary from inside the executed image |
@@ -114,6 +117,20 @@ report travel on "a descriptor the harness controls" — a descriptor above 2 th
 `close_range` into the executed image — so F1 and F4 would have scored PASS while "exactly 0, 1
 and 2 survive" was false. `/proc/self/fd` is read only in F1 and F4 as a secondary cross-check,
 and the descriptor that reading consumes is reported by number and is the only one excused.
+
+> **PRE-TRIAL FINDING (driver implementation; LAUNCH-EXEC-01 still NOT_RUN): the report channel
+> does not reach the harness.** Writing the case driver established that `launcher_spike.c`
+> retains the capture prefix in a `malloc`'d buffer, fills it, and `free()`s it at the end of
+> `main` without ever emitting it. The receipt carries `bytes_drained`, `drained_sha256`,
+> `completeness` and the retained-prefix **counts** — never the bytes. A helper report is
+> therefore produced inside the launcher and **no channel carries it out**, so every expectation
+> written against the report is unobservable as frozen: `argv_exact`, `environ_empty`,
+> `fds_exactly_012`, `signals_reset`, `no_new_privs_1`/`no_new_privs_0`,
+> `interpreter_ran_with_devfd`, and the exec evidence that separates **S1 from S5**.
+> `driver.unposable_cases()` computes the affected set statically, and the runner refuses to
+> start a trial while any **mandatory** case is in it. Recorded here as a finding and **not
+> corrected here**: the correction changes the mechanism under test, which is an owner decision
+> rather than a driver detail.
 
 **Frozen output recipe.** `byte[i] = (i * 251 + tag) mod 256`, `tag = 1` for stdout and `2` for
 stderr. `oracles.py` computes every expected count and digest from this and the declared volume

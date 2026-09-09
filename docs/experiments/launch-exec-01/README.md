@@ -33,6 +33,9 @@ permission to implement.
 | `checker.py` | Verdict evaluator. Links nothing from the spike and never repairs a record |
 | `harness.py` | Preflight inventory, static-link gate, fixture builder, descriptor pre-loader |
 | `run_launch_exec_01.py` | Runner. Refuses to run: see above |
+| `driver.py` | Case-posing driver: one concrete plan per frozen case, and the static proof that the plan table is exactly the membership. `--driver-completeness` reports it without posing anything |
+| `observations.py` | P-12: observation → frozen outcome token, from closed vocabularies. Absent evidence yields no token |
+| `evidence.py` | P-14: publication sanitiser and deterministic serialization. An environment value is never reproduced |
 | `make_fixtures.py` | Deterministic generator for the non-compiled fixtures |
 | `launcher_spike.c` | The mechanism under test: pin → measure → admission → `clone3(CLONE_PIDFD)` → child setup → `execveat` |
 | `helper_report.c` | Primary helper; reports its own observed process boundary from inside the executed image |

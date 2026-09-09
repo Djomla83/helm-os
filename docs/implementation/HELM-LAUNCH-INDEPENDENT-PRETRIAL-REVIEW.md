@@ -28,6 +28,15 @@ preserved rather than tidied away.
 > ADR-0024 is still Proposed, and D-7 is still not granted** — this recommends authorising the
 > trial, it does not authorise it.
 
+> **Read [section 10](#10-post-review-note-the-case-driver-was-implemented-still-not_run) before
+> acting on the classification above.** That classification assessed the **mechanism and its
+> source freeze**, at a time when the case-posing driver did not exist — as section 8 says in
+> terms. Implementing the driver afterwards surfaced a new BLOCKER (**D-1**: the helper report
+> never leaves the launcher), which makes **43 of the 72 cases unposable, 34 of them mandatory**.
+> Sections 1–9 are preserved exactly as written; section 10 is appended, and the classification
+> of the **new** freeze is
+> [`DRIVER_IMPLEMENTATION_NEEDS_OWNER_DECISION`](#11-classification-of-the-new-freeze).
+
 ## 1. Independently reconstructed state
 
 Nothing below is taken from the author's summary; every value was recomputed.
@@ -326,3 +335,114 @@ transliteration, and every checker attack used fabricated records. The case-posi
 implemented and both runner safety barriers were left intact. `crates/helm-launch` was not
 created. No Wine, no 7-Zip, no A0, no `sudo`, no package installation. The frozen commit
 `66bf4b6` was not amended, rebased or squashed.
+
+---
+
+## 10. Post-review note: the case driver was implemented (still NOT_RUN)
+
+**Appended after the review above, which is preserved unchanged.** Nothing in sections 1–9 is
+edited, withdrawn or restated: the first-pass **NEEDS_PRETRIAL_FIXES**, the six original BLOCKERs,
+their correction history, and the **READY_TO_AUTHORIZE_FROZEN_TRIAL** classification recorded at
+`5729458` all stand exactly as written.
+
+**What that classification was about.** It assessed the **mechanism and its source freeze** —
+hashes, manifest arithmetic, checker algebra, the C sources read instruction by instruction, and a
+clean Linux compile. It was explicit that "the runner still cannot pose a case: both safety
+barriers are intact and the driver is absent", and it named the case-posing driver, the **P-12**
+observation-to-token mapping and the **P-14** sanitiser as the remaining work. It was never a
+readiness statement about a driver that did not exist.
+
+**What this task added.** The driver (`driver.py`), the P-12 mapping (`observations.py`) and the
+P-14 sanitiser (`evidence.py`), plus 116 new non-executing tests. **No case was posed, no helper
+or spike was executed, no generated ELF was run, and the D-7 flag was never passed.** The default
+invocation still refuses at exit 3. No C source byte changed, so the compile evidence in
+[`BUILD-EVIDENCE.md`](../experiments/launch-exec-01/BUILD-EVIDENCE.md) remains exactly valid — the
+six C digests are unchanged from Build 1 and Build 2.
+
+### 10.1 A new BLOCKER, found by implementing rather than by reading
+
+**D-1 — the helper report never leaves the launcher, and 40 cases depend on it.**
+
+`launcher_spike.c` allocates `out_prefix`/`err_prefix` with `malloc`, fills them under the
+`capture_prefix` bound, and `free()`s them at the end of `main`. **They are never written
+anywhere.** The receipt carries `bytes_drained`, `drained_sha256`, `completeness` and the
+retained-prefix *counts* — never the bytes.
+
+So `helper_report.c` faithfully produces its report on descriptor 1, the launcher faithfully
+drains it, and **no channel carries it to the harness**. Every frozen expectation written against
+the report is therefore unobservable as frozen:
+
+| Token | Cases |
+|---|---|
+| `argv_exact` | A1, A2, A3, A4, A6 |
+| `environ_empty` | V1 |
+| `fds_exactly_012` | F1, F2, F3, F4, F6, F7 |
+| `signals_reset` | F5 |
+| `no_new_privs_1` / `no_new_privs_0` | N1, N2 |
+| `interpreter_ran_with_devfd` | X2c |
+| `privilege_transition_suppressed` | N3 |
+| exec evidence for a lifecycle token | E1–E4, E5b, E6, E6b, E6c, E7, R1–R4, S1, S2, S3, S5, S7, T1–T4, T6 |
+
+**This is the S1/S5 discrimination, lost.** The previous review's own summary records that "clean
+EOF alone never means exec" and that S5 "remains discriminating". It does — but only to an observer
+who can see whether a report arrived, and no such observer exists. Without the channel, S1 and S5
+are indistinguishable at every interface the harness can reach.
+
+Three further cases are unposable for separate, narrower reasons, each a mechanism arm that was
+never built:
+
+- **M2** — needs a launcher with ≥3 extra live threads. `launcher_spike.c` has no threading mode;
+  `pthread` occurs only in its comments.
+- **M3** — needs the pidfd acquisition path to be *observable*. The receipt names none, so an
+  atomic acquisition can only be asserted, which is exactly what M3's own note says it exists to
+  avoid.
+- **M5** — needs the **rejected** `fork` + `pidfd_open` arm to record an outcome. The spike
+  implements no such arm; it appears only in comments.
+
+### 10.2 Scale, computed statically
+
+`driver.unposable_cases()` walks the plan table as data and runs nothing:
+
+| | Count |
+|---|---|
+| Frozen membership | **72** |
+| Driver plans | **72** — 0 missing, 0 duplicate, 0 unknown |
+| **Posable against the frozen mechanism** | **29** (20 mandatory, 5 conditional, 4 recorded) |
+| **Unposable** | **43** (**34 mandatory**, 6 conditional, 3 recorded) |
+| Unposable for want of the report channel alone | **40** |
+
+With 34 mandatory cases unposable, the aggregate is **`MECHANISM_INCONCLUSIVE` before the first
+case is posed**. A test asserts exactly this against the checker, and asserts that supplying the
+report channel alone would reduce the unposable set to `{M2, M3, M5}`.
+
+**The runner therefore refuses to start.** `preflight_gates()` halts at `HALT_PREFLIGHT` (exit 6)
+while any mandatory case lacks an evidence channel. That is deliberate and load-bearing: the first
+valid trial is an **immutability boundary**, and consuming it on a run that is known in advance to
+be inconclusive would close the trial and force a new preregistration for nothing.
+
+### 10.3 Why this was not corrected here
+
+Correcting D-1 means changing `launcher_spike.c` — the mechanism under test — to emit bytes it
+currently discards, or changing `helper_report.c` to write its report somewhere else. Either is a
+change to a frozen artefact of the experiment, not harness glue, and the owner instruction is
+explicit that a concrete implementation mismatch proving the frozen contract cannot be implemented
+is to be **reported, not resolved by changing semantics**. The two candidate corrections are also
+not equivalent — one alters the launcher, the other alters what F1/F4 observe — so choosing
+between them is an owner decision.
+
+**P-12 and P-14 are discharged.** Both are implemented, frozen before any result can be known, and
+tested: every frozen outcome token has a demonstrated derivation, no rule can produce a token from
+absent evidence, and no environment value is ever reproduced.
+
+## 11. Classification of the new freeze
+
+**`DRIVER_IMPLEMENTATION_NEEDS_OWNER_DECISION`.** Not READY, and deliberately not.
+
+- The driver, the P-12 mapping and the P-14 sanitiser are complete, tested and frozen.
+- The frozen mechanism cannot supply the evidence 43 of its own 72 expectations are written
+  against, 34 of them mandatory.
+- The correction is an owner decision about the mechanism under test, not a driver detail.
+
+**The new descendant freeze requires a bounded independent pre-trial re-review before D-7.** This
+note recommends nothing about authorisation; D-7 is not granted, ADR-0024 is still Proposed, and
+**LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of ZERO.**
