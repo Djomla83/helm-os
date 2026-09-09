@@ -14,8 +14,7 @@ use std::os::fd::OwnedFd;
 use std::path::{Path, PathBuf};
 
 use helm_bind::{
-    BindingRefusalCode as R, ClaimState, ClaimSubject, Contradiction, Difference, bind,
-    parse_binding_plan,
+    BindingRefusalCode as R, ClaimState, Contradiction, Difference, bind, parse_binding_plan,
 };
 use helm_observe::{ObservationArtifact, ValidatedPlan};
 
