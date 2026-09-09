@@ -577,15 +577,13 @@ fn every_broken_document_combination_is_refused_without_a_report() {
     );
 
     // An entry-point target under a root other than the asserted prefix.
-    let wrong_root_plan = {
-        let mut raw = observation_plan_json(&subject);
-        let text = String::from_utf8(raw.drain(..).collect()).unwrap();
-        text.replace(
+    let wrong_root_plan = String::from_utf8(observation_plan_json(&subject))
+        .unwrap()
+        .replace(
             "{\"id\":\"entry\",\"root\":\"prefix\"",
             "{\"id\":\"entry\",\"root\":\"other\"",
         )
-        .into_bytes()
-    };
+        .into_bytes();
     let (other_root_plan, other_root_artifact) = observe(&base, &wrong_root_plan);
     let entry_mapping = parse_binding_plan(&binding_plan(
         &subject,

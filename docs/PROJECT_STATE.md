@@ -1,5 +1,41 @@
 # Stanje projekta
 
+## Implementation candidate, 2026-09-09 — helm-bind 0.1 awaits independent review
+
+Experimental [helm-bind](../crates/helm-bind/README.md) 0.1 is implemented on
+`product/helm-bind` under Accepted [ADR-0023](adr/ADR-0023-binding-authority.md) and
+**awaits independent review**. The [author implementation review](implementation/HELM-BIND-REVIEW.md)
+maps the code to every accepted invariant. Disposition: **READY_FOR_INDEPENDENT_REVIEW**.
+This is a branch candidate, not an owner-accepted merge or a release, and the author must not
+merge it.
+
+`bind` is a pure function of four already-validated values, with no filesystem, descriptor,
+network, subprocess, environment, registry, clock, randomness, write or OS backend, no
+product-semantic `cfg` branch and `unsafe` still forbidden. It emits **no satisfaction,
+compatibility or readiness verdict** and no global success token: one typed outcome per
+semantic desired claim, plus contradiction, which is true only when two known values
+disagree, and coverage counts over ten distinct states. **Coverage can never be complete in
+0.1**, because four mandatory desired requirements have no comparator, and that is a property
+test rather than a promise.
+
+The mapping is an inert exact-byte document with a closed five-kind vocabulary and no expected
+values, predicates or paths; nothing is inferred from a target ID's spelling.
+`asserted_prefix_root_id` is required exactly when an entry-point claim is mapped and every
+mapped entry-point target must sit under it. Both entry-point claims require the regular-file
+observable and bind the desired relative path byte for byte, so identical bytes at another
+path never satisfy either, and a specification stating no entry-point digest yields
+`desired_value_unspecified` rather than a manufactured requirement. Every cross-document
+precondition is checked before any claim exists, so a refusal produces no report bytes, no
+claim outcomes and no report digest.
+
+Neither `helm-app-spec` nor `helm-observe` was changed, in semantics, API or dependency
+features; the `sha2` feature-unification effect is recorded as performance and build
+composition only, and the separate package builds and standalone evidence tests are retained.
+No new system experiment was run: the module is pure, so adversarial and property tests are
+the falsification mechanism. No `helm-launch`, no lab or VM execution, no A0 rerun, no Wine
+and no 7-Zip. **A0-7ZIP remains experimental FAIL.** The next decision is to assign
+independent review of this bounded candidate.
+
 <a id="helm-bind-architecture-acceptance"></a>
 
 ## Owner acceptance, 2026-09-09 — ADR-0023 Accepted for helm-bind 0.1 architecture
