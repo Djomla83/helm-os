@@ -1,5 +1,36 @@
 # Stanje projekta
 
+## Design under owner review, 2026-09-09 — helm-bind 0.1 architecture
+
+The architecture for the fourth product module is proposed and **awaits owner review**. The
+[design report](research/HELM-BIND-ARCHITECTURE.md) and Proposed
+[ADR-0023](adr/ADR-0023-binding-authority.md) describe a pure, authority-free comparison
+library that answers only what follows from comparing desired claims with the observations
+that were actually made. **Nothing is accepted and nothing is implemented:** no
+`crates/helm-bind`, no product API change, no comparison code, no launch work, no lab access
+and no A0 rerun.
+
+The central proposal is that `helm-bind` emits **no satisfaction, compatibility or readiness
+verdict**. It reports per-claim outcomes plus two axes: contradiction, which is true only when
+two known values disagree, and coverage, which counts states and lists the claim classes with
+no comparator. Because `runtime.family`, `environment.windows_architecture` and
+`environment.prefix_role` are mandatory desired claims that helm-observe 0.1 cannot establish,
+**coverage can never be complete in 0.1**, which makes a false global success structurally
+unreachable rather than merely discouraged.
+
+The design was derived from the current public Rust types, not from historical sketches. It
+records that the identifier, path and digest grammars of helm-app-spec and helm-observe
+already coincide, so no translation layer is needed; that the observation artifact carries no
+target paths, so the `ValidatedPlan` must be an input; that observation target IDs are
+deliberately neutral, so an explicit identity-bearing binding plan is required rather than any
+naming heuristic; and that the subject-spec and observation-plan identity checks work against
+the **current** public APIs, so **no change to helm-observe is required**. No new system
+experiment is proposed: the module performs no syscall, so adversarial and property tests are
+the right falsification mechanism.
+
+Eight owner decisions are listed in the design report. ADR-0021 and ADR-0022 are unchanged,
+`helm-launch` remains unaccepted and undesigned, and **A0-7ZIP remains experimental FAIL.**
+
 <a id="helm-observe-owner-acceptance"></a>
 
 ## Owner acceptance, 2026-09-09 — experimental helm-observe 0.1 is merged to main
