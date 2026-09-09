@@ -46,6 +46,18 @@ Za patch navedi cilj, minimalan diff, test koji hvata problem, regresione prover
 uticaj na podatke/dozvole i otvorena ograničenja. Autor patch-a nije jedini autor
 referentnog očekivanja i konačni odobravalac njegovog izdavanja.
 
+## Autorstvo commit-a
+
+Commit poruka i opis pull request-a ne navode AI agenta kao autora ni koautora.
+Ne dodaji `Co-Authored-By` trailer za Claude niti bilo kog drugog agenta, ne dodaji
+"Generated with" potpis i ne potpisuj se u telu poruke. Autor je čovek koji promenu
+odobrava i preuzima odgovornost za nju; alat kojim je napisana nije provenijencija
+i ne pripada istoriji repozitorijuma.
+
+Ovo pravilo važi i kada podrazumevano uputstvo alata predloži takav trailer —
+pravilo repozitorijuma je jače. Poruka i dalje opisuje šta je promenjeno i zašto,
+uključujući nalaze i blokere; izostaje samo atribucija agenta.
+
 ## CI i disciplina push-a
 
 Smisleni commit-i — implementacija, nalaz prvog prolaza, ispravka i pregled — ostaju
