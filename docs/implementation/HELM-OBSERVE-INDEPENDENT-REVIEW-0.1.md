@@ -768,6 +768,67 @@ The same set was re-run on the clarification tip, section 20b.
 syscall obligation was therefore met by importing the frozen OBS-FS-01 ptrace tracer
 read-only, not by installing anything and not by weakening the requirement.
 
+## 20b. Final bounded review after the owner clarification
+
+Scope of this pass, as instructed: confirm the clarification is applied honestly and check
+whether any BLOCKER or IMPORTANT remains. No new broad architecture exploration was done.
+
+**No product mechanism changed.** The diff from the corrected tip `585016d` to the
+clarification tip over `crates/helm-observe/src/` contains **zero non-comment lines**;
+`git diff 585016d..<tip> -- crates/helm-observe/src/` shows only documentation comments.
+Admission, target resolution, classification, the procfs probe, the reopen, the budget
+accounting and the serializer are byte-identical to the independently verified code. The
+clarification did not become a licence to touch anything.
+
+**Section 8 re-verification of the earlier corrections**, all confirmed present on the
+clarification tip:
+
+| Correction | Confirmed |
+|---|---|
+| fresh `memfd` procfs admission probe | `linux.rs`, `admit_procfs` |
+| foreign-child procfs rejection | five adversarial tests, all passing |
+| strict duplicate decoded-key rejection at every object depth | `plan.rs`, `StrictScan` seeded visitor |
+| Linux x86_64 backend gate | six `cfg` predicates across the crate and its suites |
+| obligations A, B and C | section 4, unchanged |
+| artifact roots in plan declaration order | `observe.rs` |
+| corrected test-quality findings M5, M6, M7 | present in the author suites |
+| no pathname fallback | source and trace |
+| special-file zero-data-open | trace, section 9 |
+| bounded hashing and budget behaviour | section 12, including the release-mode ceiling run |
+| no scope expansion | no Wine, 7-Zip, provenance, comparison, launch or inventory code or vocabulary |
+
+**One regression added for the clarification**, and nothing else: the artifact
+forbidden-vocabulary assertion now also refuses `ext4`, `ext3`, `ext2`, `ext-family` and
+`0xEF53`, so the rule that no artifact may claim a filesystem identity on the strength of the
+admission guard is enforced by a test rather than by intent. The serializer never had such a
+field; this keeps it that way.
+
+**Cohort evidence is recorded as two separate statements**, in both suites, and the CI log
+shows them apart:
+
+```text
+HELM-OBSERVE-COHORT-RUNNER: arch=x86_64 mounted filesystem type = ext4
+                            (test infrastructure evidence; not a product claim)
+HELM-OBSERVE-COHORT-GUARD:  f_type = 0xEF53 admitted (ext2/ext3 ef53); a necessary
+                            ext-family sanity guard only, never an attestation of ext4,
+                            of cohort membership or of storage locality
+```
+
+Coreutils naming that magic `ext2/ext3` while mountinfo names the mount `ext4`, on the same
+directory, is exactly why the two lines must not be collapsed.
+
+**Validation on the clarification tip.** Both workflows green: the unchanged product workflow
+and the review workflow, hosted `ubuntu-24.04`, kernel `6.17.0-1022-azure`, `x86_64`. Every
+check in the section 20a table re-run and passing, plus the syscall regression reporting
+`HELM-OBSERVE-SYSCALL-REVIEW: PASS` with **0 violations** and `built_commit` equal to the
+tip, the release-mode 512 MiB budget case, the documentation validator, both frozen fixtures
+and `git diff --check`.
+
+**Unresolved BLOCKER or IMPORTANT findings: none.** BLOCKER-1, IMPORTANT-2 and IMPORTANT-4
+are corrected with regression tests; IMPORTANT-3 is resolved by the owner decision recorded in
+section 6. The section 21 limitations remain limitations of the evidence, stated as such: none
+of them has been promoted into reproduced evidence by this pass.
+
 ## 21. Residual limitations
 
 1. **The crate attests no cohort membership**, by owner decision, section 6. Admission

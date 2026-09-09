@@ -183,6 +183,13 @@ fn artifact_identity_is_exact_bytes_and_deterministic() {
         "INSTALLED",
         "READY",
         "snapshot",
+        // Per the owner's 2026-09-09 cohort attestation clarification, no artifact
+        // may claim a filesystem identity on the strength of the admission guard.
+        "ext4",
+        "ext3",
+        "ext2",
+        "ext-family",
+        "0xEF53",
     ] {
         assert!(!text.contains(banned), "artifact must not contain {banned}");
     }
