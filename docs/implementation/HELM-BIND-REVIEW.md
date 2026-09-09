@@ -9,6 +9,18 @@ architecture scope, with the owner's 2026-09-09 corrections applied.
 This is the author's own review. It maps the implementation back to every accepted invariant
 and records what was **not** done.
 
+> **Annotation, 2026-09-09.** This document was independently reviewed. Two of its claims were
+> found stronger than the truth and are corrected in the
+> [independent review](HELM-BIND-INDEPENDENT-REVIEW-0.1.md), not here, so the author's text
+> stays as delivered. Section 3's vocabulary row and section 8's description of the report
+> test pointed at a substring assertion that could not hold for all inputs, because caller
+> role and DLL selectors are legal `helm-app-spec` identifiers that may be verdict words.
+> Section 8's cross-platform paragraph describes a run that executed the serializer and the
+> parser on three platforms, not `bind` over four genuine inputs. Section 3's coverage row
+> calls a two-fixture test a property over every accepted specification; the implementation
+> does guarantee the property structurally, and the independent review establishes it with a
+> generator over the schema boundaries.
+
 ## 1. Crate boundary
 
 One new workspace member, `crates/helm-bind`, library only, `publish = false`. Direct

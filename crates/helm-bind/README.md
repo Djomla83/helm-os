@@ -48,8 +48,17 @@ ValidatedAppSpec + ValidatedBindingPlan + ValidatedPlan + ObservationArtifact
 environment, no cwd, `HOME` or `PATH`, no registry, no Wine, no package lookup, no discovery,
 no clock, no randomness, no writes and no OS backend. There is no product-semantic `cfg`
 branch anywhere, and `#![forbid(unsafe_code)]` holds. Given the same four validated inputs
-the exact `BindingReport` bytes are identical on Linux, Windows and macOS, and CI checks that
-on all three rather than asserting it.
+the exact `BindingReport` bytes are therefore identical on Linux, Windows and macOS.
+
+**What CI actually executes, precisely.** The three-platform job runs `cargo fmt --check`,
+clippy and `cargo test -p helm-bind` on Ubuntu, Windows and macOS. On all three that covers
+the binding-plan parser, the claim universe, the verdict algebra and the report serializer,
+including one fixed record whose exact bytes and digest are identical on every runner. It
+does **not** run `bind` over four genuine inputs on Windows or macOS, because
+`ObservationArtifact` has no public constructor outside `helm-observe`'s Linux backend; those
+end-to-end tests run on Linux. The determinism claim rests on that three-platform execution
+of the only platform-sensitive step, serialization, together with the absence of any
+platform-dependent construct in the comparison itself.
 
 ## The mapping is explicit, and carries no expected values
 
@@ -114,8 +123,21 @@ app-spec SHA + observation-plan SHA + binding-plan SHA + observation-artifact SH
 ```
 
 No timestamp, hostname, random identifier, signature, host path, desired relative path or
-pointer address, and no success or readiness vocabulary. The whole report is lowercase by
-construction, so a verdict token in any casing cannot appear.
+pointer address. The whole report is lowercase by construction, so an uppercase token cannot
+appear at all.
+
+**No term the binder emits is a verdict word.** Not a claim class, not a state, not the
+contradiction value, not a coverage key, not the schema name. That is the property, and it is
+the one ADR-0023 requires.
+
+It is deliberately **not** a claim that the bytes never contain such a word. Validated role
+and DLL selectors are caller data, written verbatim, and `ready`, `pass`, `fail`, `verified`,
+`complete`, `snapshot`, `compatible`, `satisfied` and `installed` are all legal
+`helm-app-spec` identifiers, so a valid specification can put any of them in a report under a
+`"role"` key. That asserts nothing, exactly as a file named `passed.txt` asserts nothing, and
+rejecting such names is not this module's business. A selector can never reach a slot the
+binder controls: identifier output cannot emit a quote, so a role cannot close its string and
+impersonate a claim class or a state.
 
 ## Build composition
 

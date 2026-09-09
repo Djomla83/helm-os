@@ -172,6 +172,13 @@ impl ClaimMapping {
 
 /// A validated, immutable binding plan. Construction is only possible through
 /// [`parse_binding_plan`], so a caller cannot manufacture one.
+///
+/// ```compile_fail
+/// # use helm_bind::ValidatedBindingPlan;
+/// fn forge(real: ValidatedBindingPlan) -> ValidatedBindingPlan {
+///     ValidatedBindingPlan { claims: Vec::new(), ..real }
+/// }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ValidatedBindingPlan {
     bytes: Vec<u8>,

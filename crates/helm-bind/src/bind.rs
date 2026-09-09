@@ -302,8 +302,12 @@ fn body_claim(
     let Some(entry) = mapping.mapping_for(kind, role) else {
         return ClaimState::NotObserved;
     };
+    // A mapped target with no entry in the artifact is a different fact from an
+    // unmapped claim, so it must not share `NotObserved`. It is unreachable while
+    // the prechecks bind the artifact to this exact plan and the observer emits one
+    // observation per plan target, and the conservative state keeps it that way.
     let Some(outcome) = outcome_for(observation, entry.target()) else {
-        return ClaimState::NotObserved;
+        return ClaimState::ObservationNotInterpretable;
     };
     match outcome {
         TargetOutcome::ObservedFile(facts) => {
@@ -410,8 +414,9 @@ fn entry_point_presence(
     if !entry_path_agrees(spec, observation_plan, entry.target()) {
         return ClaimState::Mismatch(Difference::EntryPointPath);
     }
+    // As in `body_claim`: unreachable, and conservative rather than benign.
     let Some(outcome) = outcome_for(observation, entry.target()) else {
-        return ClaimState::NotObserved;
+        return ClaimState::ObservationNotInterpretable;
     };
     match outcome {
         // A digest is not needed to establish presence.
@@ -452,8 +457,9 @@ fn entry_point_body(
     if !entry_path_agrees(spec, observation_plan, entry.target()) {
         return ClaimState::Mismatch(Difference::EntryPointPath);
     }
+    // As in `body_claim`: unreachable, and conservative rather than benign.
     let Some(outcome) = outcome_for(observation, entry.target()) else {
-        return ClaimState::NotObserved;
+        return ClaimState::ObservationNotInterpretable;
     };
     match outcome {
         TargetOutcome::ObservedFile(facts) => {

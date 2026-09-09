@@ -1,5 +1,41 @@
 # Stanje projekta
 
+## Independent review, 2026-09-09 — helm-bind 0.1 candidate reviewed
+
+The bounded implementation candidate `832a112decaa333ee3b618d52e966a20c443513e` on
+`product/helm-bind` was independently reviewed on `review/helm-bind-independent`. The
+[independent review](implementation/HELM-BIND-INDEPENDENT-REVIEW-0.1.md) records the
+reconstructed state, the dataflow trace, the findings, the corrections and the evidence. This
+entry records review status only; the candidate is **not owner-merged**.
+
+**No BLOCKER.** Eighteen independent adversarial tests, with reviewer-chosen seeds and
+independent oracles, passed against the **unmodified** candidate: the binding-plan parser and
+its ceilings, exact mapping identity, refusal atomicity and precedence, typed-domain
+separation, the size and digest truth table, entry-point root and path rules including a
+case-only difference, the optional entry-point-digest precedence matrix, observation-state
+distinctness, the contradiction algebra and the four-digest report identity. The universal
+coverage theorem was re-established with a generator spanning the schema boundaries rather
+than the two committed fixtures, confirming `unsupported_binding >= 4` for every valid
+specification and the exact claim-instance formula with its ceiling of 39.
+
+**Two IMPORTANT findings, both claims about the code rather than defects in it, corrected.**
+Caller role and DLL selectors are legal `helm-app-spec` identifiers and may be verdict words,
+so they reach report bytes verbatim, which the README and one author test said could not
+happen. The contract question resolves in the implementation's favour: ADR-0023 forbids
+verdict vocabulary in the binder's **own** terms, not caller data echoed under a `role` key,
+and a selector can never reach a slot the binder controls. The property is now stated
+precisely and enforced by a test whose selectors deliberately are verdict words. Separately,
+the three-platform run executed the parser, the claim universe, the algebra and the serializer
+on all three runners, not `bind` over four genuine inputs, because `ObservationArtifact` has
+no public constructor off Linux; the determinism claim stands on that execution plus verified
+purity, and the README now says exactly what was run where.
+
+One MINOR collapse was corrected: an unreachable branch that returned `not_observed` for a
+mapped target missing from the artifact now returns the conservative
+`observation_not_interpretable`. `helm-app-spec`, `helm-observe` and `helm-evidence` remain
+byte-identical to main, no `helm-observe` API was added to make the review pass, no lab or VM
+ran, no A0 access occurred and **A0-7ZIP remains experimental FAIL.**
+
 ## Implementation candidate, 2026-09-09 — helm-bind 0.1 awaits independent review
 
 Experimental [helm-bind](../crates/helm-bind/README.md) 0.1 is implemented on

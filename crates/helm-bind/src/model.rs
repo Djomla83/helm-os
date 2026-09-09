@@ -384,6 +384,13 @@ pub struct BindingRecord {
 /// Serialized comparison with exact-byte identity.
 ///
 /// There is no public constructor: a report can only come from a real comparison.
+///
+/// ```compile_fail
+/// # use helm_bind::BindingReport;
+/// fn forge(bytes: Vec<u8>, real: BindingReport) -> BindingReport {
+///     BindingReport { bytes, ..real }
+/// }
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BindingReport {
     bytes: Vec<u8>,
@@ -735,8 +742,20 @@ mod tests {
         assert_eq!(fixture_report().exact_bytes(), report.exact_bytes());
     }
 
-    /// Privacy and vocabulary. The whole report is lowercase by construction, so a
-    /// verdict token in any casing is impossible, and no path can appear.
+    /// Privacy and vocabulary.
+    ///
+    /// Independent review correction: this test previously also asserted that the
+    /// report bytes never *contain* `snapshot`, `verified`, `ready_to_launch` or
+    /// `installed`. That is not an invariant of the module and cannot be, for two
+    /// reasons. Validated role and DLL selectors are caller data written verbatim,
+    /// and every one of those words is a legal `helm-app-spec` identifier; and the
+    /// binder's own coverage key `observation_failed` contains `fail`.
+    ///
+    /// The property that does hold, and that this test now states, is that no term
+    /// **the binder itself emits** is a verdict word, and that no selector can
+    /// reach a slot the binder controls. The end-to-end case, with a specification
+    /// whose selectors deliberately are verdict words, is
+    /// `caller_selectors_reach_the_report_bytes_verbatim`.
     #[test]
     fn the_report_carries_no_verdict_vocabulary_and_no_path() {
         let report = fixture_report();
@@ -747,33 +766,41 @@ mod tests {
         );
         let text = String::from_utf8_lossy(bytes).into_owned();
         assert!(!text.contains('/'), "no path may appear: {text}");
-        // Whole-value comparison, so `observation_failed` is not confused with a
-        // `fail` verdict and `verification_definition_body` is not confused with
-        // `verified`.
-        for value in text
-            .split('"')
-            .skip(1)
-            .step_by(2)
-            .chain(text.split(':').skip(1))
-        {
-            for banned in [
-                "pass",
-                "fail",
-                "satisfied",
-                "unsatisfied",
-                "compatible",
-                "ready",
-                "ready_to_launch",
-                "installed_correctly",
-                "complete",
-                "snapshot",
-                "verified",
-            ] {
-                assert_ne!(value, banned, "forbidden verdict token {banned} in {text}");
-            }
+
+        const VERDICT_WORDS: [&str; 11] = [
+            "pass",
+            "fail",
+            "satisfied",
+            "unsatisfied",
+            "compatible",
+            "ready",
+            "ready_to_launch",
+            "installed_correctly",
+            "complete",
+            "snapshot",
+            "verified",
+        ];
+        // Every term the binder chooses for itself.
+        let mut emitted: Vec<&str> = vec![
+            "helm-binding-report",
+            report.contradiction().as_str(),
+            "desired_versus_observed_comparison_only",
+        ];
+        emitted.extend(report.claims().iter().map(|c| c.subject().as_str()));
+        emitted.extend(report.claims().iter().map(|c| c.state().as_str()));
+        emitted.extend(report.coverage().unsupported_classes.iter().copied());
+        for term in emitted {
+            assert!(
+                !VERDICT_WORDS.contains(&term),
+                "the binder emitted a verdict word as its own term: {term}"
+            );
         }
-        for banned in ["snapshot", "verified", "ready_to_launch", "installed"] {
-            assert!(!text.contains(banned), "forbidden token {banned} in {text}");
+        // No verdict word can reach a slot the binder controls, whatever a caller
+        // names a role: `push_id` cannot emit a quote, so a selector cannot close
+        // its string.
+        for word in VERDICT_WORDS {
+            assert!(!text.contains(&format!("\"state\":\"{word}\"")));
+            assert!(!text.contains(&format!("\"claim\":\"{word}\"")));
         }
     }
 
