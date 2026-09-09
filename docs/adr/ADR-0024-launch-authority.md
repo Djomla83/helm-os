@@ -6,7 +6,14 @@
 **Acceptance date:** not entered\
 **Authoritative base:** `5cc56384257a2ec1f2a2a9c64f7f4328da6cef2e`\
 **Design basis:** [helm-launch architecture and falsification plan](../research/HELM-LAUNCH-ARCHITECTURE.md)\
-**Experiment dependency:** [LAUNCH-EXEC-01](../experiments/LAUNCH-EXEC-01-DEFINITION.md), **NOT_RUN**
+**Experiment dependency:** [LAUNCH-EXEC-01](../experiments/LAUNCH-EXEC-01-DEFINITION.md), **NOT_RUN**\
+**Narrowed 2026-09-09** by the
+[three-workstream pre-execution review](../implementation/HELM-LAUNCH-PRE-EXECUTION-REVIEW.md),
+which found nine BLOCKERs. **Status unchanged: still Proposed.** The review corrected claims this
+ADR made, it did not accept it: the receipt's executable digest is a pre-execution measurement
+and was described as the identity of the body that ran; the credentials claim was unconditionally
+false for a set-user-ID object; clean EOF does not prove exec; and direct-child lifecycle does not
+imply direct-child liveness. Two further owner decisions, **D-9** and **D-10**, are now required.
 
 ## Context
 
@@ -73,8 +80,11 @@ resolved from the ambient environment.
 ### Proposed 0.1 scope and cohort
 
 Supported cohort: **Linux, x86_64, kernel 5.9 or newer**, that floor being set by
-`close_range`. Cohort membership is a **caller precondition, not an attestation this crate
-makes**, in the shape ADR-0022's clarification established. API compile portability is separated
+`close_range`, and **no libc version floor**, because the backend issues both Linux-specific
+syscalls through `syscall(2)` rather than through the glibc wrappers, which are gnu-only and
+`glibc >= 2.34`. Cohort membership is a **caller precondition, not an attestation this crate
+makes**, in the shape ADR-0022's clarification established. The `pidfd_open` preconditions of the
+process-boundary contract are caller preconditions in the same sense. API compile portability is separated
 from validated execution backend support: the plan parser, model and receipt serializer compile
 everywhere; the execution backend exists only inside the cohort.
 
@@ -82,7 +92,10 @@ everywhere; the execution backend exists only inside the cohort.
 
 `fork()`, async-signal-safe child setup, then
 `execveat(exec_fd, "", argv, envp, AT_EMPTY_PATH)` — chosen because the descriptor identifies
-the inode and no name is resolved at exec time. `fexecve` is rejected because glibc silently
+the inode and no name is resolved **for the pinned object** at exec time. Admission pins the
+cohort in the ELF header itself — 64-bit, little-endian, `EM_X86_64`, `ET_EXEC` or `ET_DYN` —
+so no `binfmt_misc` entry matching ELF magic with a masked `e_machine` can route a HELM
+capability to an interpreter resolved by pathname. `fexecve` is rejected because glibc silently
 falls back to `/proc/self/fd`; ordinary path-based `Command` is rejected outright.
 `execve("/proc/self/fd/N", …)` is retained only as a documented fallback with its procfs
 dependency stated, and only if LAUNCH-EXEC-01 falsifies the primary mechanism.
@@ -93,22 +106,46 @@ dependency stated, and only if LAUNCH-EXEC-01 falsifies the primary mechanism.
   launcher has no honest value to invent. NUL bytes rejected; UTF-8 only in 0.1, with non-UTF-8
   arguments a recorded limitation. **No shell, no quoting logic, no command-string parser.**
 - **environment:** never inherited. Modes are `empty` (default) and `explicit`. Any name
-  beginning `LD_` is refused at parse time, because such a variable changes which code the
-  measured image actually loads and would make the receipt's executable identity misleading.
+  beginning `LD_` is refused at parse time. This is **hardening, not provenance**: the receipt's
+  `pre_exec_body_sha256` measures only the main executable file body, never the ELF interpreter,
+  the shared libraries or any other part of the loaded-code closure, and it measures no more of
+  them under `empty` than under `explicit`. The `LD_` rule is a prefix denylist and is
+  deliberately **not** claimed to be complete — glibc's own secure-execution list also strips
+  `GCONV_PATH`, `LOCPATH`, `NLSPATH`, `TZDIR` and others.
+- **signals:** the child's signal mask is **cleared** and every disposition the host set to
+  `SIG_IGN` is restored to `SIG_DFL` before exec. `signal(7)` preserves both across `fork` and
+  `execve`, and a Rust host ignores `SIGPIPE` by default, so without this the plan would not
+  determine the child's behaviour and the host would.
 - **working directory:** a **mandatory caller-supplied directory capability**, `fchdir`ed in the
-  child. There is no ambient-cwd mode and no pathname mode.
-- **descriptors:** exactly 0, 1 and 2 survive into the executed image, achieved with `dup2` plus
+  child **before** the range close, since it is not one of the descriptors the range preserves.
+  There is no ambient-cwd mode and no pathname mode.
+- **descriptors:** exactly 0, 1 and 2 survive into the executed image, achieved by relocating the
+  preserved descriptors above 2, `dup2`, an explicit `FD_CLOEXEC` clear on 0/1/2, and
   `close_range` over everything else. This claim rests on `close_range`, **not** on HELM's own
   `CLOEXEC` hygiene, because a host process may already hold non-`CLOEXEC` descriptors.
 - **stdin:** a pipe whose write end the parent closes, giving immediate EOF.
-- **stdout/stderr:** separate pipes, drained concurrently by a single-threaded `poll` loop so
-  neither stream can deadlock; bounded capture with draining continuing past the bound.
-- **exec confirmation:** a `CLOEXEC` exec-status pipe. Clean EOF proves exec; a record proves
-  failure with its stage and errno. `ENOENT`, `EACCES`, `ENOEXEC` and `ETXTBSY` can **never** be
+- **stdout/stderr:** separate pipes, drained concurrently by a single-threaded `poll` loop over
+  the pidfd and the three pipes, so neither stream can deadlock; bounded capture with draining
+  continuing past the bound. **Direct-child lifecycle does not imply direct-child liveness**: a
+  descendant inheriting stdout or stderr holds a write end of the launcher's own pipe, so a
+  bounded `POST_EXIT_DRAIN_MS` and a `WriterRetainedAfterChildExit` disposition bound the
+  launcher's own tail.
+- **exec confirmation:** a `CLOEXEC` exec-status pipe. A record proves failure with its stage and
+  errno. **Clean EOF alone does not prove exec** — a child killed between `fork` and `execveat`
+  produces a byte-identical observation — so exec is concluded from clean EOF **together with**
+  the direct child's normal exit. `ENOENT`, `EACCES`, `ENOEXEC` and `ETXTBSY` can **never** be
   reported as an exit status.
-- **process identity:** a `pidfd`, not a reusable numeric PID; the receipt exposes no PID.
+- **process identity:** a `pidfd`, not a reusable numeric PID; the receipt exposes no PID. The
+  pidfd is **polled**, not only signalled, so exit is classified from an observed ordering. When
+  acquired by `pidfd_open` after `fork` it rests on three **caller preconditions** stated in
+  `pidfd_open(2)` — no `SIGCHLD = SIG_IGN`, no `SA_NOCLDWAIT`, no other reaper — which this
+  crate does not attest and cannot enforce; `clone3(CLONE_PIDFD)` removes them.
+- **credentials:** the child runs with the caller's own credentials **except where the authorized
+  object is set-user-ID, set-group-ID or capability-bearing**, in which case the kernel raises the
+  child's credentials at `execveat` and `helm-launch` neither prevents that nor attests it.
 - **timeout:** `CLOCK_MONOTONIC`, started **after confirmed exec**, with a separately bounded
-  pre-exec phase, a termination signal, a grace window, then `SIGKILL`.
+  pre-exec phase whose expiry terminates and reaps the child rather than leaking it, a
+  termination signal, a grace window, then `SIGKILL`.
 
 ### Proposed lifecycle limit, stated as a non-claim
 
@@ -117,27 +154,59 @@ dependency stated, and only if LAUNCH-EXEC-01 falsifies the primary mechanism.
 
 The child gets its own process group, which gives a best-effort sweep target. A process may
 still fork, `setsid`, daemonise or hand work to an existing service, and nothing available to an
-unprivileged 0.1 prevents that. A process-group sweep is recorded as issued, with no claim about
-descendants. cgroup v2 delegation is named as the future path to real containment and is out of
-scope. LAUNCH-EXEC-01 case **P1** exists to demonstrate this limitation rather than to pass.
+unprivileged 0.1 prevents that. A process-group sweep is issued **exactly once and strictly
+before the direct child is reaped** — after the reap the process-group ID may already have been
+reused, and signalling it would reach processes `helm-launch` never created — and is recorded as
+issued, with no claim about descendants. cgroup v2 delegation is named as the future path to real
+containment and is out of scope. LAUNCH-EXEC-01 cases **P1**–**P4** exist to demonstrate this
+limitation rather than to pass.
+
+**Direct-child lifecycle is a claim about what `helm-launch` ends, not about what it waits for.**
+A descendant that inherits stdout or stderr holds a write end of the launcher's own pipe, so
+those streams may never reach end-of-file even after the direct child is reaped. 0.1 therefore
+drains for a bounded `POST_EXIT_DRAIN_MS` after the direct child ends and then stops, recording
+`WriterRetainedAfterChildExit` for any stream still open. Closing that read end may deliver
+`SIGPIPE` or `EPIPE` to the retaining descendant — an effect on a process outside the claimed
+lifecycle, stated here so it is not mistaken for containment.
 
 ### Proposed non-sandbox boundary
 
 **A launch mechanism is not a sandbox.** 0.1 provides no filesystem, network, process, registry,
-device or user-data isolation. The direct child runs with the **caller's own OS credentials** and
-can generally do anything the caller can do. Clearing the environment, controlling argv and
-closing descriptors reduces *accidental* inputs and constrains nothing the child does on its own
-initiative. Proposed [ADR-0005](ADR-0005-sandbox-boundary.md) already records the related
-principle that a prefix is not a security boundary. 0.1 also performs **no privilege change**:
-no `sudo`, no setuid helper, no capability gain, no namespace, seccomp or MAC manipulation.
-**"No elevation" is not sandboxing.**
+device or user-data isolation. The direct child runs with the **caller's own OS credentials,
+except where the authorized object is set-user-ID, set-group-ID or capability-bearing, in which
+case the kernel raises the child's credentials and `helm-launch` neither prevents nor attests
+that** — 0.1 sets no `no_new_privs`, requires no `nosuid` mount and does not gate on mode bits,
+so the trusted caller's choice of descriptor decides. It can otherwise generally do anything the
+caller can do. Clearing the environment, controlling argv and closing descriptors reduces
+*accidental* inputs and constrains nothing the child does on its own initiative. Proposed
+[ADR-0005](ADR-0005-sandbox-boundary.md) already records the related principle that a prefix is
+not a security boundary. 0.1 performs **no privilege change of its own**: no `sudo`, no setuid
+helper, no capability gain, no namespace, seccomp or MAC manipulation. **"No elevation" is not
+sandboxing**, and "HELM adds no privilege" is not the same statement as "the child has the
+caller's privileges". Whether 0.1 should refuse set-id objects at admission is **owner decision
+D-9**.
 
 ### Proposed receipt semantics
 
 A `LaunchReceipt` is an exact identity-bearing artifact: deterministic bytes plus SHA-256 over
-exactly those bytes, binding the launch-plan digest, the executable's measured size and SHA-256,
-optional opaque spec and binding-report context digests, the outcome, and per-stream byte counts
-and digests. No timestamp, hostname, PID, host path or elapsed duration. The graph is acyclic.
+exactly those bytes, binding the launch-plan digest, the executable's **pre-execution measured**
+size, SHA-256 and mode bits, optional opaque spec and binding-report context digests, the process
+disposition, and per-stream byte counts, digests and completeness. No timestamp, hostname, PID,
+host path or elapsed duration. The graph is acyclic.
+
+**The receipt never asserts that the measured bytes are the executed bytes.** The measurement is
+of the pinned inode and is taken *before the execution attempt*: `execveat` re-opens the object
+through the descriptor's own path at exec time and the loader maps the inode as of that moment,
+so the descriptor pins the inode and does not freeze its contents. `ETXTBSY` does **not** cover
+that window — it refuses only a writer still holding a writable descriptor at the exec instant,
+never the ordinary open-write-close sequence. The fields are therefore named
+`pre_exec_body_sha256`, `pre_exec_body_size` and `pre_exec_mode_bits`, and `body` is load-bearing
+too: the digest covers the main executable file body and never the ELF interpreter, the shared
+libraries or any other part of the loaded-code closure.
+
+The receipt records **one process disposition and, independently, one completeness disposition
+per stream**, because those facts are orthogonal and a single sum type would have to discard one
+of two simultaneously true facts.
 
 **Execution is nondeterministic, so the same plan will not produce the same receipt.** That is
 normal, and receipt reproducibility is **not** a claim of reproducible behaviour.
@@ -147,9 +216,11 @@ exactly as a `helm-bind` refusal produces no report. Once a direct child exists 
 exists, including on exec failure. If `launch` was called but no child was ever created, the
 result is an error with no receipt.
 
-Outcome vocabulary is process facts only: `ExecFailed`, `ExecStatusIndeterminate`, `Exited`,
-`Signaled`, `TimedOut`, `TerminationFailed`, `OutputCaptureFailed`. There is no `PASS`, `FAIL`,
-`OK`, `SUCCESS`, `COMPATIBLE` or `READY`, and no function that maps an outcome onto a boolean.
+Outcome vocabulary is process facts only. Process disposition: `ExecFailed`,
+`ExecStatusIndeterminate`, `Exited`, `Signaled`, `TimedOut`, `TerminationFailed`,
+`ExitStatusUnobservable`. Per-stream completeness: `CompleteAtEof`, `DeadlineTruncated`,
+`WriterRetainedAfterChildExit`, `CaptureFailed`. There is no `PASS`, `FAIL`, `OK`, `SUCCESS`,
+`COMPATIBLE` or `READY`, and no function that maps an outcome onto a boolean.
 **Exit code 0 means only that the direct process exited with status 0** — not that the workflow
 passed, the app launched correctly, compatibility succeeded or a UI appeared.
 
@@ -201,7 +272,12 @@ non-`CLOEXEC` descriptor is inherited while exact isolation is claimed, spawn su
 confused with exec success, direct-child termination is called containment, a timeout is called
 sandboxing, exit 0 is called application success, a launch result is called compatibility, a
 Wine archive identity is called loader provenance, a refusal produces a receipt, unbounded output
-can deadlock or exhaust memory, or path replacement changes the executed body.
+can deadlock or exhaust memory, or path replacement changes the executed body. The review added
+three more, and each corresponds to a BLOCKER it found: **a pre-execution measurement is
+presented as the identity of the body that executed** (or the digest is described as covering the
+interpreter, the libraries or the loaded-code closure, or the `LD_` refusal as complete); **the
+receipt asserts a temporal or causal fact the launcher did not observe**; and **`launch()` can
+fail to return while the direct child's lifecycle has ended**.
 
 **A system experiment IS required**, unlike ADR-0023. Every load-bearing claim here is a claim
 about kernel behaviour that pure tests cannot settle.
@@ -219,9 +295,16 @@ is superseded. **A0-7ZIP remains experimental FAIL.**
 
 ## Owner decisions required
 
-Eight decisions are tabulated in the design report's
+Ten decisions are tabulated in the design report's
 [owner decisions](../research/HELM-LAUNCH-ARCHITECTURE.md#42-owner-decisions-required-before-implementation):
 the scoped unsafe backend (D-1), the 0.1 scope (D-2), zero HELM dependencies (D-3),
 direct-child-only lifecycle (D-4), the mandatory working-directory capability (D-5), UTF-8-only
-argv (D-6), authorisation and environment for LAUNCH-EXEC-01 (D-7), and the receipt carrying no
-duration or timestamp (D-8). **None is decided here.**
+argv (D-6), authorisation and environment for LAUNCH-EXEC-01 (D-7), the receipt carrying no
+duration or timestamp (D-8), refusal of set-user-ID objects at admission (**D-9**), and whether
+the environment is `empty`-only in 0.1 (**D-10**). **None is decided here.**
+
+D-1 through D-6 and D-8 are **provisionally recorded** by the owner in the
+[pre-execution review](../implementation/HELM-LAUNCH-PRE-EXECUTION-REVIEW.md), which does not
+accept this ADR and authorises no execution. **D-7 is not authorised**: D-9 and D-10 both change
+LAUNCH-EXEC-01's case membership, so its definition cannot yet be frozen, and an experiment whose
+membership still depends on an open decision must not be run.
