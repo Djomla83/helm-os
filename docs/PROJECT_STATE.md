@@ -1,5 +1,49 @@
 # Stanje projekta
 
+<a id="helm-bind-architecture-acceptance"></a>
+
+## Owner acceptance, 2026-09-09 — ADR-0023 Accepted for helm-bind 0.1 architecture
+
+The owner accepted the [helm-bind design](research/HELM-BIND-ARCHITECTURE.md) subject to
+bounded pre-implementation corrections, and
+[ADR-0023](adr/ADR-0023-binding-authority.md) moved from Proposed to **Accepted** with a
+bounded 0.1 architecture scope. Acceptance settles overall-verdict semantics, mapping
+semantics, cross-crate dependencies and the identity graph. It **does not authorise
+implementation**: there is no `crates/helm-bind`, no product API changed, no comparison code,
+no launch work, no lab access and no A0 rerun. `helm-launch` remains unaccepted and undesigned.
+
+**Accepted core.** A pure, authority-free comparison library over four already-validated
+inputs, emitting **no satisfaction, compatibility or readiness verdict**. Per-claim outcomes
+plus two axes: `Contradicted` only when two known values disagree, and a coverage summary.
+`Absent`, observation rejection, observation failure, observation omission and unsupported
+binding are **never** promoted to contradiction in 0.1, so entry-point absence stays the
+explicit `Absent` state — deliberately conservative, because the prefix-root association is
+caller asserted rather than attested.
+
+**Bounded corrections applied.** Both entry-point comparators require `regular_file_sha256`,
+because `directory_metadata` rejects a regular file as `WrongKind`; helm-observe is not
+changed and no new observable is added. Path binding applies to **both** entry-point claims,
+byte for byte with no normalisation, so a same-content file at another relative path cannot
+satisfy the entry-point body claim. The caller assertion is renamed `asserted_prefix_root_id`,
+is required exactly when an entry-point claim is mapped, and every mapped entry-point target
+must sit under it or the binding is refused. The claim universe is defined precisely: the spec
+digest, application ID and version, artifact labels and role selector keys receive no claim
+outcome and do not enter coverage. The coverage theorem is corrected to **at least four**
+unavoidable unsupported claims — source architecture, runtime family, Windows architecture and
+prefix role — which holds even when `disabled_dlls` is empty, and becomes a property-test
+obligation. The taxonomy is a single closed set of **ten** states, and a report carries up to
+**39** semantic claim instances although a binding plan carries at most 27 mapping entries.
+
+**Also accepted unchanged.** The inert exact-byte `BindingPlan`; `ValidatedPlan` as a required
+input because the observation artifact deliberately carries no target paths; subject-spec and
+observation-plan identity checks that work against the current public APIs, so **no change to
+helm-observe is required**; direct dependencies on `helm-app-spec` and `helm-observe` and not
+`helm-evidence`, with the `sha2` unification effect classified as performance and build
+composition only; the four-digest acyclic report identity; and typed refusals that produce no
+report bytes, no claim outcomes and no report digest. No new system experiment is required:
+the module is pure, so adversarial, property, exact-identity and cross-platform tests are the
+falsification mechanism. **A0-7ZIP remains experimental FAIL.**
+
 ## Design under owner review, 2026-09-09 — helm-bind 0.1 architecture
 
 The architecture for the fourth product module is proposed and **awaits owner review**. The

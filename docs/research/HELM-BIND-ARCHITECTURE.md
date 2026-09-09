@@ -1,6 +1,7 @@
 # helm-bind 0.1 architecture and design report
 
-**Status: design only. No implementation, no crate, no product API change.**\
+**Status: architecture accepted by the owner on 2026-09-09, with bounded corrections
+applied in place. Design only — no implementation, no crate, no product API change.**\
 **Authoritative base:** `9b09e7d3f6d216fb0258d23963d70bb889793567`.\
 **Task:** design the fourth HELM product module, which answers exactly one question —
 *what can we conclude when explicitly comparing desired claims with the observations that
@@ -160,18 +161,30 @@ did *not* happen.
 
 ### 3.4 Why the dangerous case is impossible, and it is provable
 
-Every valid `ValidatedAppSpec` necessarily contains `runtime.family`,
-`environment.windows_architecture` and `environment.prefix_role`; the schema makes all three
-mandatory. None of the three has a comparator in 0.1. Therefore:
+*Owner correction of 2026-09-09: the original proposal said "at least three". That was valid
+but not exact, because `application.source.architecture` is mandatory and unsupported too.
+The exact bound is four.*
+
+Every valid `ValidatedAppSpec` necessarily carries four mandatory semantic requirements that
+have no comparator in 0.1, verified against `validate::object`, whose optional-key list is
+empty for each of these containers:
+
+1. `application.source.architecture`
+2. `runtime.family`
+3. `environment.windows_architecture`
+4. `environment.prefix_role`
+
+Therefore:
 
 > **Theorem (0.1).** For every `ValidatedAppSpec` and every input combination, the binding
-> report contains at least three claims in state `UnsupportedBinding`, so its coverage is
-> never complete.
+> report contains **at least four** claims in state `UnsupportedBinding`, so its coverage is
+> never complete. The bound holds even when `disabled_dlls` is empty.
 
-This is a property test, not a hope: enumerate any accepted spec, bind it against any
-artifact, and assert `unsupported_count >= 3`. The dangerous case yields
-`NoClaimContradicted` with a visibly incomplete coverage summary and six or more unreached
-claims — a result no reasonable reader mistakes for success.
+This is a property-test obligation, not a hope: enumerate any accepted spec, bind it against
+any artifact, and assert `unsupported_count >= 4`. The dangerous case yields
+`NoClaimContradicted` with a visibly incomplete coverage summary and every unreached claim
+named — a result no reasonable reader mistakes for success, because **no global success token
+exists at all**.
 
 ## 4. Complete desired-claim bindability matrix
 
@@ -200,8 +213,43 @@ Derived field by field from the current model, not from names.
 | `verification[i].size` | **bindable with an explicit mapping** | `VerificationDefinitionBody(role)` | `FileFacts::bytes_read` |
 | `verification[i].sha256` | **bindable with an explicit mapping** | `VerificationDefinitionBody(role)` | `FileFacts::sha256`; identity of the frozen definition body **only** |
 
-Five comparators, covering at most `1 + 16 + 8 + 2 = 27` claims. Everything else is
-`UnsupportedBinding` and says so.
+Five comparators, covering at most `1 + 16 + 8 + 2 = 27` **mappable** claims.
+
+### 4.1 The claim universe, defined precisely
+
+*Owner correction of 2026-09-09.* Coverage must **not** mean "every serialized field in
+`helm-app-spec`". Three kinds of field are distinguished, and only the first enters the
+coverage denominator.
+
+**A. Semantic desired claims — these receive a claim outcome and enter coverage.**
+
+| Bindable in 0.1 | Instances |
+|---|---|
+| application source body | exactly 1 |
+| runtime artifact body, per role | 1–16 |
+| entry-point presence | exactly 1 |
+| entry-point body | exactly 1 |
+| verification-definition body, per role | 1–8 |
+
+| Unsupported in 0.1 | Instances |
+|---|---|
+| application source architecture | exactly 1 |
+| runtime family | exactly 1 |
+| Windows architecture | exactly 1 |
+| prefix role, dedication intent | exactly 1 |
+| disabled-DLL requirement, per entry | 0–8 |
+
+**B. Contextual and human metadata — no claim outcome, not in the denominator.**
+`spec_sha256`, `application.id`, `application.version`, `runtime.artifacts[i].label`.
+Comparing them to an observed object is meaningless; `spec_sha256` is used only for the
+subject check of section 6 and is bound into the report as an input identity.
+
+**C. Selector keys — no claim outcome, not in the denominator.**
+`runtime.artifacts[i].role` and `verification[i].role` name claim instances; they are the key
+under which a claim appears, never an independently compared value.
+
+Maximum semantic claim instances in one report:
+`1 + 16 + 1 + 1 + 8` bindable `+ 1 + 1 + 1 + 1 + 8` unsupported `= 39`.
 
 ## 5. Inputs
 
@@ -281,10 +329,29 @@ path-free: paths are read from the plan document the caller already holds.
 
 **The residual gap, stated plainly.** `Target::path()` is relative to a *logical root*, and
 roots carry no path and no meaning. That the root in question is the application's dedicated
-prefix is a **caller assertion**, recorded in the `BindingPlan` as `prefix_root_id` and
-reported as an assertion. `helm-bind` cannot verify it and must never phrase an entry-point
-conclusion as though it had. This is the honest analogue of `helm-observe`'s cohort
-clarification: the association is an external precondition, not something the module attests.
+prefix is a **caller assertion**, recorded in the `BindingPlan` as `asserted_prefix_root_id`
+and reported as an assertion. `helm-bind` cannot verify it and must never phrase an
+entry-point conclusion as though it had. This is the honest analogue of `helm-observe`'s
+cohort clarification: the association is an external precondition, not something the module
+attests.
+
+*Owner corrections of 2026-09-09.*
+
+1. **The field is named `asserted_prefix_root_id`**, so the wire vocabulary itself makes the
+   unattested nature visible. It is **required** when the plan maps `EntryPointPresence` or
+   `EntryPointBody`, and must be **absent** when neither is mapped.
+2. **Every mapped entry-point claim must sit under that asserted root.** For each mapped
+   `EntryPointPresence` and `EntryPointBody`, `Target::root()` must equal
+   `asserted_prefix_root_id`; otherwise `Err(BindingRefusal::EntryPointRootMismatch)`. That is
+   a broken mapping, not a desired-versus-observed contradiction, so it is a refusal and not a
+   claim outcome.
+3. **Path binding applies to both entry-point claims, not only to presence.** For each of
+   them the mapped target's `ValidatedPlan` path is compared with
+   `spec.entry_point().path().as_str()` exactly, byte for byte, with no normalisation, no case
+   folding and no target-ID heuristic. If the path differs the claim outcome is `Mismatch`
+   **before** the target is treated as the desired entry point at all, so a same-content file
+   at another relative path can never satisfy `EntryPointBody`.
+4. No absolute path enters a `BindingReport`.
 
 ## 8. The `BindingPlan`
 
@@ -306,7 +373,8 @@ rejected at every object depth, bounded sizes, exact-byte identity, no I/O on an
   "schema": "helm-binding-plan",
   "version": "0.1",
   "subject_spec_sha256": "<64 hex>",       // must equal the spec being bound
-  "prefix_root_id": "<observation root id>", // caller assertion, see section 7
+  "asserted_prefix_root_id": "<observation root id>", // caller assertion, see section 7
+                                             // required iff an entry-point claim is mapped
   "claims": [
     { "claim": "source_body",                  "target": "src-body" },
     { "claim": "runtime_artifact_body", "role": "wine-devel-archive", "target": "rt-1" },
@@ -351,7 +419,9 @@ Confirmed: SHA-256 over exact `BindingPlan` bytes, bound into the report.
 |---|---|---|
 | plan `subject_spec_sha256` ≠ spec identity | `Err(SubjectSpecMismatch)` | same rule as section 6, applied to the mapping document |
 | `target` names an ID absent from the `ValidatedPlan` | `Err(UnknownTarget)` | a dangling reference means the mapping is broken, not that a claim is unobservable |
-| `prefix_root_id` absent from `plan.root_ids()` | `Err(UnknownRoot)` | same |
+| `asserted_prefix_root_id` absent from `plan.root_ids()` | `Err(UnknownRoot)` | same |
+| `asserted_prefix_root_id` missing while an entry-point claim is mapped, or present while none is | rejected at `BindingPlan` validation | the field's presence is conditional on the mapping, so an inconsistent document is malformed |
+| a mapped entry-point target whose `root()` differs from `asserted_prefix_root_id` | `Err(EntryPointRootMismatch)` | the mapping points outside the root the caller asserted to be the prefix; a broken mapping, not a contradiction |
 | mapped target's `Observable` incompatible with the claim kind | `Err(IncompatibleObservable)` | this is the section 9 protection, and a broken mapping must not degrade into a claim outcome |
 | `role` names a role absent from the spec | `Err(UnknownRole)` | the mapping refers to a requirement that does not exist |
 | the same claim key appears twice | rejected at `BindingPlan` validation | duplicate claim, exactly as duplicate IDs are rejected elsewhere |
@@ -369,8 +439,16 @@ enforced structurally by the claim kind, which fixes three things at once:
 | `SourceBody` | `application.source.{size, sha256}` | `RegularFileSha256` | immutable application-source body identity |
 | `RuntimeArtifactBody(role)` | `runtime.artifacts[role].{size, sha256}` | `RegularFileSha256` | immutable runtime-artifact body identity |
 | `VerificationDefinitionBody(role)` | `verification[role].{size, sha256}` | `RegularFileSha256` | frozen verification-definition body identity |
-| `EntryPointPresence` | `entry_point.path` | `RegularFileSha256` or `DirectoryMetadata` | existence and kind at a caller-asserted location |
+| `EntryPointPresence` | `entry_point.path` | `RegularFileSha256` **only** | existence and regular-file kind at a caller-asserted location |
 | `EntryPointBody` | `entry_point.sha256` | `RegularFileSha256` | installed entry-point body identity |
+
+*Owner correction of 2026-09-09.* `EntryPointPresence` previously also permitted
+`DirectoryMetadata`. That was wrong: under `directory_metadata` a regular file is rejected as
+`WrongKind`, so the observable could never establish a regular entry-point file. Both
+entry-point claims therefore require `RegularFileSha256`. helm-observe is **not** changed and
+no regular-file-metadata observable is added; the binder simply uses the `ObservedFile` fact
+for presence and ignores the digest when the desired claim does not require content identity —
+which is exactly the case when `entry_point.sha256` is `None`.
 
 The caller cannot say "compare field X to target Y": the claim kind is a closed enumeration
 and each kind hard-wires which desired field it reads. Cross-domain mapping is therefore
@@ -380,10 +458,10 @@ reader never sees a runtime-archive body match presented as an installed-loader 
 ## 10. Semantic boundaries that must survive
 
 **Entry point.** Permitted conclusions: the mapped target's plan path equals the desired
-path; the observed object is a regular file; the observed digest equals the desired digest
-when the spec states one. Forbidden conclusions: executable permission, PE validity, Wine
+path, byte for byte; the observed object is a regular file under the asserted prefix root;
+the observed digest equals the desired digest when the spec states one. Forbidden conclusions: executable permission, PE validity, Wine
 loadability, successful launch, correct installation. Also forbidden: presenting the
-caller-asserted `prefix_root_id` as a proven prefix.
+caller-asserted `asserted_prefix_root_id` as a proven prefix.
 
 **Application source and runtime artifacts.** Identical observed bytes establish the identity
 of *that body* and nothing else: not that it was installed, not that it produced the current
@@ -398,7 +476,9 @@ verification fresh; those belong to the evidence and execution layers.
 
 ## 11. Result taxonomy
 
-Nine distinct claim states. None collapses into another.
+**Ten** distinct claim states. None collapses into another. *Owner correction of 2026-09-09:
+the original text said "nine states plus" a tenth, which double-counted informally; the
+taxonomy is a single closed set of ten.*
 
 | State | Meaning |
 |---|---|
@@ -424,7 +504,7 @@ matching digest with a differing `bytes_read` is a `Mismatch`, not a `Match`.
 
 `contradiction = Contradicted` if and only if at least one claim is `Mismatch`; otherwise
 `NoClaimContradicted`. Nothing else is promoted to contradiction. Coverage is a set of counts
-over the nine states plus the explicit unsupported-claim list. Refusals happen strictly
+over the ten states plus the explicit unsupported-claim list. Refusals happen strictly
 before any claim is evaluated, so they are outside the algebra.
 
 | Situation | Result |
@@ -535,8 +615,16 @@ filesystem path, any timestamp, any signature, any random or host identifier, an
 any success vocabulary. Paths are deliberately omitted even though the desired path is
 caller-supplied rather than host-derived, because the four digests already let an auditor
 recover it and omitting it keeps the report small and consistent with the artifact's
-path-free rule. Maximum size is a few kilobytes: at most 27 claims, each a short fixed
-record.
+path-free rule.
+
+**Size, corrected 2026-09-09.** The `BindingPlan` carries at most **27** mapping entries —
+1 source, up to 16 runtime artifacts, up to 8 verification definitions, entry-point presence
+and entry-point body. A `BindingReport` carries more than that, because unsupported semantic
+claims receive outcomes without ever being mapped: up to **39** claim instances, the 27
+mappable ones plus the 4 unavoidable unsupported classes plus up to 8 disabled-DLL
+requirements. Each is a short fixed record of a claim kind, an optional role and a state, so
+a deterministic report of a few kilobytes remains plausible — but the ceiling is 39 claims,
+not 27.
 
 ## 18. Relationship to evidence and to launch
 
@@ -624,8 +712,9 @@ Planned suites, all cross-platform, no VM:
 4. **Match, mismatch, size-differs-digest-agrees, digest-differs-size-agrees.**
 5. **Absence, observer rejection, observer failure, budget omission**, each producing its own
    distinct state and none collapsing into another.
-6. **Unsupported binding**, asserting the coverage theorem: at least three unsupported claims
-   for every accepted spec.
+6. **Unsupported binding**, asserting the coverage theorem as a property over every accepted
+   spec: `unsupported_count >= 4`, holding even when `disabled_dlls` is empty, with the four
+   unavoidable classes named individually.
 7. **Missing mapping, duplicate mapping, unknown target, unknown root, unknown role,
    incompatible observable.**
 8. **Entry-point path binding**, including a plan whose target path differs from the desired
@@ -688,24 +777,27 @@ product code is the Linux backend that `helm-bind` does not have.
 Dependencies: `serde`, `serde_json`, `sha2`, `helm-app-spec`, `helm-observe`. No `rustix`, no
 new third-party crate, no utility crate, no adapter crate.
 
-## 23. Owner decisions required
+## 23. Owner decisions — all eight decided on 2026-09-09
 
-1. **Accept or reject the two-axis result** of section 3.3, and with it the deliberate absence
-   of any global satisfaction verdict in 0.1.
-2. **Accept or reject the `BindingPlan`** as a fourth inert identity-bearing document, with
-   its closed five-value claim vocabulary.
-3. **Entry-point absence:** should `Absent` on `EntryPointPresence` be a contradiction? The
-   recommendation is no, for the reason in section 12; this is a genuine judgement call.
-4. **`prefix_root_id` as a caller assertion.** Confirm that recording an unverifiable
-   caller assertion, clearly labelled, is acceptable, or require that entry-point binding be
-   dropped from 0.1 instead.
-5. **Direct dependencies on both HELM crates**, accepting the `sha2` unification consequence
-   recorded in section 15 and the API-stability coupling in section 14.
-6. **Report identity** and the four-digest identity graph of section 17.
-7. **Whether `ADR-0023` is the right vehicle**, and whether anything here should instead be an
-   amendment to ADR-0021 or ADR-0022.
-8. **Refusals produce no artifact.** Confirm that a subject or plan mismatch should return a
-   typed error with no report bytes, rather than an artifact recording the refusal.
+The owner reviewed this report and **accepted the core architecture subject to bounded
+pre-implementation corrections**, which are applied above and marked in place. Acceptance is
+recorded in [ADR-0023](../adr/ADR-0023-binding-authority.md), now **Accepted**.
 
-Nothing in this report is accepted. No crate was created, no product API was changed, no
-comparison code was written, no lab was booted and A0 was not rerun.
+| # | Question | Owner decision |
+|---|---|---|
+| 1 | the two-axis result, and no global satisfaction verdict | **accepted**; no satisfaction, compatibility or readiness verdict in 0.1 |
+| 2 | the `BindingPlan` as an inert identity-bearing document with a closed five-value vocabulary | **accepted** unchanged |
+| 3 | should `Absent` on `EntryPointPresence` be a contradiction | **no**, as recommended. It stays the explicit `Absent` state; `Absent`, rejection, failure, omission and unsupported binding are **never** promoted to contradiction in 0.1 |
+| 4 | recording an unverifiable caller prefix assertion | **accepted, hardened**: the field is renamed `asserted_prefix_root_id`, its presence is conditional on an entry-point mapping, and every mapped entry-point target must sit under it or the binding is refused |
+| 5 | direct dependencies on both HELM crates, with the `sha2` consequence | **accepted**; the unification effect stays classified as performance and build composition only, hashing is not changed, and separate package builds remain tested |
+| 6 | report identity and the four-digest acyclic graph | **accepted** unchanged |
+| 7 | is ADR-0023 the right vehicle | **yes**; ADR-0021 and ADR-0022 are **not** amended to absorb this responsibility |
+| 8 | refusals produce no artifact | **accepted**: no report bytes, no claim outcomes, no report digest. A later evidence or reporting layer may record that an attempt was refused; the binder must not manufacture a comparison artifact when no valid comparison occurred |
+
+Four further corrections were directed and are applied above: the entry-point observable rule
+of section 9, the entry-point path binding on **both** entry claims in section 7, the claim
+universe of section 4.1, and the corrected counts in sections 3.4 and 17.
+
+**Still not authorised.** Acceptance settles the architecture only. It does **not** authorise
+implementation, which needs a separate owner instruction. No crate was created, no product API
+was changed, no comparison code was written, no lab was booted and A0 was not rerun.
