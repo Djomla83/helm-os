@@ -1,5 +1,19 @@
 # Istorija promena
 
+## 2026-09-09 — ADR-0023 accepted for the helm-bind 0.1 architecture
+
+Accepted the [helm-bind design](docs/research/HELM-BIND-ARCHITECTURE.md) subject to bounded
+pre-implementation corrections, and moved
+[ADR-0023](docs/adr/ADR-0023-binding-authority.md) from Proposed to Accepted with a bounded
+architecture scope. The [acceptance record](docs/PROJECT_STATE.md#helm-bind-architecture-acceptance)
+lists the corrections. helm-bind will be a pure, authority-free comparison library that emits
+**no satisfaction, compatibility or readiness verdict**: per-claim outcomes plus a
+contradiction axis and a coverage summary, where coverage can never be complete in 0.1 because
+four mandatory desired requirements have no comparator. **Architecture only.** No
+`crates/helm-bind`, no product API change, no comparison code, no `helm-launch`, no lab access
+and no A0 rerun; implementation needs a separate owner instruction. ADR-0021 and ADR-0022 are
+unchanged and A0-7ZIP remains experimental FAIL.
+
 ## 2026-09-09 — helm-observe 0.1 owner acceptance
 
 Merged the independently reviewed observation library by strict fast-forward as HELM's
