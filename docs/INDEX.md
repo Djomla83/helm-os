@@ -39,6 +39,9 @@ Revizija 2 (2026-09-07) sadrzi [dnevnik ispravki](research/FOUNDATION_AUDIT.md#s
 [Objavljivanje](runbooks/PUBLISH.md) i [izveštaj eksperimenta](runbooks/EXPERIMENT_REPORT.md)
 opisuju postupke. [CONTRIBUTING](../CONTRIBUTING.md), [SECURITY](../SECURITY.md) i
 [licencna odluka](../LICENSE-DECISION.md) definišu granice javne saradnje.
+[Raspored lokalnog stanja](operations/LOCAL-STATE.md) je konvencija koja razdvaja autoritativno
+Git radno stablo od mašinski lokalnog VM, privatnog, download i scratch stanja, i razlikuje
+istorijske putanje iz dokaza od tekućeg operativnog rasporeda.
 
 ## Strukturirani primeri
 

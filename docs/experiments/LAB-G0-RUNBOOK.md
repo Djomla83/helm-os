@@ -14,6 +14,23 @@ is historical; [completion state](#completion-state) records the additions and m
 No full desktop VM or application PoC has been started. A subsequently authorised desktop
 application baseline is prepared but blocked on Hyper-V access; see [§7](#desktop-baseline).
 
+**Current on-disk locations, 2026-09-09:** all HELM machine-local state has been consolidated
+under the local-state root defined in [local state layout](../operations/LOCAL-STATE.md), which
+is a sibling of the Git working tree rather than a directory inside it. The three retained WSL
+distributions now live at `<HELM_LOCAL_ROOT>\vm\<distro>\ext4.vhdx`; each was relocated with
+`wsl --export --vhd` followed by `wsl --import-in-place`, with the exported disk verified
+SHA-256 byte-identical to its source before the source was unregistered, and distribution name,
+WSL version, `/etc/wsl.conf` and file counts re-verified afterwards. The retained G0-2 baseline
+export is at `<HELM_LOCAL_ROOT>\vm\baseline\`. The Hyper-V desktop VM is registered under
+`<HELM_LOCAL_ROOT>\vm\`, having been relocated with the supported `Move-VMStorage` operation; it
+remains stopped, and no experiment was run during the consolidation. Resolve `<HELM_LOCAL_ROOT>`
+for a given machine from the local-only inventory kept in that root's private area; it is
+deliberately not recorded here.
+
+Path values recorded elsewhere in this document, and in every evidence file, are historical
+records of what was observed at the time. They are deliberately left unchanged and must not be
+rewritten to match the current layout.
+
 ---
 
 ## 1. Why WSL and not a VM
