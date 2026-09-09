@@ -8,10 +8,12 @@ preserved unchanged.\
 **Authority:** Accepted [ADR-0023](../adr/ADR-0023-binding-authority.md), bounded 0.1
 architecture scope, with the owner's 2026-09-09 corrections. Nothing here weakens it.
 
-**Classification: pending — first pass recorded, corrections not yet applied.**
+**Classification: READY_FOR_OWNER_MERGE.**
 
-This section is committed **before** any correction, so the candidate as submitted is
-preserved in history rather than tidied away. `832a112` itself is unchanged.
+The findings in section 3 were committed **before** any correction (`564cbc4`), so the
+candidate as submitted is preserved in history rather than tidied away. `832a112` itself is
+unchanged. No BLOCKER was found; the two IMPORTANT findings are corrected on this branch and
+each is now enforced by a test that establishes the property it states.
 
 ## 1. Independently reconstructed state
 
@@ -169,3 +171,299 @@ purity; scope. Sections 4 onward record the evidence.
 two failures the first CI run showed were defects in the reviewer's own test expectations —
 an over-strict substring predicate and a wrong `not_observed` count — corrected in the
 reviewer's tests, with the implementation's behaviour left alone in both cases.
+
+
+---
+
+## 4. Public API and construction boundary
+
+`ValidatedBindingPlan` and `BindingReport` both hold private fields. The plan's only
+constructor is `parse_binding_plan`; the report's `new` is `pub(crate)`. Neither derives or
+implements `Deserialize`, `Default` or `From`, and the only `DeserializeSeed` in the crate is
+the zero-sized internal `StrictScan` visitor, which produces `()`. `bind` takes exactly the
+four accepted input types by reference and every accessor returns an immutable borrow or a
+`Copy` value, so a report cannot be mutated after it exists.
+
+The attempt required by the instruction — a downstream program that manufactures a successful
+report without calling `bind` — is **impossible through the safe public API**, and this is now
+enforced rather than argued: two `compile_fail` doctests, one per type, try to build a value
+with struct-update syntax and are required to fail compilation. They ran green on all three
+platforms.
+
+## 5. Universal coverage theorem — established, and the author's evidence was weaker than claimed
+
+The implementation makes the property **structurally unavoidable**. `semantic_claim_subjects`
+pushes `SourceArchitecture`, `RuntimeFamily`, `WindowsArchitecture` and `PrefixRole`
+unconditionally, before any input-dependent branch, and `evaluate` maps all four to
+`UnsupportedBinding` in a single arm that consults neither the mapping nor the observation.
+There is no path through the function that omits any of them.
+
+The author's in-crate test nevertheless iterates two committed fixtures, while the author
+review calls it a property over "every accepted spec". That gap is recorded as MINOR‑2 and is
+closed here by
+`every_valid_specification_has_at_least_four_unsupported_claims`, which generates valid
+`helm-app-spec` documents across the schema boundaries — 1, 2 and 16 runtime artifacts × 1, 3
+and 8 verification definitions × 0, 1 and 8 disabled DLLs × entry-point digest present and
+absent, 54 combinations — parses each with the real validator, binds each against a genuine
+observation, and asserts for every one:
+
+- the four mandatory classes are present and `UnsupportedBinding`;
+- `unsupported_binding == 4 + disabled_dll_count`, so the bound is not merely met but exact;
+- `claims == 1 + 4 + artifacts + dlls + 2 + definitions`, recomputed independently;
+- `claims <= 39`, with the maximum specification reaching exactly 39;
+- the ten counters sum to `claims`, so coverage partitions the claim set;
+- no outcome exists for contextual metadata or a selector key.
+
+**Verdict: the universal theorem holds, by structure and by generated evidence.** The
+implementation was never at fault; only the description of its test was.
+
+## 6. Claim universe and order
+
+Fixed and derived from the specification alone, independently confirmed for both the committed
+fixtures and every generated document: source body, source architecture, runtime family, each
+runtime artifact body in declaration order, Windows architecture, prefix role, each disabled
+DLL in declaration order, entry-point presence, entry-point body, each verification definition
+in declaration order. The specification digest, application ID, application version, artifact
+labels and the role selectors themselves receive **no** outcome and are outside the coverage
+denominator. Each disabled DLL is exactly one `UnsupportedBinding` claim instance.
+
+## 7. Refusal atomicity and precedence
+
+`bind` calls `precheck` first and returns on error, before any claim, coverage counter or
+record exists, so a refusal cannot leave a partial report behind — that is structural, not
+incidental. All eight refusals were re-exercised independently and each yields `Err`, no report
+value of any kind and therefore no bytes and no digest.
+
+Precedence is total and was verified with several conditions wrong at once:
+
+1. the mapping's declared subject;
+2. the observation's declared subject;
+3. the artifact-to-plan pairing;
+4. the asserted prefix root's existence;
+5. then, in mapping declaration order, per claim: unknown target, unknown role, incompatible
+   observable, entry-point root mismatch.
+
+Tested: a mapping that is both foreign-subject and dangling yields the subject refusal; a
+claim that is both unknown-target and unknown-role yields the target refusal; two broken claims
+yield the first in mapping order.
+
+## 8. Typed domains
+
+There is no generic comparator anywhere. The claim kind selects the desired field inside
+`evaluate`, and the five arms are the only readers. Attacked with a specification in which the
+source, one runtime artifact and one verification definition declare the **same** body
+identity, and one role name is shared between the runtime and verification namespaces: an
+agreeing runtime artifact left the source and definition claims `NotObserved`, and the shared
+role produced `Match` under one kind and `Mismatch` under the other. **Cross-domain
+comparison is inexpressible, not merely discouraged.**
+
+## 9. Body comparison
+
+The full truth table was exercised with independent expected values: equal size and digest is
+`Match`; differing size alone is `Mismatch(size)`; differing digest alone is
+`Mismatch(digest)`; both is `Mismatch(size_and_digest)`. `FileFacts::bytes_read` is the
+observed length under `helm-observe`'s completed-stream contract, and no desired size is
+invented anywhere — in particular none is invented for the entry point, which the schema does
+not declare. No body match carries any installation, provisioning, loading, execution or
+runtime-selection meaning in the report vocabulary.
+
+## 10. Entry-point root and path
+
+Verified independently across the matrix: an entry mapping with the assertion absent and the
+assertion present without an entry mapping are both refused at parse time; an unknown asserted
+root and an entry target under another root are typed refusals, not claim results; the correct
+root with a differing relative path is `Mismatch(entry_point_path)` **before** the observation
+outcome is consulted; identical bytes at another relative path never bind the entry point; a
+**case-only** path difference is a mismatch, so nothing is folded; presence and body may share
+one target; and a target named `entry` gets no special treatment while a target named anything
+else works identically.
+
+## 11. Optional entry-point digest precedence
+
+The implementation evaluates "the specification states no digest" first, after the global
+prechecks. Exercised with the digest unspecified against: no body mapping, a correct mapping, a
+wrong-path mapping, and an absent target. All four yield `DesiredValueUnspecified` and none
+contradicts. Separately, a structurally broken mapping with the digest still unspecified is
+refused with `UnknownRoot`, so an unstated desired value never suppresses a cross-document
+refusal.
+
+**Verdict: coherent and correct.** Promoting a path difference here would raise a
+contradiction for a claim the specification never made, which is the worse error; the presence
+claim still reports the path difference when it is mapped.
+
+## 12. Observation-state taxonomy
+
+Every reachable outcome keeps its own state and its own counter, confirmed against genuine
+observations: absence, observer rejection with its typed reason, observer failure with its
+typed reason, budget omission with its typed reason, and the observed-file comparison. Absence
+is not a mismatch and does not contradict; a failure is not a mismatch; a rejection is not a
+failure; an unmapped claim is neither absence nor unsupported binding; unsupported binding is
+never a match.
+
+## 13. `#[non_exhaustive]` handling — source-derived
+
+`TargetOutcome`'s wildcard arm yields `ObservationNotInterpretable`. Reading the arm shows it
+cannot yield `Match`, `Mismatch`, `NotObserved` or `UnsupportedBinding`: those are produced
+only by named arms above it. The reason enums map an unknown reason to `Unrecognised` **inside
+the known outcome kind**, which is coherent — the outcome kind is known and only the reason is
+not, so collapsing it to `ObservationNotInterpretable` would discard true information. No
+unsafe and no fake constructor was added to reach the branch; it is marked source-derived, and
+the correction in MINOR‑1 removed the one place where a missing artifact entry could have
+reached a benign state instead.
+
+## 14. Contradiction and coverage algebra
+
+Re-derived independently. `Contradicted` if and only if at least one claim is `Mismatch`, with
+`mismatches` equal to the number of such claims. The author's property test covers all 512
+subsets of the nine non-mismatch states crossed with four mismatch counts; the independent
+suite adds the end-to-end direction over genuine observations, confirming that absence,
+rejection, failure, omission, unsupported binding, an unmapped claim and an unspecified desired
+value all leave `NoClaimContradicted` standing. The two axes are independent, and no code
+anywhere derives a "good", "success" or "satisfied" notion from them — there is no such
+function to derive it with.
+
+## 15. Selector and vocabulary injection
+
+See IMPORTANT‑1. Resolved as reading **A**: ADR-0023 forbids verdict vocabulary in the
+binder's own terms, and caller selector data echoed under a `"role"` key is not a verdict.
+The structural protection is real and was verified: `push_id` cannot emit a quote, so a
+selector cannot close its string and reach a `claim` or `state` slot. The documentation and the
+test now state that property instead of an unachievable one. No otherwise-valid
+`helm-app-spec` role name is rejected by `helm-bind`.
+
+## 16. Serializer, injectivity and bound
+
+Fixed field order, no map iteration, integers rendered decimally, enumerations from closed
+sets, valid JSON, and **no truncation call anywhere**. `push_id` accepts exactly the
+`helm-app-spec` identifier alphabet — lowercase ASCII, digits, `.`, `_`, `-` — and the DLL
+alphabet is a strict subset of it, so **no currently valid input loses a character**, and two
+distinct legal selectors cannot serialize identically. Runtime and verification roles stay
+distinguished by claim kind rather than by role, which the shared-role test in section 8
+confirms end to end. The widest expressible 39-claim report with maximum-length identifiers is
+proved by unit test to fit `MAX_REPORT_BYTES`, and the real 20-claim selector-attack report
+measured 1,438 bytes.
+
+## 17. Four-digest report identity
+
+Each recorded identity was checked against an independent SHA-256 oracle over the exact bytes
+of its own document, and `report.sha256()` against an oracle over the report's own bytes.
+Changing only the binding plan's bytes, with an identical semantic result, moves the report
+identity; changing only the observation artifact's bytes, again with an identical semantic
+result, moves it too. The graph is acyclic: nothing consumes the report's own digest. A wrong
+subject or a wrong plan pairing refuses rather than producing an identity.
+
+## 18. Privacy
+
+No observation relative path, host absolute path, cwd, hostname, timestamp or platform value
+appears in report bytes, verified with adversarial logical IDs; the report contains no `/` at
+all. Refusal codes are fixed strings and a refusal carries at most one validated logical
+identifier. The test harness prints fixture paths in failure messages, which is developer
+diagnostic output and not artifact content; the distinction is deliberate.
+
+## 19. Cross-platform evidence — exactly what ran
+
+**Executed on Ubuntu, Windows and macOS** (run `34355861658`): `cargo fmt --check`, clippy with
+warnings denied, and `cargo test -p helm-bind`, which on those platforms covers the crate unit
+tests, the author's binding-plan contract suite, the independent parser suite and both
+`compile_fail` doctests. All three runners produced the identical fixed-record report: 1,497
+bytes, digest `d63d04e2a55a61fa149729f48bc355fb18f28e309f8aa2c973589391bf80e923`.
+
+**Executed on Linux only** (run `34355861835`): `bind` over four genuine inputs — the author's
+11 end-to-end tests and the independent suite's 9.
+
+**Not executed anywhere**: `bind` over four genuine inputs on Windows or macOS. It cannot be,
+because `ObservationArtifact` has no public constructor outside `helm-observe`'s Linux backend,
+and adding one is outside this review's authority.
+
+**Verdict: sufficient, with the limitation retained.** The comparison contains no
+platform-dependent construct at all, the only platform-sensitive step is serialization, and
+serialization is exactly what the three runners execute identically. This is an evidence-scope
+limitation to keep stating, not an architecture question, and it is now stated accurately in
+both the README and the author review.
+
+## 20. Test quality
+
+Reviewed for false confidence. No tautological assertion, no shared helper between
+implementation and oracle — digests are computed with `sha2` directly in the tests — no
+expected value derived from the code under test, no length-only comparison, no test that
+cannot fail, no environment-dependent skip counted as a pass, and no retry. The pinned fixture
+digest was measured once and is re-measured on three runners every run, which is the right
+shape for a determinism anchor. The history in which the A0 claim count was wrong and was
+corrected is preserved, not rewritten.
+
+Two overstatements were found and are recorded as MINOR‑2 and IMPORTANT‑1: a two-fixture test
+described as a universal property, and a fixture substring assertion described as an invariant.
+Both are corrected, and both are now backed by tests that actually establish the stated
+property.
+
+## 21. Dependencies and purity
+
+Exactly `helm-app-spec`, `helm-observe`, `serde`, `serde_json`, `sha2`. No `helm-evidence`, no
+`rustix`, no `libc`, no utility crate, no build script, no platform-dependent serializer
+dependency, `unsafe` forbidden, no ambient I/O. The `sha2` `force-soft` unification is
+performance and build composition only — the feature selects an implementation, not a digest —
+and it was not touched. The existing separate package builds and the standalone
+`cargo test -p helm-evidence` are retained.
+
+## 22. Scope
+
+No product output claims installation, compatibility, launch, Wine discovery, prefix ownership,
+verification execution, evidence completeness, runtime provenance or package state. The only
+matches for that vocabulary in product source are the refusal code
+`INCOMPATIBLE_OBSERVABLE` and prose that explains what is **not** concluded. No `helm-launch`
+work exists.
+
+## 23. Corrections made on this branch
+
+| Commit | Content |
+|---|---|
+| `e9daf4e` | The independent adversarial suites, committed before any correction |
+| `e42e1ac`, `fe0ce62` | Two defects in the reviewer's own test expectations, corrected in the reviewer's tests with the implementation left alone |
+| `564cbc4` | First-pass findings, recorded **before** any correction |
+| `78e26de` | IMPORTANT‑1, IMPORTANT‑2, MINOR‑1, the `compile_fail` doctests, and the annotation on the author review |
+| this commit | This report and the `PROJECT_STATE` entry |
+
+`832a112` and the whole candidate lineage are preserved unchanged. No amend, rebase, squash or
+force-push; main was not touched.
+
+## 24. Validation on the corrected tip
+
+Both workflows green: `34355861835` (Linux workspace) and `34355861658` (three-platform
+purity). `cargo fmt --check`; workspace clippy with warnings denied; `cargo test --workspace
+--locked`; `cargo test -p helm-bind --locked` — 7 unit, 11 author end-to-end, 14 author
+contract, 9 independent Linux, 9 independent parser and 2 `compile_fail` doctests; the
+standalone `cargo test -p helm-evidence` and both release package builds; 37 repository Python
+tests; the documentation validator; the app-spec and evidence frozen fixtures; `git diff
+--check`; and the privacy and artifact checks inside the suites above.
+
+## 25. Residual limitations
+
+1. **`bind` is not executed end to end off Linux**, section 19. Structural, and closing it
+   needs a `helm-observe` API change that is not authorised here.
+2. **The `#[non_exhaustive]` future-variant branches are source-derived**, section 13. No safe
+   way exists to construct a future variant of another crate's enum, and none was faked.
+3. **`EXDEV`-class and other observer states that need a mount or an old kernel** are not
+   reachable from these tests; they arrive as `ObservationRejected` or `ObservationFailed`
+   through the same code path as the states that are exercised.
+4. **The generated specification corpus is systematic, not random**: 54 combinations at the
+   schema boundaries rather than a fuzzed space of documents. The property it establishes is
+   structural, so this is adequate, but it is enumeration rather than search.
+5. **`Coverage` derives `Default` and has public fields**, so a caller can build one; it cannot
+   become a report, and nothing consumes a caller-built `Coverage`.
+6. **Seeds are recorded**: `0x0117202609090001` for the independent binding-plan corpus, 2,048
+   cases. No seed was retried to obtain a pass.
+
+## 26. Recommendation
+
+After the corrections on this branch, `helm-bind` 0.1 is a faithful realisation of Accepted
+ADR-0023. The comparison is pure and authority-free; the claim universe, the algebra, the typed
+domains, the entry-point rules, the refusal atomicity and the identity graph all behave exactly
+as accepted, and were verified independently rather than taken from the author's suite. No
+BLOCKER was found, and the two IMPORTANT findings were claims about the code rather than
+defects in it — both corrected, both now enforced by tests that establish the property they
+state.
+
+**READY_FOR_OWNER_MERGE.**
+
+This is a reviewer recommendation. The merge is the owner's action; nothing here performs or
+authorises it, and main is untouched at `60a0e16962ac4fcd0af8e545a33bc7ded9bcc4b6`.
