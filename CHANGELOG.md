@@ -1,5 +1,30 @@
 # Istorija promena
 
+## 2026-09-09 — helm-bind 0.1 owner acceptance
+
+Merged the independently reviewed comparison library by strict fast-forward as HELM's fourth
+experimental product-code module, from `60a0e16962ac4fcd0af8e545a33bc7ded9bcc4b6` to the
+reviewed tip `4f51c1b2bc7e59b8142ccc4c328e2641c89327d3`. The authoritative
+[acceptance record](docs/PROJECT_STATE.md#helm-bind-owner-acceptance) identifies the reviewed
+tip, the independently corrected product-code tip
+`78e26de4ca952b7125032e5c9fa468e6dc85af7c`, the preserved first-pass findings and the verified
+CI runs `34355861835` and `34355861658`. The
+[independent review](docs/implementation/HELM-BIND-INDEPENDENT-REVIEW-0.1.md) reports **no
+BLOCKER and no unresolved IMPORTANT**: both IMPORTANT findings were documentation claims
+stronger than the truth, corrected and now each enforced by a test that establishes the stated
+property. **Experimental, not a release**: schema, API and numeric limits stay unstabilised and
+`publish = false`.
+
+`helm-bind` emits **no satisfaction, compatibility or readiness verdict** and no global success
+token. Unsupported semantic coverage stays **at least four**, so a report can never claim
+completeness; the widest specification reaches exactly 39 semantic claims.
+`asserted_prefix_root_id` remains a caller **assertion, never an attestation**; a refusal
+produces no `BindingReport` at all; and `bind` stays pure and authority-free.
+[ADR-0023](docs/adr/ADR-0023-binding-authority.md) remains the architectural authority and is
+unchanged. `helm-app-spec`, `helm-observe` and `helm-evidence` semantics and APIs are
+untouched. `helm-launch` remains unaccepted and unimplemented, no lab or A0 work occurred, and
+**A0-7ZIP remains experimental FAIL.**
+
 ## 2026-09-09 — ADR-0023 accepted for the helm-bind 0.1 architecture
 
 Accepted the [helm-bind design](docs/research/HELM-BIND-ARCHITECTURE.md) subject to bounded

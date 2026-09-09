@@ -10,6 +10,15 @@ architecture scope, with the owner's 2026-09-09 corrections. Nothing here weaken
 
 **Classification: READY_FOR_OWNER_MERGE.**
 
+> **Owner annotation, 2026-09-09.** The owner accepted this recommendation and fast-forwarded
+> main from `60a0e16962ac4fcd0af8e545a33bc7ded9bcc4b6` to the reviewed tip
+> `4f51c1b2bc7e59b8142ccc4c328e2641c89327d3`. **No finding, verdict, limitation or wording of
+> this review was edited by the acceptance**; section 26's closing statement that main was
+> untouched describes the state at the time of review, which is preserved. Acceptance merges an
+> experimental module: schema, API and numeric limits stay unstabilised, `publish = false`, and
+> the residual limitations in section 25 stand unchanged. See the
+> [acceptance record](../PROJECT_STATE.md#helm-bind-owner-acceptance).
+
 The findings in section 3 were committed **before** any correction (`564cbc4`), so the
 candidate as submitted is preserved in history rather than tidied away. `832a112` itself is
 unchanged. No BLOCKER was found; the two IMPORTANT findings are corrected on this branch and

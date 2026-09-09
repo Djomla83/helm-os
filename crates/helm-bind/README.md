@@ -7,9 +7,14 @@ were made, under Accepted
 It answers exactly one question: **what follows from comparing explicitly mapped desired
 claims with the observations that were actually made?**
 
-**Status: implementation candidate on a product branch, awaiting independent review. Not
-owner-merged and not a release.** Schema, API and numeric limits are experimental;
-`publish = false`.
+**Status: independently reviewed and owner-merged on main on 2026-09-09. Experimental, and
+not a release.** Reviewed tip `4f51c1b2bc7e59b8142ccc4c328e2641c89327d3`; independently
+corrected product-code tip `78e26de4ca952b7125032e5c9fa468e6dc85af7c`. Schema, API and
+numeric limits stay experimental and unstabilised; `publish = false`. The
+[independent review](../../docs/implementation/HELM-BIND-INDEPENDENT-REVIEW-0.1.md) and the
+[acceptance record](../../docs/PROJECT_STATE.md#helm-bind-owner-acceptance) state what was
+verified and what was not. Owner acceptance is a product-module merge, not a satisfaction,
+compatibility or readiness verdict, and it stabilises nothing.
 
 ## There is no verdict
 

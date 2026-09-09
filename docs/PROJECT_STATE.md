@@ -1,5 +1,54 @@
 # Stanje projekta
 
+<a id="helm-bind-owner-acceptance"></a>
+
+## Owner acceptance, 2026-09-09 — experimental helm-bind 0.1 is merged to main
+
+The owner accepted the independently reviewed implementation and **fast-forwarded main** from
+`60a0e16962ac4fcd0af8e545a33bc7ded9bcc4b6` to the reviewed tip
+`4f51c1b2bc7e59b8142ccc4c328e2641c89327d3`. Strict fast-forward: the merge base equalled main
+exactly, the lineage is linear with no merge commit, and no squash, rebase, cherry-pick, amend
+or force-push occurred. The whole reviewed history is preserved — the implementation `706e276`,
+the author review `932631a`, the author test correction `86ab17f`, the submitted candidate
+`832a112`, the independent adversarial suites `e9daf4e` committed before any correction, the
+two reviewer-test corrections `e42e1ac` and `fe0ce62`, the independent first-pass findings
+`564cbc4` recorded **before** any product correction, the corrections `78e26de`, and the
+published review `4f51c1b`. The independently corrected **product-code tip** is
+`78e26de4ca952b7125032e5c9fa468e6dc85af7c`; `4f51c1b` adds the review document only and
+changes no product code. Verified CI on that exact product-code SHA: runs `34355861835`
+(HELM Rust workspace Linux) and `34355861658` (helm-bind cross-platform purity), both success.
+
+**Experimental helm-bind 0.1 is now owner-merged on main.** It is **not a release**: the
+schema, API, numeric limits and internal layout stay unstabilised and `publish = false`.
+Accepted [ADR-0023](adr/ADR-0023-binding-authority.md) remains the architectural authority and
+this acceptance changes none of its semantics, widens no scope and stabilises nothing.
+
+**What was independently verified**
+([review](implementation/HELM-BIND-INDEPENDENT-REVIEW-0.1.md)): no BLOCKER, and no unresolved
+IMPORTANT — both IMPORTANT findings were claims about the code rather than defects in it, and
+each is corrected and now enforced by a test that establishes the property it states. The
+universal coverage theorem `unsupported_binding >= 4` is established structurally and by a
+generator over the schema boundaries, with the maximum specification reaching exactly **39**
+semantic claims. Refusal atomicity, the typed comparison domains, the body truth table, the
+entry-point root and path rules, the optional entry-point digest precedence, the ten distinct
+observation and binding states, `Contradicted` **if and only if** at least one claim is
+`Mismatch`, the serializer's injectivity and size bound, and the four-digest acyclic report
+identity were all confirmed independently. The crate performs **no I/O and holds no
+authority**, and the cross-platform evidence scope is stated honestly.
+
+**Retained limits, unchanged by acceptance.** There is **no satisfaction, compatibility or
+readiness verdict** and no global success token of any kind. Unsupported semantic coverage
+remains **at least four** — source architecture, runtime family, Windows architecture and
+prefix role have no comparator in 0.1 — so a binding report can never claim completeness.
+`asserted_prefix_root_id` remains a **caller assertion, never an attestation**, and no report
+upgrades it. A refusal produces **no `BindingReport`**: no bytes, no claim outcomes and no
+report identity. `bind` remains a pure, authority-free function. End-to-end `bind` runs on
+Linux only, because `ObservationArtifact` has no public constructor elsewhere; the parser, the
+claim universe, the algebra and the serializer run on Ubuntu, Windows and macOS.
+`helm-launch` remains **unaccepted and unimplemented**, so no comparison confers launch
+permission. No A0 rerun, no Wine or 7-Zip execution, no lab change, and **A0-7ZIP remains
+experimental FAIL.**
+
 ## Independent review, 2026-09-09 — helm-bind 0.1 candidate reviewed
 
 The bounded implementation candidate `832a112decaa333ee3b618d52e966a20c443513e` on
