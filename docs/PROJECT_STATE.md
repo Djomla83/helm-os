@@ -1,5 +1,60 @@
 # Stanje projekta
 
+<a id="helm-launch-architecture-review"></a>
+
+## Design under owner review, 2026-09-09 — helm-launch 0.1 architecture and LAUNCH-EXEC-01
+
+The [helm-launch architecture and falsification plan](research/HELM-LAUNCH-ARCHITECTURE.md)
+designs HELM's fifth product module, the first whose purpose involves **actual process
+execution**, and proposes [ADR-0024](adr/ADR-0024-launch-authority.md). **Design only.** There
+is no `crates/helm-launch`, no product API change, no execution code, no Wine or 7-Zip
+execution, no A0 access and no lab change. ADR-0024 is **Proposed, not Accepted**, and
+authorises no implementation.
+
+**Recommended 0.1 scope:** one crate that executes exactly one explicitly authorized,
+already-open, regular ELF object on Linux x86_64 (kernel 5.9 or newer, the floor set by
+`close_range`), via `fork` plus `execveat(fd, "", AT_EMPTY_PATH)`. A Wine-specific launcher,
+a path-based `std::process::Command` launcher, a two-crate split and a non-executing validator
+were all compared and rejected, with reasons recorded.
+
+**The authority boundary is the core of the design.** Parsing a `LaunchPlan` grants zero
+execution authority, and a `BindingReport` grants zero execution authority:
+`NoClaimContradicted` does **not** mean ready, safe, permitted, compatible or launchable, and
+is reachable with `unsupported_binding >= 4` and almost nothing mapped. Execution authority is
+an already-open executable descriptor passed by value by a trusted caller. The recommended
+design depends on **no HELM crate** — context travels as opaque digests — so the launcher
+contains no code path that can read `Contradiction` or `Coverage` at all.
+
+**Stated non-claims.** It is **not a sandbox**: no filesystem, network, process, registry,
+device or user-data isolation, and the child runs with the caller's own OS credentials. It
+provides **no process-tree containment**, only direct-child lifecycle. Exit code 0 means only
+that the direct process exited with status 0. A launch result is never compatibility, and
+execution receipt is never rollback.
+
+**Two findings from the current tree shape the design.** The workspace declares
+`unsafe_code = "forbid"`, which cannot be relaxed by a local `#[allow]`; and `rustix` 1.1.4
+provides no `close_range` and exposes `execveat` only as an `unsafe fn` in a `doc(hidden)`
+module documented as unstable. The exact descriptor-inheritance invariant therefore cannot be
+implemented in safe Rust today, which is recorded as owner decision **D-1** together with its
+alternative of keeping `forbid` and publishing a weaker inheritance claim. Eight owner
+decisions in total are listed in the design report and none is decided.
+
+<a id="launch-exec-01-proposed"></a>
+
+**LAUNCH-EXEC-01 is proposed and NOT_RUN.** Unlike helm-bind, a system experiment **is**
+warranted: every load-bearing claim is about kernel behaviour that pure tests cannot settle.
+The [preregistered definition](experiments/LAUNCH-EXEC-01-DEFINITION.md) freezes 43 cases
+across executable identity and TOCTOU, argv literalness, environment, descriptor inheritance,
+exec failure, output draining, exit and signal, timeout, spawn/exec confirmation, and a
+process-tree negative control designed to demonstrate a limitation rather than to pass. It
+uses only synthetic helpers: **no Wine, no 7-Zip, no proprietary software, no A0 lab and no
+privileged operation.** The recommended first environment is a GitHub-hosted `ubuntu-24.04`
+runner. `crates/helm-launch` must not be created before it has run and been reviewed.
+
+`helm-app-spec`, `helm-observe`, `helm-bind` and `helm-evidence` are untouched; ADR-0021,
+ADR-0022 and ADR-0023 are unchanged; `helm-launch` remains unimplemented and unaccepted; and
+**A0-7ZIP remains experimental FAIL.**
+
 <a id="helm-bind-owner-acceptance"></a>
 
 ## Owner acceptance, 2026-09-09 — experimental helm-bind 0.1 is merged to main
