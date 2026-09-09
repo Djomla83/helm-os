@@ -34,7 +34,12 @@ jobs:
       run:
         working-directory: docs/experiments/launch-exec-01
     steps:
+      # Full history: the repository's pre-existing fixture tests resolve blobs
+      # at named commits, and a shallow clone makes them error out for a reason
+      # that has nothing to do with this experiment.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Environment inventory
         run: |

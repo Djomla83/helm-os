@@ -176,8 +176,16 @@ def _derive_blocks(info):
         scope = info.get("ptrace_scope")
         if scope not in ("0", "1"):
             blocks["no_tracer"] = BLOCK_REASONS["no_tracer"]
+    # X8 needs a noexec mount the unprivileged user can WRITE to, not merely a
+    # noexec mount that exists. On a hosted runner /dev, /proc and /sys are
+    # noexec and none of them can host a fixture, so testing existence alone
+    # would leave X8 unblocked and let it FAIL for an environment reason.
     noexec = info.get("mountinfo_noexec")
-    if not noexec or isinstance(noexec, str):
+    usable = []
+    if isinstance(noexec, list):
+        usable = [m for m in noexec if os.access(m, os.W_OK | os.X_OK)]
+    info["noexec_writable"] = usable
+    if not usable:
         blocks["no_noexec_mount"] = BLOCK_REASONS["no_noexec_mount"]
     # N3 is BLOCKED by construction on any unprivileged runner: no privileged
     # fixture is created, and no cross-UID elevation is manufactured.

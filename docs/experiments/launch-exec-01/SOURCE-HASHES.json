@@ -1,6 +1,6 @@
 {
   "authoritative_main": "5cc56384257a2ec1f2a2a9c64f7f4328da6cef2e",
-  "build_evidence": "BUILD-EVIDENCE.md in this directory, append-only. This manifest is immutable once written: recording binary digests here would change the artefact that certifies the freeze.",
+  "build_evidence": "BUILD-EVIDENCE.md in this directory, append-only and deliberately not hashed by this manifest.",
   "case_membership": {
     "conditional": 11,
     "mandatory": 54,
@@ -10,10 +10,14 @@
   "d7_execution_authorised": false,
   "definition_sha256": {
     "docs/adr/ADR-0024-launch-authority.md": "c1f3cce88438439aab6632a9c56450ae98d1c64adb31b13c742e2febb1476351",
-    "docs/experiments/LAUNCH-EXEC-01-DEFINITION.md": "5d41583cb8bda90491392665b90c895b5c9391fa8a16055c436203e1a8efd5f5",
+    "docs/experiments/LAUNCH-EXEC-01-DEFINITION.md": "292f5f7937afa9f844cee08a54e2b3915a5b6be7eeb07d1d2cf4ec6ca1c9cf80",
     "docs/research/HELM-LAUNCH-ARCHITECTURE.md": "97fbf0d8a602c68b0cf20529c4c1bb238ae2790a6089fa8ff6818c054b443151"
   },
   "experiment": "LAUNCH-EXEC-01",
+  "not_hashed_here": {
+    "BUILD-EVIDENCE.md": "append-only build record that grows AFTER the freeze; hashing it would make this manifest mutable, which is the defect it exists to avoid",
+    "SOURCE-HASHES.json": "a manifest cannot hash itself; OBS-FS-01 convention"
+  },
   "owner_decisions": {
     "D-1": "arm_i_scoped_unsafe_backend",
     "D-10": "empty_environment_only",
@@ -33,7 +37,7 @@
     "README.md": "0ebdf9c1850ac48bc1909c33e64e1bcbb47b75c43fae8db914242077232c3bef",
     "checker.py": "b45c5a2567cc35b121c5550c19bbba1a745531e36b095c8b539e968af3c65c3b",
     "frozen_cases.py": "7228bd1336c86235ae2e272c1487bf36f1f4e15988fd7a90f32dae60451c71ba",
-    "harness.py": "3b7f6fc2843c5218b339db377103f583c8b91ed4f8d694678b4c09fb2cc78d5d",
+    "harness.py": "513c5e81a31f25f4e15f7bcac2e493c523b7477d779152497e4f6ec72974d7c9",
     "helper_alt.c": "7993aa631abdca6796171fe4ffafb2d296f2a00b61ea2322ee8e624731b99113",
     "helper_dynamic.c": "b3c398d840c16dfa4e0dbc56593b905b4019bfe2316fc339049b8a69930350a0",
     "helper_fork.c": "a62a6a1e2bbb9cc6ef8a346ae9322c7b7435b1c7f0b6c3710b3aadb9cc2ba0b0",

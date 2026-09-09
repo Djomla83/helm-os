@@ -20,6 +20,14 @@ of the kind section 24 of the owner instruction permits, because zero trials hav
 This section-3 finding set is committed **before any correction**, so the reviewed candidate is
 preserved rather than tidied away.
 
+> **Final classification after corrections and Linux compile evidence:
+> READY_TO_AUTHORIZE_FROZEN_TRIAL.** See [section 6](#6-corrections-applied) for what changed,
+> [section 7](#7-linux-compile-evidence) for the build, and
+> [section 8](#8-final-classification) for the basis. The superseded freeze `66bf4b6` is
+> preserved unchanged; the corrected sources are frozen anew. **LAUNCH-EXEC-01 is still NOT_RUN,
+> ADR-0024 is still Proposed, and D-7 is still not granted** — this recommends authorising the
+> trial, it does not authorise it.
+
 ## 1. Independently reconstructed state
 
 Nothing below is taken from the author's summary; every value was recomputed.
@@ -226,7 +234,92 @@ poses correctly. Recording only; preflight already surveys `nosuid` mounts.
 | Environment / privacy | **SOUND WITH CORRECTIONS** — `envp` is exactly empty by construction; P-14 |
 | Source / binary hash lifecycle | **IMPORTANT** — P-11 |
 
-## 5. What this review did not do
+## 6. Corrections applied
+
+All bounded, all pre-trial, none touching an owner decision or the ADR's architecture. Membership
+stays **72**; the class partition moves to **54 mandatory / 11 conditional / 7 recorded**, because
+two cases that were mandatory turned out to depend on host properties.
+
+| Finding | Correction |
+|---|---|
+| **P-1** | N2 becomes **conditional** on a new frozen cause `parent_no_new_privs_set`, and preflight reads the launcher's own `NoNewPrivs` before any case. If N2 is BLOCKED, **N1 is recorded as UNCONTROLLED** rather than silently standing alone |
+| **P-2** | M3 becomes **conditional** on `clone3_unavailable`, and preflight probes `clone3` by calling it with a NULL argument and size 0 — a supporting kernel rejects the arguments **without forking**, an unsupporting one returns `ENOSYS`, a seccomp policy returns `EPERM`/`EACCES`. Availability is established with no child created and nothing resembling a trial |
+| **P-3** | The checker now permits **only a conditional case** to absorb a block, and only with the cause its own manifest entry names. A mandatory or recorded case recorded as BLOCKED is INVALID |
+| **P-4** | The spike gains `--exec-fd-o-path` and a `DescriptorModeUnsuitable` refusal, so X6 is posable |
+| **P-5** | X4 gets `unloadable_in_cohort.elf` — a header that **passes** the cohort rule and still cannot load (`e_phnum = 0`) — so it reaches `execveat` and can produce `ENOEXEC` |
+| **P-6** | The spike implements `capture_prefix` retention and the `truncated` flag, both in memory and both reported **outside** the receipt |
+| **P-7** | The O-series runs with `--no-report`; the payload itself is the exec evidence there, because only the pinned helper can produce the frozen recipe |
+| **P-8** | A record lacking `launch_returned` is **INVALID**, forcing the harness to record a hang rather than omit it |
+| **P-9** | `CHILD_TEST_INJECTION_SYSCALLS` and `CHILD_INJECTION_MODES` separate declared fault injection from the mechanism sequence; M1/M2/M4 trace the production configuration |
+| **P-10** | `helper_report` gains a guarded fixed-length marker region, verified present in the built image |
+| **P-11** | `built_binary_sha256` is removed from the source freeze; binary evidence lives in append-only [`BUILD-EVIDENCE.md`](../experiments/launch-exec-01/BUILD-EVIDENCE.md), which the manifest deliberately does **not** hash |
+| **P-13** | `move_above_2` no longer re-adds `CLOEXEC` to a deliberately non-`CLOEXEC` exec descriptor |
+
+**P-12** and **P-14** are **not** corrected here and are carried forward as explicit D-7
+obligations: the observation-to-token mapping and the publication sanitiser both live in the
+case-posing driver, which this review is forbidden to implement. They are recorded so the
+omission cannot later read as coverage.
+
+Two further findings came from the compile job itself and are corrected:
+
+- **`strace` IS installed** on the recommended runner (`/usr/bin/strace`). The definition
+  asserted the opposite, inferred from the runner-image package manifest. Direct observation beat
+  the inference and the claim is corrected rather than carried forward.
+- **The `no_noexec_mount` derivation tested existence, not usability.** `/dev`, `/proc` and `/sys`
+  are noexec on the runner but none can host a fixture, so X8 would have been left unblocked and
+  would have FAILed for an environment reason. It now tests writability.
+
+## 7. Linux compile evidence
+
+The frozen C sources had never been compiled on Linux. A bounded **compile-only** workflow was
+added, restricted to this branch, which compiles and inspects and **never executes a produced
+binary, never invokes the case runner in trial mode and never passes the D-7 flag**. Full record:
+[`BUILD-EVIDENCE.md`](../experiments/launch-exec-01/BUILD-EVIDENCE.md).
+
+Ubuntu 24.04.4, kernel `6.17.0-1022-azure` x86_64, `cc 13.3.0`, glibc 2.39, euid 1001. The source
+freeze was verified on the runner **before** anything was built. **All six targets linked with
+zero warnings and zero errors at `-Wall -Wextra`.** Inspection as data only: the five static
+targets carry **no `PT_INTERP`**, `helper_dynamic` requests
+`/lib64/ld-linux-x86-64.so.2` — which is what E7 requires — and the E6 marker guard is present in
+the built `helper_report`. No dynamic build was substituted for a static one, no package was
+installed and no `sudo` was used.
+
+The job's **one** failure was a pre-existing repository fixture test that resolves a blob at a
+named commit and errored under `actions/checkout`'s default shallow clone. Every one of the 85
+tests belonging to this experiment passed. Per the correction boundary that is a **PRETRIAL
+finding, not a mechanism verdict** — no preregistered case ran, so no experiment verdict of any
+kind exists. The workflow now uses `fetch-depth: 0`.
+
+## 8. Final classification
+
+**READY_TO_AUTHORIZE_FROZEN_TRIAL.**
+
+- Freeze hashes verified exactly, independently, from the git object store.
+- No unresolved BLOCKER or IMPORTANT: the six BLOCKERs and the correctable IMPORTANTs are fixed,
+  and the two that cannot be fixed without implementing the driver are recorded as D-7
+  obligations rather than quietly dropped.
+- Manifest and checker algebra independently verified, including a full class × status matrix and
+  every single-case perturbation across the membership.
+- C sources independently audited instruction by instruction, and the hand-rolled SHA-256
+  verified by transliteration against `hashlib`.
+- The exact frozen sources compile and link on the target Linux, and their static/dynamic
+  properties were established **without executing them**.
+- The `no_new_privs` control is posable honestly, and where it is not, N2 blocks and N1 is
+  recorded as uncontrolled.
+- `clone3` availability is probed rather than assumed, without creating a child.
+- The output and lifecycle state machine closes, and a launcher non-return is a rejection that
+  can no longer hide as a missing record.
+- Binary-hash evidence is immutable and reviewable, and separate from the source freeze.
+- The runner still cannot pose a case: both safety barriers are intact and the driver is absent.
+- **Zero experiment cases were run.**
+
+**What this does not do.** It does not grant D-7, accept ADR-0024, or authorise
+`crates/helm-launch`. It recommends that the frozen trial may now be authorised, and the
+remaining work before a first trial is the case-posing driver — including the frozen
+observation-to-token mapping of **P-12** and the publication sanitiser of **P-14**, both of which
+must be written and frozen *before* results can be known.
+
+## 9. What this review did not do
 
 No preregistered case was posed. No binary was executed — the SHA-256 audit was a
 transliteration, and every checker attack used fabricated records. The case-posing driver was not

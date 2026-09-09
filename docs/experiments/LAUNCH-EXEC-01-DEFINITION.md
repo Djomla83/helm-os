@@ -329,8 +329,12 @@ Authoritative evidence, in preference order:
    `execveat(exec_fd, "", …, AT_EMPTY_PATH)` was the syscall used on the pinned descriptor and
    that the child window contains nothing else. Collected with `strace` if preflight finds it,
    otherwise a purpose-built parent-side `ptrace` tracer if `ptrace_scope <= 1`, otherwise those
-   cases are **BLOCKED**. **`strace` is not installed on the recommended `ubuntu-24.04` runner
-   and is not installed by this definition**; no `sudo` and no package installation is authorised.
+   cases are **BLOCKED**. **Directly observed on the recommended runner, 2026-09-09:** `strace`
+   **is** present at `/usr/bin/strace` and `ptrace_scope` is `1`, so the traced cases are posable
+   there. An earlier form of this definition asserted the opposite, inferred from the
+   runner-image package manifest; the compile-only pre-trial job observed the runner itself and
+   the claim is corrected rather than carried forward. Availability is still re-probed at
+   preflight and never assumed; no `sudo` and no package installation is authorised.
 3. **`/proc/<pid>/fd` inspection** from the harness, as a cross-check.
 4. **Independent oracles** in Python: `hashlib` over the **frozen byte recipe**, never reading
    spike output.
