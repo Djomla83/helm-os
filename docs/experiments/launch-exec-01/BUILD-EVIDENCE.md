@@ -120,3 +120,27 @@ The C sources built here are **byte-identical** to those in the current freeze: 
 made after this build touched `harness.py`, the workflow and documentation only. The binary
 digests above therefore remain valid evidence for the frozen C sources, and
 `SOURCE-HASHES.json` records the source digests they were produced from.
+
+## Build 2 — 2026-09-09, confirming run after the workflow correction
+
+**Purpose:** Build 1's job failed at a step unrelated to the experiment, so the runner-refusal
+assertion never ran and the record was incomplete. This run repeats the whole compile-only job
+with `fetch-depth: 0`.
+
+| Field | Value |
+|---|---|
+| Workflow run | `34385841542` |
+| Commit built | `5729458f48a10436167db0f915e2ee1bcf634c64` |
+| Runner / OS / kernel / toolchain | as Build 1: `ubuntu-24.04`, Ubuntu 24.04.4, `6.17.0-1022-azure` x86_64, `cc 13.3.0`, glibc 2.39 |
+| Result | **every step succeeded**, including the two the first run never reached |
+
+**All 85 non-trial Python and checker tests passed on Linux**, and the **runner-refusal assertion
+now ran and held**: `runner exit code: 3`, with `"status": "NOT_RUN"` and the reason `D-7
+(execution authorisation) is not granted. … No case was posed.` Still **no binary was executed**
+and **no preregistered case was posed**.
+
+**The produced binary digests are byte-identical to Build 1**, for all six binaries and all four
+fixtures. That is the independent confirmation of the claim recorded at the end of Build 1: the
+corrections made between the two commits touched `harness.py`, the workflow and documentation
+only, and **not one C source byte changed**. The Build 1 digests therefore remain valid evidence
+for the currently frozen C sources, and the two builds corroborate each other.
