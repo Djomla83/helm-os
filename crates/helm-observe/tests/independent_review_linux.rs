@@ -632,15 +632,21 @@ fn fixture_filesystem_cohort_is_reported_from_primary_sources() {
         }
     }
     let admitted = root_from_fd("r", dir_fd(&base));
+    // Two separate statements, deliberately never collapsed into one.
     println!(
-        "HELM-OBSERVE-INDEPENDENT-COHORT: magic=0x{magic} mounted_fstype={} admitted={} arch={}",
+        "HELM-OBSERVE-INDEPENDENT-COHORT-RUNNER: arch={} mounted_fstype={} (runner evidence \
+         about this test environment, read by the test, never by the product)",
+        std::env::consts::ARCH,
         if best.0.is_empty() {
             "unknown"
         } else {
             &best.0
         },
-        admitted.is_ok(),
-        std::env::consts::ARCH
+    );
+    println!(
+        "HELM-OBSERVE-INDEPENDENT-COHORT-GUARD: f_type=0x{magic} admitted={} (ext-family \
+         sanity guard only; attests neither ext4 nor locality nor cohort membership)",
+        admitted.is_ok()
     );
     if magic.eq_ignore_ascii_case("ef53") {
         assert!(

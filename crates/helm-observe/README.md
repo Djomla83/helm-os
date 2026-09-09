@@ -30,7 +30,7 @@ object as its self-identity probe, which touches no observed filesystem.
 
 ## Supported cohort
 
-Linux x86_64 on **local ext4**, anchored by the
+**Linux, x86_64, ext4**, anchored by the
 [OBS-FS-01](../../docs/experiments/OBS-FS-01-EXECUTION-REPORT.md) evidence cohort. Other
 filesystems, architectures and kernels are not claimed and need their own evidence.
 
@@ -39,15 +39,33 @@ reviewed anywhere. The observation backend and the capability types are gated to
 x86_64**, so an unsupported architecture gets no observation authority at all rather than
 unvalidated authority. There are no fake Windows observation semantics.
 
-**What root admission actually establishes.** It reads the superblock magic of the
-supplied descriptor and refuses every filesystem that is not ext-family, without
-degrading. It cannot go further: the Linux UAPI gives ext2, ext3 and ext4 the **same**
-`0xEF53` magic, so the check is a necessary but not a sufficient condition for ext4, an
-ext2 or ext3 root is not distinguished from an ext4 one, and "local" is assumed rather
-than established — the same magic is reported for an ext filesystem on network-backed
-block storage. Nothing reachable inside the accepted explicit-capability, no-ambient-scan
-boundary can close that gap. It is recorded for owner architecture review; the cohort is
-not renamed and admission is not weakened.
+### Cohort membership is a caller precondition, not something this crate attests
+
+Per the owner's
+[cohort attestation clarification](../../docs/adr/ADR-0022-observation-authority.md#cohort-attestation-clarification)
+to Accepted ADR-0022, the supported cohort and product admission are **separate concepts**.
+
+**helm-observe 0.1 does not attest that a supplied root is ext4, and does not attest
+storage locality.** The trusted caller and the provisioning environment are responsible for
+supplying roots that are known, outside this crate, to belong to the supported cohort. The
+observer takes no new authority to prove it: it never reads `/proc/self/mountinfo`, never
+touches a block device, never discovers through sysfs, never scans mounts, and never reads
+a superblock directly.
+
+**What the `0xEF53` guard means.** Root admission reads the superblock magic of the supplied
+descriptor and refuses, without degrading, anything that is not ext-family. Passing means
+only *"this descriptor is on a filesystem reporting the ext-family superblock magic."* The
+Linux UAPI gives ext2, ext3 and ext4 that **same** magic, so it is a necessary ext-family
+sanity guard and **not** verified ext4, a validated cohort, local storage, a supported
+environment or filesystem provenance. No artifact claims ext4 on the strength of it.
+
+**Out-of-cohort roots.** An ext2 or ext3 root may mechanically pass the guard. If that
+happens the observation is **outside** the validated and supported 0.1 cohort, and no
+support or safety claim from the ext4 evidence transfers to it. The capability authority is
+still valid in the narrow sense that a trusted caller deliberately granted that descriptor;
+cohort support is a separate precondition. The same applies to storage locality: nothing
+here distinguishes an ext filesystem on a local disk from one on NBD, iSCSI or other remote
+backing, and no claim is made about FUSE or network filesystem semantics.
 
 ### Descendant bind mounts are excluded
 

@@ -2,7 +2,11 @@
 
 ADR-0020 is Accepted for documentation language. ADR-0022 is Accepted on 2026-09-08
 with a bounded 0.1 scope on evidence from OBS-FS-01; it accepts an architecture boundary,
-not an implementation, and excludes the descendant bind-mount case as unverified. ADR-0021 is Accepted on 2026-09-08
+not an implementation, and excludes the descendant bind-mount case as unverified. On
+2026-09-09 the owner clarified it, without changing its status or widening its scope:
+filesystem cohort membership is an external support precondition, not an observation
+attestation, and root admission applies only the necessary mechanism guards available
+inside the explicit capability boundary. The supported cohort stays Linux x86_64 ext4. ADR-0021 is Accepted on 2026-09-08
 by repository owner Djomla83 only for building a pure, non-executable application
 specification/validation library before observation or lifecycle execution.
 Its schema/API remain experimental; a later separate owner instruction approved the
@@ -53,4 +57,4 @@ Proces je u [master planu](../HELM_MASTER_PLAN.md#s31). Licencna odluka ostaje z
 | ID | Decision | Status |
 |---|---|---|
 | ADR-0021 | [Make the second product module an inert application contract](adr/ADR-0021-second-product-module.md) — [selection analysis and owner refinements](research/SECOND-PRODUCT-MODULE-SELECTION.md); bounded architectural authority, with experimental helm-app-spec 0.1 now accepted on main | **Accepted 2026-09-08** |
-| ADR-0022 | [Observe explicit targets without interpreting desired state](adr/ADR-0022-observation-authority.md) — [architecture analysis](research/HELM-OBSERVE-ARCHITECTURE.md), [independent review with Amendment 1](implementation/HELM-OBSERVE-INDEPENDENT-REVIEW.md), [execution definition](experiments/obs-fs-01/) and [OBS-FS-01 PASS](experiments/OBS-FS-01-EXECUTION-REPORT.md). **Bounded acceptance**: Linux x86_64 and local ext4 cohort only; descendant bind mounts excluded and unverified; three implementation-binding obligations outstanding; **helm-observe is not implemented** | **Accepted 2026-09-08** |
+| ADR-0022 | [Observe explicit targets without interpreting desired state](adr/ADR-0022-observation-authority.md) — [architecture analysis](research/HELM-OBSERVE-ARCHITECTURE.md), [independent review with Amendment 1](implementation/HELM-OBSERVE-INDEPENDENT-REVIEW.md), [execution definition](experiments/obs-fs-01/) and [OBS-FS-01 PASS](experiments/OBS-FS-01-EXECUTION-REPORT.md). **Bounded acceptance**: Linux x86_64 and ext4 cohort only; descendant bind mounts excluded and unverified; three implementation-binding obligations, all met and independently verified on the review branch. [Owner clarification 2026-09-09](adr/ADR-0022-observation-authority.md#cohort-attestation-clarification): cohort membership is a caller precondition, not an observer attestation; `0xEF53` is a necessary ext-family guard only; no new authority added; scope unchanged. **helm-observe 0.1 is implemented and independently reviewed on `review/helm-observe-independent`, and is not owner-merged** | **Accepted 2026-09-08, clarified 2026-09-09** |

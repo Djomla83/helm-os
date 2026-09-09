@@ -4,6 +4,8 @@
 **Draft date:** 2026-09-08\
 **Approver:** Repository owner (Djomla83), by explicit written instruction of 2026-09-08\
 **Acceptance date:** 2026-09-08\
+**Clarified:** 2026-09-09, owner decision on
+[cohort attestation](#cohort-attestation-clarification); status unchanged, scope unchanged\
 **Evidence basis:** [OBS-FS-01 PASS](../experiments/OBS-FS-01-EXECUTION-REPORT.md)
 
 ## Context
@@ -58,7 +60,65 @@ is therefore mandatory, not defensive. See
 **Accepted initial evidence cohort.** Linux x86_64, local ext4, anchored by the tested
 mechanism and kernel cohort of OBS-FS-01. This experimental evidence is **not** generalised
 into arbitrary Linux filesystem support; other filesystems, architectures, kernels and
-mount topologies need their own evidence.
+mount topologies need their own evidence. The word "local" here names the recorded
+experiment environment and is **not** a property root admission establishes; see the
+[cohort attestation clarification](#cohort-attestation-clarification).
+
+<a id="cohort-attestation-clarification"></a>
+
+### Owner clarification, 2026-09-09: cohort membership is not observer attestation
+
+**Approver:** repository owner (Djomla83), by explicit written instruction of 2026-09-09,
+resolving the architecture question raised by the
+[independent review of helm-observe 0.1](../implementation/HELM-OBSERVE-INDEPENDENT-REVIEW-0.1.md).
+ADR-0022 **remains Accepted**. This clarification expands no support and adds no authority.
+
+The review established from primary Linux sources that `EXT2_SUPER_MAGIC`,
+`EXT3_SUPER_MAGIC` and `EXT4_SUPER_MAGIC` are all `0xEF53`, so an `fstatfs` magic check
+cannot attest ext4. The owner resolves this by separating two concepts that had been
+conflated:
+
+> **Filesystem cohort membership is an external support precondition, not an observation
+> attestation. Root admission applies only necessary mechanism guards available inside the
+> explicit capability boundary.**
+
+**The supported and empirically validated 0.1 cohort is unchanged: Linux, x86_64, ext4**,
+bounded by this ADR and the OBS-FS-01 evidence. It is **not** broadened to ext2, ext3 or
+"ext-family".
+
+**helm-observe 0.1 does not attest cohort membership.** It does not attest that a supplied
+root is ext4, and it does not attest storage locality. The trusted caller and the
+provisioning environment are responsible for supplying roots that are known, **outside**
+helm-observe, to belong to the supported cohort; that external fact may come from
+provisioning, controlled deployment or separate evidence. The observer acquires no new
+authority to prove it.
+
+**The `0xEF53` check is retained, with a precise meaning.** Passing it means only *"this
+descriptor is on a filesystem reporting the ext-family superblock magic."* It is a
+necessary ext-family sanity and admission guard. It is **not** verified ext4, not a
+validated cohort, not local storage, not a supported environment and not filesystem
+provenance. No artifact may claim ext4 was observed on the strength of that magic.
+
+**Out-of-cohort roots are recorded, not supported.** An ext2 or ext3 root may mechanically
+pass the guard. Where that happens the observation is **outside** the validated and
+supported 0.1 cohort, and no support or safety claim derived from the ext4 evidence
+transfers to it. Passing admission likewise proves nothing about storage locality. The
+capability authority remains valid in the narrow sense that a trusted caller deliberately
+granted that descriptor; cohort support is a separate precondition.
+
+**No stronger discriminator is authorised by this clarification.** helm-observe 0.1 must
+not read `/proc/self/mountinfo`, acquire implicit procfs access beyond the already accepted
+descriptor-reopen capability, touch a block device, discover through sysfs, scan mounts,
+read a filesystem superblock directly, or discover packaging or provisioning. Each would
+add authority merely to enforce a support label and needs its own architecture and evidence
+decision.
+
+**Locality.** No claim is made about physical disk locality, NBD or iSCSI transport,
+arbitrary remote backing, or FUSE and network filesystem semantics. The validated
+experiment cohort remains the recorded ext4 environment.
+
+Everything else in this ADR is preserved unchanged, including the descendant bind-mount
+exclusion below, the implementation obligations, and every retained semantic limit.
 
 <a id="bind-mount-exclusion"></a>
 

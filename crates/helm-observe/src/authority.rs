@@ -66,7 +66,9 @@ impl ProcFdCapability {
 ///
 /// # Errors
 /// Fails when the descriptor is not a directory, its metadata is unavailable, or
-/// its filesystem is outside the supported local-ext4 0.1 cohort.
+/// its filesystem does not report the ext-family superblock magic. Passing that
+/// guard attests neither ext4 nor storage locality nor cohort membership, which
+/// stays a caller precondition established outside this crate.
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 pub fn root_from_fd(id: &str, fd: OwnedFd) -> Result<RootCapability, AdmissionError> {
     let tuple = linux::admit_root(&fd)?;

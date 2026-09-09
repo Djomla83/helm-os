@@ -1,5 +1,39 @@
 # Stanje projekta
 
+## Owner decision, 2026-09-09 — ADR-0022 cohort attestation clarified; helm-observe 0.1 ready for owner merge
+
+The owner resolved the architecture question the
+[independent review](implementation/HELM-OBSERVE-INDEPENDENT-REVIEW-0.1.md) raised, by
+[clarifying Accepted ADR-0022](adr/ADR-0022-observation-authority.md#cohort-attestation-clarification)
+rather than by expanding support. ADR-0022 **remains Accepted** and its scope is unchanged.
+The operative clarification is: **filesystem cohort membership is an external support
+precondition, not an observation attestation; root admission applies only necessary mechanism
+guards available inside the explicit capability boundary.**
+
+**The supported and empirically validated 0.1 cohort stays Linux, x86_64, ext4.** It is
+**not** broadened to ext2, ext3 or "ext-family". `helm-observe` does **not** attest that a
+supplied root is ext4 and does **not** attest storage locality; the trusted caller and the
+provisioning environment supply in-cohort roots, established outside the crate. The retained
+`0xEF53` check means only "this descriptor is on a filesystem reporting the ext-family
+superblock magic" — a necessary sanity guard, never verified ext4, a validated cohort, local
+storage, a supported environment or provenance. An ext2 or ext3 root may mechanically pass it;
+such an observation is outside the validated cohort and inherits no support or safety claim.
+No new authority was added to enforce the label: no mountinfo read, no block device, no sysfs,
+no mount scan, no superblock read. The descendant bind-mount exclusion and every other
+ADR-0022 semantic limit are preserved unchanged.
+
+The IMPORTANT-3 finding is preserved, not erased: it was valid, the implementation could not
+solve it inside ADR-0022, and the owner resolved it by decision. The cohort tests now print
+two statements that must not be collapsed — runner evidence that the *test* ran on ext4, and
+the *product guard* seeing `f_type = 0xEF53`.
+
+With that decision, no BLOCKER or IMPORTANT finding remains unresolved. The independent review
+classifies the corrected tip **READY_FOR_OWNER_MERGE**. That is a reviewer recommendation:
+the candidate is **still not owner-merged**, main is unchanged at
+`0f93431d3bb9285a71e9a7f2c2db3dc3d0bfb45b`, and the merge remains a separate owner action. No
+A0 evidence was opened, no WSL or Hyper-V lab was touched, no Wine or 7-Zip ran, `helm-bind`
+and `helm-launch` remain unimplemented, and **A0-7ZIP remains experimental FAIL.**
+
 ## Independent review, 2026-09-08 — helm-observe 0.1 needs an owner architecture decision
 
 The bounded implementation candidate `e2a62081ece52391b30ede153eee139103c98e31` on

@@ -16,14 +16,21 @@ use rustix::io::Errno;
 use crate::error::{AdmissionError, AdmissionErrorCode as A};
 use crate::model::{Failure, ObjectKind, ObjectTuple, Rejection};
 
-/// The ext-family superblock magic. `include/uapi/linux/magic.h` gives the **same**
-/// `0xEF53` to `EXT2_SUPER_MAGIC`, `EXT3_SUPER_MAGIC` and `EXT4_SUPER_MAGIC`, so
-/// this value is a **necessary but not sufficient** condition for the accepted
-/// local-ext4 cohort: it refuses every other filesystem, and it cannot tell ext4
-/// apart from ext2 or ext3. Nothing reachable inside the accepted
-/// explicit-capability boundary can. See the independent review of 0.1; narrowing
-/// this to a proven ext4 identity is an owner architecture decision, and widening
-/// the claim to "ext-family" would be a scope change, so neither is done here.
+/// The ext-family superblock magic, used as a **necessary sanity and admission
+/// guard, never as proof of ext4**.
+///
+/// `include/uapi/linux/magic.h` gives the same `0xEF53` to `EXT2_SUPER_MAGIC`,
+/// `EXT3_SUPER_MAGIC` and `EXT4_SUPER_MAGIC`. Passing this check therefore means
+/// only "this descriptor is on a filesystem reporting the ext-family superblock
+/// magic". It is not verified ext4, not a validated cohort, not local storage, not
+/// a supported environment and not filesystem provenance.
+///
+/// Per the owner's 2026-09-09 cohort attestation clarification to Accepted
+/// ADR-0022, cohort membership is a caller precondition established outside this
+/// crate, so the observer takes no further authority — no mountinfo read, no block
+/// device, no sysfs, no mount scan, no superblock read — merely to enforce a
+/// support label. An ext2 or ext3 root may mechanically pass this guard; such an
+/// observation is outside the validated cohort and inherits no support claim.
 const EXT_FAMILY_SUPER_MAGIC: i64 = 0xEF53;
 
 /// The reviewed constraint set, applied to every target resolution.
@@ -87,8 +94,9 @@ pub(crate) fn describe(fd: &OwnedFd) -> Result<Meta, Errno> {
     })
 }
 
-/// Admit a root descriptor: a directory on the supported local cohort.
-/// Metadata only; the directory is never enumerated.
+/// Admit a root descriptor: a directory whose filesystem passes the ext-family
+/// sanity guard. Metadata only; the directory is never enumerated, and admission
+/// attests no cohort membership.
 pub(crate) fn admit_root(fd: &OwnedFd) -> Result<ObjectTuple, AdmissionError> {
     let meta = describe(fd).map_err(|_| AdmissionError::new(A::RootMetadataUnavailable))?;
     if meta.kind != ObjectKind::Directory {

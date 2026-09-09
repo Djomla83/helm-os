@@ -755,16 +755,20 @@ fn retained_root_descriptor_survives_pathname_replacement() {
     }
 }
 
-/// Supported-cohort check. The cohort is Linux x86_64 on local ext4. If the
-/// runner is not on an ext-family filesystem this test does **not** weaken
-/// admission to pass: it asserts that admission correctly refuses, and prints the
-/// filesystem so the report records what was actually measured.
+/// Supported-cohort check, in the two separate statements the owner's 2026-09-09
+/// cohort attestation clarification requires. It keeps them apart deliberately:
 ///
-/// Independent review correction: this test previously printed
-/// `HELM-OBSERVE-COHORT: ext4 PASS` on the strength of the `0xEF53` magic alone.
-/// That magic is shared by ext2, ext3 and ext4, so it is a necessary but not a
-/// sufficient condition and cannot support an ext4 identity. The assertions are
-/// unchanged and admission is not weakened; only the claim is.
+///   runner cohort evidence  — what the test infrastructure independently
+///                             establishes about the environment this test ran in
+///   product admission guard — what the crate itself checked, which is the
+///                             ext-family superblock magic and nothing more
+///
+/// Collapsing the two would be the original defect. The magic is shared by ext2,
+/// ext3 and ext4, so it never supports an ext4 identity; the mounted filesystem
+/// type comes from the runner, not from the product, and is recorded as evidence
+/// that the **test** ran on ext4. If the fixture is not on an ext-family
+/// filesystem this test does **not** weaken admission to pass: it asserts that
+/// admission correctly refuses.
 #[test]
 fn ext4_cohort_admission_is_reported_not_weakened() {
     let base = temp_root("cohort");
@@ -776,6 +780,32 @@ fn ext4_cohort_admission_is_reported_not_weakened() {
         .output()
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
         .unwrap_or_else(|_| "unknown".to_owned());
+    // Runner-side evidence only. The product never reads this file.
+    let mut mounted = "unknown".to_owned();
+    let mut best = 0usize;
+    for line in fs::read_to_string("/proc/self/mountinfo")
+        .unwrap_or_default()
+        .lines()
+    {
+        let Some((left, right)) = line.split_once(" - ") else {
+            continue;
+        };
+        let (Some(point), Some(fstype)) = (
+            left.split_whitespace().nth(4),
+            right.split_whitespace().next(),
+        ) else {
+            continue;
+        };
+        if base.starts_with(point) && point.len() >= best {
+            best = point.len();
+            mounted = fstype.to_owned();
+        }
+    }
+    println!(
+        "HELM-OBSERVE-COHORT-RUNNER: arch={} mounted filesystem type = {mounted} (test          infrastructure evidence that this run was on ext4; not a product claim)",
+        std::env::consts::ARCH
+    );
+
     let admitted = root_from_fd("r", dir_fd(&base));
     if is_ext(&base) {
         assert!(
@@ -783,15 +813,17 @@ fn ext4_cohort_admission_is_reported_not_weakened() {
             "an ext-family fixture root must be admitted: {magic}"
         );
         println!(
-            "HELM-OBSERVE-COHORT: ext-family magic 0xEF53 admitted ({magic});              this is necessary but NOT sufficient for ext4, which the mechanism              cannot establish"
+            "HELM-OBSERVE-COHORT-GUARD: f_type = 0xEF53 admitted ({magic}); a necessary              ext-family sanity guard only, never an attestation of ext4, of cohort              membership or of storage locality"
         );
     } else {
         let err = admitted.unwrap_err();
         assert_eq!(
             err.code(),
             A::RootUnsupportedFilesystem,
-            "a non-cohort filesystem must be refused, never silently accepted: {magic}"
+            "a non-ext-family filesystem must be refused, never silently accepted: {magic}"
         );
-        println!("HELM-OBSERVE-COHORT: BLOCKED, fixture filesystem is not ext-family ({magic})");
+        println!(
+            "HELM-OBSERVE-COHORT-GUARD: refused, fixture filesystem is not ext-family ({magic})"
+        );
     }
 }

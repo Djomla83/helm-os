@@ -9,15 +9,20 @@ is preserved unchanged.\
 **Authority:** Accepted [ADR-0022](../adr/ADR-0022-observation-authority.md), bounded 0.1
 scope. Nothing here broadens it.
 
-**Classification: NEEDS_ARCHITECTURE_OWNER_REVIEW.**
+**Classification: READY_FOR_OWNER_MERGE**, following the owner's architecture decision of
+2026-09-09. The earlier disposition of this review was
+**NEEDS_ARCHITECTURE_OWNER_REVIEW**; that is recorded below rather than erased, and the
+finding that produced it stands as a valid finding.
 
-One BLOCKER and three IMPORTANT findings were raised. Three of the four are corrected on
-this branch with regression tests, and the corrected tip is green. The fourth cannot be
-resolved by an implementation change at all: the accepted cohort names **ext4**, and no
-mechanism inside the accepted explicit-capability, no-ambient-scan boundary can establish
-ext4 rather than ext-family. That is an owner architecture decision, not a defect a
-reviewer may fix by renaming the cohort, so the candidate is not
-READY_FOR_OWNER_MERGE. Section 6 states the exact question the owner has to answer.
+One BLOCKER and three IMPORTANT findings were raised. Three of the four were corrected on
+this branch with regression tests. The fourth, IMPORTANT-3, could not be resolved by any
+implementation change: the accepted cohort names **ext4**, and no mechanism inside the
+accepted explicit-capability, no-ambient-scan boundary can establish ext4 rather than
+ext-family. It was referred to the owner, who resolved it by
+[clarifying ADR-0022](../adr/ADR-0022-observation-authority.md#cohort-attestation-clarification)
+rather than by broadening scope: **cohort membership is an external support precondition,
+not an observation attestation.** Section 6 records the analysis, the decision and the
+resulting disposition.
 
 The findings in section 3 were committed **before** any correction
 (`a1726f3`), so the candidate as submitted is preserved in history rather than tidied away.
@@ -166,10 +171,12 @@ one document-level finding, consistently with that sibling crate.
 `distinct_objects_may_reuse_the_same_key_names`, which proves sibling objects may reuse key
 names and that key-shaped text inside a string value is data, not a key.
 
-### IMPORTANT-3 — `0xEF53` does not establish ext4. **Confirmed from primary sources. Claims corrected; the cohort question is referred to the owner.**
+### IMPORTANT-3 — `0xEF53` does not establish ext4. **Confirmed from primary sources. Referred to the owner and RESOLVED BY OWNER DECISION on 2026-09-09.**
 
-Full analysis in section 6. Classification for this item alone:
-**NEEDS_ARCHITECTURE_OWNER_REVIEW**.
+The finding was and remains **valid**: an `fstatfs` magic check cannot attest ext4. The
+implementation could not solve it within ADR-0022, so it was referred rather than patched
+over. The owner resolved it by clarification, not by expanding support. Full analysis, the
+decision and its consequences are in section 6.
 
 ### IMPORTANT-4 — the Linux x86_64 half of the cohort was not enforced. **Source-derived. Corrected.**
 
@@ -341,7 +348,7 @@ exactly what the mechanism establishes, in the README, in the crate documentatio
 in the cohort test's printed line. The cohort is **not** renamed to "ext-family", ADR-0022 is
 **not** broadened, and no new provenance is invented.
 
-**The question for the owner.** Choose one, with evidence:
+**The question put to the owner.** Choose one, with evidence:
 
 1. accept that 0.1's admission enforces an ext-family necessary condition and restate the
    supported cohort accordingly, which is a scope change only an owner may make; or
@@ -349,6 +356,47 @@ in the cohort test's printed line. The cohort is **not** renamed to "ext-family"
    own falsification evidence; or
 3. keep the cohort as ext4 and accept, explicitly and in writing, that admission does not
    enforce it and that an ext2 or ext3 root will be observed.
+
+<a id="owner-decision"></a>
+
+### Owner decision, 2026-09-09: option 3, recorded as an ADR-0022 clarification
+
+The repository owner chose **option 3** by explicit written instruction and recorded it as
+an owner-approved clarification to Accepted ADR-0022, which remains **Accepted**. The
+clarification is
+[in the ADR itself](../adr/ADR-0022-observation-authority.md#cohort-attestation-clarification);
+its operative sentence is:
+
+> Filesystem cohort membership is an external support precondition, not an observation
+> attestation. Root admission applies only necessary mechanism guards available inside the
+> explicit capability boundary.
+
+What follows from it, and what this review verified in the code and documents:
+
+| Point | State on this branch |
+|---|---|
+| Supported and evidenced cohort | **Linux, x86_64, ext4**, unchanged. **Not** broadened to ext2, ext3 or "ext-family" |
+| What helm-observe attests about the cohort | **Nothing.** It does not attest ext4 and does not attest storage locality |
+| Who establishes cohort membership | The trusted caller and the provisioning environment, **outside** the crate, from provisioning, controlled deployment or separate evidence |
+| Meaning of the `0xEF53` guard | Only *"this descriptor is on a filesystem reporting the ext-family superblock magic."* A necessary sanity and admission guard. Not verified ext4, not a validated cohort, not local storage, not a supported environment, not provenance |
+| ext2 or ext3 roots | May mechanically pass the guard. Such an observation is **outside** the validated cohort; no support or safety claim transfers. Recorded, not supported |
+| New authority to distinguish ext4 | **None added.** No mountinfo read, no implicit procfs beyond the accepted reopen capability, no block device, no sysfs, no mount scan, no superblock read, no provisioning discovery |
+| Artifact claims | No artifact claims ext4 from the magic. The serializer emits no filesystem-type field at all |
+| Descendant bind-mount exclusion | Preserved unchanged |
+| Other ADR-0022 semantic limits | Preserved unchanged |
+
+**Disposition of this finding.** Valid finding; not solvable inside ADR-0022 by the
+implementation; referred to the owner; resolved by owner decision rather than by weakening
+admission, renaming the cohort or inventing provenance. The finding text above is preserved
+in full, and the pre-correction state is preserved at `a1726f3`.
+
+**Consequences for the documents**, all applied on this branch: ADR-0022 carries the
+clarification and an annotation on the historical word "local" so it cannot be read as a
+property root admission establishes; the crate README, the crate documentation, the
+`RootUnsupportedFilesystem` documentation and the magic constant's comment all state the
+guard's exact meaning; and the cohort tests print **two separate statements** that must not
+be collapsed — a runner-side line recording the mounted filesystem type as evidence that the
+*test* ran on ext4, and a product-side line recording that the *guard* saw `f_type = 0xEF53`.
 
 ## 7. Linux x86_64 gating
 
@@ -678,9 +726,12 @@ writer control exists precisely so that "did not block" is distinguished from "d
 | `81aec01` | Test-harness fix: the shell-based foreign helper held two descriptors rather than the attacked range, because POSIX shells need only honour single-digit descriptor numbers in redirections. The helper is now this test binary re-executed in helper mode |
 | `834322b` | BLOCKER-1, IMPORTANT-2, IMPORTANT-3 claims, IMPORTANT-4, M1, M2, M4, M5, M6, M7, M10 |
 | `41f6c4e` | Dead-code removal exposed by the M10 correction, the built-commit field in the syscall evidence, this report and the `PROJECT_STATE` entry |
+| `c4e292b`, `585016d` | Validation record for the corrected tip, and the review's own residual limits stated precisely |
+| this commit | The owner's 2026-09-09 cohort attestation clarification applied to ADR-0022, the crate, the cohort tests and this report. **No product mechanism changed**: admission, resolution, classification, reopen, budgets and the artifact are byte-identical to `585016d` apart from documentation comments |
 
-`e2a62081` is preserved unchanged. No history was rewritten, nothing was force-pushed, main
-was not touched and no merge of main was performed.
+`e2a62081` is preserved unchanged, as are the first-pass finding commits. No history was
+rewritten, nothing was force-pushed, main was not touched and no merge of main was
+performed. Provenance stays linear.
 
 ## 20a. Validation on the corrected tip
 
@@ -707,7 +758,9 @@ Both workflows are green on `41f6c4e8371324abd2dc4983694b843d0f9b378d`, hosted
 | release-mode budget ceiling test, streams 512 MiB | pass |
 | syscall-level regression, 9 cases | `HELM-OBSERVE-SYSCALL-REVIEW: PASS`, **0 violations** |
 | privacy and artifact checks | pass, inside the suites above |
-| supported-cohort check | admission behaves correctly; the *claim* is the open question of section 6 |
+| supported-cohort check | admission behaves correctly; the *claim* was the open question of section 6, since resolved by owner decision |
+
+The same set was re-run on the clarification tip, section 20b.
 
 **Runner tool inventory**, recorded by the workflow before anything is concluded from it:
 `rustc`, `cargo`, `gcc`, `cc`, `python3`, `stat`, `mkfifo` and `mkfs.ext4` present;
@@ -717,10 +770,13 @@ read-only, not by installing anything and not by weakening the requirement.
 
 ## 21. Residual limitations
 
-1. **The ext4 cohort question is open**, section 6. Admission enforces an ext-family
-   necessary condition; the accepted cohort says ext4; the gap is an owner decision.
-2. **"Local" is not established.** Network-backed block storage under an ext filesystem is
-   indistinguishable to this mechanism.
+1. **The crate attests no cohort membership**, by owner decision, section 6. Admission
+   applies an ext-family necessary guard only; the supported cohort stays ext4 and is a
+   caller precondition. Supplying an in-cohort root is the deploying environment's
+   responsibility, and an ext2 or ext3 root will be observed without support.
+2. **"Local" is not established by anything in the crate.** Network-backed block storage
+   under an ext filesystem is indistinguishable to this mechanism, and nothing claims
+   otherwise.
 3. **Descendant bind mounts remain unvalidated**, exactly as ADR-0022 records. This review
    constructed no mount namespace and claims nothing new. `EXDEV` mapping is therefore
    source-derived, not reproduced.
@@ -749,15 +805,21 @@ read-only, not by installing anything and not by weakening the requirement.
 
 ## 22. Recommendation
 
-The implementation is, after the corrections on this branch, a faithful and unusually
-disciplined realisation of the accepted mechanism: obligations A, B and C hold, the
-special-file and symlink negatives are proved on the compiled product at the syscall level,
-there is no hidden authority and no alternate path, and the result vocabulary and privacy
-posture are honest.
+The implementation is, after the corrections on this branch and under the owner's 2026-09-09
+clarification, a faithful and disciplined realisation of the accepted mechanism. Obligations
+A, B and C hold. The special-file, symlink and no-fallback negatives are proved on the
+compiled product at syscall level. There is no hidden authority and no alternate path. The
+result vocabulary, the privacy posture and now the cohort language are honest about exactly
+what is and is not established.
 
-It is **not** ready for owner merge, for one reason that no implementation change can remove:
-the accepted cohort names ext4 and the accepted mechanism cannot establish ext4. The owner
-must settle section 6 first. Once that decision exists, this branch is the basis for a merge
-candidate, and the three corrected findings need no further work.
+Every BLOCKER and IMPORTANT finding is resolved: BLOCKER-1 and IMPORTANT-2 and IMPORTANT-4 by
+correction with regression tests, IMPORTANT-3 by owner decision recorded as an ADR-0022
+clarification that expands no support and adds no authority. The MINOR findings are either
+corrected or recorded with a stated reason for leaving the behaviour alone. The residual
+limitations in section 21 stay exactly what they are — source-derived limitations and
+environment bounds — and none of them is inflated into reproduced evidence.
 
-**NEEDS_ARCHITECTURE_OWNER_REVIEW.**
+**READY_FOR_OWNER_MERGE.**
+
+This is a reviewer recommendation. The merge itself remains the owner's action; nothing in
+this review performs or authorises it, and main is untouched.

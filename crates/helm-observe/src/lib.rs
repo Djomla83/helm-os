@@ -30,15 +30,19 @@
 //!
 //! # Supported cohort
 //!
-//! Linux x86_64 on local ext4, anchored by the OBS-FS-01 evidence cohort. Other
+//! Linux, x86_64, ext4, anchored by the OBS-FS-01 evidence cohort. Other
 //! filesystems, architectures and kernels are **not** claimed, and the
 //! observation backend does not compile outside Linux x86_64.
 //!
-//! What admission actually establishes is narrower than the cohort name. The
-//! `0xEF53` superblock magic is shared by ext2, ext3 and ext4, so root admission
-//! refuses every non-ext-family filesystem but **cannot** prove ext4 specifically,
-//! and "local" is assumed rather than established. That gap is recorded for owner
-//! architecture review, not resolved by widening the cohort.
+//! Cohort membership is a **caller precondition, not an attestation this crate
+//! makes**. It does not attest that a supplied root is ext4, and it does not
+//! attest storage locality; the trusted caller and the provisioning environment
+//! are responsible for supplying in-cohort roots, established outside this crate.
+//! Root admission applies only the mechanism guards available inside the explicit
+//! capability boundary: the `0xEF53` superblock magic is shared by ext2, ext3 and
+//! ext4, so refusing everything else is a necessary ext-family sanity guard and
+//! never proof of ext4. An ext2 or ext3 root may mechanically pass it, and such an
+//! observation is outside the validated cohort with no support claim transferred.
 //!
 //! Target paths whose correctness claim depends specifically on rejecting a bind
 //! mount created as a descendant of an authorised ext4 root are outside the
