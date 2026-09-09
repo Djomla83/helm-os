@@ -13,6 +13,23 @@ read directly, and from primary Linux documentation. Where a claim rests on docu
 rather than on evidence produced in this repository, it is marked **documentation-derived**
 and becomes an experiment obligation rather than an accepted fact.
 
+> **Corrected 2026-09-09 under the
+> [three-workstream pre-execution review](../implementation/HELM-LAUNCH-PRE-EXECUTION-REVIEW.md).**
+> Nine BLOCKER findings are applied to this document. The largest are that the executable digest
+> is a **pre-execution measurement** and was described as the identity of the body that ran
+> ([section 32](#32-executable-identity-and-mutation)); that the child-setup sequence closed the
+> working-directory descriptor before using it, and the parent never closed its own copies of the
+> pipe ends, so **no launch could have succeeded as written**
+> ([sections 17](#17-file-descriptor-inheritance) and
+> [19](#19-standard-output-and-standard-error)); that the drain loop had no termination condition
+> surviving a descendant holding a stdio write end (section 19); that inherited signal state was
+> an unclosed ambient input (section 17); that the credentials claim was false for a set-user-ID
+> object ([section 28](#28-user-credentials-and-privilege)); and that clean EOF does not prove
+> exec ([section 21](#21-spawn-versus-exec-confirmation)). The design's original commit `ae4591e`
+> is preserved unchanged in history. **ADR-0024 remains Proposed and LAUNCH-EXEC-01 remains
+> NOT_RUN.** Two new owner decisions, **D-9** and **D-10**, are recorded in
+> [section 42](#42-owner-decisions-required-before-implementation).
+
 ## 1. Reconstructed current state
 
 Four owner-merged experimental modules exist, all `publish = false`.
@@ -201,7 +218,10 @@ The candidate mechanism needs these kernel primitives:
 | `waitid(P_PIDFD, …)` | wait on that handle | Linux 5.4 |
 | `close_range(first, last, 0)` | the descriptor-inheritance invariant | Linux 5.9 |
 
-**Minimum kernel 5.9; architecture x86_64; operating system Linux.**
+**Minimum kernel 5.9; architecture x86_64; operating system Linux; and no libc version floor**,
+because the backend invokes `execveat` and `close_range` through `libc::syscall(SYS_…)` rather
+than through the glibc wrappers, which are gnu-only and `glibc >= 2.34`
+([section 35](#35-dependency-direction)).
 
 The honest cohort statement, in the shape ADR-0022's clarification established:
 
@@ -241,19 +261,41 @@ socket, device or `O_PATH`-only handle is refused. `O_PATH` is refused specifica
 bytes cannot be read through it, and an unmeasurable executable defeats the identity the
 receipt exists to carry.
 
-**ELF only in 0.1?** Yes, checked by reading `7F 45 4C 46` through the same descriptor. This is
-a deliberate narrowing, not a security check — valid ELF magic proves nothing about the
-program. It exists to exclude interpreter scripts, and that exclusion buys something concrete:
-**`execveat` on a `#!` script requires the kernel to hand the interpreter a `/dev/fd/N`
-pathname, silently making script execution depend on procfs being mounted and on that
-descriptor surviving into the interpreter.** Excluding scripts removes an entire hidden
-dependency from the 0.1 contract. Documentation-derived; case **X2** in the experiment.
+**ELF only in 0.1?** Yes — but **magic alone is not enough**, and the check is therefore on the
+header, not on four bytes. Admission reads the first 64 bytes through the same descriptor and
+requires `e_ident[EI_MAG]` = `7F 45 4C 46`, `EI_CLASS = ELFCLASS64`, `EI_DATA = ELFDATA2LSB`,
+`e_machine = EM_X86_64` (62), and `e_type` in `{ET_EXEC, ET_DYN}`. Anything else is refused as
+`AdmissionError::ElfNotInCohort`. This is a deliberate narrowing, not a security check — a
+well-formed header proves nothing about the program — and it does two concrete things.
 
-**Should scripts be rejected?** Yes in 0.1, for that reason. A future adapter wanting scripts
-must first evidence the procfs and descriptor-survival behaviour.
+First, it excludes interpreter scripts: **`execveat` on a `#!` script requires the kernel to hand
+the interpreter a `/dev/fd/N` pathname, silently making script execution depend on procfs being
+mounted and on that descriptor surviving into the interpreter** — and under the mandated
+`O_CLOEXEC` capability mode the call does not even get that far, failing `ENOENT`
+(see [section 7](#7-executable-toctou-process-creation-mechanisms-compared) and case **X2b**).
+
+Second, and this is why magic alone would not do: `binfmt_misc` recognises a binary by matching
+bytes at the start of the file **with a mask**, is documented with `\x7fELF` examples, is
+consulted **ahead of** `binfmt_elf`, and locates its interpreter **by full pathname** at exec
+time. `qemu-user-static` registers exactly such an entry — masked `e_machine` over ELF magic —
+and foreign architectures are HELM's own problem domain. A four-byte check would therefore let a
+HELM-authorized capability be routed to an interpreter resolved from a mutable path, with the
+pinned object demoted to an argument, which is precisely what
+[falsifier 4](#38-falsifiers) forbids. Pinning the cohort in the header closes that by
+construction. Cases **X2**, **X2b**, **X2c** and **E8**; the runner's
+`/proc/sys/fs/binfmt_misc/status` and every registration are recorded before the first trial.
+
+**Should scripts be rejected?** Yes in 0.1, for both reasons. A future adapter wanting scripts
+must first evidence the procfs and descriptor-survival behaviour — and must hand the kernel a
+**non-`CLOEXEC`** descriptor to work at all, contradicting
+[section 17](#17-file-descriptor-inheritance)'s inheritance invariant, which is a second
+independent reason scripts are out of 0.1.
 
 **Should execute permission be checked before launch?** **No — recorded, not enforced.** Mode
-bits are stored as a fact in the capability and the receipt. The launcher does not implement a
+bits are stored as a **pre-execution measurement** in the capability and the receipt, and the
+kernel evaluates permission again at exec: `fs/exec.c:do_open_execat` opens with
+`.acc_mode = MAY_EXEC`, so a `fchmod` between admission and exec changes the answer and the
+recorded bits describe the earlier moment (case **E6d**). The launcher does not implement a
 second, necessarily divergent permission model on top of the kernel's; `execveat` is the
 authority and a permission failure arrives as typed `ExecFailed { errno: EACCES }`.
 Pre-checking would add a race and would produce two different answers on the same object under
@@ -265,18 +307,36 @@ reads (`pread`) so no shared file offset is disturbed and no seek state is obser
 **How is the measurement bound to the exact object later executed?** By never letting go of the
 descriptor. The capability owns the `OwnedFd`; `authorize` moves it into `AuthorizedLaunch`;
 `launch` consumes that and hands **the same descriptor** to `execveat`. No pathname exists at
-any point after admission. The receipt therefore asserts exactly: *these bytes were read
-through this descriptor, and this descriptor was the exec target.*
+any point after admission. The receipt therefore asserts exactly: *these bytes were read through
+this descriptor **before the execution attempt**, and this descriptor was the exec target.*
+
+It does **not** assert that these bytes are the bytes the kernel executed, and the distinction is
+load-bearing rather than pedantic. `execveat` does not execute the caller's open file
+description: `fs/exec.c:do_open_execat` performs a **fresh** open through the descriptor's own
+path with `.acc_mode = MAY_EXEC`, takes the write-deny reference there, and `binfmt_elf` maps the
+inode's pages as of that moment. There is no snapshot at admission. The measurement is therefore
+a **pre-execution measurement of the pinned inode** and never a measurement of the executed
+image — which is why the receipt field is named `pre_exec_body_sha256`
+([section 32](#32-executable-identity-and-mutation)).
 
 **Does hashing affect atime or cache?** Yes, and it is stated rather than hidden. Reading
 updates atime under default `relatime` and populates the page cache. `O_NOATIME` is not used
 because it needs file ownership or `CAP_FOWNER`, and 0.1 must not require privileges. Measuring
 is an act with observable side effects, and the README must say so.
 
-**What descriptor mode is required?** `O_RDONLY | O_CLOEXEC`. Not `O_PATH` (unreadable), and
-emphatically **not** writable: Linux `deny_write_access` makes `execveat` fail `ETXTBSY` while
-any writable descriptor is open on the inode, so a writable capability would be a launcher that
-cannot launch.
+**What descriptor mode is required?** `O_RDONLY | O_CLOEXEC`. Not `O_PATH` — **the kernel would
+accept it**, since `execveat(2)` states that `AT_EMPTY_PATH` works with descriptors obtained with
+`O_PATH`, but the bytes cannot be read through it and an unmeasurable executable defeats the
+identity the receipt exists to carry. The refusal is HELM's, not the kernel's, and case **X6**
+must not be read as a kernel fact. Emphatically **not** writable either: Linux's exec-time write
+deny makes `execveat` fail `ETXTBSY` while a writable descriptor is **held open** on the inode at
+the exec instant, so a writable capability would be a launcher that cannot launch.
+
+This narrows what 0.1 can launch, and the narrowing is stated rather than discovered later: the
+kernel requires only `MAY_EXEC` to execute an object, so an execute-only object (mode `0111`, or
+one readable only by another user) is executable by the kernel and **inadmissible here**.
+Measurability, not executability, is the binding constraint, and that is the price of the
+receipt.
 
 **What mount or filesystem claims are needed?** **None, and none are made.** Unlike
 `helm-observe`, which admits an ext-family superblock magic as a necessary mechanism guard,
@@ -290,16 +350,17 @@ attestation the module cannot back.
 
 | Property | Assessment |
 |---|---|
-| Same pinned object executed | **Yes.** The descriptor identifies the inode; no name is resolved at exec time |
-| Pathname replacement after pin | **Irrelevant by construction** — there is no pathname |
+| Same pinned object executed | **Yes, for an object handled by `binfmt_elf`.** The descriptor identifies the inode and no name is resolved for *it*. The kernel still resolves a dynamic ELF's `PT_INTERP` by pathname, and a `binfmt_misc` entry matching the object would resolve its interpreter by pathname — excluded at admission ([section 6](#6-executable-authority)) |
+| Pathname replacement after pin | **Irrelevant by construction** for the pinned object — there is no pathname. Not a statement about the interpreter or the libraries |
+| Content mutation after measurement | **Not prevented.** The measurement is a pre-execution measurement; the fd pins the inode, not its contents ([section 32](#32-executable-identity-and-mutation)) |
 | Descriptor inheritance requirement | The exec descriptor must survive until the syscall; `CLOEXEC` is correct, the kernel resolves it before replacing the image |
-| CLOEXEC interaction | Desired: the descriptor does not appear in the new image |
-| ELF vs script | ELF direct. `#!` makes the kernel synthesise `/dev/fd/N` for the interpreter → procfs dependency → **excluded in 0.1** |
-| Dynamic loader | Normal `ld.so` behaviour for a dynamic ELF; the loader then resolves libraries by name, which is why loader-controlling environment variables are refused ([section 15](#15-environment-policy)) |
-| procfs dependency | **None** for ELF |
+| CLOEXEC interaction | Desired: the descriptor does not appear in the new image — and correct **only** because the object is a regular ELF. For anything needing an interpreter, an `O_CLOEXEC` exec descriptor makes `execveat` fail **`ENOENT`**: `execveat(2)` ERRORS and BUGS, and `fs/exec.c` sets `BINPRM_FLAGS_PATH_INACCESSIBLE` when `get_close_on_exec(fd)` |
+| ELF vs script | ELF direct. `#!` under an `O_CLOEXEC` descriptor is `ENOENT`; without `CLOEXEC` the kernel synthesises `/dev/fd/N` for the interpreter → procfs dependency → **excluded in 0.1**, cases **X2b** and **X2c** |
+| Dynamic loader | Normal `ld.so` behaviour for a dynamic ELF. The kernel resolves `PT_INTERP` **by pathname at exec**, and `ld.so` then resolves `DT_NEEDED` by name, so the absolute reading of row 1 holds for the *pinned object only*. Loader-controlling environment variables are refused as hardening ([section 15](#15-environment-policy)), which reduces one route to that surface and measures none of it |
+| procfs dependency | **None** for an ELF handled by `binfmt_elf`. `binfmt_script` and `binfmt_misc` both take the `/dev/fd/N` route and are excluded at admission |
 | Mount namespace | None beyond the executable's own mount |
 | Rust API safety | **Poor.** rustix exposes it only as `unsafe fn` in a `doc(hidden)` self-declared-unstable module; the realistic call is `libc::syscall(SYS_execveat, …)` |
-| fork/multithread safety | The syscall is async-signal-safe; the surrounding child setup must be too |
+| fork/multithread safety | The raw `execveat`, `close_range`, `dup3`, `fchdir` and `setpgid` syscalls mutate no userspace state and are safe to issue post-`fork`. Note that `execveat` and `close_range` are Linux-specific and therefore absent from POSIX's `signal-safety(7)` list, so this is an argument from the syscall contract, not a citation. **glibc's `fork()` additionally runs every registered `pthread_atfork` handler in the child before any helm-launch code**, outside the reviewed unsafe region; `clone3` with `CLONE_PIDFD` avoids both that and the `pidfd_open` precondition of [section 22](#22-process-identity), and is measured as arm (b) of case **M3**. The surrounding child setup must be async-signal-safe, and case **M1** is what establishes that rather than assertion |
 | Control of inherited FDs | Complete, combined with `close_range` |
 | Portability | Linux only |
 | Error reporting | Exact errno over the exec-status pipe ([section 21](#21-spawn-versus-exec-confirmation)) |
@@ -400,16 +461,53 @@ and executed, which is the discovery problem this design exists to remove. The i
 explicit that a helper needs a concrete justification; there is none here.
 
 If B is chosen, the mechanical constraints are part of the architecture, not implementation
-detail:
+detail. **Declining the workspace lint table drops all four of its lints, not just one**, so the
+three clippy denies must be restated verbatim or the policy is weakened by accident — that is
+the semantic-preservation requirement, and it is the part most easily lost:
 
-- `helm-launch` **does not** use `[lints] workspace = true`; it declares its own `[lints]` table
-  with `unsafe_code = "deny"` and a single `#[allow(unsafe_code)]` on one module, because
-  `forbid` at workspace level cannot be overridden locally;
+```toml
+# crates/helm-launch/Cargo.toml — the workspace table is deliberately NOT
+# inherited: it sets unsafe_code = "forbid", which cannot be relaxed by a local
+# #[allow], and exactly one module in this crate must allow unsafe (D-1 arm (i)).
+# Every workspace lint is restated below; nothing is dropped.
+[lints.rust]
+unsafe_code            = "deny"   # "forbid" at workspace level
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+unwrap_used = "deny"              # restated verbatim from the workspace table
+expect_used = "deny"
+panic       = "deny"
+undocumented_unsafe_blocks    = "deny"   # added: this crate has an unsafe surface
+multiple_unsafe_ops_per_block = "deny"
+```
+
+- the crate root restates the policy in source — `#![deny(unsafe_code, unsafe_op_in_unsafe_fn)]`
+  — so a reviewer sees it without opening the manifest;
+- exactly **one** narrowly named module carries `#[allow(unsafe_code)]`, and it is `#[cfg]`-gated
+  to the cohort exactly as `helm-observe` gates its `authority`/`linux`/`observe` modules, so the
+  unsafe surface does not exist off Linux x86_64;
+- `undocumented_unsafe_blocks` is what turns "every unsafe block carries a documented invariant"
+  from a review convention into a compile error;
 - the unsafe region is one file, contains no allocation, no `Vec` growth, no locking, no
   formatting and no panic path — every C string, the `argv` pointer array and the `envp` pointer
   array are fully materialised **before** `fork`;
-- the region's only exits are `execveat` and `_exit`;
-- it is covered by the strace-level evidence of LAUNCH-EXEC-01 rather than by assertion.
+- the child entry point is a single `extern "C" fn(*const ChildArgs) -> !` over one `#[repr(C)]`
+  POD, with `const _: () = assert!(!core::mem::needs_drop::<ChildArgs>());` in the same module,
+  so no destructor-dependent value can reach the child path by construction;
+- the module additionally denies `clippy::indexing_slicing` and
+  `clippy::arithmetic_side_effects`, which are panic sources `clippy::panic` does not catch;
+- the region's only exits are `execveat` and `_exit`.
+
+**That list is a set of claims, so it needs a falsifier rather than an assurance.** Case **M1**
+supplies it: the child's traced syscalls between the `fork`/`clone` return and `execveat` must be
+exactly the enumerated set, and any `brk`, `mmap`, `munmap`, `mprotect`, `futex`, `openat`,
+`set_robust_list` or `getrandom` in that window is a FAIL. **M2** poses the multithreaded parent
+that every real HELM caller is, and **M4** matches the implemented sequence against the frozen
+one, so the accepted mechanism is the documented mechanism. The proof obligation is also larger
+than "~100 lines of syscalls" suggests: the hard parts are the pointer lifetimes spanning `fork`,
+the `-> !` contract on the child path, and the `pthread_atfork` surface glibc's `fork()` opens
+before any helm-launch code runs.
 
 ## 9. No shell, ever
 
@@ -595,12 +693,35 @@ where the entries are the **complete** environment. Nothing is inherited in eith
 Because environment variables change *which code the pinned executable actually loads*, the
 following are **refused at parse time** in 0.1: any name beginning `LD_` (covering `LD_PRELOAD`,
 `LD_LIBRARY_PATH`, `LD_AUDIT`), plus any name that is empty, contains `=`, or contains NUL.
-Refusing them protects the one thing this module claims: that the object it measured is the
-object that ran. `LD_PRELOAD` would let a caller with a valid plan run arbitrary other code
-inside the measured process image, so accepting it would make the executable identity in the
-receipt misleading. `PATH` is *allowed* as an explicit value, and it is recorded that it has no
-effect on which executable `helm-launch` runs — the launcher uses a descriptor — and affects
-only what the child itself may later exec. Case **V3** checks the policy behaves as written.
+Refusing them is **hardening, not provenance**, and the distinction is load-bearing. That the
+pinned object is the object handed to `execveat` is established by the descriptor and holds under
+**every** environment mode; the environment policy neither establishes it nor can weaken it. What
+refusing `LD_*` reduces is one well-known surface for injecting *additional* code into the
+process after the kernel has mapped the measured body.
+
+That surface is never empty and is never measured. **`pre_exec_body_sha256` covers only the main
+executable file body.** It does not cover the ELF interpreter named in `PT_INTERP`, any
+`DT_NEEDED` shared object, anything later `dlopen`ed, or any other part of the loaded-code
+closure; the kernel resolves `PT_INTERP` **by pathname at exec** and `ld.so` resolves the rest
+from `DT_RPATH`, `DT_RUNPATH`, `/etc/ld.so.cache` and the default library directories — host
+state this crate neither reads nor attests. **This is equally true in `empty` mode**: an empty
+environment does not pin the loaded-code closure, it removes one way of steering it.
+
+The `LD_` rule is also a **prefix denylist, not a closure**. glibc's own secure-execution list
+strips `GCONV_PATH`, `GETCONF_DIR`, `HOSTALIASES`, `LOCALDOMAIN`, `LOCPATH`, `MALLOC_TRACE`,
+`NIS_PATH`, `NLSPATH`, `RESOLV_HOST_CONF`, `RES_OPTIONS`, `TMPDIR` and `TZDIR` alongside the
+`LD_*` names, and 0.1 refuses none of those — `GCONV_PATH` in particular directs glibc to load
+gconv objects from a caller-chosen directory. No completeness may be inferred from the rule, and
+case **V5** records that such a name is accepted so the incompleteness is evidenced rather than
+assumed. `PATH` is *allowed* as an explicit value, and it is recorded that it has no effect on
+which executable `helm-launch` runs — the launcher uses a descriptor — and affects only what the
+child itself may later exec.
+
+Whether 0.1 should offer `explicit` at all is **owner decision D-10**: `empty` is already the
+only mode the first synthetic cohort needs, and dropping `explicit` would remove a
+caller-controlled surface and the weakest reasoning in this section. If `explicit` is retained,
+it is acceptable only with the narrowings above plus an `environment_mode` field in the receipt,
+so a consumer need not re-read the plan to know a caller-supplied environment was in force.
 
 Wine's eventual needs — `DISPLAY`, `WAYLAND_DISPLAY`, `XDG_RUNTIME_DIR`, `WINEPREFIX` and others
 — are **explicitly not** smuggled into this contract. No name is special-cased for Wine, and no
@@ -634,19 +755,54 @@ The invariant, stated as a claim that must be falsifiable:
 > launcher-supplied stdin, stdout and stderr endpoints. No other descriptor of the host process
 > — `CLOEXEC` or not, owned by HELM or not — is present in the new image.
 
-The mechanism, in child order:
+The mechanism, in order. **Step 0 is in the parent and steps 1–7 are in the child, and the
+ordering is load-bearing rather than stylistic** — an earlier draft of this section closed the
+working-directory descriptor before using it, which no launch could have survived:
 
-1. `dup2` the three prepared endpoints onto 0, 1, 2 (`dup2` clears `CLOEXEC` on the new
-   descriptor, which is exactly what is wanted for stdio);
-2. `close_range` over everything above 2 **except** the two descriptors still needed — the exec
-   descriptor and the exec-status pipe write end — which requires up to three `close_range` calls
-   over the gaps between them;
-3. `setpgid(0, 0)`; `fchdir(dir_fd)`;
-4. `execveat(exec_fd, "", argv, envp, AT_EMPTY_PATH)`.
+0. **In the parent, before `fork`:** renumber the exec descriptor, the exec-status pipe write
+   end, the working-directory descriptor and the three prepared stdio endpoints above 2 with
+   `fcntl(F_DUPFD_CLOEXEC, 3)` if any of them is 0, 1 or 2, so the `dup2` step and the
+   `close_range` gap arithmetic have no special cases. The kernel allocates the lowest free
+   descriptor, so a host with stdio closed — a daemon, a `systemd` unit, a test harness — makes
+   this reachable, not hypothetical;
+1. `dup2` the three prepared endpoints onto 0, 1, 2, then unconditionally `fcntl(0, F_SETFD, 0)`,
+   `fcntl(1, F_SETFD, 0)`, `fcntl(2, F_SETFD, 0)`. `dup2` clears `FD_CLOEXEC` on *newfd* **only
+   when `oldfd != newfd`** — `dup(2)`: "if *newfd* has the same value as *oldfd*, then dup2()
+   does nothing" — so the explicit clear is required, not defensive. Step 0 makes the no-op case
+   unreachable and the clear makes the invariant hold even if it is not;
+2. `fchdir(dir_fd)` — **before** any range close, because `dir_fd` is not one of the descriptors
+   the range preserves;
+3. `close_range` over everything above 2 **except** the two descriptors still needed — the exec
+   descriptor and the exec-status pipe write end — which requires up to three
+   `close_range(first, last, 0)` calls over the gaps between them, **skipping any range whose
+   first exceeds its last**, since `close_range(2)` returns `EINVAL` in that case and the child's
+   only exits are `execveat` and `_exit`;
+4. `setpgid(0, 0)`; the parent also calls `setpgid(child, child)` and ignores `EACCES`, so the
+   group exists before any sweep can be issued;
+5. `rt_sigprocmask(SIG_SETMASK, <empty set>, NULL)` to clear the inherited blocked set;
+6. `rt_sigaction(sig, SIG_DFL)` for every signal the host may have set to `SIG_IGN`;
+7. `execveat(exec_fd, "", argv, envp, AT_EMPTY_PATH)`.
 
 Both surviving descriptors are `CLOEXEC`, so a successful exec removes them and the invariant
-holds in the new image. Step 2 is the load-bearing one, and it is the step
-[section 8](#8-the-unsafe-and-helper-question) shows is unreachable from safe Rust.
+holds in the new image. Step 3 is the load-bearing one, and it is the step
+[section 8](#8-the-unsafe-and-helper-question) shows is unreachable from safe Rust. The frozen
+sequence is matched syscall-for-syscall against the trace in case **M4**, because the accepted
+mechanism must be the documented one.
+
+**Signal state is the fifth ambient input, and 0.1 closes it explicitly** — steps 5 and 6 exist
+for that and nothing else. `signal(7)`: a child inherits a copy of the parent's signal mask,
+"the signal mask is preserved across `execve(2)`", and "during an `execve(2)`, the dispositions
+of handled signals are reset to the default; **the dispositions of ignored signals are left
+unchanged**". So without steps 5 and 6 the executed program inherits the host's blocked set and
+every disposition the host set to `SIG_IGN`, through both `fork` and `execveat` — exactly the
+class of hidden input [section 15](#15-environment-policy) refuses for the environment, and worse
+because the plan cannot express it. This is not hypothetical for a Rust host: Rust's startup code
+sets `SIGPIPE` to `SIG_IGN` before `main`, so a backend omitting the reset guarantees that every
+child runs with `SIGPIPE` ignored, silently changing the behaviour of a child that writes to a
+closed pipe — the scenario case O5 tests. A host that blocks `SIGTERM` would likewise guarantee
+that [section 23](#23-timeout)'s grace window is burned in full. Both syscalls are on
+`signal-safety(7)`'s POSIX list. Cases **F5** and **T6**; the receipt makes no claim about signal
+state, the point being that the plan and not the host determines it.
 
 Considered and rejected: `closefrom` variants (not a Linux syscall; the BSD/glibc wrapper reads
 `/proc/self/fd`, adding a procfs dependency and a directory walk in the child);
@@ -682,11 +838,43 @@ Two **separate** pipes, never merged: merging would destroy the distinction betw
 results and its diagnostics, and that distinction is a fact worth recording.
 
 **Draining is concurrent and deadlock-free by construction.** The parent runs a single-threaded
-`poll()` loop over the stdout read end, the stderr read end and the exec-status pipe, with the
-poll timeout computed from a `CLOCK_MONOTONIC` deadline. Reading one stream to completion before
-the other — the classic bug — is impossible because no read is issued except on a descriptor
-`poll` reported ready. A thread pool is deliberately avoided: threads in the parent complicate
-the fork-safety argument in [section 8](#8-the-unsafe-and-helper-question) for no gain.
+`poll()` loop over **the pidfd**, the stdout read end, the stderr read end and the exec-status
+pipe, with the poll timeout computed from a `CLOCK_MONOTONIC` deadline. Reading one stream to
+completion before the other — the classic bug — is impossible because no read is issued except on
+a descriptor `poll` reported ready. A thread pool is deliberately avoided: threads in the parent
+complicate the fork-safety argument in [section 8](#8-the-unsafe-and-helper-question) for no
+gain.
+
+Three rules make that loop actually terminate, and each closes a way it otherwise would not.
+
+**Parent-side closes, immediately after `fork` returns and before the loop.** The parent closes
+its own copies of the exec-status pipe **write** end, the stdout pipe **write** end, the stderr
+pipe **write** end and the stdin pipe **read** end, and closes the stdin pipe write end to
+deliver the immediate EOF of [section 18](#18-standard-input). The child's `CLOEXEC` closures are
+necessary and **not sufficient**: `pipe(7)` reaches end-of-file only when **every** descriptor
+referring to the write end is closed, and `fork(2)` gave the parent its own copy of each. Without
+this the exec-status pipe never reaches EOF, every launch burns `SPAWN_CONFIRM_TIMEOUT_MS`, and
+the drain loop never terminates even with no descendant in the picture.
+
+**A descriptor leaves the poll set on its terminal event, and only after `read()` returns 0.**
+`poll(2)` returns POLLHUP in *revents* whether or not it was requested in *events*, so a
+descriptor left in the set after end-of-file makes every subsequent `poll()` return immediately
+and converts the loop into a busy spin that consumes the timeout without progress — a state a
+naive "no deadlock, completed inside the timeout" oracle would score as success. POLLHUP is never
+acted on before the descriptor has been read to `read() == 0`.
+
+**A bounded post-exit drain, because direct-child lifecycle does not imply direct-child
+liveness.** A descendant forked after exec inherits descriptors 1 and 2 — the launcher's own pipe
+write ends — and `pipe(7)` withholds EOF while any of them lives. The direct child can therefore
+exit and be reaped while both streams stay open forever, and neither POLLIN nor POLLHUP is ever
+raised. On child end the launcher continues the loop over the two read ends for at most
+`POST_EXIT_DRAIN_MS`, then stops reading, closes the read end, and records
+`WriterRetainedAfterChildExit` for that stream. Closing that read end may deliver `SIGPIPE` or
+`EPIPE` to the retaining descendant: that is an effect on a process outside the claimed
+lifecycle, it is stated here so it cannot be mistaken for containment, and it is the price of
+bounding the launcher's own tail. Total bound:
+`SPAWN_CONFIRM_TIMEOUT_MS + timeout_ms + grace_ms + POST_EXIT_DRAIN_MS`, and that bound is itself
+a tested property. Cases **O6**, **P4** and **T5**.
 
 Per-stream modes, chosen in the plan:
 
@@ -699,8 +887,10 @@ Per-stream modes, chosen in the plan:
 **Draining continues after the capture bound is reached**, discarding the excess, so a child that
 writes more than the bound is never blocked by a full pipe. Capture is binary-safe: counts and
 digests are over raw bytes with no encoding assumption. A read failure is a typed
-`OutputCaptureFailed { stream, errno_class }` and is never silently reported as "no output".
-If the deadline expires mid-stream the counts are marked partial rather than presented as final.
+per-stream `completeness` value of [section 30](#30-receipt-vocabulary-and-when-a-receipt-exists)
+and is never silently reported as "no output", and never collapses the process disposition.
+If the deadline expires mid-stream the stream's `completeness` says so; **the digest is never
+presented as a digest of "the child's output"**, only of exactly the bytes this launcher read.
 
 ## 20. Output privacy
 
@@ -744,8 +934,24 @@ What the parent may then conclude, and nothing more:
 | Parent observes | Conclusion |
 |---|---|
 | a complete record | `ExecFailed { stage, errno_class }` — a child existed, the target never ran |
-| clean EOF, no record | exec succeeded; the executed image is the pinned object |
+| clean EOF, no record, **and the direct child exited normally** | exec succeeded; the executed image is the pinned object |
+| clean EOF, no record, **and the direct child was terminated by a signal** | `ExecStatusIndeterminate` — exec cannot be distinguished from pre-exec death |
 | EOF plus a short or partial record | `ExecStatusIndeterminate` — recorded as such, never guessed |
+
+**Clean EOF alone does not prove exec, and the earlier form of this table said it did.** A child
+killed between `fork` and `execveat` closes its inherited `CLOEXEC` write end by dying; the
+parent's copy is already closed; so the parent observes a clean EOF with no record that is
+byte-identical to the successful case. The disposition of the direct child is what separates
+them, which is why it is part of the rule and why case **S5** poses exactly that state.
+
+**"Clean EOF" means `read()` returned 0 after every available byte was read.** `poll(2)` reports
+POLLIN and POLLHUP together when a child writes a record and immediately exits, so hangup is
+never interpreted before the descriptor is drained to `read() == 0` — interpreting it first
+reports exec success for a child that never execed, which is
+[falsifier 8](#38-falsifiers) reached through this table. The record is well below `PIPE_BUF` and
+is therefore atomic (`pipe(7)`), so the child's write loops on `EINTR` and a short record
+indicates an interrupted transfer, staying `ExecStatusIndeterminate` rather than being
+reconstructed. Cases **S5** and **S7**.
 
 `ENOENT`, `EACCES`, `ENOEXEC`, `ENOMEM`, `E2BIG`, `ETXTBSY` and `EPERM` therefore arrive as
 distinct `ExecFailed` error classes and can never be presented as an exit status.
@@ -755,11 +961,33 @@ distinct `ExecFailed` error classes and can never be presented as an exit status
 **Use a `pidfd`.** A numeric PID is reusable and is therefore unsuitable as long-lived
 authority; a `pidfd` refers to one process for its whole lifetime.
 
-`pidfd_open(pid)` immediately after `fork` is sound here, and the reasoning is worth recording:
-the launcher never reaps the child before opening the pidfd, so the child is at worst a zombie
-and its PID cannot have been recycled in the interval. Atomic `CLONE_PIDFD` via `clone3` would
-remove even that reasoning step, at the cost of a second, more complex unsafe call site; it is
-recorded as a possible later refinement, not a 0.1 requirement.
+`pidfd_open(pid)` immediately after `fork` is sound **only under three conditions the crate
+cannot establish**, and `pidfd_open(2)` NOTES states them: the disposition of `SIGCHLD` has not
+been set to `SIG_IGN`; `SA_NOCLDWAIT` was not specified; and the zombie was not reaped elsewhere
+in the program, by a signal handler or by `wait` in another thread. `helm-launch` is a
+**library** running inside a host process it does not control, and the direct child is that
+host's child, so these are **caller preconditions, in the shape ADR-0022's cohort clarification
+established: the crate does not attest them and cannot enforce them.** The failure mode is not
+benign — under `SIGCHLD = SIG_IGN` the child is auto-reaped, its PID becomes immediately
+reusable, and `pidfd_open` may return `ESRCH` or open an unrelated process the launcher then
+signals at timeout.
+
+Atomic `CLONE_PIDFD` via `clone3` **removes the precondition entirely**, at the cost of a second
+unsafe call site, and it also avoids the `pthread_atfork` surface of
+[section 8](#8-the-unsafe-and-helper-question). It is therefore measured as arm (b) of case
+**M3** and adopted for 0.1 if the `fork` + `pidfd_open` arm shows any loss — not deferred as a
+refinement.
+
+**The pidfd is polled, not only signalled.** `pidfd_open(2)`: the descriptor becomes readable
+when the task terminates and becomes a zombie, and reports a hangup once it is reaped. It is
+therefore in the `poll` set from `fork` onward, which is what lets
+[section 23](#23-timeout) classify from an **observed** ordering rather than from what the
+launcher did.
+
+If the reap is stolen anyway, `waitid` fails `ECHILD` and the launcher has learned *that* the
+child ended and cannot learn *how*. That is `ExitStatusUnobservable`, a distinct outcome from
+`ExecStatusIndeterminate` — which is about exec confirmation, not exit disposition — and it is
+never guessed and never reported as `Exited { 0 }`. Case **R4**.
 
 Signalling uses `pidfd_send_signal`, and waiting uses `waitid` with `WaitId::PidFd`, both of
 which rustix already exposes safely.
@@ -774,7 +1002,12 @@ created and what became of it.
 - **When it starts:** after **confirmed exec**, that is, when the exec-status pipe reports EOF.
   Charging process setup to the program's budget would misreport what timed out. The pre-exec
   phase has its own separate fixed bound (`SPAWN_CONFIRM_TIMEOUT_MS`, 5000), so neither phase is
-  unbounded.
+  unbounded. **On that bound expiring** with no record and no EOF, the launcher terminates the
+  direct child by `pidfd` (termination signal, `grace_ms`, `SIGKILL`), **reaps it**, and emits
+  `ExecStatusIndeterminate { phase: PreExecTimeout }`. Stating the bound without stating the
+  action would leave a live process, a live pidfd and four open pipe ends inside a library
+  caller's address space. That outcome **may not be read as "nothing ran"**: exec may have
+  completed a moment after the launcher stopped observing. Case **S6**.
 - **Bounds:** `timeout_ms` in `[1, 600_000]`; `grace_ms` in `[0, 60_000]`.
 - **On expiry:** issue the plan's termination signal to the direct child via `pidfd_send_signal`,
   wait up to `grace_ms`, then `SIGKILL`, then wait.
@@ -788,7 +1021,17 @@ created and what became of it.
 | Deadline expired; child killed by the launcher | `TimedOut { disposition: KilledByLauncher { signal } }` |
 | Deadline expired; child still alive after `SIGKILL` and wait | `TerminationFailed` |
 
-The launcher always knows which case applies because it knows whether it issued the signal.
+**The launcher classifies from what it observed, not from what it did.** `Exited` and `Signaled`
+are emitted when the pidfd became readable **before** the deadline; `TimedOut` only when the
+deadline expired while the pidfd was still not readable. The earlier form of this section said
+"the launcher always knows which case applies because it knows whether it issued the signal",
+and that is false twice over: with the pidfd absent from the poll set the launcher never observes
+an early exit at all and reports `TimedOut { ExitedDuringGrace }` for a child that exited before
+the deadline and was never affected by any signal; and `waitid` reports a signal *number*, not a
+*sender*. `KilledByLauncher` therefore records only that the launcher issued that signal and that
+the child then ended with it — it does not attest that the launcher's signal was the one that
+ended it. A `SIGTERM` delivered to an already-dead zombie is simply discarded (`kill(2)`).
+Cases **T4** and **T5**.
 
 **No determinism is claimed.** Timing depends on scheduling and load. Consistent with
 `helm-observe` and `helm-bind`, the receipt carries **no wall-clock timestamp and no elapsed
@@ -815,10 +1058,27 @@ running service. None of the mechanisms available to an unprivileged 0.1 prevent
 > **Recommended 0.1 claim: direct-child lifecycle only.** The child is placed in its own process
 > group with `setpgid(0, 0)`, which gives a best-effort sweep target and stops the child
 > receiving the launcher's terminal signals. Termination targets the **direct child** by
-> `pidfd`. A process-group sweep may additionally be issued and is recorded as
-> `group_sweep_issued: true` with **no** claim about descendants. `helm-launch` 0.1 provides
-> **no process-tree containment**, and the receipt vocabulary contains no word that could be
-> read as containment.
+> `pidfd`. A process-group sweep is issued **exactly once, and always strictly before the direct
+> child is reaped**, and is recorded as `group_sweep_issued: true` with **no** claim about
+> descendants. `helm-launch` 0.1 provides **no process-tree containment**, and the receipt
+> vocabulary contains no word that could be read as containment.
+
+**The sweep ordering is load-bearing, not stylistic.** [Section 22](#22-process-identity) refuses
+a numeric PID as authority because it is reusable, and a process-group ID is a number from the
+same space with no `pgidfd` equivalent. POSIX reserves a process-group ID only while the group is
+non-empty, and a zombie is still an existing process (`kill(2)`), so the sweep is safe **only
+while the direct child remains unreaped**. Issued after `waitid`, it may signal a process group
+the system has already reassigned — an unprivileged `SIGKILL` at an unrelated group owned by the
+same user, which is the launcher acting on processes it never created and a stronger defect than
+the descendant limitation this section openly accepts. Whether a sweep is issued is fixed by this
+decision and is **not** an implementer's option; "may additionally be issued" is not a contract.
+Case **P3**.
+
+**Direct-child lifecycle is a claim about what `helm-launch` ends, not about what it waits for.**
+A descendant that inherits stdout or stderr holds a write end of the launcher's own pipe, so
+those streams may never reach end-of-file even after the direct child is reaped. The bounded
+post-exit drain of [section 19](#19-standard-output-and-standard-error) is what makes the
+launcher terminate in that state; the sweep is not, and must not be described as if it were.
 
 The hypothesis in the instruction therefore survives testing, and case **P1** is designed to
 *demonstrate the limitation rather than to pass*: a helper forks a descendant that outlives its
@@ -912,7 +1172,24 @@ is a separate module with its own architecture, its own evidence and its own acc
 0.1 **does not elevate privileges**. No `sudo`, no setuid helper, no file capabilities, no
 `CAP_*` acquisition, no namespace creation, no seccomp or AppArmor manipulation. The child
 executes under the same uid, gid, supplementary groups, rlimits and MAC context as the calling
-process.
+process **unless the authorized object is set-user-ID, set-group-ID, or carries file
+capabilities**, in which case the kernel applies them at `execveat` and the child's credentials
+differ from the caller's.
+
+That exception is not a wording nit: this section states the upper bound on what a launch can do,
+and the unconditional form of it was wrong. `execve(2)` honours those bits and ignores them only
+under `no_new_privs`, a `nosuid` mount, or ptrace — and 0.1 sets none of the three, since it
+explicitly creates no namespace and no seccomp filter and treats mode bits as a recorded fact
+rather than a gate. `execveat` with `AT_EMPTY_PATH` takes the same `do_open_execat` path and
+applies the same credential transition; there is no `execveat`-specific suppression. So a trusted
+caller handing over a descriptor on a set-user-ID-root object gets a child with **different
+credentials from the caller**, and `helm-launch` neither prevents that nor attests it. The bits
+are visible in the receipt's `pre_exec_mode_bits`, which is a pre-execution measurement
+([section 32](#32-executable-identity-and-mutation)) and not a guarantee about the exec.
+
+Whether 0.1 should instead **refuse `S_ISUID`/`S_ISGID` at admission** — a one-line gate that
+makes the paragraph above true by construction, at the cost of a capability 0.1 has no use for —
+is **owner decision D-9**. Case **X7**.
 
 `O_NOATIME` is not used for the same reason: it would require ownership or `CAP_FOWNER`.
 
@@ -927,11 +1204,25 @@ reason it held for `BindingReport`: a later layer may need to refer to exactly o
 Identity inputs, all recorded inside the receipt bytes:
 
 - `launch_plan_sha256` — determines argv, environment, timeout, capture and termination policy;
-- the executable's observed identity: `size` and `sha256`, plus recorded `mode_bits`;
+- the executable's **pre-execution measurement**: `pre_exec_body_size`, `pre_exec_body_sha256`
+  and `pre_exec_mode_bits`. The names carry the two narrowings the fields actually have —
+  `pre_exec` because the measurement was taken before the execution attempt and the kernel maps
+  the inode again at exec, and `body` because it covers only the main executable file body and
+  never the ELF interpreter, the shared libraries or any other part of the loaded-code closure.
+  **No HELM layer may read these as "the executable body that ran"**;
 - `subject_spec_sha256`, when the plan carried one — opaque context;
 - `binding_report_sha256`, when the plan carried one — opaque context;
-- the execution outcome ([section 30](#30-receipt-vocabulary-and-when-a-receipt-exists));
-- per-stream `{ bytes_drained, sha256, truncated }` for stdout and stderr;
+- the process disposition ([section 30](#30-receipt-vocabulary-and-when-a-receipt-exists));
+- per-stream `{ bytes_drained, drained_sha256, completeness }` for stdout and stderr, where
+  `drained_sha256` is the SHA-256 of **exactly the `bytes_drained` bytes this launcher read from
+  that stream** and is never a digest of "the child's output"; `completeness` is the closed
+  vocabulary of section 30 and is the only field that says whether those bytes are the whole
+  stream. The `truncated` flag of [section 19](#19-standard-output-and-standard-error) describes
+  the in-memory retained prefix, is not a statement about the stream, and does not appear here;
+- `group_sweep_issued`, recording only that a sweep was issued to the child's process group and
+  nothing about which processes received it or what became of them;
+- `environment_mode`, from the closed set `{empty, explicit}`, so a consumer need not re-read the
+  plan to know whether a caller-supplied environment was in force;
 - the cohort statement: `linux_exact_executable`, and the mechanism actually used.
 
 `receipt_sha256 = SHA256(exact receipt bytes)`, over deterministic bytes with fixed field order
@@ -960,17 +1251,47 @@ Between those two lies one narrow case: `launch` was called but no child was eve
 example `fork` or `pipe` failed. That is `Err(LaunchError::NoAttempt { … })` with **no** receipt,
 because no execution was attempted.
 
-The outcome vocabulary, all process facts and no application semantics:
+The outcome vocabulary, all process facts and no application semantics. A receipt records **one
+process disposition** and, independently, **one completeness disposition per stream**. They are
+orthogonal facts and neither may absorb the other — a child that exits 42 while a stream read
+fails has two facts, and a sum type could carry only one, so whichever it kept the receipt would
+assert a falsehood by omission. Both accepted modules already record partiality on its own axis:
+`helm-observe`'s `TargetOutcome::Failed { failure, observed_kind, partial_bytes }` keeps it per
+target, and ADR-0023's accepted result is per-claim states plus two independent axes for exactly
+this reason.
 
 ```text
-ExecFailed { stage, errno_class }          the child existed; the target never ran
-ExecStatusIndeterminate                    exec status could not be established; not guessed
-Exited { code }                            the direct child exited with this status
-Signaled { signal, by_launcher: false }    ended by a signal the launcher did not send
-TimedOut { disposition }                   the deadline expired and the launcher acted
-TerminationFailed                          the direct child did not stop after SIGKILL and wait
-OutputCaptureFailed { stream, errno_class} a stream could not be drained
+process_disposition:
+  ExecFailed { stage, errno_class }     the child existed; the target never ran
+  ExecStatusIndeterminate { phase }     exec status could not be established; not guessed
+  Exited { code }                       the direct child exited with this status
+  Signaled { signal, launcher_signal_issued: bool }
+  TimedOut { disposition }              the deadline expired with the child still running
+  TerminationFailed                     the direct child did not stop after SIGKILL and wait
+  ExitStatusUnobservable { reason }     a child existed and exec was confirmed, but its exit
+                                        disposition was consumed outside the launcher
+
+stream_completeness (stdout, stderr, each):
+  CompleteAtEof                         the pipe reached end-of-file and was fully drained
+  DeadlineTruncated                     the launcher stopped reading when the deadline expired
+  WriterRetainedAfterChildExit          the direct child ended, another process still held a
+                                        write end, and the bounded post-exit drain expired
+  CaptureFailed { errno_class }         a read failed
 ```
+
+`TerminationFailed` and every `stream_completeness` value other than `CompleteAtEof` may coexist
+with any process disposition. `ExitStatusUnobservable` is deliberately **not** folded into
+`ExecStatusIndeterminate`: that one is about *exec confirmation*, and overloading it with an
+*exit-status* fact would be the same collapse this structure exists to prevent.
+
+**What the receipt may claim in the descendant state**, verbatim, because it is the easiest place
+to over-claim: the direct child exited with the recorded status; for each stream, `bytes_drained`
+bytes were read by this launcher before it stopped reading, and `drained_sha256` is over exactly
+those bytes; `WriterRetainedAfterChildExit` states one observed fact, that at the moment the
+launcher stopped reading at least one process other than the direct child still held a write end
+open. The receipt makes **no** claim about the total volume the child and its descendants
+produced, **no** claim about whether more was written afterwards, **no** claim about whether any
+descendant is still running, and nothing that may be read as containment.
 
 There is no `PASS`, `FAIL`, `OK`, `SUCCESS`, `WORKED`, `COMPATIBLE` or `READY` anywhere, and no
 field from which such a value could be derived — there is no function that maps an outcome onto
@@ -995,21 +1316,43 @@ path replacement, rename and unlink are all irrelevant to *which object runs* �
 **E3** and **E4** exist to establish that rather than assume it.
 
 Mutation of the object itself is the honest residual risk, and it is stated rather than papered
-over. Two documentation-derived properties bear on it:
+over. Three documentation-derived properties bear on it:
 
-- Linux `deny_write_access` causes `execveat` to fail with `ETXTBSY` if **any** writable
-  descriptor is open on the inode at exec time, and blocks new writable opens while the image is
+- Linux's exec-time write deny (`exe_file_deny_write_access()` in `fs/exec.c:do_open_execat`)
+  makes `execveat` fail with `ETXTBSY` if a writable open file description exists on the inode
+  **at the instant of the exec syscall**, and blocks new writable opens while the image is
   executing;
+- **that reference is taken only at exec time**, so a writer that opens for writing, writes and
+  **closes before the exec** leaves `i_writecount` at zero and never triggers `ETXTBSY`;
 - neither property freezes the file's contents during the window **between** hashing and exec.
 
-> **`helm-launch` does not promise that the executed bytes equal the hashed bytes.** It promises
-> that the hashed object and the executed object are **the same inode, reached through the same
-> descriptor**, and it records the measurement. Anyone able to write to that inode in the window
-> between measurement and exec — which requires write access to the file — can invalidate the
-> content claim, and `ETXTBSY` behaviour means such a writer usually breaks the exec instead.
+> **`helm-launch` does not promise that the executed bytes equal the hashed bytes, and `ETXTBSY`
+> does not close that window.** It promises that the hashed object and the executed object are
+> **the same inode, reached through the same descriptor**, and that the measurement was taken
+> **before the execution attempt**. `ETXTBSY` refuses the exec only for a writer still *holding*
+> a writable descriptor at the exec instant; the ordinary open-write-close sequence — every
+> editor, `cp`, `install`, `dd conv=notrunc` and package manager — is never refused, the modified
+> body executes, and the receipt carries the pre-execution digest. The field is therefore named
+> `pre_exec_body_sha256` and documented as a pre-execution measurement, and **no HELM layer may
+> read it as "the executable body that ran"**.
 
-This must be verified, not asserted: the mutation cases are part of the E series and their
-outcome may force this paragraph to be rewritten before implementation.
+An earlier form of this section said such a writer "usually breaks the exec instead". That was
+unfounded and is withdrawn: the write-deny reference is taken at exec time, so the
+measure-to-exec window is not covered at all, and the common case is exactly the one that is not
+refused.
+
+**The known path to the strong claim, recorded and not adopted.** Copying the measured bytes into
+a `memfd_create(MFD_ALLOW_SEALING)` object, applying
+`F_SEAL_WRITE|F_SEAL_SHRINK|F_SEAL_GROW|F_SEAL_SEAL`, and executing the sealed memfd would make
+measured bytes and executed bytes provably identical. The cost is a full copy, the loss of
+set-user-ID and on-disk identity semantics, a changed `/proc/self/exe`, and an interaction with
+`vm.memfd_noexec`/`MFD_NOEXEC_SEAL`. It is recorded here as the mechanism that would earn the
+stronger claim, **not** as a claim 0.1 makes.
+
+This must be verified, not asserted: cases **E5**, **E5b**, **E6**, **E6b**, **E6c** and **E6d**
+are the E-series mutation cases, and **E6, E6b and E6d are documentation gates as well as
+mechanism gates** — none may be scored PASS while any document still presents the pre-execution
+measurement as the identity of the executed body.
 
 ## 33. Resource bounds
 
@@ -1027,6 +1370,7 @@ outcome may force this paragraph to be rewritten before implementation.
 | `timeout_ms` | 1 … 600 000 | |
 | `grace_ms` | 0 … 60 000 | |
 | `SPAWN_CONFIRM_TIMEOUT_MS` | 5 000 | Bounds the pre-exec phase separately |
+| `POST_EXIT_DRAIN_MS` | 2 000 | Bounds draining after the direct child ends, for the case where a descendant still holds a stdio write end. **Fixed by the architecture, never a plan field**, so a plan cannot lengthen the launcher's own tail |
 | `MAX_CAPTURE_BYTES` per stream | 64 KiB | Retained only in memory, never in the receipt |
 | `MAX_RECEIPT_BYTES` | 8 KiB | The receipt holds digests and counts, not payloads |
 
@@ -1080,8 +1424,11 @@ authority — inside the launcher's graph, where it must never be mistaken for l
 | `helm-bind` | **No** | Only two digests are needed, and linking it would pull in `helm-observe` |
 
 External dependencies, each justified: `rustix` (already vetted here; `process`, `pipe`, `event`,
-`fs`, `std`) for the safe syscalls; `libc` for `close_range` and the `execveat` syscall, which
-rustix does not safely provide; `sha2` for digests; `serde` and `serde_json` for strict JSON
+`fs`, `std`) for the safe syscalls; `libc` for the `execveat` and `close_range` **syscall numbers
+and the `syscall` entry point**, which rustix does not safely provide — deliberately **not** the
+crate's glibc wrappers for either, because both are declared for `linux-gnu` only and
+`close_range`'s is marked "Added in glibc 2.34", so using them would add an invisible
+**glibc >= 2.34** runtime floor and fail to link on any musl target; `sha2` for digests; `serde` and `serde_json` for strict JSON
 scanning, following the existing crates' pattern of a strict scanner over `serde_json` rather
 than derived deserialisation. **No shared utility crate is created**: there is no concrete need,
 and the identifier and digest grammars are small enough to restate.
@@ -1144,6 +1491,15 @@ Reject the architecture, or any implementation of it, if any of the following is
 16. Unbounded stdout or stderr can deadlock the launcher or exhaust memory.
 17. Path replacement changes the executed body under a claimed pinned-exec mechanism.
 18. `authorize` can be replayed to produce more executions than authorizations.
+19. A receipt field, its name, or its prose presents a **pre-execution measurement** as the
+    identity of the body that executed; or the executable digest is described as covering the
+    ELF interpreter, the shared libraries or the loaded-code closure; or any environment mode,
+    including `empty`, is described as establishing which code the process loaded; or the `LD_`
+    refusal is described as complete.
+20. The receipt asserts a temporal or causal fact the launcher did not observe — in particular a
+    `TimedOut` disposition for a child observed to have exited before the deadline, or an exit
+    status the launcher did not obtain.
+21. `launch()` can fail to return while the direct child's lifecycle has ended.
 
 ## 39. Crate and API sketch
 
@@ -1195,18 +1551,21 @@ no `Deserialize` and no `From`, each guarded by a `compile_fail` doctest as in `
 
 ```text
    LaunchPlan exact bytes                ExecutableCapability
-            │ sha256                       │ fstat + pread
+            │ sha256                       │ fstat + pread, BEFORE the exec attempt
             ▼                              ▼
-   launch_plan_sha256              size + executable_sha256 + mode_bits
+   launch_plan_sha256       pre_exec_body_size + pre_exec_body_sha256
+            │                            + pre_exec_mode_bits
             │                              │
-            │   subject_spec_sha256 ┐      │
-            │   binding_report_sha256┘     │      (opaque context digests)
+            │   subject_spec_sha256 ┐      │  (the main file body only: never the
+            │   binding_report_sha256┘     │   interpreter, the libraries or the
+            │        (opaque context)      │   loaded-code closure)
             └───────────┬──────────────────┘
                         ▼
                  AuthorizedLaunch
-                        │  actual execution (nondeterministic)
-                        ▼
-        execution outcome + per-stream {count, sha256}
+                        │  actual execution (nondeterministic; the kernel re-opens
+                        │  and re-maps the inode at exec, so these bytes are not
+                        ▼  attested to be the executed bytes)
+   process_disposition + per-stream {bytes_drained, drained_sha256, completeness}
                         │
                         ▼
              LaunchReceipt exact bytes
@@ -1221,7 +1580,14 @@ receipt that a run of that plan will produce.
 
 ## 41. Test and falsification strategy beyond the experiment
 
-The experiment settles kernel semantics. In-crate tests must independently cover: strict plan
+The experiment settles kernel semantics; **plan-parse properties are not settled by it and are
+not preregistered in it.** LAUNCH-EXEC-01 originally carried a NUL-argument case (A5) and an
+`LD_PRELOAD` case (V3); both were deleted, because both are properties of a crate that does not
+exist and that must not be created before the experiment runs, and a NUL byte cannot be delivered
+through a C spike's `argv` at all. They are obligations here instead, and **no experiment result
+supports or refutes them**.
+
+In-crate tests must independently cover: strict plan
 parsing including duplicate keys at every depth and every bound; the `LD_` refusal rule; NUL and
 non-UTF-8 argument rejection; refusal atomicity — no receipt on any refusal path; receipt
 serializer determinism, injectivity and the size bound; the absence of verdict vocabulary among
@@ -1241,6 +1607,11 @@ in CI.
 | **D-5** | Accept the mandatory `DirectoryCapability` working directory, with no ambient cwd mode | Accept |
 | **D-6** | Accept UTF-8-only argv in 0.1, leaving non-UTF-8 arguments unrepresentable | Accept, recorded as a limitation |
 | **D-7** | Authorise LAUNCH-EXEC-01 to run, and on which environment | Authorise on a GitHub-hosted `ubuntu-24.04` runner first |
-| **D-8** | Accept that the receipt carries no elapsed duration and no timestamp | Accept |
+| **D-8** | Accept that the receipt carries no elapsed duration and no timestamp | Accept, **conditional on the pidfd being polled** — excluding the duration is only safe once the exit-versus-deadline ordering is an *observed* fact ([section 23](#23-timeout)) |
+| **D-9** | Refuse `S_ISUID`/`S_ISGID` objects at admission, or record and permit them | **Refuse in 0.1**, with `AdmissionError::SetIdBitsPresent`. The non-elevation claim of [section 28](#28-user-credentials-and-privilege) is load-bearing for the whole non-sandbox boundary, and 0.1 has no setuid use case |
+| **D-10** | Environment `empty`-only in 0.1, or retain `explicit` with the narrowings of [section 15](#15-environment-policy) | **`empty`-only.** It is already the only mode the first synthetic cohort needs, and it removes a caller-controlled surface rather than adding one |
 
-None of these is decided here. ADR-0024 records them as **Proposed**.
+None of these is decided here. ADR-0024 records them as **Proposed**. D-9 and D-10 were added by
+the [pre-execution review](../implementation/HELM-LAUNCH-PRE-EXECUTION-REVIEW.md), and both
+change LAUNCH-EXEC-01's case membership, so the definition cannot be frozen until they are ruled
+on.
