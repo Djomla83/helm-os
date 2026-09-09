@@ -311,3 +311,75 @@ is still locatable in the built `helper_report`.
 build, and the **runner-refusal assertion held at exit 3** with `"status": "NOT_RUN"`. The freeze
 verified on the runner *before* anything was built, which also confirms the manifest hashes are over
 the LF bytes a fresh checkout produces.
+
+## Build 5 — 2026-09-09, the corrected PRE-D7-B1 source, clean
+
+**Purpose:** Build 4 surfaced a genuine source defect — the duplicated `wait_errno` conversion.
+This run compiles the descendant commit that corrects it. Build 4 is preserved above; this section
+does not replace it.
+
+> **No binary produced here was executed, traced, `ldd`'d or loaded.** LAUNCH-EXEC-01 remains
+> **NOT_RUN**, D-7 is not granted, and no preregistered case was posed.
+
+| Field | Value |
+|---|---|
+| Workflow run | `34409337399` |
+| Commit built | `002e1e4fe72dce9a141e0dcb5ee85f339bb4a560` |
+| Runner / OS / kernel | GitHub-hosted `ubuntu-24.04`, `6.17.0-1022-azure` x86_64 |
+| Compiler / libc | `cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0`, `GLIBC 2.39-0ubuntu8.8` |
+| Source freeze verified before building | **yes** — `freeze_verified: true` |
+| Result | **every step succeeded** |
+
+**Zero warnings and zero errors at `-Wall -Wextra`.** The `-Wformat=` diagnostic quoted in Build 4
+is gone, and no other diagnostic replaced it, so the experiment's standing "zero warnings" claim
+holds again for the current frozen source.
+
+### Binary and fixture digests
+
+```
+f7548af2574c52f7172e3035a99ffec3cf88535aa0667ab62c87b96a1307be09  launcher_spike   (CHANGED)
+423ac81e0cbf553a3d8f821d72209ed6f505f4a45494c38d800bfdfc126ca236  helper_report    (unchanged)
+d13082b12b26cb35d6707f6575feaab3b17368a13b6fd0ccf6ed7ae10c98e26d  helper_alt       (unchanged)
+3232d09ffb089907e2586ac0bffdd1ba5b635c99e80cab1333e4ddb575a13dcb  helper_fork      (unchanged)
+500c4af1934be000acefc6daa49ebe8ac984686b23a4358bd134464e02f66c10  helper_setid     (unchanged)
+c854162ddf4074cdfe132492ddc595ae6345f820c22a1cd082e32dd1646850cc  helper_dynamic   (unchanged)
+415f14b8538c8e59832a107b12c54f2fae9cd2ab5637df2f8a6facb82a9cfd52  helper_foreign.elf
+51224867e5fb13d0c6052397c9f4959c7c87bb8bc7d750c91429728a18b507d9  unloadable_in_cohort.elf
+3bdbb4fe8397cd2b842430b39ccff01a8663c751945ef5e9a09e267fb8b1d359  magic_only.bin
+37f800b1a77f026dbf2ee2724829458ddf78dd8329527deee3d086025959208a  script_fixture.sh
+```
+
+`launcher_spike` moved from `57e233b3…` (Build 4) to `f7548af2…`, which is the one-line correction.
+**Every other digest is byte-identical across Builds 1, 2, 4 and 5** — four independent builds
+agreeing that only the launcher changed and that `helper_report.c`'s reporting channel was never
+touched, which is what the owner decision required.
+
+These digests are **not reproducible across toolchains**: the build embeds a BuildID and is
+sensitive to compiler and libc version. They identify what this runner produced from this source
+freeze.
+
+### Inspection, as data only
+
+| Binary | `file` | PT_INTERP |
+|---|---|---|
+| `launcher_spike` | ELF 64-bit LSB executable, x86-64, **statically linked** | none |
+| `helper_report` | ELF 64-bit LSB executable, x86-64, **statically linked** | none |
+| `helper_alt` | ELF 64-bit LSB executable, x86-64, **statically linked** | none |
+| `helper_fork` | ELF 64-bit LSB executable, x86-64, **statically linked** | none |
+| `helper_setid` | ELF 64-bit LSB executable, x86-64, **statically linked** | none |
+| `helper_dynamic` | ELF 64-bit LSB **pie**, x86-64, **dynamically linked** | present |
+
+`-pthread` did not cost the static-linking precondition: `launcher_spike` is still statically linked
+and still carries no `PT_INTERP`, so M2's control arm did not weaken the condition that makes a
+complete trace evidence rather than filtering. `helper_dynamic` still carries one, which is what E7
+requires. The E6 marker guard is still locatable in the built `helper_report`.
+
+### Other steps
+
+**All 247 non-trial Python and checker tests passed on the runner**, and the **runner-refusal
+assertion held at exit 3** with `"status": "NOT_RUN"`. The freeze verified on the runner *before*
+anything was built, which also confirms the manifest hashes are computed over the LF bytes a fresh
+checkout produces rather than over a local working copy.
+
+**Successful compilation is not trial evidence.** No preregistered case ran, so no experiment
+verdict of any kind exists.
