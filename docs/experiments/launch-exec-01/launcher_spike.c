@@ -878,7 +878,6 @@ int main(int argc, char **argv)
            "\"exit_code\":%d,\"term_signal\":%d,"
            "\"launcher_signal_issued\":%s,"
            "\"group_sweep_issued\":%s,"
-           "\"wait_errno\":%d,"
            "\"wait_errno\":%d,",
            digest, (long long)st.st_size, (unsigned)(st.st_mode & 07777),
            disposition, timeout_disposition,

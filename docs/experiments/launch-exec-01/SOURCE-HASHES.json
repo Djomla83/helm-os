@@ -73,13 +73,13 @@
     "helper_fork.c": "a62a6a1e2bbb9cc6ef8a346ae9322c7b7435b1c7f0b6c3710b3aadb9cc2ba0b0",
     "helper_report.c": "99770ed8cfdd4049f9bef3624e21850496b6c14a169c3895b54ab7a858d54711",
     "helper_setid.c": "c609755d105122eea304f5fe12685d8dcc24064d77659295a11a76d42b86329f",
-    "launcher_spike.c": "7d13090e3e815b32ae730da9c16aef769e213bb41411dbe1fdea9f066dd118db",
+    "launcher_spike.c": "10df2c7c0e6bc7f03e8c1b8141a5d2f06a27812596fd3c6d9fa94b367bda9018",
     "make_fixtures.py": "19ebbb6487b412afd0ba1f17db5a329ff3a686c10b91eaf928cf3344919cec9b",
     "observations.py": "3d399de8837e58dbcedeb6269ffe9a9c60cca15905d3e055ae5cdf28ce2bee55",
     "oracles.py": "83beb81102f9f60e3796c9469d4bd5265e8acac3d4383f7873840fb9c40b4842",
     "run_launch_exec_01.py": "6740f174f5a58b70a80ba44d16ea6ebdfdd64d8d77ec8bdedb5cdb2bbbfc20dd"
   },
   "status": "NOT_RUN",
-  "supersedes": "575727fbdb3863211611173972bf3851ec7e569d",
-  "supersession_reason": "PRE-D7-B1 corrected by owner decision, launcher-side: launcher_spike.c now emits the bounded capture prefix it already retained, base64-encoded, inside each stream block. bytes_drained, drained_sha256 and completeness are unchanged, and NO descriptor was added to the helper - the report still arrives on descriptor 1 and the executed image still sees exactly {0,1,2}. M2 and M5 gained the TEST/CONTROL-ONLY arms their frozen contracts name (--extra-threads, --rejected-acquisition-arm). Posable cases went from 29 to 71. M3 remains unposable and is returned as an owner question rather than answered with a self-asserting receipt field. The superseded freezes 66bf4b6, 5729458 and 575727f are preserved unchanged."
+  "supersedes": "a7ae6b9bc44b6db58fd4474fb617ef132e9bc664",
+  "supersession_reason": "PRE-D7-B1 corrected by owner decision, launcher-side: launcher_spike.c now emits the bounded capture prefix it already retained, base64-encoded, inside each stream block. bytes_drained, drained_sha256 and completeness are unchanged, and NO descriptor was added to the helper - the report still arrives on descriptor 1 and the executed image still sees exactly {0,1,2}. M2 and M5 gained the TEST/CONTROL-ONLY arms their frozen contracts name (--extra-threads, --rejected-acquisition-arm). Posable cases went from 29 to 71. M3 remains unposable and is returned as an owner question rather than answered with a self-asserting receipt field. The superseded freezes 66bf4b6, 5729458 and 575727f are preserved unchanged. This freeze additionally corrects a defect the compile-only run 34408977185 surfaced in the PRE-D7-B1 receipt split: the wait_errno format specifier was duplicated, so the second %d read a vararg that did not exist - undefined behaviour emitting a garbage duplicate key. -Wall -Wextra caught it; the defective compile evidence is preserved in BUILD-EVIDENCE.md rather than discarded."
 }

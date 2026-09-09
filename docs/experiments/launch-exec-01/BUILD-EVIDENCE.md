@@ -206,3 +206,108 @@ unposable, plus M2, M3 and M5 for separate reasons. Full analysis in
 
 **Successful validation does not constitute trial evidence.** No preregistered case ran, so no
 experiment verdict of any kind exists.
+
+## Build 4 — 2026-09-09, first compile of the PRE-D7-B1 correction (defect found)
+
+**Purpose:** `launcher_spike.c` changed for the first time since the freeze — PRE-D7-B1 (emit the
+retained capture prefix) plus M2's and M5's TEST/CONTROL-ONLY arms — so Build 1 and Build 2 no
+longer cover the mechanism source. Fresh Linux compile-only evidence was required.
+
+> **No binary produced here was executed, traced, `ldd`'d or loaded.** Every property below came
+> from compiling and from reading the produced files as data. LAUNCH-EXEC-01 remains **NOT_RUN**,
+> D-7 is not granted, and no preregistered case was posed.
+
+| Field | Value |
+|---|---|
+| Workflow run | `34408977185`, `.github/workflows/launch-exec-01-compile-only.yml` |
+| Commit built | `a7ae6b9bc44b6db58fd4474fb617ef132e9bc664` |
+| Trigger | `push` to `docs/helm-launch-architecture` (path filter), not a dummy change |
+| Runner | GitHub-hosted `ubuntu-24.04` (`runnervmejwal`) |
+| Kernel | `6.17.0-1022-azure`, `x86_64` |
+| Compiler | `cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0` |
+| C library | `GLIBC 2.39-0ubuntu8.8` |
+| Source freeze verified before building | **yes** — `freeze_verified: true` |
+| Job conclusion | **success** (every step, including the runner-refusal assertion) |
+
+**Local compile capability, again:** the ordinary personal `Ubuntu` WSL distribution still has no C
+compiler (`gcc`, `cc`, `clang`, `gcc-13`, `musl-gcc` all absent; only `gcc-14-base`). Installing one
+is not authorised and the preserved `helm-lab-g0*` distributions were not touched. The bounded
+GitHub compile-only workflow was used on the exact candidate ref, which is what it exists for.
+
+### Link commands
+
+```
+cc -O2 -Wall -Wextra -static -o build/<t> <t>.c
+    for helper_report, helper_alt, helper_fork, helper_setid
+cc -O2 -Wall -Wextra -static -pthread -o build/launcher_spike launcher_spike.c
+cc -O2 -Wall -Wextra -o build/helper_dynamic helper_dynamic.c
+```
+
+`-pthread` is new and applies to `launcher_spike` alone: M2's control arm starts extra live threads
+in the launcher. **It linked statically**, so a static binary with pthread is not a problem on this
+toolchain. The four helpers still build with the frozen command exactly as before.
+
+### The defect this build found
+
+**The job succeeded, and it should not be read as a clean result.** The compiler emitted a real
+warning, and the standing claim for this experiment has been *zero* warnings at `-Wall -Wextra`:
+
+```
+launcher_spike.c: In function 'main':
+launcher_spike.c:871:12: warning: format '%d' expects a matching 'int' argument [-Wformat=]
+  882 |            "\"wait_errno\":%d,"
+```
+
+Splitting the single receipt `printf` into a sequence — needed so the base64 capture prefix could be
+streamed out — left **`"wait_errno":%d,` duplicated**. The second `%d` therefore read a variadic
+argument that was never passed: undefined behaviour, emitting a garbage duplicate key into every
+accepted receipt.
+
+This is a **genuine source defect, not a build-environment artefact**. It is recorded here rather
+than quietly rebuilt, and it is corrected in a descendant commit with its own build section. Warnings
+do not fail this workflow, which is why the job is green above and why the green must not be taken
+as the whole answer.
+
+### Binary digests from this build
+
+Recorded because they establish exactly which helpers did and did not change.
+
+```
+57e233b303c8727a55748d76eb52de31471f8f545af4bf7bbfe675ffdacd8739  launcher_spike   (CHANGED)
+423ac81e0cbf553a3d8f821d72209ed6f505f4a45494c38d800bfdfc126ca236  helper_report    (unchanged)
+d13082b12b26cb35d6707f6575feaab3b17368a13b6fd0ccf6ed7ae10c98e26d  helper_alt       (unchanged)
+3232d09ffb089907e2586ac0bffdd1ba5b635c99e80cab1333e4ddb575a13dcb  helper_fork      (unchanged)
+500c4af1934be000acefc6daa49ebe8ac984686b23a4358bd134464e02f66c10  helper_setid     (unchanged)
+c854162ddf4074cdfe132492ddc595ae6345f820c22a1cd082e32dd1646850cc  helper_dynamic   (unchanged)
+415f14b8538c8e59832a107b12c54f2fae9cd2ab5637df2f8a6facb82a9cfd52  helper_foreign.elf
+51224867e5fb13d0c6052397c9f4959c7c87bb8bc7d750c91429728a18b507d9  unloadable_in_cohort.elf
+3bdbb4fe8397cd2b842430b39ccff01a8663c751945ef5e9a09e267fb8b1d359  magic_only.bin
+37f800b1a77f026dbf2ee2724829458ddf78dd8329527deee3d086025959208a  script_fixture.sh
+```
+
+**Only `launcher_spike` changed**, from `d8392a45…` at Builds 1 and 2 to `57e233b3…` here. All five
+helper digests and all four fixture digests are byte-identical to Build 1 — independent confirmation
+that the correction touched the launcher alone and left `helper_report.c`'s reporting channel exactly
+as the owner required.
+
+### Inspection, as data only
+
+| Binary | `file` | PT_INTERP |
+|---|---|---|
+| `launcher_spike` | ELF 64-bit LSB executable, x86-64, **statically linked** | none |
+| `helper_report` | ELF 64-bit LSB executable, x86-64, **statically linked** | none |
+| `helper_alt` | ELF 64-bit LSB executable, x86-64, **statically linked** | none |
+| `helper_fork` | ELF 64-bit LSB executable, x86-64, **statically linked** | none |
+| `helper_setid` | ELF 64-bit LSB executable, x86-64, **statically linked** | none |
+| `helper_dynamic` | ELF 64-bit LSB **pie**, x86-64, **dynamically linked** | present |
+
+Both frozen assertions still hold: no static target carries a `PT_INTERP` — `-pthread` did not make
+`launcher_spike` dynamic — and `helper_dynamic` does, which is what E7 requires. The E6 marker guard
+is still locatable in the built `helper_report`.
+
+### Other steps
+
+**All 247 non-trial Python and checker tests passed on the runner**, 138 more than the previous
+build, and the **runner-refusal assertion held at exit 3** with `"status": "NOT_RUN"`. The freeze
+verified on the runner *before* anything was built, which also confirms the manifest hashes are over
+the LF bytes a fresh checkout produces.
