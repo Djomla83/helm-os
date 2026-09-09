@@ -387,7 +387,7 @@ the provenance of each change.
 
 | Class | Members | n |
 |---|---|---|
-| **Mandatory** — must PASS | all of E except E6c; all of A, V, F, O, S and T; X1-X6; R1-R3 | **58** |
+| **Mandatory** — must PASS | E-series except E6c (11); A (5); V1, V2, V4 (3); F1-F7 (7); X1, X2, X2b, X2c, X3, X4, X5, X6 (8); O (8); R1-R3 (3); T (6); S (7) | **58** |
 | **Conditional** — may be BLOCKED by the environment | X7, X8, M1, M2, M4 | **5** |
 | **Recorded** — outcome not predicted, gated only on named sub-assertions | E6c, M3, P1, P2, P3, P4, R4, V5 | **8** |
 
