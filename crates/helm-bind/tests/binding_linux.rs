@@ -404,8 +404,11 @@ fn an_unstated_entry_point_digest_is_never_synthesised() {
         ClaimState::DesiredValueUnspecified,
         "the specification states no digest, so there is nothing to compare"
     );
-    // A0 declares four runtime artifacts, two disabled DLLs and three definitions.
-    assert_eq!(report.coverage().claims, 1 + 2 + 4 + 2 + 2 + 3);
+    // A0 declares four runtime artifacts, two disabled DLLs and three definitions:
+    // 1 source body + 4 always-unsupported classes + 4 artifacts + 2 disabled DLLs
+    // + 2 entry-point claims + 3 definitions.
+    assert_eq!(report.coverage().claims, 1 + 4 + 4 + 2 + 2 + 3);
+    assert_eq!(report.coverage().claims, 16);
     assert!(report.coverage().unsupported_binding >= 4);
     assert!(
         report
