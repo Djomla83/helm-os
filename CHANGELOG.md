@@ -1,5 +1,23 @@
 # Istorija promena
 
+## 2026-09-09 — helm-observe 0.1 owner acceptance
+
+Merged the independently reviewed observation library by strict fast-forward as HELM's
+second experimental product-code module. The authoritative
+[acceptance record](docs/PROJECT_STATE.md#helm-observe-owner-acceptance) identifies the
+reviewed tip, the preserved first-pass findings, the corrections and the verified CI runs.
+The [independent review](docs/implementation/HELM-OBSERVE-INDEPENDENT-REVIEW-0.1.md) reports
+one BLOCKER and three IMPORTANT findings, all resolved: a foreign process's procfs
+descriptor directory could be admitted, duplicate decoded JSON keys escaped detection, the
+backend was not gated to the accepted architecture, and the `0xEF53` guard could not attest
+ext4. The last was resolved by an owner
+[clarification to Accepted ADR-0022](docs/adr/ADR-0022-observation-authority.md#cohort-attestation-clarification):
+cohort membership is an external support precondition, not an observation attestation.
+Supported cohort stays Linux x86_64 and ext4; ext2, ext3 and storage locality remain
+unattested and unsupported; descendant bind mounts stay excluded. Schema and API remain
+experimental and `publish = false`. No release, no architecture ADR acceptance, no
+`helm-bind` or `helm-launch`, and A0-7ZIP remains experimental FAIL.
+
 ## 2026-09-08 — bounded helm-app-spec selection accepted
 
 Repository owner Djomla83 accepted [ADR-0021](docs/adr/ADR-0021-second-product-module.md)

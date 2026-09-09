@@ -12,8 +12,12 @@ whether a prefix is dedicated, whether DLL policy is effective, or whether launc
 Comparison belongs to a future `helm-bind`; execution to a future `helm-launch`. Neither
 exists, and neither is authorised.
 
-**Status: implemented on a product branch, awaiting independent review. Not owner-merged
-and not a release.**
+**Status: experimental, owner-merged on main on 2026-09-09** at reviewed tip
+`626de914000263cc3206d28479db692ad0b40724`, after
+[independent review](../../docs/implementation/HELM-OBSERVE-INDEPENDENT-REVIEW-0.1.md).
+**Not a release.** The schema, API and numeric limits are unstabilised and `publish = false`.
+Accepted [ADR-0022](../../docs/adr/ADR-0022-observation-authority.md) remains the
+architectural authority; merging this crate expanded none of its limits.
 
 ## What it will not do
 

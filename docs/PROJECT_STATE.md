@@ -1,5 +1,46 @@
 # Stanje projekta
 
+<a id="helm-observe-owner-acceptance"></a>
+
+## Owner acceptance, 2026-09-09 — experimental helm-observe 0.1 is merged to main
+
+The owner accepted the independently reviewed implementation and **fast-forwarded main** from
+`0f93431d3bb9285a71e9a7f2c2db3dc3d0bfb45b` to the reviewed tip
+`626de914000263cc3206d28479db692ad0b40724`. Strict fast-forward: merge base equalled main
+exactly, the lineage is linear with no merge commit, and no squash, rebase, cherry-pick,
+amend or force-push occurred. The full history is preserved, including the initial
+implementation `53ade006`, the author candidate `e2a62081`, the independent first-pass
+findings `a1726f3` recorded **before** any correction, and every correction commit. Verified
+CI on that exact SHA: runs `34316001530` (helm-observe independent review) and `34316001469`
+(HELM Rust workspace Linux), both success.
+
+**Experimental helm-observe 0.1 is now owner-merged on main.** It is **not a release**: the
+schema, API, numeric limits and internal layout stay unstabilised and `publish = false`.
+Accepted [ADR-0022](adr/ADR-0022-observation-authority.md) remains the architectural
+authority and this acceptance changes none of its semantics.
+
+**What was independently verified** ([review](implementation/HELM-OBSERVE-INDEPENDENT-REVIEW-0.1.md)):
+no unresolved BLOCKER or IMPORTANT finding; exact plan SHA-256 binding, root-set binding by
+logical ID, and plan-substitution prevention by construction, all three obligations
+implemented and independently confirmed; procfs admission using the corrected fresh `memfd`
+self-identity probe, with controlled foreign-process descriptor directories refused and the
+real current-process capability admitted; strict rejection of duplicate decoded JSON keys at
+every object depth; the observation backend gated to Linux x86_64; special files, symlinks and
+over-limit metadata proved at syscall level never to reach the regular-file data reopen; no
+pathname fallback; bounded hashing and budget behaviour.
+
+**Retained limits, unchanged by acceptance.** The supported and evidenced cohort stays
+**Linux x86_64 and ext4**. Cohort membership is an **external support precondition, not
+something helm-observe attests**: the trusted caller and the provisioning environment supply
+in-cohort roots. `0xEF53` is only the necessary ext-family admission guard, never proof of
+ext4; **ext2 and ext3 remain unsupported and unevidenced even though they mechanically pass
+it**; storage locality is not attested; and no artifact makes a filesystem-identity claim, now
+enforced by test. Descendant bind mounts remain outside the validated 0.1 cohort. There is no
+desired-versus-observed comparison and no execution anywhere in helm-observe: a future
+`helm-bind` owns comparison and a future `helm-launch` owns execution, and **neither is
+implemented or accepted**. No A0 rerun, no Wine or 7-Zip execution, no lab change, and
+**A0-7ZIP remains experimental FAIL.**
+
 ## Owner decision, 2026-09-09 — ADR-0022 cohort attestation clarified; helm-observe 0.1 ready for owner merge
 
 The owner resolved the architecture question the

@@ -9,6 +9,13 @@ is preserved unchanged.\
 **Authority:** Accepted [ADR-0022](../adr/ADR-0022-observation-authority.md), bounded 0.1
 scope. Nothing here broadens it.
 
+> **Annotation, 2026-09-09.** After this review closed, the owner accepted the reviewed
+> lineage and fast-forwarded main to `626de914000263cc3206d28479db692ad0b40724`. The
+> findings, corrections, evidence and classification below are the review as delivered and
+> are **not** edited by that acceptance; the sentence at the end of section 22 that main was
+> untouched describes the state at the moment of the recommendation. See the owner
+> acceptance entry in [PROJECT_STATE](../PROJECT_STATE.md).
+
 **Classification: READY_FOR_OWNER_MERGE**, following the owner's architecture decision of
 2026-09-09. The earlier disposition of this review was
 **NEEDS_ARCHITECTURE_OWNER_REVIEW**; that is recorded below rather than erased, and the
