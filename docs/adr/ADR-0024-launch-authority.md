@@ -13,7 +13,11 @@ which found sixteen BLOCKERs among 53 findings. **Status unchanged: still Propos
 ADR made, it did not accept it: the receipt's executable digest is a pre-execution measurement
 and was described as the identity of the body that ran; the credentials claim was unconditionally
 false for a set-user-ID object; clean EOF does not prove exec; and direct-child lifecycle does not
-imply direct-child liveness. Two further owner decisions, **D-9** and **D-10**, are now required.
+imply direct-child liveness.\
+**Owner decisions recorded 2026-09-09:** D-1 arm (i), D-2 to D-6, D-8, **D-9** (refuse set-id
+objects), **D-10** (empty environment only) and a new **D-11** (`PR_SET_NO_NEW_PRIVS` before
+exec). **D-7 is NOT granted** and this ADR is **still Proposed** — deciding the questions it
+depends on is not accepting it.
 
 ## Context
 
@@ -105,13 +109,18 @@ dependency stated, and only if LAUNCH-EXEC-01 falsifies the primary mechanism.
 - **argv:** a vector, never a string. `argv[0]` is declared explicitly by the plan, because the
   launcher has no honest value to invent. NUL bytes rejected; UTF-8 only in 0.1, with non-UTF-8
   arguments a recorded limitation. **No shell, no quoting logic, no command-string parser.**
-- **environment:** never inherited. Modes are `empty` (default) and `explicit`. Any name
-  beginning `LD_` is refused at parse time. This is **hardening, not provenance**: the receipt's
-  `pre_exec_body_sha256` measures only the main executable file body, never the ELF interpreter,
-  the shared libraries or any other part of the loaded-code closure, and it measures no more of
-  them under `empty` than under `explicit`. The `LD_` rule is a prefix denylist and is
-  deliberately **not** claimed to be complete — glibc's own secure-execution list also strips
-  `GCONV_PATH`, `LOCPATH`, `NLSPATH`, `TZDIR` and others.
+- **environment: exactly empty, and that is the only mode (D-10).** Never inherited, and no
+  key/value list: no `PATH`, no `HOME`, no `LD_*`, no `GCONV_PATH`, no locale inheritance. This is
+  **hardening, not provenance**: the receipt's `pre_exec_body_sha256` measures only the main
+  executable file body, never the ELF interpreter, the shared libraries or any other part of the
+  loaded-code closure — and an empty environment measures no more of them than any other. It
+  removes one way of *steering* the loaded-code closure and pins none of it.
+- **privilege (D-9, D-11):** an object carrying `S_ISUID` or `S_ISGID` is **refused at
+  admission** as `SetIdBitsPresent`, and the child sets `PR_SET_NO_NEW_PRIVS = 1` before exec.
+  Both are needed: the refusal does not cover **file capabilities**, which admission metadata
+  does not carry, and `no_new_privs` makes exec unable to grant new privilege through set-user-ID,
+  set-group-ID or file capabilities alike. Neither drops the caller's existing privileges,
+  isolates anything, or sandboxes the program.
 - **signals:** the child's signal mask is **cleared** and every disposition the host set to
   `SIG_IGN` is restored to `SIG_DFL` before exec. `signal(7)` preserves both across `fork` and
   `execve`, and a Rust host ignores `SIGPIPE` by default, so without this the plan would not
@@ -172,19 +181,24 @@ lifecycle, stated here so it is not mistaken for containment.
 ### Proposed non-sandbox boundary
 
 **A launch mechanism is not a sandbox.** 0.1 provides no filesystem, network, process, registry,
-device or user-data isolation. The direct child runs with the **caller's own OS credentials,
-except where the authorized object is set-user-ID, set-group-ID or capability-bearing, in which
-case the kernel raises the child's credentials and `helm-launch` neither prevents nor attests
-that** — 0.1 sets no `no_new_privs`, requires no `nosuid` mount and does not gate on mode bits,
-so the trusted caller's choice of descriptor decides. It can otherwise generally do anything the
-caller can do. Clearing the environment, controlling argv and closing descriptors reduces
-*accidental* inputs and constrains nothing the child does on its own initiative. Proposed
-[ADR-0005](ADR-0005-sandbox-boundary.md) already records the related principle that a prefix is
-not a security boundary. 0.1 performs **no privilege change of its own**: no `sudo`, no setuid
-helper, no capability gain, no namespace, seccomp or MAC manipulation. **"No elevation" is not
-sandboxing**, and "HELM adds no privilege" is not the same statement as "the child has the
-caller's privileges". Whether 0.1 should refuse set-id objects at admission is **owner decision
-D-9**.
+device or user-data isolation. The direct child runs with the **caller's own OS credentials** and
+can generally do anything the caller can do. Clearing the environment, controlling argv and
+closing descriptors reduces *accidental* inputs and constrains nothing the child does on its own
+initiative. Proposed [ADR-0005](ADR-0005-sandbox-boundary.md) already records the related
+principle that a prefix is not a security boundary. 0.1 performs **no privilege change of its
+own**: no `sudo`, no setuid helper, no capability gain, no namespace, seccomp or MAC
+manipulation.
+
+That credentials sentence was, in an earlier draft, unconditionally false: `execve` honours
+set-user-ID, set-group-ID and file capabilities unless something suppresses them, and 0.1
+suppressed nothing. **D-9 and D-11 together make it true by construction** — set-id objects are
+refused at admission, and `PR_SET_NO_NEW_PRIVS` covers the file-capability case that refusal
+cannot reach. Both are stated in the process-boundary contract above.
+
+**None of that is sandboxing.** `no_new_privs` prevents a launch from acquiring *more* authority
+than the caller had; it does not reduce the caller's authority, isolate anything, or make the
+child's behaviour safe. "No elevation" is not confinement, and "HELM adds no privilege" is not
+the same statement as "the child is contained".
 
 ### Proposed receipt semantics
 
@@ -295,16 +309,28 @@ is superseded. **A0-7ZIP remains experimental FAIL.**
 
 ## Owner decisions required
 
-Ten decisions are tabulated in the design report's
-[owner decisions](../research/HELM-LAUNCH-ARCHITECTURE.md#42-owner-decisions-required-before-implementation):
-the scoped unsafe backend (D-1), the 0.1 scope (D-2), zero HELM dependencies (D-3),
-direct-child-only lifecycle (D-4), the mandatory working-directory capability (D-5), UTF-8-only
-argv (D-6), authorisation and environment for LAUNCH-EXEC-01 (D-7), the receipt carrying no
-duration or timestamp (D-8), refusal of set-user-ID objects at admission (**D-9**), and whether
-the environment is `empty`-only in 0.1 (**D-10**). **None is decided here.**
+Eleven decisions are tabulated in the design report's
+[owner decisions](../research/HELM-LAUNCH-ARCHITECTURE.md#42-owner-decisions-required-before-implementation).
+**Ten are now decided** by the owner, on 2026-09-09:
 
-D-1 through D-6 and D-8 are **provisionally recorded** by the owner in the
-[pre-execution review](../implementation/HELM-LAUNCH-PRE-EXECUTION-REVIEW.md), which does not
-accept this ADR and authorises no execution. **D-7 is not authorised**: D-9 and D-10 both change
-LAUNCH-EXEC-01's case membership, so its definition cannot yet be frozen, and an experiment whose
-membership still depends on an open decision must not be run.
+| # | Ruling |
+|---|---|
+| **D-1** | **Accepted, arm (i)** — the scoped unsafe backend; FD isolation is not weakened to preserve crate-wide `forbid` |
+| **D-2** | Accepted — one exact-executable Linux substrate before Wine |
+| **D-3** | Accepted — zero HELM crate dependencies |
+| **D-4** | Accepted **as corrected** — what `helm-launch` owns and terminates, not permission to wait forever for descendants |
+| **D-5** | Accepted — mandatory working-directory capability |
+| **D-6** | Accepted — UTF-8-only argv, a plan-representation limit and not a kernel limit |
+| **D-8** | Accepted — no timestamp and no elapsed duration in the identity-bearing receipt |
+| **D-9** | **Refuse** set-user-ID and set-group-ID objects at admission |
+| **D-10** | **Empty environment only**; `explicit` is removed from the 0.1 contract |
+| **D-11** | **Require** `PR_SET_NO_NEW_PRIVS` in the child before exec |
+
+**D-7 — authorisation to run LAUNCH-EXEC-01 — is NOT granted.** The owner authorised pre-trial
+implementation of the experiment artefacts only. The definition is now frozen and its case set is
+settled at 72, which makes it reviewable, not runnable; the runner refuses to pose a case without
+explicit authorisation, and its case-posing driver is deliberately unimplemented.
+
+**None of this accepts this ADR.** It stays **Proposed** until LAUNCH-EXEC-01 has executed and
+been reviewed, and deciding the design questions it depends on is not the same act as accepting
+it.

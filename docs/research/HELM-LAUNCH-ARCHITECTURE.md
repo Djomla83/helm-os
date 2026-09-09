@@ -27,8 +27,15 @@ and becomes an experiment obligation rather than an accepted fact.
 > object ([section 28](#28-user-credentials-and-privilege)); and that clean EOF does not prove
 > exec ([section 21](#21-spawn-versus-exec-confirmation)). The design's original commit `ae4591e`
 > is preserved unchanged in history. **ADR-0024 remains Proposed and LAUNCH-EXEC-01 remains
-> NOT_RUN.** Two new owner decisions, **D-9** and **D-10**, are recorded in
-> [section 42](#42-owner-decisions-required-before-implementation).
+> NOT_RUN.**
+>
+> **Owner decisions of 2026-09-09**, recorded in
+> [section 42](#42-owner-decisions-required-before-implementation): **D-1 arm (i)** (scoped
+> unsafe backend; FD isolation is not weakened to preserve crate-wide `forbid`), **D-9** (refuse
+> set-user-ID and set-group-ID objects at admission), **D-10** (the environment is **empty
+> only**; `explicit` is removed from the 0.1 contract), and a new **D-11** (the child sets
+> `PR_SET_NO_NEW_PRIVS` before exec, because D-9 does not cover file capabilities). **D-7 —
+> authorisation to run the experiment — is NOT granted.**
 
 ## 1. Reconstructed current state
 
@@ -686,18 +693,26 @@ same plan behave differently on two machines, and it would silently carry `LD_PR
 **C is rejected for 0.1** because a pass-through list still reads host state, so the executed
 semantics still depend on the machine; the plan would no longer determine the run.
 
-**Recommendation.** Two modes: `{"mode": "empty"}` — the recommended default and the only mode
-the first synthetic cohort needs — and `{"mode": "explicit", "entries": [{"name", "value"}]}`,
-where the entries are the **complete** environment. Nothing is inherited in either mode.
+**Recommendation, and owner decision D-10 has taken it further: `{"mode": "empty"}` is the ONLY
+mode in 0.1.** The child's environment is exactly empty. There is no key/value list, no `PATH`,
+no `HOME`, no `LD_*`, no `GCONV_PATH`, no locale inheritance and no ambient inheritance of any
+kind. `{"mode": "explicit"}` is removed from the 0.1 contract rather than retained with
+narrowings, because it was the only remaining caller-controlled input surface and the first
+synthetic cohort never needed it.
 
-Because environment variables change *which code the pinned executable actually loads*, the
-following are **refused at parse time** in 0.1: any name beginning `LD_` (covering `LD_PRELOAD`,
-`LD_LIBRARY_PATH`, `LD_AUDIT`), plus any name that is empty, contains `=`, or contains NUL.
-Refusing them is **hardening, not provenance**, and the distinction is load-bearing. That the
-pinned object is the object handed to `execveat` is established by the descriptor and holds under
-**every** environment mode; the environment policy neither establishes it nor can weaken it. What
-refusing `LD_*` reduces is one well-known surface for injecting *additional* code into the
-process after the kernel has mapped the measured body.
+That deletes this section's weakest reasoning along with it. The `LD_` prefix rule was a
+**denylist**, and a provably incomplete one — glibc's own secure-execution list also strips
+`GCONV_PATH`, `LOCPATH`, `NLSPATH`, `TZDIR` and others that a prefix rule never catches. With no
+environment to filter, the incompleteness is moot for 0.1 rather than papered over. If explicit
+environment is ever reintroduced, the rule returns **with** its incompleteness documented, and
+the name-shape refusals below return with it: any name that is empty, contains `=`, or contains
+NUL.
+An empty environment is **hardening, not provenance**, and the distinction survives D-10 rather
+than being settled by it. That the pinned object is the object handed to `execveat` is
+established by the descriptor and holds under **every** environment mode; the environment policy
+neither establishes it nor can weaken it. What an empty environment removes is one well-known
+surface for injecting *additional* code into the process after the kernel has mapped the measured
+body.
 
 That surface is never empty and is never measured. **`pre_exec_body_sha256` covers only the main
 executable file body.** It does not cover the ELF interpreter named in `PT_INTERP`, any
@@ -707,21 +722,16 @@ from `DT_RPATH`, `DT_RUNPATH`, `/etc/ld.so.cache` and the default library direct
 state this crate neither reads nor attests. **This is equally true in `empty` mode**: an empty
 environment does not pin the loaded-code closure, it removes one way of steering it.
 
-The `LD_` rule is also a **prefix denylist, not a closure**. glibc's own secure-execution list
-strips `GCONV_PATH`, `GETCONF_DIR`, `HOSTALIASES`, `LOCALDOMAIN`, `LOCPATH`, `MALLOC_TRACE`,
-`NIS_PATH`, `NLSPATH`, `RESOLV_HOST_CONF`, `RES_OPTIONS`, `TMPDIR` and `TZDIR` alongside the
-`LD_*` names, and 0.1 refuses none of those — `GCONV_PATH` in particular directs glibc to load
-gconv objects from a caller-chosen directory. No completeness may be inferred from the rule, and
-case **V5** records that such a name is accepted so the incompleteness is evidenced rather than
-assumed. `PATH` is *allowed* as an explicit value, and it is recorded that it has no effect on
-which executable `helm-launch` runs — the launcher uses a descriptor — and affects only what the
-child itself may later exec.
+**An empty environment is not a claim about the loaded-code closure**, and this is the sentence
+most easily got wrong: emptying the environment removes one way of *steering* the closure, and
+pins none of it. A dynamically linked object still has its interpreter resolved by pathname and
+its libraries resolved by name from `/etc/ld.so.cache` and the default directories, with an
+entirely empty environment, exactly as it would otherwise. Case **E7** exists to show that
+happening rather than to assert it.
 
-Whether 0.1 should offer `explicit` at all is **owner decision D-10**: `empty` is already the
-only mode the first synthetic cohort needs, and dropping `explicit` would remove a
-caller-controlled surface and the weakest reasoning in this section. If `explicit` is retained,
-it is acceptable only with the narrowings above plus an `environment_mode` field in the receipt,
-so a consumer need not re-read the plan to know a caller-supplied environment was in force.
+The receipt still records `environment_mode` from the closed set `{empty}`, so a consumer reads
+the fact from the artifact rather than inferring it from a version number — and so that
+reintroducing a second mode later cannot silently change what an old receipt meant.
 
 Wine's eventual needs — `DISPLAY`, `WAYLAND_DISPLAY`, `XDG_RUNTIME_DIR`, `WINEPREFIX` and others
 — are **explicitly not** smuggled into this contract. No name is special-cased for Wine, and no
@@ -781,7 +791,13 @@ working-directory descriptor before using it, which no launch could have survive
    group exists before any sweep can be issued;
 5. `rt_sigprocmask(SIG_SETMASK, <empty set>, NULL)` to clear the inherited blocked set;
 6. `rt_sigaction(sig, SIG_DFL)` for every signal the host may have set to `SIG_IGN`;
-7. `execveat(exec_fd, "", argv, envp, AT_EMPTY_PATH)`.
+7. `prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)` — **owner decision D-11**, and the last thing before
+   the exec;
+8. `execveat(exec_fd, "", argv, envp, AT_EMPTY_PATH)`.
+
+The frozen stage vocabulary is therefore `RELOCATE`, `DUP2`, `CLEAR_CLOEXEC`, `CHDIR`,
+`CLOSE_RANGE`, `SETPGID`, `SIGMASK`, `SIGACTION`, `NO_NEW_PRIVS`, `EXEC`, and an exec-status
+record names exactly one of them.
 
 Both surviving descriptors are `CLOEXEC`, so a successful exec removes them and the invariant
 holds in the new image. Step 3 is the load-bearing one, and it is the step
@@ -974,9 +990,11 @@ signals at timeout.
 
 Atomic `CLONE_PIDFD` via `clone3` **removes the precondition entirely**, at the cost of a second
 unsafe call site, and it also avoids the `pthread_atfork` surface of
-[section 8](#8-the-unsafe-and-helper-question). It is therefore measured as arm (b) of case
-**M3** and adopted for 0.1 if the `fork` + `pidfd_open` arm shows any loss — not deferred as a
-refinement.
+[section 8](#8-the-unsafe-and-helper-question). **It is therefore the primary acquisition in 0.1,
+not a later refinement**: a design whose soundness argument rests on three conditions a library
+cannot establish has not resolved the finding, it has deferred it. Case **M3** measures the
+`clone3` path as mandatory; case **M5** records the rejected `fork` + `pidfd_open` path under
+`SIGCHLD = SIG_IGN`, so the reason for the choice is evidenced rather than asserted.
 
 **The pidfd is polled, not only signalled.** `pidfd_open(2)`: the descriptor becomes readable
 when the task terminates and becomes a zombie, and reports a hangup once it is reaped. It is
@@ -1187,9 +1205,32 @@ credentials from the caller**, and `helm-launch` neither prevents that nor attes
 are visible in the receipt's `pre_exec_mode_bits`, which is a pre-execution measurement
 ([section 32](#32-executable-identity-and-mutation)) and not a guarantee about the exec.
 
-Whether 0.1 should instead **refuse `S_ISUID`/`S_ISGID` at admission** — a one-line gate that
-makes the paragraph above true by construction, at the cost of a capability 0.1 has no use for —
-is **owner decision D-9**. Case **X7**.
+**Owner decisions D-9 and D-11 close this, from two directions, and neither alone is enough.**
+
+**D-9: `S_ISUID` and `S_ISGID` are refused at admission**, with the bounded typed refusal
+`AdmissionError::SetIdBitsPresent`. Not recorded-and-permitted: 0.1 has no setuid use case, and
+the non-elevation claim is load-bearing for this whole section. Case **X7** is therefore a
+deterministic admission-refusal test, and reaching `execveat` at all rejects the mechanism.
+
+**D-11: the child sets `PR_SET_NO_NEW_PRIVS = 1` before `execveat`.** D-9 alone does *not* close
+the finding, because it addresses only the set-id bits: **file capabilities are a separate
+mechanism that admission metadata does not carry**, and a `CAP_*`-bearing object would still have
+been elevated by the kernel at exec. `no_new_privs` makes exec unable to grant new privilege
+through set-user-ID, set-group-ID **or** file capabilities, so the two decisions together make
+the paragraph above true by construction rather than by inspection.
+
+What `no_new_privs` is **not**, stated as flatly as the rest of this section: it does **not** drop
+the caller's existing privileges, does **not** isolate filesystem access, does **not** isolate the
+network, does **not** sandbox the program, and establishes **nothing** about whether the child
+behaves safely. It removes one specific way for a launch to end up with *more* authority than the
+caller had. It is defence in depth behind D-9, not a boundary.
+
+Cases **N1** (the executed child observes `NoNewPrivs: 1`), **N2** (a control arm skipping the
+`prctl` must observe `0`, without which N1 would be uninformative on a runner that already set it
+process-wide) and **N3**. N3 is the honest gap: exercising a *real* privilege transition needs a
+privileged fixture, none is created, and it is therefore **BLOCKED by construction** and recorded
+as an untested privileged transition resting on primary-source kernel semantics — never as a
+demonstrated one.
 
 `O_NOATIME` is not used for the same reason: it would require ownership or `CAP_FOWNER`.
 
@@ -1598,20 +1639,22 @@ in CI.
 
 ## 42. Owner decisions required before implementation
 
-| # | Decision | Recommendation |
+| # | Decision | Owner ruling, 2026-09-09 |
 |---|---|---|
-| **D-1** | Permit a narrowly scoped `unsafe` backend in `helm-launch` only, or keep `forbid(unsafe_code)` and publish the weaker FD claim | Permit it, scoped as in [section 8](#8-the-unsafe-and-helper-question) |
-| **D-2** | Accept `helm-launch` 0.1 scope B — one generic Linux exact-executable crate, no Wine | Accept |
-| **D-3** | Accept zero HELM crate dependencies, with context carried as opaque digests | Accept |
-| **D-4** | Accept direct-child lifecycle only, with process-tree containment explicitly not provided | Accept |
-| **D-5** | Accept the mandatory `DirectoryCapability` working directory, with no ambient cwd mode | Accept |
-| **D-6** | Accept UTF-8-only argv in 0.1, leaving non-UTF-8 arguments unrepresentable | Accept, recorded as a limitation |
-| **D-7** | Authorise LAUNCH-EXEC-01 to run, and on which environment | Authorise on a GitHub-hosted `ubuntu-24.04` runner first |
-| **D-8** | Accept that the receipt carries no elapsed duration and no timestamp | Accept, **conditional on the pidfd being polled** — excluding the duration is only safe once the exit-versus-deadline ordering is an *observed* fact ([section 23](#23-timeout)) |
-| **D-9** | Refuse `S_ISUID`/`S_ISGID` objects at admission, or record and permit them | **Refuse in 0.1**, with `AdmissionError::SetIdBitsPresent`. The non-elevation claim of [section 28](#28-user-credentials-and-privilege) is load-bearing for the whole non-sandbox boundary, and 0.1 has no setuid use case |
-| **D-10** | Environment `empty`-only in 0.1, or retain `explicit` with the narrowings of [section 15](#15-environment-policy) | **`empty`-only.** It is already the only mode the first synthetic cohort needs, and it removes a caller-controlled surface rather than adding one |
+| **D-1** | Permit a narrowly scoped `unsafe` backend in `helm-launch` only, or keep `forbid(unsafe_code)` and publish the weaker FD claim | **ACCEPTED, arm (i).** Pursue the tiny isolated unsafe Linux backend, scoped as in [section 8](#8-the-unsafe-and-helper-question). **FD isolation must not be weakened merely to preserve crate-wide `forbid`** |
+| **D-2** | `helm-launch` 0.1 scope B — one exact-executable Linux substrate, no Wine | **ACCEPTED** |
+| **D-3** | Zero HELM crate dependencies, context carried as opaque digests | **ACCEPTED** |
+| **D-4** | Direct-child lifecycle only, with process-tree containment explicitly not provided | **ACCEPTED as corrected** — a statement about what `helm-launch` owns and terminates, **not** permission to wait forever for descendants ([section 19](#19-standard-output-and-standard-error)) |
+| **D-5** | Mandatory `DirectoryCapability` working directory, no ambient cwd mode | **ACCEPTED** |
+| **D-6** | UTF-8-only argv in 0.1 | **ACCEPTED** — a `LaunchPlan` representation limit, not a Linux kernel limit |
+| **D-7** | Authorise LAUNCH-EXEC-01 to run, and on which environment | **NOT AUTHORISED.** Pre-trial implementation only; no trial may be posed |
+| **D-8** | The receipt carries no elapsed duration and no timestamp | **ACCEPTED**, and safe because the pidfd is polled, so the exit-versus-deadline ordering is an *observed* fact ([section 23](#23-timeout)) |
+| **D-9** | Refuse `S_ISUID`/`S_ISGID` objects at admission, or record and permit them | **REFUSE**, with `AdmissionError::SetIdBitsPresent`. Not recorded-and-permitted. Case **X7** becomes a deterministic admission-refusal test |
+| **D-10** | Environment `empty`-only in 0.1, or retain `explicit` | **`empty`-only.** `explicit` is removed from the 0.1 contract: no key/value list, no `PATH`, no `HOME`, no `LD_*`, no `GCONV_PATH`, no locale or ambient inheritance ([section 15](#15-environment-policy)) |
+| **D-11** | Require `PR_SET_NO_NEW_PRIVS = 1` in the child before exec | **REQUIRED.** D-9 refuses set-id objects but does **not** cover **file capabilities**, which admission metadata does not carry; `no_new_privs` closes that. Defence in depth, and explicitly **not** isolation, privilege reduction or a sandbox ([section 28](#28-user-credentials-and-privilege)) |
 
-None of these is decided here. ADR-0024 records them as **Proposed**. D-9 and D-10 were added by
-the [pre-execution review](../implementation/HELM-LAUNCH-PRE-EXECUTION-REVIEW.md), and both
-change LAUNCH-EXEC-01's case membership, so the definition cannot be frozen until they are ruled
-on.
+**D-1 through D-6 and D-8 through D-11 are decided.** They are recorded in the experiment's
+machine-readable manifest as frozen inputs before the first trial, so none can be selected after
+a result is known. **D-7 alone is not granted**: this is authorisation to implement the
+pre-trial artefacts, not to run them. ADR-0024 itself remains **Proposed** and is not accepted by
+any of this.
