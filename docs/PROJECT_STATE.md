@@ -11,7 +11,7 @@ None could write to the repository and none saw the others' work; the synthesis 
 by technical evidence rather than by vote. The result is the
 [pre-execution review](implementation/HELM-LAUNCH-PRE-EXECUTION-REVIEW.md).
 
-**Classification: NEEDS_ARCHITECTURE_OWNER_REVIEW. Nine BLOCKER findings**, two of them reached
+**Classification: NEEDS_ARCHITECTURE_OWNER_REVIEW. Sixteen BLOCKER findings** among 53 in total, two of them reached
 independently by two workstreams. The core mechanism survives — `execveat` on a retained
 descriptor does pin the inode — but the frozen definition could have returned
 `MECHANISM_ACCEPTED` while four load-bearing claims were false, and the documented child-setup
@@ -94,7 +94,7 @@ decisions in total are listed in the design report and none is decided.
 > **Superseded in part, 2026-09-09**, by the
 > [pre-execution review](#helm-launch-pre-execution-review). This section records the design as
 > submitted, and is kept unedited for provenance. Since then the design report has been corrected
-> under nine BLOCKER findings, the owner decisions have grown from eight to **ten** with D-9 and
+> under sixteen BLOCKER findings, the owner decisions have grown from eight to **ten** with D-9 and
 > D-10, and D-1 is provisionally recorded at arm (i).
 
 <a id="launch-exec-01-proposed"></a>

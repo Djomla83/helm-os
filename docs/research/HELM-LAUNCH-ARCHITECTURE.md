@@ -15,7 +15,7 @@ and becomes an experiment obligation rather than an accepted fact.
 
 > **Corrected 2026-09-09 under the
 > [three-workstream pre-execution review](../implementation/HELM-LAUNCH-PRE-EXECUTION-REVIEW.md).**
-> Nine BLOCKER findings are applied to this document. The largest are that the executable digest
+> The review's sixteen BLOCKER findings, among 53 in total, are applied across this document and the preregistration. The largest are that the executable digest
 > is a **pre-execution measurement** and was described as the identity of the body that ran
 > ([section 32](#32-executable-identity-and-mutation)); that the child-setup sequence closed the
 > working-directory descriptor before using it, and the parent never closed its own copies of the

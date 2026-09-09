@@ -16,7 +16,7 @@ and this review does not accept it.
 > no A0 access, no lab change, no privileged operation, no change to main, and no change to any
 > existing crate. **ADR-0024 remains Proposed.** **A0-7ZIP remains experimental FAIL.**
 
-The three workstreams returned **nine BLOCKER findings**, two of which were reached
+The three workstreams returned **sixteen BLOCKER findings** among 53 in total, two of which were reached
 independently by two workstreams each. The core mechanism survives — `execveat` on a retained
 descriptor does pin the inode, and the rejections of `fexecve`, path-based `Command` and
 `posix_spawn` are correct — but the frozen definition could have returned `MECHANISM_ACCEPTED`
@@ -37,9 +37,10 @@ single workstream proposed.
 
 | Workstream | Scope | Findings |
 |---|---|---|
-| **A** | executable identity, `execveat`, the unsafe backend | 16 (4 BLOCKER, 8 IMPORTANT, 4 MINOR) |
-| **B** | descriptors, environment, I/O, timeout, process lifecycle | 16 (6 BLOCKER, 7 IMPORTANT, 3 MINOR) |
+| **A** | executable identity, `execveat`, the unsafe backend | 16 (4 BLOCKER, 9 IMPORTANT, 3 MINOR) |
+| **B** | descriptors, environment, I/O, timeout, process lifecycle | 16 (7 BLOCKER, 6 IMPORTANT, 3 MINOR) |
 | **C** | preregistration, oracles, verdict logic | 21 (5 BLOCKER, 11 IMPORTANT, 5 MINOR) |
+| **Total** | | **53 (16 BLOCKER, 26 IMPORTANT, 11 MINOR)** |
 
 Each workstream read `AGENTS.md`, [project state](../PROJECT_STATE.md),
 [decisions](../DECISIONS.md), [ADR-0022](../adr/ADR-0022-observation-authority.md),

@@ -9,7 +9,7 @@
 **Experiment dependency:** [LAUNCH-EXEC-01](../experiments/LAUNCH-EXEC-01-DEFINITION.md), **NOT_RUN**\
 **Narrowed 2026-09-09** by the
 [three-workstream pre-execution review](../implementation/HELM-LAUNCH-PRE-EXECUTION-REVIEW.md),
-which found nine BLOCKERs. **Status unchanged: still Proposed.** The review corrected claims this
+which found sixteen BLOCKERs among 53 findings. **Status unchanged: still Proposed.** The review corrected claims this
 ADR made, it did not accept it: the receipt's executable digest is a pre-execution measurement
 and was described as the identity of the body that ran; the credentials claim was unconditionally
 false for a set-user-ID object; clean EOF does not prove exec; and direct-child lifecycle does not
