@@ -346,36 +346,82 @@ fn caller_selectors_reach_the_report_bytes_verbatim() {
     assert!(text.contains("\"role\":\"verified\""));
     assert!(text.contains("\"role\":\"satisfied\""));
 
-    // What must remain true regardless: every such word appears only as selector
-    // data, never as a claim class, a state, a contradiction value or a coverage
-    // key. That is the property the accepted architecture actually requires.
-    let is_selector_slot = |needle: &str| {
-        text.match_indices(needle).all(|(at, _)| {
-            let before = &text[..at];
-            before.ends_with("\"role\":\"")
-                || before.ends_with("\"id\":\"")
-                || before.ends_with("_body\",\"role\":\"")
-        })
-    };
+    // The property the accepted architecture actually requires, and which a
+    // substring search cannot express: no term the **binder itself** emits is a
+    // verdict word. A verdict word may appear as caller selector data, and it may
+    // appear as a substring of the binder's own descriptive vocabulary — the
+    // coverage key `observation_failed` contains `fail` — but never as a whole
+    // token the binder chose.
+    let mut emitted: Vec<&str> = vec![
+        "helm-binding-report",
+        "0.1",
+        report.contradiction().as_str(),
+        "origin",
+        "desired_versus_observed_comparison_only",
+    ];
+    emitted.extend([
+        "schema",
+        "version",
+        "inputs",
+        "spec_sha256",
+        "observation_plan_sha256",
+        "binding_plan_sha256",
+        "observation_artifact_sha256",
+        "contradiction",
+        "state",
+        "mismatches",
+        "coverage",
+        "claims",
+        "match",
+        "mismatch",
+        "desired_value_unspecified",
+        "not_observed",
+        "unsupported_binding",
+        "absent",
+        "observation_rejected",
+        "observation_failed",
+        "observation_omitted",
+        "observation_not_interpretable",
+        "unsupported_classes",
+        "claim",
+        "role",
+        "difference",
+        "reason",
+    ]);
+    emitted.extend(report.claims().iter().map(|c| c.subject().as_str()));
+    emitted.extend(report.claims().iter().map(|c| c.state().as_str()));
+    emitted.extend(report.coverage().unsupported_classes.iter().copied());
+    for term in &emitted {
+        assert!(
+            !loaded.contains(term),
+            "the binder emitted a verdict word as its own term: {term}"
+        );
+    }
+    // Every occurrence of a verdict word is either caller selector data in a role
+    // slot, or inside one of the binder's own terms. Nothing else.
     for word in loaded {
-        if text.contains(word) {
+        for (at, _) in text.match_indices(word) {
+            let before = &text[..at];
+            let in_role_slot = before.ends_with("\"role\":\"");
+            let inside_own_term = emitted.iter().any(|term| term.contains(word));
             assert!(
-                is_selector_slot(word),
-                "{word} appears outside a selector slot: {text}"
+                in_role_slot || inside_own_term,
+                "{word} at {at} is neither selector data nor part of a binder term: {text}"
             );
         }
     }
-    // The binder's own vocabulary never contains a verdict word.
-    for state_word in report.claims().iter().map(|c| c.state().as_str()) {
+    // A selector can never occupy a slot the binder controls: `push_id` cannot
+    // emit a quote, so no role can close its string and impersonate a state.
+    for word in loaded {
         assert!(
-            !loaded.contains(&state_word),
-            "a claim state must not be a verdict word: {state_word}"
+            !text.contains(&format!("\"state\":\"{word}\"")),
+            "no state may be a verdict word"
+        );
+        assert!(
+            !text.contains(&format!("\"claim\":\"{word}\"")),
+            "no claim class may be a verdict word"
         );
     }
-    assert!(
-        !text.contains("\"state\":\"ready\"") && !text.contains("\"state\":\"pass\""),
-        "no state may be a verdict word"
-    );
     assert!(!text.contains('/'), "no path may appear");
     assert!(!text.bytes().any(|b| b.is_ascii_uppercase()));
 }
@@ -804,7 +850,8 @@ fn every_observation_outcome_keeps_its_own_state() {
     assert_eq!(report.contradiction(), Contradiction::NoClaimContradicted);
     assert_eq!(report.coverage().absent, 1);
     assert_eq!(report.coverage().mismatched, 0);
-    assert_eq!(report.coverage().not_observed, 3);
+    // 1 runtime artifact + 2 entry-point claims + 1 verification definition.
+    assert_eq!(report.coverage().not_observed, 4);
 
     // An unmapped claim and an absent target are different states with their own
     // counters, and neither is the other.
