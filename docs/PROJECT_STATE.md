@@ -1,5 +1,52 @@
 # Stanje projekta
 
+<a id="launch-exec-01-frozen"></a>
+
+## Owner decisions and pre-trial freeze, 2026-09-09 — LAUNCH-EXEC-01 at 72 cases, still NOT_RUN
+
+The owner resolved every open decision from the
+[pre-execution review](implementation/HELM-LAUNCH-PRE-EXECUTION-REVIEW.md) and authorised
+**pre-trial experiment implementation only**. The
+[preregistered definition](experiments/LAUNCH-EXEC-01-DEFINITION.md) is re-frozen at **72 cases**
+— 56 mandatory, 9 conditional, 7 recorded — and the disposable experiment sources now exist under
+[`docs/experiments/launch-exec-01/`](experiments/launch-exec-01/).
+
+**Decisions.** **D-1 arm (i)**: pursue the tiny isolated unsafe Linux backend, and do **not**
+weaken the exact FD-inheritance invariant merely to preserve crate-wide `forbid(unsafe_code)`.
+**D-9**: refuse `S_ISUID`/`S_ISGID` objects at admission as `SetIdBitsPresent`, never
+record-and-permit. **D-10**: the child environment is **exactly empty** and `explicit` is removed
+from the 0.1 contract — no key/value list, no `PATH`, no `HOME`, no `LD_*`, no `GCONV_PATH`, no
+locale or ambient inheritance. **D-11**, new: the child sets `PR_SET_NO_NEW_PRIVS` before exec,
+because D-9 refuses set-id bits but **file capabilities are a separate mechanism admission
+metadata does not carry**. D-2 to D-6 and D-8 are accepted, D-4 as corrected by the review.
+**D-7 — authorisation to run — is NOT granted.**
+
+**`frozen_cases.py` is the machine source of truth.** Membership, the class partition, the frozen
+D-1 arm, schedules and per-case `traced` flags live there; the definition's prose tables are
+**generated from it**, and `tools/tests/test_launch_exec_01.py` enforces that they match, along
+with the manifest's own invariants and the totality of the aggregate precedence — using
+fabricated records that never invoke the spike. That self-test caught a real defect in the
+corrected aggregate rule: as written after the review, a conditional case BLOCKED with a recorded
+cause would have fired `MECHANISM_INCONCLUSIVE`, which would have made the class meaningless and
+the whole run inconclusive by construction, since **N3 is BLOCKED by design on any unprivileged
+runner**.
+
+**What the experiment still cannot show, recorded rather than papered over.** D-11's guarantee
+rests on three separable things that must never be collapsed: the kernel semantics, taken from
+primary sources; the **directly observed** `NoNewPrivs: 1` state, which N1 establishes and N2
+controls for; and the **untested** privileged transition, which is N3, is BLOCKED because no
+privileged fixture is created, and is never presented as demonstrated.
+
+**The C sources have not been compiled on Linux.** They were authored and reviewed on a Windows
+host, where a Linux build cannot honestly be attempted; faking one, or reaching for WSL merely to
+obtain a green result, would manufacture evidence. First compilation is a preflight step of the
+first authorised trial, and a failure there is a preflight finding under the halt rule.
+
+**No trial has been executed and no case has been posed.** `crates/helm-launch` was not created,
+no experiment code entered the Cargo workspace, and the runner refuses to pose a case without
+both a verified source freeze and explicit owner authorisation. **ADR-0024 remains Proposed** and
+**A0-7ZIP remains experimental FAIL.**
+
 <a id="helm-launch-pre-execution-review"></a>
 
 ## Pre-execution review, 2026-09-09 — helm-launch 0.1 and LAUNCH-EXEC-01
@@ -110,9 +157,9 @@ privileged operation.** The recommended first environment is a GitHub-hosted `ub
 runner. `crates/helm-launch` must not be created before it has run and been reviewed.
 
 > **Superseded, 2026-09-09.** The 43-case definition described here was audited and
-> [re-frozen at 71 cases](#launch-exec-01-reframed); the count, the case classes, the aggregate
-> verdict rules and the instrumentation all changed. It remains **NOT_RUN**, and is now **not yet
-> freezable** pending owner decisions D-9 and D-10.
+> [re-frozen at 71 cases](#launch-exec-01-reframed), then at
+> [72 after the owner decisions](#launch-exec-01-frozen); the count, the case classes, the
+> aggregate verdict rules and the instrumentation all changed. It remains **NOT_RUN**.
 
 `helm-app-spec`, `helm-observe`, `helm-bind` and `helm-evidence` are untouched; ADR-0021,
 ADR-0022 and ADR-0023 are unchanged; `helm-launch` remains unimplemented and unaccepted; and
