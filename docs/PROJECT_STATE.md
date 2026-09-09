@@ -1,5 +1,57 @@
 # Stanje projekta
 
+<a id="helm-launch-pre-execution-review"></a>
+
+## Pre-execution review, 2026-09-09 — helm-launch 0.1 and LAUNCH-EXEC-01
+
+Three independent reviewers audited the proposed architecture and the preregistration in
+**isolated contexts, in parallel**, before any experiment is authorised: A on executable identity
+and `execveat`, B on the process boundary and lifecycle, C on the preregistration as a protocol.
+None could write to the repository and none saw the others' work; the synthesis resolved conflicts
+by technical evidence rather than by vote. The result is the
+[pre-execution review](implementation/HELM-LAUNCH-PRE-EXECUTION-REVIEW.md).
+
+**Classification: NEEDS_ARCHITECTURE_OWNER_REVIEW. Nine BLOCKER findings**, two of them reached
+independently by two workstreams. The core mechanism survives — `execveat` on a retained
+descriptor does pin the inode — but the frozen definition could have returned
+`MECHANISM_ACCEPTED` while four load-bearing claims were false, and the documented child-setup
+sequence could not have executed a single successful launch, because it closed the
+working-directory descriptor before using it and the parent never closed its own copies of the
+pipe write ends.
+
+**What was corrected.** The executable digest is a **pre-execution measurement** and was
+described as the identity of the body that ran; it is renamed `pre_exec_body_sha256`, and
+`ETXTBSY` does not cover the measure-to-exec window — the ordinary open-write-close writer is
+never refused. The drain loop had no termination condition surviving a descendant that holds a
+stdio write end, so a bounded `POST_EXIT_DRAIN_MS` and a `WriterRetainedAfterChildExit`
+disposition now bound the launcher's own tail without claiming containment. Inherited signal mask
+and ignored dispositions were an unclosed ambient input. The credentials claim was
+unconditionally false for a set-user-ID object. Clean EOF does not prove exec. The receipt becomes
+a product of one process disposition and one per-stream completeness, because those facts are
+orthogonal. ELF admission now pins the header cohort, so no `binfmt_misc` entry can route a HELM
+capability to a pathname-resolved interpreter.
+
+<a id="launch-exec-01-reframed"></a>
+
+**LAUNCH-EXEC-01 is re-frozen at 71 cases and remains NOT_RUN**, up from 43: two deleted as
+unposable, thirty added, eleven reformulated — 58 mandatory, 5 conditional, 8 recorded, verified
+mechanically. Its aggregate precedence was neither total nor disjoint and is replaced by an
+ordered total precedence following OBS-FS-01; E6's safe set was illegitimate and becomes a single
+prediction; F2 is a mandatory PASS under the owner's D-1 arm (i) and its FAIL now rejects; the
+helper report moves to descriptor 1 so the instrumentation stops violating the invariant it
+measures; and a launcher-side non-return is an unconditional rejection, including in the negative
+controls.
+
+**D-1 through D-6 and D-8 are provisionally recorded; D-7 is NOT authorised.** Two new owner
+decisions the review surfaced are open and both change case membership: **D-9**, whether to refuse
+set-user-ID objects at admission, and **D-10**, whether the environment is `empty`-only in 0.1.
+A definition whose membership depends on an open decision cannot be frozen, so the recommended
+next step is to rule on D-9 and D-10 and re-read the corrected case table.
+
+`helm-app-spec`, `helm-observe`, `helm-bind` and `helm-evidence` are untouched; no crate was
+created; **ADR-0024 remains Proposed**; the experiment was **not executed**; main was not changed;
+and **A0-7ZIP remains experimental FAIL.**
+
 <a id="helm-launch-architecture-review"></a>
 
 ## Design under owner review, 2026-09-09 — helm-launch 0.1 architecture and LAUNCH-EXEC-01
@@ -39,6 +91,12 @@ implemented in safe Rust today, which is recorded as owner decision **D-1** toge
 alternative of keeping `forbid` and publishing a weaker inheritance claim. Eight owner
 decisions in total are listed in the design report and none is decided.
 
+> **Superseded in part, 2026-09-09**, by the
+> [pre-execution review](#helm-launch-pre-execution-review). This section records the design as
+> submitted, and is kept unedited for provenance. Since then the design report has been corrected
+> under nine BLOCKER findings, the owner decisions have grown from eight to **ten** with D-9 and
+> D-10, and D-1 is provisionally recorded at arm (i).
+
 <a id="launch-exec-01-proposed"></a>
 
 **LAUNCH-EXEC-01 is proposed and NOT_RUN.** Unlike helm-bind, a system experiment **is**
@@ -50,6 +108,11 @@ process-tree negative control designed to demonstrate a limitation rather than t
 uses only synthetic helpers: **no Wine, no 7-Zip, no proprietary software, no A0 lab and no
 privileged operation.** The recommended first environment is a GitHub-hosted `ubuntu-24.04`
 runner. `crates/helm-launch` must not be created before it has run and been reviewed.
+
+> **Superseded, 2026-09-09.** The 43-case definition described here was audited and
+> [re-frozen at 71 cases](#launch-exec-01-reframed); the count, the case classes, the aggregate
+> verdict rules and the instrumentation all changed. It remains **NOT_RUN**, and is now **not yet
+> freezable** pending owner decisions D-9 and D-10.
 
 `helm-app-spec`, `helm-observe`, `helm-bind` and `helm-evidence` are untouched; ADR-0021,
 ADR-0022 and ADR-0023 are unchanged; `helm-launch` remains unimplemented and unaccepted; and
