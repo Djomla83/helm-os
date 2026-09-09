@@ -3,7 +3,7 @@
 ## 2026-09-09 — helm-observe 0.1 owner acceptance
 
 Merged the independently reviewed observation library by strict fast-forward as HELM's
-second experimental product-code module. The authoritative
+third experimental product-code module. The authoritative
 [acceptance record](docs/PROJECT_STATE.md#helm-observe-owner-acceptance) identifies the
 reviewed tip, the preserved first-pass findings, the corrections and the verified CI runs.
 The [independent review](docs/implementation/HELM-OBSERVE-INDEPENDENT-REVIEW-0.1.md) reports
