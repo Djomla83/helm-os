@@ -9,7 +9,29 @@ comprising `ae4591e` (architecture), `be0251b` (LAUNCH-EXEC-01, NOT_RUN) and `a5
 **Authority:** **Proposed** [ADR-0024](../adr/ADR-0024-launch-authority.md). It is not Accepted,
 and this review does not accept it.
 
-**Classification: NEEDS_ARCHITECTURE_OWNER_REVIEW.**
+**Classification at the time of review: NEEDS_ARCHITECTURE_OWNER_REVIEW.**
+
+> **Owner disposition, 2026-09-09 — the open decisions are now resolved.** The owner ruled on
+> every decision this review recorded as provisional or open, and added one the review's own A-3
+> finding implied but did not name:
+>
+> | # | Ruling | Effect on this review |
+> |---|---|---|
+> | **D-1** | **arm (i)** — scoped unsafe backend; FD isolation not weakened to keep crate-wide `forbid` | Confirms section 8 and section 12. F2 is mandatory, with no documented-failure path |
+> | **D-2, D-3, D-5, D-6** | Accepted as recorded | No change |
+> | **D-4** | Accepted **as corrected** by section 9 | The addition this review required is now the decision |
+> | **D-8** | Accepted | Its stated condition is met: the pidfd is polled, so the ordering is observed |
+> | **D-9** | **Refuse** set-id objects at admission | X7 becomes a deterministic admission-refusal test, not a conditional privilege observation |
+> | **D-10** | **Empty environment only** | V2, V4 and V5 leave the experiment as plan-parse properties; section 11's recommendation is taken |
+> | **D-11** | **New:** `PR_SET_NO_NEW_PRIVS` before exec | Closes the half of A-3 that D-9 cannot reach — **file capabilities**, which admission metadata does not carry. New cases N1, N2, N3 |
+> | **D-7** | **NOT granted** | The experiment is still not authorised to run |
+>
+> The definition was re-frozen from 71 to **72 cases** and is now freezable; the disposable
+> experiment sources exist and are hashed. **LAUNCH-EXEC-01 remains NOT_RUN, `crates/helm-launch`
+> was not created, and ADR-0024 remains Proposed.** Nothing in the findings below was edited by
+> this disposition: section 18's recommendation describes the state at the time of review, and
+> the one bounded reason it gave for withholding freeze — D-9 and D-10 being open — is what the
+> owner has now closed.
 
 > **LAUNCH-EXEC-01 was not executed.** No trial ran, no case was posed, no result exists, and
 > LAUNCH-EXEC-01 remains **NOT_RUN**. `crates/helm-launch` was not created. No Wine, no 7-Zip,
