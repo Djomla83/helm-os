@@ -11,6 +11,13 @@ on:
       - 'review/helm-observe-**'
   workflow_dispatch:
 
+# A newer run for the same workflow and ref makes an older, still-running one
+# stale, so cancel it instead of consuming runners for a result nobody reads.
+# This cancels only overlapping runs; it never relaxes a check or a failure.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 

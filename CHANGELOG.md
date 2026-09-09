@@ -1,5 +1,30 @@
 # Istorija promena
 
+## 2026-09-09 — CI concurrency and agent push discipline
+
+A repository-process correction that reduces redundant Actions runs and failure-email noise
+**without weakening CI**. All three workflows gained a workflow-level `concurrency` group keyed
+on workflow and ref with `cancel-in-progress: true`, so a newer run cancels an older run of the
+same workflow on the same ref instead of consuming a runner for a result nobody reads.
+`helm-bind.yml` and `helm-evidence.yml` gained `workflow_dispatch`, so a final exact branch or
+ref can be re-tested on purpose without manufacturing a no-op source commit; their existing
+push and pull_request path filters are unchanged and automatic CI on main is unchanged. No
+scheduled CI was added.
+
+[AGENTS.md](AGENTS.md) gains a repo-wide **CI i disciplina push-a** section. Meaningful
+implementation, first-pass finding, correction and review commits stay separate when
+provenance benefits, but preserving history does not require pushing each commit separately:
+keep intermediate commits local, run all locally executable validation first, and publish the
+completed linear sequence in one push. Actions is not the normal edit/compile/test loop. One
+intentional remote failing run is permitted only when the finding genuinely depends on a
+remote runner or environment, and is followed by a local fix and a single correction push.
+Never retry until green; never delete, rewrite or conceal a genuine failing commit or result.
+
+Concurrency only cancels stale runs that overlap in time; the primary protection against
+redundant runs is the batching rule. No test was disabled, no `continue-on-error` was added,
+no fail-fast or failure semantics changed, and the existing rule against removing a test that
+found a defect is untouched. No product code changed.
+
 ## 2026-09-09 — helm-bind 0.1 owner acceptance
 
 Merged the independently reviewed comparison library by strict fast-forward as HELM's fourth

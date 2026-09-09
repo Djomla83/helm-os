@@ -46,6 +46,29 @@ Za patch navedi cilj, minimalan diff, test koji hvata problem, regresione prover
 uticaj na podatke/dozvole i otvorena ograničenja. Autor patch-a nije jedini autor
 referentnog očekivanja i konačni odobravalac njegovog izdavanja.
 
+## CI i disciplina push-a
+
+Smisleni commit-i — implementacija, nalaz prvog prolaza, ispravka i pregled — ostaju
+odvojeni kada provenijencija od toga ima koristi. Čuvanje istorije ne zahteva poseban
+push za svaki commit. Podrazumevano međukorake drži lokalno.
+
+Pre prvog udaljenog push-a pokreni sve lokalno izvršive provere. Osim ako se kvar zaista
+ne može reprodukovati bez udaljenog OS-a, runner-a ili okruženja, završeni linearni niz
+commit-a push-uj samo jednom, posle zelene lokalne validacije. GitHub Actions nije
+uobičajena petlja izmene, kompajliranja i testiranja.
+
+Za nezavisni pregled, test ili nalaz prvog prolaza koji pada mora biti commit-ovan pre
+svoje ispravke kada provenijencija pregleda to zahteva; taj commit normalno ostaje lokalan
+dok ispravljeni niz nije spreman za objavu. Jedan namerno neuspešan udaljeni CI run
+dozvoljen je samo kada se nalaz ne može reprodukovati lokalno i stvarno zavisi baš od tog
+udaljenog runner-a ili okruženja. Posle takvog neuspeha uradi ispravku i svu lokalno
+izvršivu validaciju, pa napravi jedan završni ispravni push.
+
+Nikada ne ponavljaj push dok CI ne postane zelen. Nikada ne briši, ne prepisuj i ne
+skrivaj stvarni commit ili rezultat koji je pao. Commit samo nad dokumentacijom posle
+zelenog code tip-a ne traži lažnu izmenu koda da bi se pokrenuo CI; kada je ponovno
+pokretanje nad tačnim ref-om zaista potrebno, koristi `workflow_dispatch`.
+
 ## Granica prvog posla
 
 Ne započinji novi kernel, jezik, generalni rekompajler ili novi compositor.
