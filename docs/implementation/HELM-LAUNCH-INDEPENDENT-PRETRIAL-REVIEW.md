@@ -2042,3 +2042,126 @@ Written by the same author who wrote the code it corrects, and the tests that ex
 author's own. One final independent P-16 micro-check is required before D-7.
 
 **D-7 remains not authorised. LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of ZERO.**
+
+## 34. Final P-16 verification of `89c923a`
+
+Frozen candidate `89c923a147ff16182d4d0ae14a0bd7bb6e62723d`, clean tree, branch
+`docs/helm-launch-architecture`, 12 commits unpushed and not pushed by this review. Review only; the
+candidate is byte-identical after it. No case posed, no ELF executed, no tracer attached.
+
+**Freeze.** 16/16 source and 3/3 definition hashes exact; the manifest still does not hash itself.
+AST-recomputed: **72 total, 54 mandatory, 11 conditional, 7 recorded**, zero duplicate ids, traced
+set **E1 E7 F4 F7 M1 M2 M3 M4**, **72 handlers / 72 posable / 0 unposable**, `NOT_RUN`, D-7 `false`,
+**valid trial count ZERO**. C unchanged since `002e1e4`; Build 5 applies. `driver.py`, `checker.py`
+and `observations.py` byte-identical to `c418284`.
+
+### 34.1 Collection
+
+Read from harness's AST, the complete set of commands it invokes is `uname -s`, `uname -r`,
+`uname -m`, `strace --version`, `gcc --version`, `ldd --version`, `getconf PAGESIZE` and
+`shutil.which("strace")`. No `-a`, no `-n`, no `--all`, no `--nodename`; no `hostname`,
+`hostnamectl`, `dnsdomainname`, `whoami`, `id`, `getent` or `host`. The `uname` field is gone;
+`kernel_name`, `kernel_release` and `arch` remain. **`HOSTNAME_COLLECTION_CLOSED`.**
+
+### 34.2 Publication boundary
+
+Every emit, serialise and file-write site in all nine experiment modules was enumerated by AST, not
+taken from the author's test. Result: `json.dumps` appears **once**, in `evidence.serialise`; the
+only stdout write is inside `evidence.publish`; the six runner paths and the four module `__main__`
+blocks all call `evidence.publish`. `publish` executes in the order `serialise(sanitiser.record(...))`
+then write — sanitisation strictly precedes serialisation, which strictly precedes output.
+
+`run_trial` contains **no** `record`, `text`, `serialise` or `Sanitiser` call at all, and both of its
+returns hand back a raw document with the sanitiser beside it. The raw object was confirmed to carry
+the probe on the way out and to be clean after the boundary, so the boundary is demonstrably what
+removes it.
+
+No evidence is written to a file anywhere in the experiment; the only file write outside the build
+directory is `/tmp/probe.c` in CI. `sanitise_env_name` and `sanitise_path` remain defined, are called
+by nothing, return strings and cannot emit. Nothing outside the experiment imports these modules
+except the two test files. **`PUBLICATION_BOUNDARY_CLOSED`** across the frozen source set — see 34.6
+for one emitter that lives outside it.
+
+### 34.3 The original leak
+
+`helm-secret-host-9371` injected as a legacy `uname -a` value, a bare `nodename`, a `hostname`, and
+into success-shaped, `HALT_PREFLIGHT` and freeze-drift documents, each pushed through the actual
+public path:
+
+| path | hostname | username | home | token | env value |
+|---|---|---|---|---|---|
+| `main([])` NOT_RUN, exit 3 | 0 | 0 | 0 | 0 | 0 |
+| `--verify-freeze` / `--driver-completeness` | 0 | 0 | 0 | 0 | 0 |
+| `--preflight-only` | 0 | 0 | 0 | 0 | 0 |
+| `HALT_PREFLIGHT`, real halt return, exit 6 | 0 | 0 | 0 | 0 | 0 |
+| freeze-drift `HALT` | 0 | 0 | 0 | 0 | 0 |
+| success-shaped document | 0 | 0 | 0 | 0 | 0 |
+
+Legacy `uname` and `nodename` become `<WITHHELD:host-descriptor>`, `hostname` becomes `<USER>`.
+`Linux`, `6.5.0-1015-azure` and `x86_64` survive in every document that carried them; the freeze-drift
+halt keeps both SHA-256 digests; the halt keeps `status`, `reason` and `halts[0].gate = clone3`; the
+F-1 token survives the success document.
+
+### 34.4 M-1, vocabulary and P-14
+
+With a partially initialised driver installed, all six public routes refuse — `vocabulary`,
+`Sanitiser.text`, `Sanitiser.record`, `serialise`, `publish`, and `publish` with an explicit
+`public_sanitiser` — zero bytes reach the stream and neither cache is populated. A failed import
+refuses both routes. Recovery returns the complete 379-token immutable set.
+**`M1_FAIL_CLOSED_INTACT`.**
+
+366 tokens enumerated independently: **0 missing, 0 corrupted across 4,758 checks**.
+`sigterm_blocked_sigpipe_ignored` byte-exact through the real `record()` path;
+`returned_before_descendant_lifetime` registered, referenced by no plan, protected.
+**`CURRENT_VOCABULARY_CLOSED`.**
+
+Negative controls unchanged: A4's argument `<OPAQUE:a2e659da>` and absent from the vocabulary; PAT,
+AWS, JWT and high-entropy probes redacted; digests preserved; raw pid, pointer and tracer text absent
+from a real parsed trace record; keys byte-exact; environment values never raw; serialization
+deterministic.
+
+### 34.5 Prior invariants
+
+V-1 an unobserved clone3 return is `not_observed` and scores INVALID, not FAIL. V-2 a contradictory
+`si_pid` scores INVALID. V-3/V-4 the shared gate rejects missing and truncated records for all eight
+traced cases. V-5 `truncated` and `specific` survive usernames `run` and `ci`. M3 keeps direct
+external evidence only — `closure` survives in comments recording its removal, and no
+`pidfd_acquisition` receipt field exists. R-4 floor `(5, 4)`: 5.3 and an absent tracer fail, 5.4
+passes. 72 / 72 / 0 intact.
+
+### 34.6 Finding
+
+**BACKLOG_NONBLOCKING — the compile-only CI workflow emits outside the boundary.**
+`.github/workflows/launch-exec-01-compile-only.yml` prints `uname -a` in its "Environment inventory"
+shell step, and runs
+`python3 -c "import json,harness; print(json.dumps(harness.preflight(), ...))"` in its "Preflight
+probes" step, which does not go through `evidence.publish`.
+
+Not blocking, on the standard set for this review. The workflow is not in the frozen source set and
+is not hashed by the manifest; it emits to a GitHub Actions log for an ephemeral, GitHub-hosted
+`ubuntu-24.04` runner, with `permissions: contents: read`, no artifact upload, no commit and no file
+write; and it cannot corrupt evidence, change case interpretation, manufacture a verdict or
+invalidate the first trial — its final step asserts the runner refuses with exit 3. The P-16
+collection fix already means `harness.preflight()` cannot return a nodename, so the Python-side
+exposure is gone and the residual is the raw `uname -a` shell line, whose value is an auto-generated
+disposable VM name identifying no person, account or private system. Two one-line workflow edits
+close it whenever the owner wants: `uname -srm` in place of `uname -a`, and
+`python3 run_launch_exec_01.py --preflight-only` in place of the inline print.
+
+### 34.7 Validation
+
+`git diff --check` clean · `validate_docs` PASS · **407 tests OK** · `cargo check --workspace
+--all-targets` exit 0 · freeze verification `true` · driver completeness 72/72/0 · independent
+vocabulary closure CLOSED · runner default exit 3.
+
+**Experimental ELF executions 0 · preregistered cases executed 0 · valid trial count 0.**
+
+### 34.8 Classification
+
+**`READY_FOR_OWNER_D7`.**
+
+`HOSTNAME_COLLECTION_CLOSED`, `PUBLICATION_BOUNDARY_CLOSED`, `M1_FAIL_CLOSED_INTACT`,
+`CURRENT_VOCABULARY_CLOSED`, no BLOCKING_CURRENT finding, freeze integrity exact, trial count ZERO.
+
+This is a readiness statement about the artefacts, not an authorisation. **D-7 remains not
+authorised. LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of ZERO.**
