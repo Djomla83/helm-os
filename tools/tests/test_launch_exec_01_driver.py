@@ -1260,10 +1260,13 @@ class StraceParsing(unittest.TestCase):
         self.assertIsNone(ob.parse_strace_child_window(""))
         self.assertIsNone(ob.parse_strace_child_window(None))
 
-    def test_a_resumed_line_is_still_a_syscall(self):
+    def test_a_split_syscall_is_rejoined_in_the_child_window(self):
+        """R-1: fragments are paired per task before anything is read."""
         text = (self.WINDOW.replace(
             "[pid   222] execveat(3, \"\", NULL, NULL, AT_EMPTY_PATH) = 0\n",
-            "[pid   222] <... execveat resumed>) = 0\n"))
+            "[pid   222] execveat(3, \"\",  <unfinished ...>\n"
+            "111 write(2, \"x\", 1)                   = 1\n"
+            "[pid   222] <... execveat resumed>NULL, AT_EMPTY_PATH) = 0\n"))
         out = ob.parse_strace_child_window(text)
         self.assertEqual(out["child_syscalls"][-1], "execveat")
 
@@ -1438,14 +1441,33 @@ class M3AcquisitionEvidence(unittest.TestCase):
         self.assertEqual(token, fc.BY_NAME["M3"]["predict"])
         self.assertIn(ob.EVIDENCE_DIRECT, reason)
 
-    def test_closure_form_passes_when_no_pidfd_open_exists(self):
-        """The tracer did not print the write-back, but the record is closed."""
+    def test_closure_form_is_removed(self):
+        """R-2. Absence of pidfd_open no longer proves the descriptor's origin."""
         token, reason = self._token(acq_trace(with_out=False))
-        self.assertEqual(token, "pidfd_acquired_atomically")
-        self.assertIn(ob.EVIDENCE_CLOSURE, reason)
+        self.assertIsNone(token)
+        self.assertIn("did not render", reason)
+        self.assertFalse(hasattr(ob, "EVIDENCE_CLOSURE"))
+
+    def test_every_route_the_closure_form_accepted_is_now_refused(self):
+        """The six alternate acquisition routes the bounded review found."""
+        base = acq_trace(with_out=False)
+        routes = {
+            "dup2": "111   dup2(4, 7)                      = 7",
+            "pidfd_getfd": "111   pidfd_getfd(9, 3, 0)     = 4",
+            "procfs": "111   openat(AT_FDCWD, \"/proc/222\", O_DIRECTORY) = 4",
+            "legacy_clone": ("111   clone(child_stack=NULL, "
+                             "flags=CLONE_PIDFD|SIGCHLD, parent_tid=[4]) = 333"),
+            "fork": "111   fork()                          = 333",
+            "scm_rights": ("111   recvmsg(8, {msg_control=[{cmsg_type="
+                           "SCM_RIGHTS, cmsg_data=[4]}]}, 0) = 1"),
+        }
+        for label, line in routes.items():
+            token, _ = self._token(
+                base.replace("111   poll(", line + "\n111   poll("))
+            self.assertIsNone(token, label + " still yielded a token")
 
     def test_the_frozen_facts_are_all_named_in_the_manifest(self):
-        self.assertEqual(sorted(fc.M3_EVIDENCE_FACTS), list("ABCDEFG"))
+        self.assertEqual(sorted(fc.M3_EVIDENCE_FACTS), list("ABCDEFGH"))
         self.assertIn("SAME clone3", fc.M3_BOUNDED_CLAIM)
         self.assertTrue(fc.M3_CLAIM_EXCLUSIONS)
 
@@ -1460,9 +1482,12 @@ class M3AcquisitionEvidence(unittest.TestCase):
         self.assertEqual(token, "pidfd_not_acquired_atomically")
 
     # -- D: clone3 failure ---------------------------------------------------
-    def test_clone3_failure_is_not_success(self):
-        token, _ = self._token(acq_trace(ret=-1, with_out=False,
-                                         with_waitid=False))
+    def test_clone3_failure_is_a_mechanism_fail(self):
+        """A genuine error return, reached AFTER the fragments rejoined."""
+        text = ("111   clone3({flags=CLONE_PIDFD, pidfd=0x7ffd0000, "
+                "exit_signal=SIGCHLD}, 88) = -1 EPERM (Operation not "
+                "permitted)\n")
+        token, _ = self._token(text)
         self.assertEqual(token, "clone3_failed")
 
     # -- C: no output location decoded --------------------------------------
@@ -1483,24 +1508,30 @@ class M3AcquisitionEvidence(unittest.TestCase):
         token, _ = self._token(acq_trace(pidfd_open=999))
         self.assertEqual(token, "pidfd_acquired_atomically")
 
-    def test_closure_form_refuses_when_any_pidfd_open_exists(self):
-        """Without the write-back, the record must be complete about pidfd_open."""
+    def test_no_write_back_is_invalid_regardless_of_pidfd_open(self):
         token, reason = self._token(acq_trace(with_out=False, pidfd_open=999))
         self.assertIsNone(token)
-        self.assertIn("not closed", reason)
+        self.assertIn("did not render", reason)
 
     # -- G: correlation ------------------------------------------------------
     def test_no_waitid_correlation_is_invalid(self):
         token, reason = self._token(acq_trace(with_waitid=False))
         self.assertIsNone(token)
-        self.assertIn("correlated", reason)
+        self.assertIn("waitid", reason)
 
-    def test_ambiguous_correlation_is_invalid(self):
-        extra = ("111   waitid(P_PIDFD, 9, {si_pid=333, si_code=CLD_EXITED}, "
+    def test_two_descriptors_claiming_the_same_child_are_ambiguous(self):
+        extra = ("111   waitid(P_PIDFD, 9, {si_pid=222, si_code=CLD_EXITED}, "
                  "WEXITED, NULL) = 0")
         token, reason = self._token(acq_trace(extra=extra))
         self.assertIsNone(token)
-        self.assertIn("correlated", reason)
+        self.assertIn("waitid", reason)
+
+    def test_unrelated_child_activity_does_not_break_correlation(self):
+        """R-3: si_pid filtering means another child's reap is simply ignored."""
+        extra = ("111   waitid(P_PIDFD, 9, {si_pid=333, si_code=CLD_EXITED}, "
+                 "WEXITED, NULL) = 0")
+        token, _ = self._token(acq_trace(extra=extra))
+        self.assertEqual(token, "pidfd_acquired_atomically")
 
     def test_a_descriptor_mismatch_is_invalid(self):
         """clone3 returned one descriptor and the lifecycle used another."""
@@ -1688,6 +1719,259 @@ class M3Privacy(unittest.TestCase):
         self.assertNotIn("acquisition", record)
         text = evidence.serialise(self.s.record(record))
         self.assertNotIn("0x7ffd0000", text)
+
+
+# ================================================ R-1: strace fragment joining
+SPLIT_CLONE3 = (
+    "111   clone3({flags=CLONE_PIDFD, pidfd=0x7ffd0000, exit_signal=SIGCHLD}"
+    " <unfinished ...>\n"
+    "[pid   222] execveat(3, \"\", NULL, NULL, AT_EMPTY_PATH) = 0\n"
+    "111   <... clone3 resumed> => {pidfd=[4]}, 88) = 222\n"
+    "111   poll([{fd=4, events=POLLIN}], 1, 5000) = 1\n"
+    "111   waitid(P_PIDFD, 4, {si_pid=222, si_code=CLD_EXITED, si_status=0},"
+    " WEXITED, NULL) = 0\n")
+
+
+class FragmentJoining(unittest.TestCase):
+    """R-1. A formatting fragment must never become a mechanism verdict."""
+
+    def _token(self, text):
+        return ob.derive("pidfd_acquired_atomically",
+                         observation(acquisition=ob.parse_pidfd_acquisition(text)))
+
+    def test_a_normal_split_clone3_rejoins_and_passes(self):
+        """The defect the bounded review found: this used to FAIL."""
+        token, reason = self._token(SPLIT_CLONE3)
+        self.assertEqual(token, "pidfd_acquired_atomically")
+        self.assertNotEqual(token, "clone3_failed")
+        facts = ob.parse_pidfd_acquisition(SPLIT_CLONE3)
+        self.assertTrue(facts["clone3_was_joined"])
+        self.assertEqual(facts["clone3_return"], 222)
+        self.assertEqual(facts["pidfd_from_clone3"], 4)
+
+    def test_an_interleaved_syscall_from_another_task_does_not_break_the_pair(self):
+        text = SPLIT_CLONE3.replace(
+            "[pid   222] execveat",
+            "[pid   999] write(1, \"noise\", 5)         = 5\n[pid   222] execveat")
+        self.assertEqual(self._token(text)[0], "pidfd_acquired_atomically")
+
+    def test_fragments_are_never_spliced_across_tasks(self):
+        """The resumed half belongs to a different task than the unfinished."""
+        text = SPLIT_CLONE3.replace("111   <... clone3 resumed>",
+                                    "777   <... clone3 resumed>")
+        token, reason = self._token(text)
+        self.assertIsNone(token)
+        self.assertIn("resumed", reason)
+
+    def test_two_simultaneous_unfinished_clone3_from_different_tasks(self):
+        text = ("111   clone3({flags=CLONE_PIDFD, pidfd=0x1, "
+                "exit_signal=SIGCHLD} <unfinished ...>\n"
+                "777   clone3({flags=CLONE_PIDFD, pidfd=0x2, "
+                "exit_signal=SIGCHLD} <unfinished ...>\n"
+                "111   <... clone3 resumed> => {pidfd=[4]}, 88) = 222\n"
+                "777   <... clone3 resumed> => {pidfd=[5]}, 88) = 333\n"
+                "111   waitid(P_PIDFD, 4, {si_pid=222}, WEXITED, NULL) = 0\n")
+        facts = ob.parse_pidfd_acquisition(text)
+        # Both pairs rejoin correctly per task, and TWO clone3 calls are then
+        # ambiguous for M3 -- which is the honest answer, not a guess.
+        self.assertEqual(facts["fragments_unmatched"], 0)
+        self.assertEqual(facts["clone3_call_count"], 2)
+        token, reason = self._token(text)
+        self.assertIsNone(token)
+        self.assertIn("more than one clone3", reason)
+
+    def test_two_unfinished_from_the_SAME_task_are_ambiguous(self):
+        text = ("111   clone3({flags=CLONE_PIDFD, pidfd=0x1, "
+                "exit_signal=SIGCHLD} <unfinished ...>\n"
+                "111   clone3({flags=CLONE_PIDFD, pidfd=0x2, "
+                "exit_signal=SIGCHLD} <unfinished ...>\n"
+                "111   <... clone3 resumed> => {pidfd=[4]}, 88) = 222\n")
+        facts = ob.parse_pidfd_acquisition(text)
+        self.assertEqual(facts["fragments_ambiguous"], 1)
+        token, reason = self._token(text)
+        self.assertIsNone(token)
+        self.assertIn("unambiguously", reason)
+
+    def test_missing_resumed_half_is_invalid_not_fail(self):
+        text = SPLIT_CLONE3.replace(
+            "111   <... clone3 resumed> => {pidfd=[4]}, 88) = 222\n", "")
+        facts = ob.parse_pidfd_acquisition(text)
+        self.assertEqual(facts["fragments_unmatched"], 1)
+        token, reason = self._token(text)
+        self.assertIsNone(token, "an unfinished fragment produced a verdict")
+        self.assertIn("never resumed", reason)
+
+    def test_orphan_resumed_half_is_invalid(self):
+        text = ("111   <... clone3 resumed> => {pidfd=[4]}, 88) = 222\n"
+                "111   waitid(P_PIDFD, 4, {si_pid=222}, WEXITED, NULL) = 0\n")
+        facts = ob.parse_pidfd_acquisition(text)
+        self.assertEqual(facts["fragments_orphaned"], 1)
+        token, reason = self._token(text)
+        self.assertIsNone(token)
+        self.assertIn("no matching", reason)
+
+    def test_a_mismatched_resume_is_never_spliced(self):
+        """The task resumed a different syscall than it left unfinished."""
+        text = SPLIT_CLONE3.replace("<... clone3 resumed>", "<... read resumed>")
+        facts = ob.parse_pidfd_acquisition(text)
+        self.assertEqual(facts["fragments_orphaned"], 1)
+        self.assertEqual(facts["fragments_unmatched"], 1)
+        self.assertIsNone(self._token(text)[0])
+
+    def test_resumed_error_return_is_a_real_failure(self):
+        text = ("111   clone3({flags=CLONE_PIDFD, pidfd=0x7ffd0000, "
+                "exit_signal=SIGCHLD} <unfinished ...>\n"
+                "999   write(1, \"x\", 1)                = 1\n"
+                "111   <... clone3 resumed>, 88) = -1 EPERM (Operation not "
+                "permitted)\n")
+        token, _ = self._token(text)
+        self.assertEqual(token, "clone3_failed")
+
+    def test_truncated_final_line_is_invalid(self):
+        text = SPLIT_CLONE3.replace(
+            "111   <... clone3 resumed> => {pidfd=[4]}, 88) = 222\n",
+            "111   <... clone3 resumed> => {pidfd=[4]}, 88")
+        token, _ = self._token(text)
+        self.assertIsNone(token)
+
+    def test_a_malformed_task_prefix_is_invalid(self):
+        text = SPLIT_CLONE3.replace("[pid   222]", "[pid   ????]")
+        facts = ob.parse_pidfd_acquisition(text)
+        self.assertEqual(facts["lines_malformed"], 1)
+        token, reason = self._token(text)
+        self.assertIsNone(token)
+        self.assertIn("task attribution", reason)
+
+    def test_a_well_formed_pid_prefix_is_not_malformed(self):
+        """Guards the backtracking bug where [pid   222] read as malformed."""
+        for prefix in ("[pid 222]", "[pid   222]", "222", "[pid 7]"):
+            joined = ob.join_trace_fragments(prefix + " execveat(3) = 0\n")
+            self.assertEqual(joined["malformed"], [], prefix)
+            self.assertEqual(len(joined["records"]), 1, prefix)
+
+
+class SiPidCorrelation(unittest.TestCase):
+    """R-3. The reaped process must BE the direct child."""
+
+    def _token(self, text):
+        return ob.derive("pidfd_acquired_atomically",
+                         observation(acquisition=ob.parse_pidfd_acquisition(text)))
+
+    def test_exact_pid_match_correlates(self):
+        self.assertEqual(self._token(acq_trace())[0], "pidfd_acquired_atomically")
+
+    def test_pid_mismatch_is_invalid(self):
+        text = acq_trace().replace("si_pid=222", "si_pid=999")
+        token, reason = self._token(text)
+        self.assertIsNone(token, "a pidfd for another process correlated")
+        self.assertIn("si_pid", reason)
+
+    def test_missing_si_pid_is_invalid(self):
+        text = acq_trace().replace("{si_pid=222, si_code=CLD_EXITED, "
+                                   "si_status=0}", "{...}")
+        token, reason = self._token(text)
+        self.assertIsNone(token)
+        self.assertIn("si_pid", reason)
+
+    def test_repeated_waitid_on_the_same_pidfd_still_correlates(self):
+        extra = ("111   waitid(P_PIDFD, 4, {si_pid=222, si_code=CLD_EXITED}, "
+                 "WEXITED, NULL) = 0")
+        self.assertEqual(self._token(acq_trace(extra=extra))[0],
+                         "pidfd_acquired_atomically")
+
+    def test_echild_after_a_correct_correlation_is_harmless(self):
+        extra = ("111   waitid(P_PIDFD, 4, {}, WEXITED, NULL) = -1 ECHILD "
+                 "(No child processes)")
+        self.assertEqual(self._token(acq_trace(extra=extra))[0],
+                         "pidfd_acquired_atomically")
+
+    def test_a_descriptor_mismatch_between_clone3_and_waitid_is_invalid(self):
+        token, reason = self._token(acq_trace(out_fd=4, lifecycle_fd=5))
+        self.assertIsNone(token)
+        self.assertIn("lifecycle used", reason)
+
+
+class TracerPreflightRequirement(unittest.TestCase):
+    """R-4. strace is mandatory; its absence HALTS, it never BLOCKS a case."""
+
+    def _gates(self, preflight):
+        import run_launch_exec_01 as runner
+        real = runner.harness.static_link_gate
+        try:
+            runner.harness.static_link_gate = lambda _: {"ok": True}
+            return runner.preflight_gates(preflight, "unused")
+        finally:
+            runner.harness.static_link_gate = real
+
+    GOOD = {"clone3": {"available": True}, "strace": "/usr/bin/strace",
+            "strace_version": ["strace -- version 6.8"], "ptrace_scope": "1"}
+
+    def test_no_strace_halts(self):
+        pf = dict(self.GOOD, strace=None, strace_version=None)
+        self.assertIn("tracer", [h["gate"] for h in self._gates(pf)])
+
+    def test_unsupported_strace_halts(self):
+        pf = dict(self.GOOD, strace_version=["strace -- version 4.26"])
+        self.assertIn("tracer", [h["gate"] for h in self._gates(pf)])
+
+    def test_unreadable_strace_version_halts(self):
+        pf = dict(self.GOOD, strace_version=["<unavailable: no such file>"])
+        self.assertIn("tracer", [h["gate"] for h in self._gates(pf)])
+
+    def test_restrictive_ptrace_scope_halts(self):
+        pf = dict(self.GOOD, ptrace_scope="3")
+        self.assertIn("tracer", [h["gate"] for h in self._gates(pf)])
+
+    def test_a_supported_tracer_may_proceed(self):
+        self.assertEqual([h["gate"] for h in self._gates(self.GOOD)], [])
+
+    def test_no_tracer_never_becomes_clone3_unavailable(self):
+        pf = dict(self.GOOD, strace=None, strace_version=None)
+        halts = self._gates(pf)
+        self.assertNotIn("clone3", [h["gate"] for h in halts])
+        for halt in halts:
+            self.assertNotIn("clone3_unavailable", json.dumps(halt))
+
+    def test_the_tracer_condition_is_not_a_conditional_block_cause(self):
+        ctx = _ctx(block_reasons={"no_tracer": fc.BLOCK_REASONS["no_tracer"]})
+        self.assertIsNone(driver.blocked_cause_for(driver.CASE_PLANS["M3"], ctx))
+
+    def test_no_case_is_posed_while_the_tracer_gate_fails(self):
+        """run_trial returns HALT_PREFLIGHT before the case loop is reached."""
+        import run_launch_exec_01 as runner
+        source = (EXP / "run_launch_exec_01.py").read_text(encoding="utf-8")
+        body = source[source.index("def run_trial("):]
+        halt_at = body.index("HALT_PREFLIGHT")
+        pose_at = body.index("driver.observe(")
+        self.assertLess(halt_at, pose_at,
+                        "the preflight halt must precede any posing")
+        self.assertIn("if halts:", body[:halt_at])
+
+    def test_the_requirement_is_frozen_in_the_manifest(self):
+        self.assertEqual(fc.STRACE_MIN_VERSION, (5, 4))
+        self.assertIn("mandatory", fc.TRACER_REQUIREMENT)
+        self.assertIn("HALT", fc.TRACER_REQUIREMENT)
+
+    def test_no_fallback_tracer_was_added(self):
+        """R-4 forbids a second instrumentation stack, not the word "sudo" in a
+        comment saying sudo is never used -- so this greps for CODE."""
+        banned = ("PTRACE_ATTACH", "PTRACE_TRACEME", "ptrace(", "bpf(",
+                  "import bpf", "perf_event_open", "libbpf", "insmod",
+                  "subprocess.run([\"sudo", "\"sudo\"")
+        for module in ("driver.py", "observations.py", "harness.py",
+                       "run_launch_exec_01.py"):
+            text = (EXP / module).read_text(encoding="utf-8")
+            code = chr(10).join(line.split("#", 1)[0]
+                                for line in text.splitlines())
+            for token in banned:
+                self.assertNotIn(token, code, module + " gained " + token)
+
+    def test_strace_is_the_only_tracer_the_driver_can_invoke(self):
+        source = (EXP / "driver.py").read_text(encoding="utf-8")
+        body = source[source.index("def tracer_argv("):]
+        body = body[:body.index(chr(10) * 3)]
+        self.assertIn("strace", body)
+        self.assertIn("return None", body)
 
 
 # The tokens this suite has demonstrated a derivation for. The universe test

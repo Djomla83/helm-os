@@ -196,6 +196,47 @@ and the descriptor that reading consumes is reported by number and is the only o
 > printed the kernel's write-back (`=> {pidfd=[N]}`). *Closure*: it did not, and the record instead
 > contains **no `pidfd_open` at all** alongside B, C, D and G — leaving no other route by which that
 > descriptor could exist. Anything less is INVALID, never PASS.
+
+> **SUPERSEDED by the bounded review's findings `R-1`…`R-5`. The paragraph above is preserved as
+> written; the active contract is this one.**
+>
+> **`R-2` — the closure form is REMOVED.** The bounded review demonstrated six alternate routes to a
+> direct-child pidfd that the closure argument accepted — `dup2` duplication, `pidfd_getfd`,
+> `/proc/<pid>` opened `O_DIRECTORY`, legacy `clone(CLONE_PIDFD)`, a second `fork()` child, and
+> `SCM_RIGHTS` descriptor passing. Each is excluded by the *frozen source*, none by the *trace*, so
+> the closure form rested on source-trust — the very thing M3 exists to replace. Upstream
+> `strace/src/clone.c` prints the kernel's write-back via `printnum_fd()`, so the direct rendering
+> is available and is now **required**. Absence of `pidfd_open` no longer proves anything about
+> which descriptor `clone3` returned.
+>
+> **`R-1` — tracer fragments are rejoined before any clone3 semantics are read.** Under `-f` strace
+> splits a syscall whenever another task produces output first, which for a clone-family call is
+> routine. Fragments are paired **per traced task**; an unfinished half with no resume, an orphan
+> resume, two unfinished calls from one task, or an unreadable task prefix are each **INVALID**. A
+> formatting fragment can never become `clone3_failed` or any other mechanism FAIL.
+>
+> **`R-3` — correlation requires the reaped process to BE the direct child.**
+> `waitid(P_PIDFD, N, …)` correlates only when the siginfo it renders reports
+> `si_pid == the clone3 return`. Entries with no rendered `si_pid` are ignored rather than fatal, so
+> an `ECHILD` retry cannot erase an earlier correct observation.
+>
+> **The active success contract is exactly A–H**, frozen as `M3_EVIDENCE_FACTS`: one candidate
+> `clone3`; `CLONE_PIDFD` present; a `clone_args.pidfd` output location; success returning the
+> direct-child pid; the tracer rendering the descriptor written back; that descriptor equal to the
+> one the lifecycle used; `waitid(P_PIDFD, …)` reporting `si_pid ==` the clone3 return; and no
+> `pidfd_open(DIRECT_CHILD_PID)`.
+
+> **`R-4` — a usable `strace` is a MANDATORY pretrial requirement, and there is no fallback.**
+> Frozen as `STRACE_MIN_VERSION` (5.4) and `TRACER_REQUIREMENT`. For 0.1 the strace-based tracer is
+> the **sole** supported external syscall-record mechanism for the eight traced cases; no `ptrace`
+> helper, eBPF, custom tracing binary or root requirement exists or may be added.
+>
+> If `strace` is absent, older than the floor, unreadable in version, or unable to attach because
+> `ptrace_scope` is restrictive, the runner **HALTS before the first preregistered case**. That is
+> an environment failure preventing a valid trial from starting — it is **not**
+> `clone3_unavailable`, it never becomes M3's conditional cause, and it does not widen any BLOCKED
+> escape hatch. `no_tracer` remains M1/M2/M4's frozen cause in the manifest but is now unreachable
+> in practice, because the halt fires first.
 >
 > **`pidfd_open` on the direct child is rejected outright**, which is the distinction §5 of the
 > amendment demands: `clone3(CLONE_PIDFD)` acquisition is not the same as
@@ -425,9 +466,11 @@ Authoritative evidence, in preference order:
 2. **A syscall record of the launcher**, collected **only** for the eight cases declared
    `traced: true` — **E1, E7, F4, F7, M1, M2, M3, M4** — establishing that
    `execveat(exec_fd, "", …, AT_EMPTY_PATH)` was the syscall used on the pinned descriptor and
-   that the child window contains nothing else. Collected with `strace` if preflight finds it,
-   otherwise a purpose-built parent-side `ptrace` tracer if `ptrace_scope <= 1`, otherwise those
-   cases are **BLOCKED**. **Directly observed on the recommended runner, 2026-09-09:** `strace`
+   that the child window contains nothing else. Collected with **`strace`, which is now a
+   mandatory pretrial requirement** — see the `R-4` note below; the parent-side `ptrace` fallback
+   an earlier form of this definition promised was never built and is **withdrawn**, and tracer
+   absence now HALTS preflight rather than BLOCKING these cases.
+   **Directly observed on the recommended runner, 2026-09-09:** `strace`
    **is** present at `/usr/bin/strace` and `ptrace_scope` is `1`, so the traced cases are posable
    there. An earlier form of this definition asserted the opposite, inferred from the
    runner-image package manifest; the compile-only pre-trial job observed the runner itself and

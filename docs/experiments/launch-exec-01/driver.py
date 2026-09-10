@@ -1216,7 +1216,7 @@ def declared_injection_modes(plan):
 def tracer_argv(preflight, output_path):
     """How this environment collects a syscall record, or None if it cannot.
 
-    Availability is re-probed at preflight and never assumed. Only the seven
+    Availability is re-probed at preflight and never assumed. Only the eight
     cases declared ``traced: true`` ever reach here, which is the definition's
     own restriction on evidence item 2 rather than a driver convention.
     """

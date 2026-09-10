@@ -936,3 +936,97 @@ between them is small.
 Freeze integrity holds, the partition and traced set are exactly as declared, the traced-record fix
 is sound, P-12's refusals hold everywhere except the closure path, P-14 holds, and no C source
 changed. **D-7 remains not authorised and the valid trial count remains ZERO.**
+
+---
+
+## 17. Disposition of bounded findings R-1 through R-5
+
+**Appended after section 16, which is preserved unchanged — the findings stand as recorded before
+any correction.** This section records what was done about them. **LAUNCH-EXEC-01 remains NOT_RUN,
+D-7 is not granted, and the valid trial count is ZERO.**
+
+| ID | Severity | Disposition |
+|---|---|---|
+| **R-1** | BLOCKER | **FIXED** — tracer fragments rejoined per traced task |
+| **R-2** | IMPORTANT | **FIXED by removal of the closure form** |
+| **R-3** | IMPORTANT | **FIXED** — `waitid` requires `si_pid == clone3` return |
+| **R-4** | IMPORTANT | **FIXED by mandatory `strace` preflight; no fallback** |
+| **R-5** | MINOR | **FIXED** — docstring corrected to eight traced cases |
+
+### 17.1 R-1 — fragments are rejoined before anything is interpreted
+
+`join_trace_fragments()` pairs `<unfinished ...>` with `<... call resumed>` **keyed on the task the
+tracer attributed the line to**, so fragments from different tasks are never spliced and no return
+value is ever inferred from an unfinished half. The joined text is then parsed exactly as a
+single-line call would be.
+
+| Condition | Result |
+|---|---|
+| complete pair | one logical `clone3` observation |
+| unfinished with no resume | **INVALID** |
+| resume with no unfinished | **INVALID** |
+| resume naming a *different* call | **INVALID** (both halves recorded, neither spliced) |
+| two unfinished from one task | **INVALID** — ambiguous |
+| unreadable task prefix | **INVALID** |
+| genuine error return *after* rejoining | `clone3_failed` — a real mechanism FAIL |
+
+Trace integrity is checked **first**, before any `clone3` semantics, so a formatting fragment can
+never reach the failure tokens. The split record that previously produced `clone3_failed` now
+produces the success token, verified directly.
+
+A latent defect was found and fixed while writing this: an early draft tested the "malformed
+prefix" pattern *before* the well-formed one, and `\s+` backtracking let `[pid   222]` satisfy it by
+matching one space as the non-digit character — flagging every correctly prefixed line unreadable.
+The well-formed prefix is now tried first, and a test pins four prefix spellings.
+
+### 17.2 R-2 — the closure form is gone
+
+`EVIDENCE_CLOSURE` no longer exists. Fact **E** requires the tracer-rendered write-back, which
+[section 16.2](#162-what-was-verified-sound) established is available. A test asserts each of the
+six routes the closure form accepted — `dup2`, `pidfd_getfd`, `/proc/<pid>`, legacy
+`clone(CLONE_PIDFD)`, a second `fork()` child, `SCM_RIGHTS` — now yields **no token**, and another
+asserts the attribute is absent rather than merely unused.
+
+### 17.3 R-3 — correlation names the child
+
+`_correlated_pidfd()` now selects only `waitid(P_PIDFD, N)` entries whose rendered `si_pid` equals
+the `clone3` return, and requires exactly one such descriptor. Entries with no rendered `si_pid` —
+an `ECHILD` retry — are ignored rather than fatal, so a later failed reap cannot erase an earlier
+correct one. **An unrelated child's reap is now simply filtered out instead of making the record
+ambiguous**, which is strictly better than the behaviour section 16 tested.
+
+### 17.4 R-4 — strace is mandatory, and there is no fallback
+
+Frozen as `STRACE_MIN_VERSION = (5, 4)` and `TRACER_REQUIREMENT`. The preflight gate HALTS when
+`strace` is absent, below the floor, unreadable in version, or unable to attach because
+`ptrace_scope` is restrictive. The parent-side `ptrace` fallback the definition once promised is
+**withdrawn** from the active text; the historical statement that it had been proposed is left
+intact.
+
+This is **not** `clone3_unavailable` and never becomes a conditional cause — tests assert both,
+including that no halt record mentions `clone3_unavailable` and that a `no_tracer` environment
+yields no block cause for M3. A further test asserts the halt precedes any posing in `run_trial`,
+and another greps the three modules for `PTRACE_*`, `bpf(`, `perf_event_open`, `libbpf`, `insmod`
+and `sudo` **in code rather than comments** — the first draft of that guard failed on a comment
+saying sudo is never used.
+
+`no_tracer` remains M1/M2/M4's frozen cause in the manifest but is now unreachable in practice,
+because the halt fires first. That is recorded rather than tidied away.
+
+### 17.5 What did not change
+
+The partition is **72 / 54 / 11 / 7**, the traced set is the same **eight**, `status` is `NOT_RUN`,
+`d7_execution_authorised` is `false`, and **no C source byte changed** — all six digests are
+identical to the source Build 5 compiled clean, so that evidence still applies and no new compile
+was requested.
+
+## 18. Status after R-1…R-5
+
+**`M3_FIXES_READY_FOR_FINAL_BOUNDED_REVIEW`.**
+
+All five findings are dispositioned, 312 tests pass, and static posability is 72/72/0. This is
+**not** a readiness statement and it is deliberately not self-certified: the corrections were made
+by the same hand that wrote the code under review, and **a final bounded independent verification
+of exactly these fixes is required before D-7.**
+
+**D-7 remains not authorised. LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of ZERO.**

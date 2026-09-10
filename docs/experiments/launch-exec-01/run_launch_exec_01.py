@@ -31,8 +31,10 @@ import checker
 import driver
 import evidence
 import harness
+import observations
 from frozen_cases import (
     DECISIONS,
+    TRACER_REQUIREMENT,
     MEMBERSHIP,
     POST_EXIT_DRAIN_MS,
     SPAWN_CONFIRM_TIMEOUT_MS,
@@ -120,6 +122,36 @@ def preflight_gates(preflight, build_dir):
                                        sorted(by_class.items())})),
             "evidence": unposable,
         })
+
+    # R-4. A usable tracer is a MANDATORY pretrial requirement, not a per-case
+    # condition. Eight cases now depend on the external syscall record, and the
+    # definition's parent-side ptrace fallback never existed -- so a host that
+    # cannot trace stops the trial here rather than degrading eight results to
+    # INVALID one at a time.
+    #
+    # This is emphatically NOT clone3_unavailable, and it never becomes M3's
+    # conditional BLOCKED cause: it is an environment failure that prevents a
+    # valid trial from starting at all.
+    ok, detail = observations.strace_supported(
+        preflight.get("strace"), preflight.get("strace_version"))
+    if not ok:
+        halts.append({"gate": "tracer", "detail": detail,
+                      "requirement": TRACER_REQUIREMENT,
+                      "evidence": {"strace": preflight.get("strace"),
+                                   "strace_version": preflight.get(
+                                       "strace_version")}})
+    else:
+        # strace itself needs ptrace. A permissive scope is part of the same
+        # requirement, and a restrictive one is the same environment failure.
+        scope = preflight.get("ptrace_scope")
+        if scope is not None and str(scope).strip() not in ("0", "1"):
+            halts.append({
+                "gate": "tracer",
+                "detail": ("ptrace_scope is " + str(scope).strip() + "; strace "
+                           "is present but cannot attach, so the traced cases "
+                           "have no syscall record"),
+                "requirement": TRACER_REQUIREMENT,
+                "evidence": {"ptrace_scope": scope}})
 
     # Static linking is a precondition, not a preference: a complete trace is
     # what makes "no other descriptor was present" evidence rather than

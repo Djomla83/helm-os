@@ -42,6 +42,7 @@ from frozen_cases import (
     CHILD_PERMITTED_SYSCALLS,
     CHILD_TEST_INJECTION_SYSCALLS,
     STAGES,
+    STRACE_MIN_VERSION,
 )
 
 # --------------------------------------------------------- closed vocabularies
@@ -437,7 +438,7 @@ def _timed_out(timeout_disposition, exit_code, term_signal):
 
 # ------------------------------------------------------------ syscall records
 # Evidence item 2 in the definition's preference order, collected ONLY for the
-# seven cases declared traced: true. The parser reads a tracer's text and never
+# eight cases declared traced: true. The parser reads a tracer's text and never
 # runs one; the driver owns invocation.
 
 # Which frozen stage each child syscall belongs to. RELOCATE is absent on
@@ -455,25 +456,116 @@ _SYSCALL_STAGE = {
     "execveat": "EXEC",
 }
 
-# strace renders a traced process's lines in one of these shapes depending on
-# build and on whether more than one process is being followed.
-_STRACE_LINE = re.compile(
-    r"\A(?:\[pid\s+(?P<p1>\d+)\]\s*|(?P<p2>\d+)\s+)?"
-    r"(?P<call>[a-z_][a-z0-9_]*)\(")
-_STRACE_RESUMED = re.compile(
-    r"\A(?:\[pid\s+(?P<p1>\d+)\]\s*|(?P<p2>\d+)\s+)?"
-    r"<\.\.\.\s+(?P<call>[a-z_][a-z0-9_]*)\s+resumed>")
-_CLONE3_RET = re.compile(r"=\s*(\d+)\s*\Z")
+# ------------------------------------------------- R-1: fragment joining
+# Under -f, strace splits a syscall whenever another traced task produces output
+# before it returns. A clone-family call is the routine case, because the child
+# starts running while the parent is still inside the syscall:
+#
+#   111 clone3({...} <unfinished ...>
+#   222 execveat(...)             = 0
+#   111 <... clone3 resumed> => {pidfd=[4]}, 88) = 222
+#
+# Reading the unfinished half alone sees no return value, which the bounded
+# review found would be reported as clone3_failed -- a FAIL turning a FORMATTING
+# artefact into MECHANISM_REJECTED. Fragments are therefore rejoined into one
+# logical observation BEFORE any clone3 semantics are interpreted, and a
+# fragment that cannot be rejoined is INVALID, never a mechanism failure.
+_TASK_PREFIX = re.compile(r"\A(?:\[pid\s+(?P<p1>\d+)\]|(?P<p2>\d+))\s+")
+_UNFINISHED = re.compile(r"\A(?P<head>.*?)\s*<unfinished\s*\.\.\.>\s*\Z")
+_RESUMED = re.compile(r"\A<\.\.\.\s+(?P<call>[a-z_][a-z0-9_]*)\s+resumed>"
+                      r"(?P<tail>.*)\Z")
+_CALL_NAME = re.compile(r"\A(?P<call>[a-z_][a-z0-9_]*)\(")
 
 
-def _strace_pid_and_call(line):
-    text = line.rstrip("\n")
-    for pattern in (_STRACE_LINE, _STRACE_RESUMED):
-        match = pattern.match(text)
-        if match:
-            pid = match.group("p1") or match.group("p2")
-            return (int(pid) if pid else None), match.group("call")
-    return None, None
+def _split_task(line):
+    """``(task_id, remainder, malformed)`` for one raw tracer line.
+
+    The well-formed prefix is tried FIRST and the malformed check only runs when
+    it fails. Testing "malformed" first is what a earlier draft did, and
+    ``\\s+`` backtracking then let ``[pid   222]`` satisfy the malformed pattern
+    by matching one space as the "non-digit" character -- flagging every
+    correctly prefixed line as unreadable.
+    """
+    text = line.rstrip("\n").rstrip()
+    match = _TASK_PREFIX.match(text)
+    if match:
+        task = int(match.group("p1") or match.group("p2"))
+        return task, text[match.end():], False
+    if text.startswith("[pid"):
+        # It announced a task attribution and did not supply a readable one.
+        return None, text, True
+    return None, text, False
+
+
+def join_trace_fragments(text):
+    """Rejoin ``<unfinished ...>`` / ``<... call resumed>`` pairs per task.
+
+    Returns ``{"records": [...], "unmatched_unfinished": [...],
+    "orphan_resumed": [...], "ambiguous": [...], "malformed": [...]}``.
+
+    Joining is keyed on the TASK the tracer attributed the line to, so fragments
+    belonging to different tasks are never spliced together, and a second
+    unfinished call from the same task before its resume is recorded as
+    ambiguous rather than guessed at.
+    """
+    if text is None:
+        return None
+    if isinstance(text, bytes):
+        text = text.decode("utf-8", "replace")
+
+    records, pending = [], {}
+    unmatched, orphans, ambiguous, malformed = [], [], [], []
+
+    for raw in text.splitlines():
+        task, body, bad_prefix = _split_task(raw)
+        if bad_prefix:
+            malformed.append(raw)
+            continue
+        if not body:
+            continue
+
+        resumed = _RESUMED.match(body)
+        if resumed:
+            held = pending.pop(task, None)
+            if held is None:
+                orphans.append({"task": task, "call": resumed.group("call")})
+                continue
+            if held["call"] != resumed.group("call"):
+                # The tracer resumed a different call than the one this task
+                # left unfinished. Splicing them would fabricate an observation.
+                orphans.append({"task": task, "call": resumed.group("call")})
+                unmatched.append({"task": task, "call": held["call"]})
+                continue
+            records.append({"task": task, "call": held["call"],
+                            "text": held["head"] + resumed.group("tail"),
+                            "joined": True})
+            continue
+
+        unfinished = _UNFINISHED.match(body)
+        if unfinished:
+            head = unfinished.group("head")
+            name = _CALL_NAME.match(head)
+            if name is None:
+                malformed.append(raw)
+                continue
+            if task in pending:
+                ambiguous.append({"task": task, "call": name.group("call")})
+                unmatched.append(pending.pop(task))
+            pending[task] = {"task": task, "call": name.group("call"),
+                             "head": head}
+            continue
+
+        name = _CALL_NAME.match(body)
+        records.append({"task": task,
+                        "call": name.group("call") if name else None,
+                        "text": body, "joined": False})
+
+    for held in pending.values():
+        unmatched.append({"task": held["task"], "call": held["call"]})
+
+    return {"records": records, "unmatched_unfinished": unmatched,
+            "orphan_resumed": orphans, "ambiguous": ambiguous,
+            "malformed": malformed}
 
 
 def parse_strace_child_window(text):
@@ -484,35 +576,30 @@ def parse_strace_child_window(text):
     window: a case declared traced whose trace produced no record is INVALID, and
     conflating the two would let a tracer failure read as a minimal child.
     """
-    if text is None:
+    joined = join_trace_fragments(text)
+    if joined is None:
         return None
-    if isinstance(text, bytes):
-        text = text.decode("utf-8", "replace")
 
     child_pid = None
-    for line in text.splitlines():
-        _, call = _strace_pid_and_call(line)
-        if call == "clone3":
-            match = _CLONE3_RET.search(line.rstrip())
-            if match:
-                child_pid = int(match.group(1))
+    for record in joined["records"]:
+        if record["call"] == "clone3":
+            match = _CLONE3_RESULT.search(record["text"])
+            if match and int(match.group("ret")) > 0:
+                child_pid = int(match.group("ret"))
                 break
     if child_pid is None:
         return None
 
-    calls, seen_clone_return = [], False
-    for line in text.splitlines():
-        pid, call = _strace_pid_and_call(line)
-        if call is None:
+    calls, seen_clone = [], False
+    for record in joined["records"]:
+        if not seen_clone:
+            if record["call"] == "clone3":
+                seen_clone = True
             continue
-        if not seen_clone_return:
-            if call == "clone3":
-                seen_clone_return = True
+        if record["task"] != child_pid or record["call"] is None:
             continue
-        if pid != child_pid:
-            continue
-        calls.append(call)
-        if call == "execveat":
+        calls.append(record["call"])
+        if record["call"] == "execveat":
             break
 
     if not calls:
@@ -530,17 +617,24 @@ def parse_strace_child_window(text):
 
 
 # ------------------------------------------------- M3-T: pidfd acquisition
-# Owner amendment M3-T. M3 is now a traced case, and its expectation rests on
-# the EXTERNAL syscall record. Nothing here reads a launcher field naming its
-# own acquisition mode: a receipt saying "I used clone3" is precisely the
+# Owner amendment M3-T. M3 is a traced case, and its expectation rests on the
+# EXTERNAL syscall record. Nothing here reads a launcher field naming its own
+# acquisition mode: a receipt saying "I used clone3" is precisely the
 # self-assertion M3 exists to avoid, and this module refuses to accept one.
 #
 # The bounded claim is about THIS execution's direct child only. It is not a
 # claim about Linux pidfds in general and not a claim that the kernel is atomic;
 # frozen_cases.M3_CLAIM_EXCLUSIONS states that in the manifest itself.
+#
+# R-2: the CLOSURE evidence form is REMOVED. It concluded "no other route could
+# exist" from the absence of pidfd_open, which the bounded review showed depends
+# on frozen-source invariants the trace never observes -- dup2, pidfd_getfd,
+# /proc/<pid>, legacy clone(CLONE_PIDFD), a second fork() child and SCM_RIGHTS
+# each satisfied it. M3 now requires the tracer-rendered pidfd output, which
+# upstream strace prints via printnum_fd() and is therefore available.
 
-# strace renders clone3 with its clone_args struct decoded, optionally followed
-# by an output block for the fields the kernel writes back.
+# strace renders clone3 with its clone_args struct decoded, followed by an
+# output block for the fields the kernel writes back.
 _CLONE3_LINE = re.compile(r"clone3\(\{(?P<args>[^}]*)\}"
                           r"(?:\s*=>\s*\{(?P<out>[^}]*)\})?")
 _CLONE3_RESULT = re.compile(r"\)\s*=\s*(?P<ret>-?\d+)")
@@ -549,20 +643,20 @@ _PIDFD_PTR = re.compile(r"pidfd\s*=\s*(?P<ptr>0x[0-9a-fA-F]+)")
 _PIDFD_OUT = re.compile(r"pidfd\s*=\s*\[(?P<fd>\d+)\]")
 _PIDFD_OPEN = re.compile(r"pidfd_open\(\s*(?P<pid>\d+)")
 _WAITID_PIDFD = re.compile(r"waitid\(\s*P_PIDFD\s*,\s*(?P<fd>\d+)")
+_SI_PID = re.compile(r"si_pid\s*=\s*(?P<pid>\d+)")
 _PIDFD_SEND = re.compile(r"pidfd_send_signal\(\s*(?P<fd>\d+)")
 _POLL_FD = re.compile(r"fd\s*=\s*(?P<fd>\d+)")
 
 # The frozen lifecycle operations that can correlate a descriptor with the
-# launcher's direct-child handle. waitid(P_PIDFD, N) is the decisive one: it
-# reaps THE direct child through N, so N is that child's handle by construction.
+# launcher's direct-child handle. waitid(P_PIDFD, N) is the decisive one, and
+# only when the siginfo it renders names the direct child (R-3).
 LIFECYCLE_WAITID = "waitid_p_pidfd"
 LIFECYCLE_SEND_SIGNAL = "pidfd_send_signal"
 LIFECYCLE_POLL = "poll"
 
-# How fact E was established. Recorded so a reviewer can see which, rather than
-# having to infer it from a bare boolean.
-EVIDENCE_DIRECT = "direct"        # the tracer printed the kernel's pidfd output
-EVIDENCE_CLOSURE = "closure"      # no pidfd_open exists anywhere in the record
+# Retained so an evidence record says how fact E was established. After R-2
+# there is exactly one admissible form.
+EVIDENCE_DIRECT = "direct"
 
 
 def parse_pidfd_acquisition(text):
@@ -575,11 +669,12 @@ def parse_pidfd_acquisition(text):
 
     This parser reads text. It runs no tracer and executes nothing.
     """
-    if text is None:
+    joined = join_trace_fragments(text)
+    if joined is None:
         return None
-    if isinstance(text, bytes):
-        text = text.decode("utf-8", "replace")
-    if not text.strip():
+    if not joined["records"] and not any(
+            joined[k] for k in ("unmatched_unfinished", "orphan_resumed",
+                                "ambiguous", "malformed")):
         return None
 
     facts = {
@@ -594,35 +689,43 @@ def parse_pidfd_acquisition(text):
         "lifecycle_uses": [],
         "evidence_form": None,
         "clone3_call_count": 0,
+        # R-1: trace integrity. A record whose fragments did not rejoin is
+        # incomplete evidence, and the rule refuses it rather than reading the
+        # surviving half as a mechanism result.
+        "fragments_unmatched": len(joined["unmatched_unfinished"]),
+        "fragments_orphaned": len(joined["orphan_resumed"]),
+        "fragments_ambiguous": len(joined["ambiguous"]),
+        "lines_malformed": len(joined["malformed"]),
+        "clone3_was_joined": False,
     }
 
-    for line in text.splitlines():
+    for record in joined["records"]:
+        line = record["text"]
         match = _CLONE3_LINE.search(line)
         if match:
             facts["clone3_call_count"] += 1
-            if facts["clone3_seen"]:
-                # More than one clone3 in the record. The direct child cannot be
-                # identified unambiguously, and guessing is how a wrong pidfd
-                # would get correlated with the right child.
-                continue
-            facts["clone3_seen"] = True
-            args = match.group("args") or ""
-            flags = _FLAGS.search(args)
-            if flags:
-                facts["clone3_flags"] = [f for f in flags.group("flags").split("|")
-                                         if f]
-                facts["clone_pidfd_flag"] = "CLONE_PIDFD" in facts["clone3_flags"]
-            facts["pidfd_output_pointer_supplied"] = bool(_PIDFD_PTR.search(args))
-            out = match.group("out")
-            if out:
-                written = _PIDFD_OUT.search(out)
-                if written:
-                    facts["pidfd_from_clone3"] = int(written.group("fd"))
-                    facts["evidence_form"] = EVIDENCE_DIRECT
-            result = _CLONE3_RESULT.search(line)
-            if result:
-                facts["clone3_return"] = int(result.group("ret"))
-                facts["clone3_succeeded"] = facts["clone3_return"] > 0
+            if not facts["clone3_seen"]:
+                facts["clone3_seen"] = True
+                facts["clone3_was_joined"] = bool(record["joined"])
+                args = match.group("args") or ""
+                flags = _FLAGS.search(args)
+                if flags:
+                    facts["clone3_flags"] = [
+                        f for f in flags.group("flags").split("|") if f]
+                    facts["clone_pidfd_flag"] = (
+                        "CLONE_PIDFD" in facts["clone3_flags"])
+                facts["pidfd_output_pointer_supplied"] = bool(
+                    _PIDFD_PTR.search(args))
+                out = match.group("out")
+                if out:
+                    written = _PIDFD_OUT.search(out)
+                    if written:
+                        facts["pidfd_from_clone3"] = int(written.group("fd"))
+                        facts["evidence_form"] = EVIDENCE_DIRECT
+                result = _CLONE3_RESULT.search(line)
+                if result:
+                    facts["clone3_return"] = int(result.group("ret"))
+                    facts["clone3_succeeded"] = facts["clone3_return"] > 0
 
         opened = _PIDFD_OPEN.search(line)
         if opened:
@@ -634,33 +737,40 @@ def parse_pidfd_acquisition(text):
 
         reaped = _WAITID_PIDFD.search(line)
         if reaped:
-            facts["lifecycle_uses"].append(
-                {"op": LIFECYCLE_WAITID, "fd": int(reaped.group("fd"))})
+            si_pid = _SI_PID.search(line)
+            facts["lifecycle_uses"].append({
+                "op": LIFECYCLE_WAITID, "fd": int(reaped.group("fd")),
+                "si_pid": int(si_pid.group("pid")) if si_pid else None})
         signalled = _PIDFD_SEND.search(line)
         if signalled:
             facts["lifecycle_uses"].append(
-                {"op": LIFECYCLE_SEND_SIGNAL, "fd": int(signalled.group("fd"))})
+                {"op": LIFECYCLE_SEND_SIGNAL, "fd": int(signalled.group("fd")),
+                 "si_pid": None})
         if "poll(" in line:
             for polled in _POLL_FD.finditer(line):
                 facts["lifecycle_uses"].append(
-                    {"op": LIFECYCLE_POLL, "fd": int(polled.group("fd"))})
-
-    if not facts["clone3_seen"]:
-        return facts        # a real observation: no clone3 in the record
+                    {"op": LIFECYCLE_POLL, "fd": int(polled.group("fd")),
+                     "si_pid": None})
     return facts
 
 
 def _correlated_pidfd(facts):
-    """The descriptor the frozen lifecycle actually used for the direct child.
+    """The descriptor the frozen lifecycle used FOR THE DIRECT CHILD.
 
-    ``waitid(P_PIDFD, N)`` reaps THE direct child through N, so N is that
-    child's handle by construction. Only that operation is decisive; a poll or a
-    signal on N corroborates but cannot identify the child on its own.
+    R-3: a ``waitid(P_PIDFD, N)`` only correlates when the siginfo it renders
+    names the direct child. Without that check a descriptor referring to some
+    other process satisfies the correlation, which is what the bounded review
+    demonstrated. Entries with no rendered ``si_pid`` -- an ECHILD retry, for
+    instance -- are ignored rather than fatal, so a later failed reap cannot
+    erase an earlier correct one.
     """
-    reaps = {use["fd"] for use in facts.get("lifecycle_uses", ())
-             if use["op"] == LIFECYCLE_WAITID}
-    if len(reaps) == 1:
-        return next(iter(reaps))
+    child_pid = facts.get("clone3_return")
+    if child_pid is None:
+        return None
+    matched = {use["fd"] for use in facts.get("lifecycle_uses", ())
+               if use["op"] == LIFECYCLE_WAITID and use.get("si_pid") == child_pid}
+    if len(matched) == 1:
+        return next(iter(matched))
     return None             # none, or ambiguous: refuse to pick one
 
 
@@ -669,7 +779,7 @@ def normalise_acquisition(facts):
 
     Raw pids and fds are experiment-local identifiers and must not become part
     of a receipt's identity. They are replaced by the two roles that carry the
-    meaning, and everything else is a boolean or a decoded flag name.
+    meaning, and everything else is a boolean, a count or a decoded flag name.
     """
     if not isinstance(facts, dict):
         return None
@@ -682,6 +792,7 @@ def normalise_acquisition(facts):
         "pidfd_output_pointer_supplied":
             bool(facts.get("pidfd_output_pointer_supplied")),
         "clone3_succeeded": bool(facts.get("clone3_succeeded")),
+        "clone3_was_joined": bool(facts.get("clone3_was_joined")),
         "direct_child": "DIRECT_CHILD" if facts.get("clone3_succeeded") else None,
         "direct_child_pidfd": (
             "DIRECT_CHILD_PIDFD" if correlated is not None else None),
@@ -690,7 +801,66 @@ def normalise_acquisition(facts):
         "lifecycle_ops": sorted({use["op"]
                                  for use in facts.get("lifecycle_uses") or ()}),
         "evidence_form": facts.get("evidence_form"),
+        "trace_integrity": {
+            "fragments_unmatched": facts.get("fragments_unmatched", 0),
+            "fragments_orphaned": facts.get("fragments_orphaned", 0),
+            "fragments_ambiguous": facts.get("fragments_ambiguous", 0),
+            "lines_malformed": facts.get("lines_malformed", 0),
+        },
     }
+
+
+# --------------------------------------------------- R-4: tracer supportedness
+# Pure text helpers. They decide whether the environment can produce the trace
+# contract the eight traced cases depend on; the RUNNER turns a negative answer
+# into a preflight HALT, because a missing tracer stops the trial rather than
+# blocking a case.
+_STRACE_VERSION = re.compile(r"(?:\A|\s)v?(?P<maj>\d+)\.(?P<min>\d+)")
+
+
+def parse_strace_version(reported):
+    """``(major, minor)`` from ``strace --version`` output, or None.
+
+    Accepts the list preflight records or a bare string. ``None`` means the
+    version could not be read, which is treated as unsupported rather than
+    assumed good.
+    """
+    if reported is None:
+        return None
+    if isinstance(reported, (list, tuple)):
+        reported = reported[0] if reported else ""
+    if not isinstance(reported, str):
+        return None
+    if reported.startswith("<unavailable"):
+        return None
+    match = _STRACE_VERSION.search(reported)
+    if not match:
+        return None
+    return int(match.group("maj")), int(match.group("min"))
+
+
+def strace_supported(path, reported_version, minimum=None):
+    """``(ok, reason)`` for the frozen tracer requirement.
+
+    Unsupported is never silently downgraded into a case-level block: the caller
+    HALTS preflight, which is the whole point of R-4.
+    """
+    if minimum is None:
+        minimum = STRACE_MIN_VERSION
+    if not path:
+        return False, ("no strace on PATH; a usable tracer is a mandatory "
+                       "pretrial requirement and no fallback tracer exists")
+    version = parse_strace_version(reported_version)
+    if version is None:
+        return False, ("strace is present at " + str(path) + " but its version "
+                       "could not be read, so the trace contract cannot be "
+                       "established")
+    if version < tuple(minimum):
+        return False, ("strace %d.%d is older than the frozen floor %d.%d, "
+                       "below which clone3 clone_args decoding cannot be "
+                       "relied on" % (version + tuple(minimum)))
+    return True, "strace %d.%d at %s meets the frozen floor" % (
+        version + (str(path),))
 
 
 def _usable_report(obs):
@@ -1198,7 +1368,24 @@ def rule_pidfd_acquired_atomically(obs):
     # evidence the acquisition externally, not to relay the launcher's account
     # of itself.
 
-    # A -- a parent-side clone3 call occurred.
+    # R-1 -- trace integrity comes FIRST. A record whose <unfinished ...> and
+    # <... resumed> fragments did not rejoin is incomplete evidence, and reading
+    # the surviving half would turn a tracer FORMATTING artefact into a
+    # mechanism verdict. Every one of these is INVALID, never FAIL.
+    if facts.get("lines_malformed"):
+        return None, ("the record contains lines whose task attribution could "
+                      "not be read; fragments cannot be rejoined safely")
+    if facts.get("fragments_ambiguous"):
+        return None, ("a task left two syscalls unfinished before either "
+                      "resumed; the fragments cannot be paired unambiguously")
+    if facts.get("fragments_orphaned"):
+        return None, ("the record contains a resumed fragment with no matching "
+                      "unfinished half")
+    if facts.get("fragments_unmatched"):
+        return None, ("the record contains an unfinished syscall that never "
+                      "resumed; the trace is incomplete")
+
+    # A -- exactly one parent-side clone3 call.
     if not facts.get("clone3_seen"):
         return None, ("no clone3 call is present in the record; a tracer that "
                       "did not decode it and a launcher that did not call it "
@@ -1213,7 +1400,8 @@ def rule_pidfd_acquired_atomically(obs):
                 "clone3 was called without CLONE_PIDFD, so no pidfd could be "
                 "returned by the syscall that created the child")
 
-    # D -- the call actually created the direct child.
+    # D -- the call actually created the direct child. Reached only after the
+    # fragments rejoined, so a genuine error return is a genuine result.
     if not facts.get("clone3_succeeded"):
         return ("clone3_failed",
                 "clone3 did not create a child, so no acquisition occurred")
@@ -1224,53 +1412,51 @@ def rule_pidfd_acquired_atomically(obs):
                       "location was decoded; the record cannot show where the "
                       "kernel would have written the descriptor")
 
-    child_pid = facts.get("clone3_return")
-    opens = facts.get("pidfd_open_calls") or ()
+    # E -- the tracer rendered the descriptor the kernel wrote back. R-2 removed
+    # the closure alternative: inferring the descriptor's origin from the
+    # absence of pidfd_open depended on frozen-source invariants the trace never
+    # observes, and dup2, pidfd_getfd, /proc/<pid>, legacy clone(CLONE_PIDFD), a
+    # second fork() child and SCM_RIGHTS all satisfied it. Direct rendering is
+    # available -- upstream strace prints it via printnum_fd -- so it is now
+    # required.
+    written = facts.get("pidfd_from_clone3")
+    if written is None:
+        return None, ("the tracer did not render the pidfd clone3 wrote back, "
+                      "so the descriptor's origin is not externally observed")
 
-    # F -- no separate pidfd_open acquired THIS child's handle. A pidfd_open
+    child_pid = facts.get("clone3_return")
+
+    # H -- no separate pidfd_open acquired THIS child's handle. A pidfd_open
     # aimed at some other process is not this case's concern, which is why the
     # target pid is compared rather than the mere presence of the call.
-    for call in opens:
+    for call in facts.get("pidfd_open_calls") or ():
         if call.get("target_pid") == child_pid:
             return ("pidfd_acquired_by_pidfd_open",
                     "the direct child's handle was acquired by pidfd_open on "
                     "its numeric pid after creation, which is exactly the "
                     "acquisition the primary mechanism rejects")
 
-    # G -- the descriptor is correlated to the launcher's direct-child handle
-    # through the frozen lifecycle. waitid(P_PIDFD, N) reaps THE direct child
-    # through N, so it is the decisive correlation; without it there is nothing
-    # tying any descriptor to this child.
+    # G -- the descriptor is correlated to the launcher's DIRECT-CHILD handle.
+    # R-3: waitid(P_PIDFD, N) only correlates when the siginfo it renders names
+    # the direct child; otherwise N could refer to any process.
     correlated = _correlated_pidfd(facts)
     if correlated is None:
-        return None, ("no unambiguous waitid(P_PIDFD, ...) ties a descriptor to "
-                      "the direct child, so the acquisition cannot be "
-                      "correlated with the launcher's handle")
+        return None, ("no unambiguous waitid(P_PIDFD, ...) reporting "
+                      "si_pid == the clone3 return ties a descriptor to the "
+                      "direct child")
 
-    # E -- the same syscall yielded the descriptor. Two admissible forms.
-    written = facts.get("pidfd_from_clone3")
-    if written is not None:
-        if written != correlated:
-            return None, ("the descriptor clone3 returned is not the one the "
-                          "lifecycle used; the correlation is ambiguous")
-        form = EVIDENCE_DIRECT
-    else:
-        # The tracer did not print the kernel's write-back. The record can still
-        # close the question, but only if it is COMPLETE about pidfd_open: with
-        # CLONE_PIDFD requested, an output location supplied, a descriptor used
-        # to reap this child, and no pidfd_open anywhere in the record, there is
-        # no other route by which that descriptor could exist.
-        if opens:
-            return None, ("the tracer did not record the kernel's pidfd "
-                          "write-back, and the record contains pidfd_open "
-                          "calls, so the descriptor's origin is not closed")
-        form = EVIDENCE_CLOSURE
+    # F -- and it is the same descriptor clone3 yielded.
+    if written != correlated:
+        return None, ("the descriptor clone3 returned is not the one the "
+                      "lifecycle used to reap the direct child; the "
+                      "correlation is ambiguous")
 
     return ("pidfd_acquired_atomically",
             "clone3 created the direct child with CLONE_PIDFD and an output "
-            "location, the descriptor it yielded is the one waitid(P_PIDFD) "
-            "used to reap that child, and no pidfd_open acquired it "
-            "(evidence form: " + form + ")")
+            "location, the tracer rendered the descriptor it wrote back, that "
+            "descriptor is the one waitid(P_PIDFD) used to reap this exact "
+            "child, and no pidfd_open acquired it (evidence form: " +
+            EVIDENCE_DIRECT + ")")
 
 
 def rule_rejected_acquisition(obs):

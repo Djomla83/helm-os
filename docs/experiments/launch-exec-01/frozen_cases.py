@@ -137,17 +137,44 @@ M3_CLAIM_EXCLUSIONS = (
 
 # The facts the normalised trace must establish. All of them, or the case is
 # INVALID -- partial evidence never yields the success token.
+#
+# Amended after the bounded review's findings R-2 and R-3. The CLOSURE form is
+# gone: inferring the descriptor's origin from the absence of pidfd_open rested
+# on frozen-source invariants the trace never observes, so E now requires the
+# tracer to render the descriptor the kernel wrote back. G now requires the
+# reaped process to BE the direct child, not merely some process.
 M3_EVIDENCE_FACTS = {
-    "A": "a parent-side clone3 call occurred",
-    "B": "its flags contain CLONE_PIDFD",
-    "C": "clone_args.pidfd is supplied as the kernel output location",
-    "D": "the clone3 call successfully created the direct child",
-    "E": "the same syscall yields a pidfd output",
-    "F": "no separate pidfd_open() acquired the direct child's pidfd",
-    "G": "the returned pidfd is subsequently used by the frozen pidfd "
-         "lifecycle, correlating the acquisition with the launcher's "
-         "direct-child handle",
+    "A": "exactly one relevant candidate clone3 direct-child creation",
+    "B": "CLONE_PIDFD present in its flags",
+    "C": "clone_args.pidfd output location present",
+    "D": "clone3 succeeds and returns the DIRECT_CHILD pid",
+    "E": "the tracer directly renders the pidfd produced by that clone3 call",
+    "F": "that pidfd equals the pidfd used by the launcher's direct-child "
+         "lifecycle observation",
+    "G": "waitid(P_PIDFD, that_pidfd, ...) reports si_pid == the clone3 return",
+    "H": "no pidfd_open(DIRECT_CHILD_PID) acquisition path is observed",
 }
+
+# ------------------------------------------------- R-4: the tracer requirement
+# A usable strace is a MANDATORY PREFLIGHT requirement, not a per-case
+# condition. The definition previously promised a parent-side ptrace fallback
+# that was never built, and preflight only raised no_tracer when ptrace_scope
+# was restrictive -- so a host with no strace and a permissive scope left every
+# traced case INVALID with no honest path. For 0.1 the strace-based tracer is
+# the SOLE supported external syscall-record mechanism for the eight traced
+# cases, and its absence stops the trial before the first case rather than
+# degrading eight results.
+#
+# This is NOT clone3_unavailable and must never become M3's conditional cause:
+# it is an environment failure that prevents a valid trial from starting at all.
+STRACE_MIN_VERSION = (5, 4)
+TRACER_REQUIREMENT = (
+    "A usable strace >= %d.%d is a mandatory pretrial environment requirement. "
+    "If strace is absent, older than the floor, or cannot render the trace "
+    "contract the traced cases depend on, the runner HALTS before the first "
+    "preregistered case. No ptrace, eBPF, helper-binary or root-requiring "
+    "fallback exists or may be added for 0.1."
+    % STRACE_MIN_VERSION)
 
 # ------------------------------------------------------------- output recipe
 # byte[i] = (i * 251 + tag) mod 256. A volume is not a recipe; oracles.py
