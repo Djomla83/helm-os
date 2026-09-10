@@ -383,3 +383,55 @@ checkout produces rather than over a local working copy.
 
 **Successful compilation is not trial evidence.** No preregistered case ran, so no experiment
 verdict of any kind exists.
+
+## Build 6 — 2026-09-10, the Trial #2 C source with the post-pin control hook, clean
+
+Build 5 no longer covers `launcher_spike.c`: the TEST/CONTROL-ONLY post-pin barrier changed it, so
+this is the first Linux compile of the Trial #2 source. Nothing was executed.
+
+| | |
+|---|---|
+| Commit built | `53c00393eb4ff5471042b9c9860f42fc29bab047` |
+| Frozen candidate | `e4f49f2bdb77c78cb57354584bc78f08a50531ea` (freeze verification `true` on the runner) |
+| Workflow run | `34525876757`, job `103034518998`, **success** |
+| Runner | GitHub-hosted `ubuntu-24.04` |
+| Kernel / arch | `6.17.0-1022-azure`, `x86_64` |
+| Compiler | `gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0` |
+| C library | `ldd (Ubuntu GLIBC 2.39-0ubuntu8.8) 2.39` |
+| Link command | `cc -O2 -Wall -Wextra -static -pthread -o build/launcher_spike launcher_spike.c` |
+| Compiler diagnostics | **none** — no warning and no error under `-Wall -Wextra` |
+
+The only two `warning:`/`error:` strings in the whole log are `ldd` broken-pipe messages from the
+preflight probe's `| head -1`, not compiler output.
+
+### Produced artefacts
+
+```
+d13082b12b26cb35d6707f6575feaab3b17368a13b6fd0ccf6ed7ae10c98e26d  build/helper_alt
+c854162ddf4074cdfe132492ddc595ae6345f820c22a1cd082e32dd1646850cc  build/helper_dynamic
+415f14b8538c8e59832a107b12c54f2fae9cd2ab5637df2f8a6facb82a9cfd52  build/helper_foreign.elf
+3232d09ffb089907e2586ac0bffdd1ba5b635c99e80cab1333e4ddb575a13dcb  build/helper_fork
+423ac81e0cbf553a3d8f821d72209ed6f505f4a45494c38d800bfdfc126ca236  build/helper_report
+500c4af1934be000acefc6daa49ebe8ac984686b23a4358bd134464e02f66c10  build/helper_setid
+9e9e5803f5e9f3bbf435758ae5ec79349ae80eacc6c1a3f34c3134754cd8e7ba  build/launcher_spike
+3bdbb4fe8397cd2b842430b39ccff01a8663c751945ef5e9a09e267fb8b1d359  build/magic_only.bin
+37f800b1a77f026dbf2ee2724829458ddf78dd8329527deee3d086025959208a  build/script_fixture.sh
+51224867e5fb13d0c6052397c9f4959c7c87bb8bc7d750c91429728a18b507d9  build/unloadable_in_cohort.elf
+```
+
+These are compile-only artefacts from a disposable runner. They are **not** Trial #2 build identity:
+the trial hashes the files it will actually consume, in its own run, before its first case.
+
+### Static/dynamic inspection, by `readelf`, never by execution
+
+The five static targets each report **no PT_INTERP**; `helper_dynamic` has one, which is what E7
+requires. `helper_report` still carries the guarded marker region E6 locates.
+
+### Nothing ran
+
+No produced ELF was executed: the log contains no `set -x` trace of `build/<binary>` as a command,
+only `file` and `readelf` reading them as data. `--post-pin-control-fd` appears **zero** times — the
+new hook is inactive without it, and CI never passes it. The runner was invoked without D-7 and
+exited **3**. The non-trial suite ran **500 tests, OK**, with none skipped on Linux.
+
+**LAUNCH-EXEC-01 Trial #2 remains NOT_RUN. D-7 is not authorised. The valid trial count is ZERO.**
