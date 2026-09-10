@@ -11,9 +11,12 @@ import ast
 import contextlib
 import io
 import json
+import os
 import pathlib
+import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
 
 EXP = (pathlib.Path(__file__).resolve().parents[2]
@@ -25,6 +28,7 @@ import checker              # noqa: E402
 import driver               # noqa: E402
 import evidence             # noqa: E402
 import harness              # noqa: E402
+import journal              # noqa: E402
 import run_launch_exec_01 as runner   # noqa: E402
 import frozen_cases as fc   # noqa: E402
 import observations as ob   # noqa: E402
@@ -2897,10 +2901,13 @@ class P16PublicationBoundary(unittest.TestCase):
         real_preflight, real_gates = harness.preflight, runner.preflight_gates
         harness.preflight = tainted_preflight
         runner.preflight_gates = lambda preflight, build_dir: halt
+        out = tempfile.mkdtemp(prefix="launch-exec-01-halt-")
         try:
-            return runner.run_trial("target/launch-exec-01-not-a-real-dir", None)
+            return runner.run_trial("target/launch-exec-01-not-a-real-dir",
+                                    None, out)
         finally:
             harness.preflight, runner.preflight_gates = real_preflight, real_gates
+            shutil.rmtree(out, ignore_errors=True)
 
     def _published(self, argv):
         buffer = io.StringIO()
@@ -3005,6 +3012,684 @@ class P16OriginalLeakCannotRecur(unittest.TestCase):
                 sys.modules.pop("driver", None)
             evidence._reset_vocabulary_cache()
         self.assertIn("NOT_RUN", self._publish({"status": "NOT_RUN"}))
+
+
+# ======================================================= Trial #2 corrections
+# Trial #1 crossed the immutability boundary and aborted in E5b's fixture setup
+# with EBADF, taking E1-E5's already-scored records with it because they lived
+# only in memory. Two defects, both fixed here and both tested here: the access
+# mode, and the preservation architecture.
+#
+# Nothing in this section poses a preregistered case, builds a HELM ELF or runs
+# launcher_spike. Where a file is needed it is a throwaway byte pattern in a
+# temporary directory.
+
+TRIAL2_FD_READS = {"read", "pread", "readv", "preadv"}
+TRIAL2_FD_WRITES = {"write", "pwrite", "writev", "pwritev"}
+
+
+def descriptor_map(function_node):
+    """Every ``os.open`` in a function, mapped to the ops on THAT variable.
+
+    Function-level "does this function read anywhere" is what makes an audit
+    miss a correct two-descriptor sequence, so this follows the variable.
+    """
+    opened = {}
+    for node in ast.walk(function_node):
+        if isinstance(node, ast.Assign) and isinstance(node.value, ast.Call) \
+                and ast.unparse(node.value.func) == "os.open":
+            name = getattr(node.targets[0], "id", None)
+            if name:
+                opened[name] = {"flags": ast.unparse(node.value.args[1])
+                                if len(node.value.args) > 1 else "",
+                                "ops": []}
+    for node in ast.walk(function_node):
+        if not isinstance(node, ast.Call) or not node.args:
+            continue
+        name = ast.unparse(node.func)
+        if not name.startswith("os."):
+            continue
+        target = ast.unparse(node.args[0])
+        if target in opened:
+            opened[target]["ops"].append(name.split(".")[-1])
+    return opened
+
+
+def driver_function(name):
+    tree = ast.parse((EXP / "driver.py").read_text(encoding="utf-8"))
+    return [n for n in ast.walk(tree)
+            if isinstance(n, ast.FunctionDef) and n.name == name][0]
+
+
+def fake_build(tmp, names=("helper_report",), payload=b"\x7fELF" + b"Z" * 512):
+    """A throwaway build directory and its identity map. Not a HELM binary."""
+    build = pathlib.Path(tmp)
+    build.mkdir(parents=True, exist_ok=True)
+    for name in names:
+        (build / name).write_bytes(payload)
+    return build, harness.build_identity(str(build))
+
+
+class Trial2E5bAccessModes(unittest.TestCase):
+    """The defect that aborted Trial #1, and the fix that keeps E5b's claim."""
+
+    def setUp(self):
+        self.fn = driver_function("_setup_writer_open_closed")
+        self.fds = descriptor_map(self.fn)
+
+    def test_the_writer_is_still_opened_write_only(self):
+        """Widening to O_RDWR would silently change what E5b tests."""
+        wronly = [v for v in self.fds.values() if "O_WRONLY" in v["flags"]]
+        self.assertEqual(len(wronly), 1, "E5b must have exactly one writer")
+        for var, info in self.fds.items():
+            self.assertNotIn("O_RDWR", info["flags"], var)
+
+    def test_nothing_reads_through_the_write_only_descriptor(self):
+        """The exact Trial #1 defect: pread on an O_WRONLY fd is EBADF."""
+        for var, info in self.fds.items():
+            if "O_WRONLY" in info["flags"]:
+                reads = [o for o in info["ops"] if o in TRIAL2_FD_READS]
+                self.assertEqual(reads, [], "%s is read from" % var)
+
+    def test_the_byte_is_read_through_a_separate_read_only_descriptor(self):
+        readers = [v for v in self.fds.values() if "O_RDONLY" in v["flags"]]
+        self.assertEqual(len(readers), 1)
+        self.assertTrue(any(o in TRIAL2_FD_READS for o in readers[0]["ops"]))
+        for info in readers:
+            self.assertEqual([o for o in info["ops"] if o in TRIAL2_FD_WRITES],
+                             [])
+
+    def test_the_reader_is_closed_before_the_writer_opens(self):
+        """Source order: read, close, then open the writer."""
+        body = ast.unparse(self.fn)
+        close_reader = body.index("os.close(read_fd)")
+        open_writer = body.index("os.open(path, os.O_WRONLY)")
+        self.assertLess(close_reader, open_writer)
+
+    def test_every_descriptor_is_closed_on_the_failure_path(self):
+        """Both opens sit in try/finally, so a raise cannot leak a descriptor."""
+        tries = [n for n in ast.walk(self.fn) if isinstance(n, ast.Try)]
+        self.assertEqual(len(tries), 2)
+        for node in tries:
+            self.assertTrue(node.finalbody)
+            self.assertIn("os.close", ast.unparse(node.finalbody[0]))
+
+    # ------------------------------------------------- behavioural, on a mock
+    def _inject(self, pread, pwrite):
+        """os.pread/os.pwrite are Unix-only, so they are injected rather than
+        merely replaced. Windows has neither, which is precisely why the
+        Trial #1 defect could not surface until the trial itself ran."""
+        self._saved = {n: getattr(os, n, None) for n in ("pread", "pwrite")}
+        os.pread, os.pwrite = pread, pwrite
+
+    def _restore(self):
+        for name, value in getattr(self, "_saved", {}).items():
+            if value is None:
+                if hasattr(os, name):
+                    delattr(os, name)
+            else:
+                setattr(os, name, value)
+
+    def _ctx(self, tmp):
+        build, identity = fake_build(tmp)
+        return driver.TrialContext(build=str(build), work=str(build),
+                                   preflight={}, freeze={},
+                                   sanitiser=evidence.Sanitiser(),
+                                   build_identity=identity), build
+
+    @unittest.skipUnless(hasattr(os, "pread") and hasattr(os, "pwrite"),
+                         "os.pread/os.pwrite are Unix-only; Linux CI runs "
+                         "this, and their absence here is exactly why the "
+                         "Trial #1 defect survived to the trial")
+    def test_the_executable_is_byte_identical_afterwards(self):
+        tmp = tempfile.mkdtemp(prefix="e5b-")
+        try:
+            ctx, build = self._ctx(tmp)
+            plan = driver.CASE_PLANS["E5b"]
+            before = (build / plan.binary).read_bytes()
+            info = driver.SETUPS["writer_open_closed"](ctx, plan)
+            self.assertNotIn("not_posed", info, info)
+            after = pathlib.Path(info["exec_path"]).read_bytes()
+            self.assertEqual(after, before, "E5b changed the executable")
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_a_short_read_does_not_pose_the_case(self):
+        tmp = tempfile.mkdtemp(prefix="e5b-short-read-")
+        try:
+            ctx, _ = self._ctx(tmp)
+            self._inject(lambda fd, n, off: b"", lambda fd, d, o: len(d))
+            info = driver.SETUPS["writer_open_closed"](ctx,
+                                                       driver.CASE_PLANS["E5b"])
+            self.assertIn("not_posed", info)
+            self.assertIn("0 bytes read", info["not_posed"])
+            status, _ = checker.score_case("E5b", info)
+            self.assertEqual(status, checker.INVALID)
+        finally:
+            self._restore()
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_a_short_write_does_not_pose_the_case(self):
+        tmp = tempfile.mkdtemp(prefix="e5b-short-write-")
+        try:
+            ctx, _ = self._ctx(tmp)
+            self._inject(lambda fd, n, off: b"A", lambda fd, d, o: 0)
+            info = driver.SETUPS["writer_open_closed"](ctx,
+                                                       driver.CASE_PLANS["E5b"])
+            self.assertIn("not_posed", info)
+            self.assertIn("wrote 0 bytes", info["not_posed"])
+            status, _ = checker.score_case("E5b", info)
+            self.assertEqual(status, checker.INVALID)
+        finally:
+            self._restore()
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+class Trial2DefectClassAudit(unittest.TestCase):
+    """The class, not the instance."""
+
+    def test_no_python_descriptor_has_an_access_mode_mismatch(self):
+        offenders = []
+        for path in sorted(EXP.glob("*.py")):
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            for fn in [n for n in ast.walk(tree)
+                       if isinstance(n, ast.FunctionDef)]:
+                for var, info in descriptor_map(fn).items():
+                    reads = [o for o in info["ops"] if o in TRIAL2_FD_READS]
+                    writes = [o for o in info["ops"] if o in TRIAL2_FD_WRITES]
+                    if "O_WRONLY" in info["flags"] and reads:
+                        offenders.append((path.name, fn.name, var, "read"))
+                    if "O_RDONLY" in info["flags"] and writes:
+                        offenders.append((path.name, fn.name, var, "write"))
+        self.assertEqual(offenders, [])
+
+    def test_no_descriptor_is_used_after_close(self):
+        """Within one function, source order: close must not precede a use."""
+        offenders = []
+        for path in sorted(EXP.glob("*.py")):
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            for fn in [n for n in ast.walk(tree)
+                       if isinstance(n, ast.FunctionDef)]:
+                for var in descriptor_map(fn):
+                    closed_at = uses_after = None
+                    for node in ast.walk(fn):
+                        if not isinstance(node, ast.Call) or not node.args:
+                            continue
+                        name = ast.unparse(node.func)
+                        if not name.startswith("os.") or \
+                                ast.unparse(node.args[0]) != var:
+                            continue
+                        if name == "os.close":
+                            closed_at = node.lineno
+                        elif closed_at is not None and node.lineno > closed_at:
+                            uses_after = (name, node.lineno)
+                    if uses_after:
+                        offenders.append((path.name, fn.name, var, uses_after))
+        self.assertEqual(offenders, [])
+
+
+class Trial2BuildIdentity(unittest.TestCase):
+    """The trial must be able to say which bytes it ran, even if it aborts."""
+
+    def test_identity_covers_every_generated_file(self):
+        tmp = tempfile.mkdtemp(prefix="identity-")
+        try:
+            build, identity = fake_build(
+                tmp, names=("helper_report", "helper_alt", "fixture.bin"))
+            self.assertEqual(sorted(identity),
+                             ["fixture.bin", "helper_alt", "helper_report"])
+            for name, entry in identity.items():
+                self.assertEqual(sorted(entry), ["kind", "sha256", "size"])
+                self.assertEqual(len(entry["sha256"]), 64)
+                self.assertEqual(entry["size"],
+                                 (build / name).stat().st_size)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_elf_classification_reads_the_headers(self):
+        static = bytearray(b"\x7fELF\x02\x01" + b"\x00" * 118)
+        static[32:40] = (64).to_bytes(8, "little")      # e_phoff
+        static[54:56] = (56).to_bytes(2, "little")      # e_phentsize
+        static[56:58] = (1).to_bytes(2, "little")       # e_phnum
+        static[64:68] = (1).to_bytes(4, "little")       # PT_LOAD
+        self.assertEqual(harness._elf_kind(bytes(static)), "elf_static")
+        self.assertEqual(harness._elf_kind(b"#!/bin/sh\n"), "not_elf")
+        self.assertEqual(harness._elf_kind(b""), "not_elf")
+        # One PT_INTERP program header at offset 64.
+        dynamic = bytearray(b"\x7fELF\x02\x01" + b"\x00" * 58 + b"\x00" * 56)
+        dynamic[32:40] = (64).to_bytes(8, "little")     # e_phoff
+        dynamic[54:56] = (56).to_bytes(2, "little")     # e_phentsize
+        dynamic[56:58] = (1).to_bytes(2, "little")      # e_phnum
+        dynamic[64:68] = (harness.PT_INTERP).to_bytes(4, "little")
+        self.assertEqual(harness._elf_kind(bytes(dynamic)), "elf_dynamic")
+
+    def test_a_setup_refuses_an_artefact_that_is_not_the_hashed_one(self):
+        tmp = tempfile.mkdtemp(prefix="identity-drift-")
+        try:
+            build, identity = fake_build(tmp)
+            ctx = driver.TrialContext(build=str(build), work=str(build),
+                                      preflight={}, freeze={},
+                                      sanitiser=evidence.Sanitiser(),
+                                      build_identity=identity)
+            plan = driver.CASE_PLANS["E1"]
+            (build / plan.binary).write_bytes(b"\x7fELF" + b"Q" * 512)
+            info = driver.SETUPS[plan.setup](ctx, plan)
+            self.assertIn("not_posed", info)
+            self.assertIn("not the one this trial hashed", info["not_posed"])
+            self.assertEqual(checker.score_case("E1", info)[0], checker.INVALID)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_a_setup_refuses_when_no_identity_was_recorded(self):
+        tmp = tempfile.mkdtemp(prefix="identity-missing-")
+        try:
+            build, _ = fake_build(tmp)
+            ctx = driver.TrialContext(build=str(build), work=str(build),
+                                      preflight={}, freeze={},
+                                      sanitiser=evidence.Sanitiser())
+            info = driver.SETUPS["copy"](ctx, driver.CASE_PLANS["E1"])
+            self.assertIn("not_posed", info)
+            self.assertIn("no build identity", info["not_posed"])
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_verify_build_identity_reports_every_deviation(self):
+        tmp = tempfile.mkdtemp(prefix="identity-verify-")
+        try:
+            build, identity = fake_build(tmp, names=("a.bin", "b.bin"))
+            ctx = driver.TrialContext(build=str(build), work=str(build),
+                                      preflight={}, freeze={},
+                                      sanitiser=evidence.Sanitiser(),
+                                      build_identity=identity)
+            self.assertEqual(driver.verify_build_identity(ctx), [])
+            (build / "a.bin").write_bytes(b"changed")
+            deviations = driver.verify_build_identity(ctx)
+            self.assertEqual([d["artefact"] for d in deviations], ["a.bin"])
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_the_driver_never_builds_anything(self):
+        """It opens what the harness produced; it must not produce its own."""
+        source = (EXP / "driver.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                name = ast.unparse(node.func)
+                self.assertNotIn(name, ("harness.build", "harness.build_identity",
+                                        "make_fixtures.write"))
+        for banned in ('"cc"', "'cc'", "-static"):
+            self.assertNotIn(banned, source, banned)
+
+    def test_identity_is_hashed_before_the_first_case_is_entered(self):
+        """Source order inside run_trial, read from the AST."""
+        tree = ast.parse((EXP / "run_launch_exec_01.py").read_text(encoding="utf-8"))
+        fn = [n for n in tree.body if isinstance(n, ast.FunctionDef)
+              and n.name == "run_trial"][0]
+        def line_of(fragment):
+            for node in ast.walk(fn):
+                if isinstance(node, ast.Call) and fragment in ast.unparse(node):
+                    return node.lineno
+            return None
+        hashed = line_of("harness.build_identity")
+        journalled = line_of("jrnl.build_identity")
+        entered = line_of("jrnl.case_entered")
+        posed = line_of("driver.observe")
+        for name, value in (("build_identity", hashed),
+                            ("journal build_identity", journalled),
+                            ("case_entered", entered), ("observe", posed)):
+            self.assertIsNotNone(value, name + " is missing from run_trial")
+        self.assertLess(hashed, journalled)
+        self.assertLess(journalled, entered)
+        self.assertLess(entered, posed)
+
+
+class Trial2Journal(unittest.TestCase):
+    """The preservation architecture Trial #1 did not have."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="journal-")
+        self.path = pathlib.Path(self.tmp) / "journal.jsonl"
+        self.s = evidence.Sanitiser(work="/w", home="/h", build="/b",
+                                    user="runner")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _journal(self):
+        return journal.Journal(self.path, self.s, trial="trial-002")
+
+    def test_case_entered_is_distinguishable_from_case_completed(self):
+        with self._journal() as j:
+            j.case_entered("E1", 0)
+            j.case_completed("E1", checker.PASS, "ok", {"launch_returned": True})
+            j.case_entered("E2", 1)          # entered, then the process dies
+        records, truncated = journal.read(self.path)
+        self.assertFalse(truncated)
+        state = journal.replay(records)
+        self.assertEqual(state["entered"], ["E1", "E2"])
+        self.assertEqual(sorted(state["completed"]), ["E1"])
+        self.assertEqual(state["entered_not_completed"], ["E2"])
+        self.assertEqual(state["last_entered"], "E2")
+        self.assertEqual(state["last_completed"], "E1")
+
+    def test_an_entered_case_is_never_given_a_frozen_status(self):
+        self.assertNotIn(journal.ENTERED_NOT_COMPLETED,
+                         (checker.PASS, checker.FAIL, checker.INVALID,
+                          checker.BLOCKED))
+
+    def test_completed_records_survive_the_next_case_exception(self):
+        """Exactly Trial #1's shape: five completed, the sixth aborts in setup."""
+        done = ["E1", "E2", "E3", "E4", "E5"]
+        with self.assertRaises(OSError):
+            with self._journal() as j:
+                for i, name in enumerate(done):
+                    j.case_entered(name, i)
+                    j.case_completed(name, checker.PASS, "ok", {"case": name})
+                j.case_entered("E5b", 5)
+                raise OSError(9, "Bad file descriptor")
+        records, truncated = journal.read(self.path)
+        self.assertFalse(truncated)
+        state = journal.replay(records)
+        self.assertEqual(sorted(state["completed"]), done)
+        self.assertEqual(state["entered_not_completed"], ["E5b"])
+        self.assertEqual(state["last_entered"], "E5b")
+        for name in done:
+            self.assertEqual(state["completed"][name]["status"], checker.PASS)
+
+    def test_a_completed_status_cannot_be_revised(self):
+        with self._journal() as j:
+            j.case_entered("E1", 0)
+            j.case_completed("E1", checker.PASS, "ok", {})
+            with self.assertRaises(journal.JournalError):
+                j.case_completed("E1", checker.FAIL, "second thoughts", {})
+            with self.assertRaises(journal.JournalError):
+                j.case_entered("E1", 0)
+
+    def test_completing_a_case_that_was_never_entered_is_refused(self):
+        with self._journal() as j:
+            with self.assertRaises(journal.JournalError):
+                j.case_completed("E9", checker.PASS, "ok", {})
+
+    def test_the_journal_has_no_update_or_delete(self):
+        for banned in ("def update", "def delete", "def revise", "def retry"):
+            self.assertNotIn(banned, (EXP / "journal.py").read_text(encoding="utf-8"))
+
+    def test_a_torn_final_line_is_dropped_and_reported(self):
+        with self._journal() as j:
+            j.case_entered("E1", 0)
+            j.case_completed("E1", checker.PASS, "ok", {})
+        # Simulate a crash mid-write: a partial line with no newline.
+        with open(self.path, "a", encoding="utf-8") as handle:
+            handle.write('{"kind":"case_completed","case":"E2","stat')
+        records, truncated = journal.read(self.path)
+        self.assertTrue(truncated)
+        state = journal.replay(records)
+        self.assertEqual(sorted(state["completed"]), ["E1"])
+
+    def test_every_record_is_exactly_one_line(self):
+        with self._journal() as j:
+            j.trial_begin(freeze={"a": 1}, membership={"total": 72})
+            j.case_entered("E1", 0)
+            j.case_completed("E1", checker.PASS, "reason with\nnewline", {})
+        lines = self.path.read_text(encoding="utf-8").splitlines()
+        self.assertEqual(len(lines), 3)
+        for line in lines:
+            self.assertIsNotNone(evidence.parse_line(line))
+
+    def test_sequence_numbers_are_monotonic(self):
+        with self._journal() as j:
+            j.trial_begin(freeze={}, membership={})
+            j.case_entered("E1", 0)
+            j.case_completed("E1", checker.PASS, "ok", {})
+        records, _ = journal.read(self.path)
+        self.assertEqual([r["n"] for r in records], [0, 1, 2])
+
+    def test_the_final_document_is_reconstructable_without_inventing_status(self):
+        with self._journal() as j:
+            j.case_entered("E1", 0)
+            j.case_completed("E1", checker.PASS, "ok", {"launch_returned": True})
+            j.case_entered("E2", 1)
+        state = journal.replay(journal.read(self.path)[0])
+        recovered = journal.recovered_records(state)
+        self.assertEqual(sorted(recovered), ["E1"])
+        # E2 was entered and never completed: the journal says so and stops
+        # there. It does NOT hand the reader a status.
+        self.assertNotIn("E2", recovered)
+        self.assertIn("E2", state["entered_not_completed"])
+
+    def test_the_journal_is_p14_sanitised(self):
+        with self._journal() as j:
+            j.preflight({"uname": "Linux secret-host-1 6.1 x86_64",
+                         "hostname": "secret-host-1",
+                         "user": "secret-user",
+                         "kernel_release": "6.1",
+                         "environ": ["TOKEN=" + "q" * 44]})
+            j.case_entered("E1", 0)
+            j.case_completed("E1", checker.PASS, "ok",
+                             {"child_pid": 31337, "raw_trace": "clone3() = 31337",
+                              "capture_prefix_base64": "c2VjcmV0",
+                              "path": "/w/build/x"})
+        text = self.path.read_text(encoding="utf-8")
+        for leak in ("secret-host-1", "secret-user", "q" * 44, "31337",
+                     "c2VjcmV0", "clone3()"):
+            self.assertNotIn(leak, text, leak)
+        self.assertIn(evidence.HOST_DESCRIPTOR, text)
+        self.assertIn(evidence.WITHHELD, text)
+        self.assertIn("6.1", text)                  # the useful fact survives
+        self.assertIn(checker.PASS, text)           # so does the frozen status
+
+    def test_the_journal_inherits_the_m1_fail_closed_rule(self):
+        import types
+        real = sys.modules.get("driver")
+        evidence._reset_vocabulary_cache()
+        sys.modules["driver"] = types.ModuleType("driver")
+        try:
+            with self.assertRaises(evidence.VocabularyUnavailable):
+                with self._journal() as j:
+                    j.case_entered("E1", 0)
+        finally:
+            if real is not None:
+                sys.modules["driver"] = real
+            else:
+                sys.modules.pop("driver", None)
+            evidence._reset_vocabulary_cache()
+
+
+class Trial2RunnerCrashSimulation(unittest.TestCase):
+    """Trial #1's exact shape, at the runner level, with nothing posed.
+
+    Every experiment call the loop makes is replaced by a fabricated one: no
+    fixture is built, no ELF exists, no launcher_spike runs and no
+    ``driver.Authorisation`` is constructed. What is exercised is the
+    preservation architecture -- the thing Trial #1 did not have.
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="trial2-runner-")
+        self.out = pathlib.Path(self.tmp) / "out"
+        self.saved = {
+            "preflight": harness.preflight,
+            "gates": runner.preflight_gates,
+            "build": harness.build,
+            "identity": harness.build_identity,
+            "verify": driver.verify_build_identity,
+            "observe": driver.observe,
+            "evaluate": driver.evaluate,
+        }
+        harness.preflight = lambda: {"kernel_name": "Linux", "block_reasons": {}}
+        runner.preflight_gates = lambda preflight, build_dir: []
+        harness.build = lambda build_dir: {"helper_report": "a" * 64}
+        harness.build_identity = lambda build_dir: {
+            "helper_report": {"size": 4, "sha256": "a" * 64, "kind": "elf_static"}}
+        driver.verify_build_identity = lambda ctx: []
+
+    def tearDown(self):
+        harness.preflight = self.saved["preflight"]
+        runner.preflight_gates = self.saved["gates"]
+        harness.build = self.saved["build"]
+        harness.build_identity = self.saved["identity"]
+        driver.verify_build_identity = self.saved["verify"]
+        driver.observe = self.saved["observe"]
+        driver.evaluate = self.saved["evaluate"]
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _abort_at(self, target):
+        def observe(plan, ctx, auth):
+            if plan.case == target:
+                raise OSError(9, "Bad file descriptor")
+            return {"case": plan.case}
+        driver.observe = observe
+        driver.evaluate = lambda plan, obs: {"launch_returned": True,
+                                             "fabricated": True}
+
+    def test_the_journal_survives_an_abort_in_the_sixth_case(self):
+        self._abort_at("E5b")
+        with self.assertRaises(OSError):
+            runner.run_trial(self.tmp, None, str(self.out))
+
+        records, truncated = journal.read(self.out / runner.JOURNAL_FILE)
+        self.assertFalse(truncated)
+        state = journal.replay(records)
+
+        # Exactly Trial #1's shape, now preserved instead of lost.
+        self.assertEqual(state["entered"][:6],
+                         ["E1", "E2", "E3", "E4", "E5", "E5b"])
+        self.assertEqual(sorted(state["completed"]),
+                         ["E1", "E2", "E3", "E4", "E5"])
+        self.assertEqual(state["entered_not_completed"], ["E5b"])
+        self.assertEqual(state["last_entered"], "E5b")
+        self.assertEqual(state["last_completed"], "E5")
+        self.assertIsNone(state["trial_end"])
+
+        # The facts a crash must not destroy were already durable.
+        self.assertIsNotNone(state["preflight"])
+        self.assertIsNotNone(state["build_identity"])
+        self.assertIn("helper_report", state["build_identity"])
+
+    def test_preflight_and_build_identity_are_on_disk_before_the_abort(self):
+        self._abort_at("E1")
+        with self.assertRaises(OSError):
+            runner.run_trial(self.tmp, None, str(self.out))
+        for name in (runner.PREFLIGHT_FILE, runner.BUILD_IDENTITY_FILE,
+                     runner.JOURNAL_FILE):
+            path = self.out / name
+            self.assertTrue(path.exists(), name)
+            self.assertGreater(path.stat().st_size, 0, name)
+        # Not even the first case completed, and the journal says exactly that.
+        state = journal.replay(journal.read(self.out / runner.JOURNAL_FILE)[0])
+        self.assertEqual(state["entered"], ["E1"])
+        self.assertEqual(state["completed"], {})
+
+    def test_a_completed_run_writes_every_declared_artifact_file(self):
+        driver.observe = lambda plan, ctx, auth: {"case": plan.case}
+        driver.evaluate = lambda plan, obs: {"launch_returned": True}
+        code, document, _ = runner.run_trial(self.tmp, None, str(self.out))
+        self.assertEqual(code, 0)
+        for name in (runner.PREFLIGHT_FILE, runner.BUILD_IDENTITY_FILE,
+                     runner.JOURNAL_FILE, runner.EVIDENCE_FILE):
+            self.assertTrue((self.out / name).exists(), name)
+        state = journal.replay(journal.read(self.out / runner.JOURNAL_FILE)[0])
+        self.assertEqual(len(state["completed"]), 72)
+        self.assertEqual(state["entered_not_completed"], [])
+        self.assertEqual(state["trial_end"]["status"], "RUN")
+        # The document is a summary of durable facts, not their only copy.
+        self.assertEqual(sorted(state["completed"]), sorted(document["cases"]))
+        for case, entry in state["completed"].items():
+            self.assertEqual(entry["status"], document["cases"][case]["status"])
+
+    def test_the_halt_path_journals_its_end_and_poses_nothing(self):
+        runner.preflight_gates = lambda preflight, build_dir: [
+            {"gate": "clone3", "detail": "clone3 is unavailable"}]
+        driver.observe = self._never
+        code, document, _ = runner.run_trial(self.tmp, None, str(self.out))
+        self.assertEqual(code, 6)
+        self.assertEqual(document["status"], "HALT_PREFLIGHT")
+        state = journal.replay(journal.read(self.out / runner.JOURNAL_FILE)[0])
+        self.assertEqual(state["entered"], [])
+        self.assertEqual(state["trial_end"]["status"], "HALT_PREFLIGHT")
+        self.assertIsNone(state["build_identity"])
+
+    def test_a_build_identity_deviation_halts_before_the_first_case(self):
+        driver.verify_build_identity = lambda ctx: [
+            {"artefact": "helper_report", "detail": "changed"}]
+        driver.observe = self._never
+        code, document, _ = runner.run_trial(self.tmp, None, str(self.out))
+        self.assertEqual(code, 6)
+        self.assertEqual(document["status"], "HALT_BUILD_IDENTITY")
+        state = journal.replay(journal.read(self.out / runner.JOURNAL_FILE)[0])
+        self.assertEqual(state["entered"], [])
+
+    @staticmethod
+    def _never(*args, **kwargs):
+        raise AssertionError("a case was posed after a halt")
+
+    def test_every_written_file_is_sanitised(self):
+        harness.preflight = lambda: {"kernel_name": "Linux",
+                                     "uname": "Linux secret-host-2 6.1",
+                                     "user": "secret-user-2",
+                                     "block_reasons": {}}
+        driver.observe = lambda plan, ctx, auth: {"case": plan.case}
+        driver.evaluate = lambda plan, obs: {"launch_returned": True,
+                                             "child_pid": 4242}
+        runner.run_trial(self.tmp, None, str(self.out))
+        for name in (runner.PREFLIGHT_FILE, runner.BUILD_IDENTITY_FILE,
+                     runner.JOURNAL_FILE, runner.EVIDENCE_FILE):
+            text = (self.out / name).read_text(encoding="utf-8")
+            for leak in ("secret-host-2", "secret-user-2", "4242"):
+                self.assertNotIn(leak, text, "%s leaked into %s" % (leak, name))
+
+
+class Trial2Membership(unittest.TestCase):
+    """The corrections must not have moved the experiment."""
+
+    def test_the_partition_is_unchanged(self):
+        self.assertEqual(len(fc.MEMBERSHIP), 72)
+        self.assertEqual(len(fc.MANDATORY_CASES), 54)
+        self.assertEqual(len(fc.CONDITIONAL_CASES), 11)
+        self.assertEqual(len(fc.RECORDED_CASES), 7)
+
+    def test_all_72_handlers_remain_and_every_case_is_posable(self):
+        complete = driver.completeness()
+        self.assertTrue(complete["complete"])
+        self.assertEqual(complete["driver_total"], 72)
+        self.assertEqual(complete["frozen_total"], 72)
+        self.assertEqual(driver.unposable_cases(), {})
+
+    def test_the_traced_set_is_unchanged(self):
+        self.assertEqual([c["case"] for c in fc.CASES if c.get("traced")],
+                         ["E1", "E7", "F4", "F7", "M1", "M2", "M3", "M4"])
+
+    def test_e5b_keeps_its_expectation_and_class(self):
+        spec = fc.BY_NAME["E5b"]
+        self.assertEqual(spec["cls"], fc.MANDATORY)
+        self.assertEqual(spec["predict"], "Exited:0")
+        self.assertEqual(driver.CASE_PLANS["E5b"].setup, "writer_open_closed")
+
+
+class Trial2PersistentFilePrivacy(unittest.TestCase):
+    """Every file the trial writes for upload is already sanitised."""
+
+    def test_every_persistent_write_goes_through_the_boundary(self):
+        tree = ast.parse((EXP / "run_launch_exec_01.py").read_text(encoding="utf-8"))
+        fn = [n for n in tree.body if isinstance(n, ast.FunctionDef)
+              and n.name == "_write"][0]
+        self.assertIn("evidence.publish", ast.unparse(fn))
+
+    def test_the_journal_serialises_only_through_evidence(self):
+        source = (EXP / "journal.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                name = ast.unparse(node.func)
+                self.assertNotIn(name, ("json.dumps", "json.dump"))
+        self.assertIn("evidence.serialise_line", source)
+
+    def test_the_declared_artifact_files_are_the_sanitised_ones(self):
+        self.assertEqual(
+            sorted([runner.PREFLIGHT_FILE, runner.BUILD_IDENTITY_FILE,
+                    runner.JOURNAL_FILE, runner.EVIDENCE_FILE]),
+            ["build-identity.json", "evidence.json", "journal.jsonl",
+             "preflight.json"])
 
 
 # ============================================ M-1: fail-closed lazy vocabulary

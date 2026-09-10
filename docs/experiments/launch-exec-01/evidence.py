@@ -651,6 +651,32 @@ def publish(document, sanitiser=None, stream=None):
     return text
 
 
+def serialise_line(document):
+    """One deterministic JSON line, for the append-only progress journal.
+
+    The same determinism rules as :func:`serialise` -- sorted keys, fixed
+    separators, no timestamp -- but compact, because a journal record has to be
+    exactly one line. That is what makes a torn write from a crash detectable
+    instead of silently corrupting the record before it.
+    """
+    vocabulary()
+    return json.dumps(document, sort_keys=True, separators=(",", ":"),
+                      ensure_ascii=False, default=str) + "\n"
+
+
+def parse_line(text):
+    """One journal line back, or ``None`` when it does not parse.
+
+    ``None`` means a torn write and the caller drops the line. Nothing here
+    repairs a partial record: half a record is not evidence.
+    """
+    try:
+        value = json.loads(text)
+    except ValueError:
+        return None
+    return value if isinstance(value, dict) else None
+
+
 def receipt_view(spike_receipt):
     """The receipt fields only, with the fields D-8 and the freeze keep out.
 

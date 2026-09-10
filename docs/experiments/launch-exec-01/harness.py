@@ -284,6 +284,66 @@ def build(build_dir):
     return built
 
 
+# ==================================================== trial build identity
+# Trial #1 recorded no identity for the binaries it actually ran. build()
+# computed their digests, but they lived in memory and died with the runner
+# alongside E1-E5's records, and a disposable runner cannot be re-interrogated
+# afterwards. So identity is taken from the files ON DISK -- the same ones the
+# case driver opens -- and the runner writes it down BEFORE the first case.
+
+PT_INTERP = 3
+
+
+def _elf_kind(data):
+    """``elf_static`` / ``elf_dynamic`` / ``not_elf``, by reading the headers.
+
+    Deliberately not ``file`` or ``ldd``: identity evidence should not depend on
+    another tool's output text, and the presence of a PT_INTERP program header
+    is the same fact those tools report. Anything unreadable says so rather than
+    guessing.
+    """
+    if len(data) < 64 or data[:4] != b"\x7fELF":
+        return "not_elf"
+    if data[4] != 2 or data[5] != 1:
+        return "elf_unsupported_class_or_endianness"
+
+    def u(offset, width):
+        return int.from_bytes(data[offset:offset + width], "little")
+
+    phoff, phentsize, phnum = u(32, 8), u(54, 2), u(56, 2)
+    if phnum == 0:
+        # No program header table at all, so no PT_INTERP to find.
+        return "elf_static"
+    if phentsize < 4 or phoff + phnum * phentsize > len(data):
+        return "elf_headers_unreadable"
+    for i in range(phnum):
+        if u(phoff + i * phentsize, 4) == PT_INTERP:
+            return "elf_dynamic"
+    return "elf_static"
+
+
+def build_identity(build_dir):
+    """Hash every file the trial will consume, as a snapshot before case one.
+
+    Taken after :func:`build` and before the first case is entered, so the map
+    covers every generated executable and every fixture and nothing a case has
+    since created. The driver opens these exact paths; it never builds.
+    """
+    import hashlib
+    build = pathlib.Path(build_dir)
+    artefacts = {}
+    for path in sorted(build.iterdir()):
+        if not path.is_file():
+            continue
+        data = path.read_bytes()
+        artefacts[path.name] = {
+            "size": len(data),
+            "sha256": hashlib.sha256(data).hexdigest(),
+            "kind": _elf_kind(data),
+        }
+    return artefacts
+
+
 def open_non_cloexec_descriptor(path):
     """F2: a descriptor the child must not see. Deliberately NOT CLOEXEC."""
     fd = os.open(path, os.O_RDONLY)

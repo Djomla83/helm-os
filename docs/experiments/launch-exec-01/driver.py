@@ -272,16 +272,66 @@ def _check(name):
 # Each returns a dict describing what it built: at minimum {"exec_path": ...},
 # or {"not_posed": reason}. They touch only the disposable build directory.
 
+def _verified_source(ctx, name):
+    """``(path, None)`` for a built object, or ``(None, reason)``.
+
+    The digest is compared against the identity the runner hashed BEFORE the
+    first case. Trial #1 could not say which bytes it had run; this makes the
+    answer a checked fact at the moment of use rather than a claim made at the
+    end. The driver never builds anything -- it only opens what the harness
+    produced -- so a mismatch here means the object changed underneath the
+    trial, which is not a mechanism result and must not be scored as one.
+    """
+    path = ctx.build / name
+    identity = getattr(ctx, "build_identity", None)
+    if not identity:
+        return None, ("no build identity was recorded before the first case, "
+                      "so the bytes being run cannot be tied to the trial")
+    recorded = identity.get(name)
+    if recorded is None:
+        return None, "the trial recorded no build identity for " + str(name)
+    try:
+        actual = oracles.digest_of(path.read_bytes())
+    except OSError as exc:                                 # noqa: BLE001
+        return None, "the built object %s could not be read: %r" % (name, exc)
+    if actual != recorded.get("sha256"):
+        return None, ("the built object %s is not the one this trial hashed "
+                      "before its first case" % name)
+    return path, None
+
+
+def verify_build_identity(ctx):
+    """Every recorded artefact, re-hashed. Returns the deviations, if any.
+
+    Called once before the first case, so a build that changed between hashing
+    and posing halts BEFORE the immutability boundary rather than producing
+    evidence about unknown bytes.
+    """
+    identity = getattr(ctx, "build_identity", None) or {}
+    deviations = []
+    for name in sorted(identity):
+        path, reason = _verified_source(ctx, name)
+        if path is None:
+            deviations.append({"artefact": name, "detail": reason})
+    return deviations
+
+
 @_setup("none")
 def _setup_none(ctx, plan):
-    return {"exec_path": str(ctx.build / plan.binary)}
+    path, reason = _verified_source(ctx, plan.binary)
+    if path is None:
+        return {"not_posed": reason}
+    return {"exec_path": str(path)}
 
 
 @_setup("copy")
 def _setup_copy(ctx, plan):
     """A private copy, so a case that mutates an inode cannot disturb another."""
+    source, reason = _verified_source(ctx, plan.binary)
+    if source is None:
+        return {"not_posed": reason}
     target = ctx.build / (plan.case + "_" + plan.binary)
-    shutil.copy2(ctx.build / plan.binary, target)
+    shutil.copy2(source, target)
     return {"exec_path": str(target)}
 
 
@@ -327,14 +377,47 @@ def _setup_writer_open_held(ctx, plan):
 
 @_setup("writer_open_closed")
 def _setup_writer_open_closed(ctx, plan):
-    """E5b: the writer opens, writes and CLOSES before launch -- no ETXTBSY,
-    because the write-deny reference is taken at exec time."""
+    """E5b: the writer opens O_WRONLY, writes and CLOSES before launch.
+
+    No ETXTBSY is expected, because the write-deny reference is taken at exec
+    time and this writer is gone by then.
+
+    **Trial #1 aborted here** with ``OSError: [Errno 9] Bad file descriptor``.
+    The byte was read back through the write-only descriptor, and a write-only
+    file description carries no ``FMODE_READ``: the kernel refuses the read
+    before it reaches the filesystem, which is what ``read(2)`` means by "not
+    open for reading". The descriptor was valid; the access mode was wrong.
+
+    The case under test is *a real O_WRONLY writer*, so the fix does not widen
+    the descriptor to ``O_RDWR`` -- that would quietly change what E5b tests.
+    The byte is read first, through a separate read-only descriptor that is
+    closed before the writer is opened, and then written back unchanged. The
+    executable stays byte-identical, a genuine write happens through a
+    write-only descriptor, and the writer closes before exec.
+
+    A short read or a short write does not continue: the case is not posed, and
+    says so.
+    """
     info = _setup_copy(ctx, plan)
-    fd = os.open(info["exec_path"], os.O_WRONLY)
+    path = info["exec_path"]
+
+    read_fd = os.open(path, os.O_RDONLY)
     try:
-        os.pwrite(fd, os.pread(fd, 1, 0), 0)     # a no-op rewrite of one byte
+        original = os.pread(read_fd, 1, 0)
     finally:
-        os.close(fd)
+        os.close(read_fd)
+    if len(original) != 1:
+        return {"not_posed": "E5b could not read the byte it rewrites: %d "
+                             "bytes read, exactly 1 required" % len(original)}
+
+    write_fd = os.open(path, os.O_WRONLY)
+    try:
+        written = os.pwrite(write_fd, original, 0)
+    finally:
+        os.close(write_fd)
+    if written != 1:
+        return {"not_posed": "E5b's no-op rewrite wrote %d bytes, exactly 1 "
+                             "required" % written}
     return info
 
 
@@ -1149,12 +1232,16 @@ class TrialContext:
     """Everything a case needs that is not in its plan. Built once per trial."""
 
     def __init__(self, build, work, preflight, freeze, sanitiser,
-                 supplied_channels=None):
+                 supplied_channels=None, build_identity=None):
         self.build = pathlib.Path(build)
         self.work = pathlib.Path(work)
         self.preflight = preflight
         self.freeze = freeze
         self.sanitiser = sanitiser
+        # The exact artefacts hashed before the first case. Every setup that
+        # opens a build product checks against this, so the trial can prove
+        # which bytes it ran even if it later aborts.
+        self.build_identity = dict(build_identity or {})
         self.supplied_channels = frozenset(
             SPIKE_SUPPLIED_CHANNELS if supplied_channels is None
             else supplied_channels)

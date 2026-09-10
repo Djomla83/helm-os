@@ -31,6 +31,7 @@ import checker
 import driver
 import evidence
 import harness
+import journal
 import observations
 from frozen_cases import (
     DECISIONS,
@@ -172,66 +173,136 @@ def preflight_gates(preflight, build_dir):
     return halts
 
 
-def run_trial(build_dir, auth):
-    """Pose every frozen case once and return the evidence document RAW.
+TRIAL_ID = "trial-002"
+
+PREFLIGHT_FILE = "preflight.json"
+BUILD_IDENTITY_FILE = "build-identity.json"
+JOURNAL_FILE = "journal.jsonl"
+EVIDENCE_FILE = "evidence.json"
+
+
+def _write(out_dir, name, document, sanitiser):
+    """One sanitised file, through the single publication boundary."""
+    path = pathlib.Path(out_dir) / name
+    with open(path, "w", encoding="utf-8", newline="\n") as handle:
+        evidence.publish(document, sanitiser, stream=handle)
+    return path
+
+
+def run_trial(build_dir, auth, out_dir):
+    """Pose every frozen case once, writing every fact down as it becomes final.
 
     Reached only with an :class:`driver.Authorisation`. Every case in the
     membership produces a record -- absence is never an omission.
 
-    **P-16: this function no longer sanitises.** It returns the document and
+    **P-16: this function does not sanitise.** It returns the document raw with
     the sanitiser it built, and :func:`evidence.publish` applies P-14 once, at
-    the boundary. Sanitising at each return site is how the ``HALT_PREFLIGHT``
-    document came to be published raw: it was the one return that did not
-    remember. Returning raw from every path makes forgetting impossible.
+    the boundary. Sanitising at each return site is how ``HALT_PREFLIGHT`` came
+    to be published raw.
+
+    **Trial #1's correction: nothing waits for the end.** Trial #1 posed E1
+    through E5, scored them, and lost all five when it aborted in E5b's fixture
+    setup, because per-case records were held in memory until one final
+    document. Here the preflight, the build identity and each case's final
+    status are flushed to the journal as they happen, so an abort can destroy
+    at most the record being written. The final document is a SUMMARY of
+    durable facts, never their only copy.
     """
     sanitiser = evidence.public_sanitiser(build=build_dir)
-    preflight = harness.preflight()
-    halts = preflight_gates(preflight, build_dir)
-    if halts:
-        return 6, {"status": "HALT_PREFLIGHT",
-                   "reason": "a mandatory preflight invariant is false; no case "
-                             "was posed and LAUNCH-EXEC-01 remains NOT_RUN",
-                   "halts": halts,
-                   "preflight": preflight}, sanitiser
+    out = pathlib.Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    freeze = frozen_manifest()
 
-    built = harness.build(build_dir)
-    ctx = driver.TrialContext(build=build_dir, work=build_dir,
-                              preflight=preflight, freeze=frozen_manifest(),
-                              sanitiser=sanitiser)
+    with journal.Journal(out / JOURNAL_FILE, sanitiser, trial=TRIAL_ID) as jrnl:
+        jrnl.trial_begin(freeze=freeze, membership=summary())
 
-    records, cases = {}, {}
-    for name in MEMBERSHIP:
-        plan = driver.CASE_PLANS[name]
-        observation = driver.observe(plan, ctx, auth)
-        record = driver.evaluate(plan, observation)
-        records[name] = record
-        cases[name] = {"plan": plan.as_dict(), "record": record}
+        preflight = harness.preflight()
+        _write(out, PREFLIGHT_FILE, {"preflight": preflight,
+                                     "manifest": summary()}, sanitiser)
+        jrnl.preflight(preflight)
 
-    report = checker.report(records)
-    for name, (status, reason) in checker.score_all(records).items():
-        cases[name]["status"] = status
-        cases[name]["reason"] = reason
+        halts = preflight_gates(preflight, build_dir)
+        if halts:
+            jrnl.trial_end(status="HALT_PREFLIGHT", halts=halts)
+            return 6, {"status": "HALT_PREFLIGHT",
+                       "reason": "a mandatory preflight invariant is false; no "
+                                 "case was posed and LAUNCH-EXEC-01 remains "
+                                 "NOT_RUN",
+                       "halts": halts,
+                       "preflight": preflight}, sanitiser
 
-    uncontrolled = []
-    if records.get("N2", {}).get("blocked") == "parent_no_new_privs_set":
-        # N1 stands alone where its control arm could not be posed, and saying so
-        # is the whole point of making N2 conditional rather than dropping it.
-        uncontrolled.append(
-            "N1 is UNCONTROLLED: its control arm N2 was BLOCKED because the "
-            "launcher's parent already had no_new_privs set")
+        # The build happens ONCE. Its identity is hashed from the files on disk
+        # and made durable BEFORE the first case, because a disposable runner
+        # cannot be asked afterwards which bytes it ran -- Trial #1 could not
+        # answer that question at all.
+        built = harness.build(build_dir)
+        identity = harness.build_identity(build_dir)
+        _write(out, BUILD_IDENTITY_FILE,
+               {"trial": TRIAL_ID, "build": built, "artefacts": identity},
+               sanitiser)
+        jrnl.build_identity(identity)
 
-    document = evidence.evidence_document({
-        "status": "RUN",
-        "aggregate": report["aggregate"],
-        "detail": report["detail"],
-        "counts": report["counts"],
-        "preflight": preflight,
-        "membership": summary(),
-        "cases": cases,
-        "build": built,
-        "freeze": frozen_manifest(),
-        "uncontrolled": uncontrolled,
-    })
+        ctx = driver.TrialContext(build=build_dir, work=build_dir,
+                                  preflight=preflight, freeze=freeze,
+                                  sanitiser=sanitiser, build_identity=identity)
+
+        # Still before the boundary: if an artefact changed between hashing and
+        # posing, halt rather than produce evidence about unknown bytes.
+        deviations = driver.verify_build_identity(ctx)
+        if deviations:
+            jrnl.trial_end(status="HALT_BUILD_IDENTITY", halts=deviations)
+            return 6, {"status": "HALT_BUILD_IDENTITY",
+                       "reason": "a built artefact does not match the identity "
+                                 "hashed for this trial; no case was posed",
+                       "halts": deviations,
+                       "preflight": preflight}, sanitiser
+
+        # ---------------------------------------------- the case loop
+        records, cases = {}, {}
+        for index, name in enumerate(MEMBERSHIP):
+            # Durable BEFORE the case is posed. Trial #1 entered E5b and died
+            # in its setup, and only a stack trace showed which case that was.
+            jrnl.case_entered(name, index)
+            plan = driver.CASE_PLANS[name]
+            observation = driver.observe(plan, ctx, auth)
+            record = driver.evaluate(plan, observation)
+            status, reason = checker.score_case(name, record)
+            # Durable the moment the frozen status is final, and once only.
+            jrnl.case_completed(name, status, reason, record)
+            records[name] = record
+            cases[name] = {"plan": plan.as_dict(), "record": record,
+                           "status": status, "reason": reason}
+
+        report = checker.report(records)
+        for name, (status, reason) in checker.score_all(records).items():
+            cases[name]["status"] = status
+            cases[name]["reason"] = reason
+
+        uncontrolled = []
+        if records.get("N2", {}).get("blocked") == "parent_no_new_privs_set":
+            # N1 stands alone where its control arm could not be posed, and
+            # saying so is the whole point of making N2 conditional rather than
+            # dropping it.
+            uncontrolled.append(
+                "N1 is UNCONTROLLED: its control arm N2 was BLOCKED because the "
+                "launcher's parent already had no_new_privs set")
+
+        document = evidence.evidence_document({
+            "status": "RUN",
+            "aggregate": report["aggregate"],
+            "detail": report["detail"],
+            "counts": report["counts"],
+            "preflight": preflight,
+            "membership": summary(),
+            "cases": cases,
+            "build": {"targets": built, "artefacts": identity},
+            "freeze": freeze,
+            "uncontrolled": uncontrolled,
+        })
+        jrnl.trial_end(status="RUN", aggregate=report["aggregate"],
+                       detail=report["detail"], counts=report["counts"])
+
+    _write(out, EVIDENCE_FILE, document, sanitiser)
     return 0, document, sanitiser
 
 
@@ -249,6 +320,10 @@ def main(argv=None):
                         help="required to pose any preregistered case; D-7 is "
                              "NOT currently granted")
     parser.add_argument("--build-dir", default="target/launch-exec-01")
+    parser.add_argument("--out-dir", default="trial-output",
+                        help="where the durable sanitised trial evidence is "
+                             "written: the progress journal, the preflight, "
+                             "the build identity and the final document")
     args = parser.parse_args(argv)
 
     if args.verify_freeze:
@@ -297,7 +372,7 @@ def main(argv=None):
     # Past this line a case can be posed. The Authorisation object is the single
     # gate every posing path checks, and it cannot be built without the flag.
     auth = driver.Authorisation(True)
-    code, document, sanitiser = run_trial(args.build_dir, auth)
+    code, document, sanitiser = run_trial(args.build_dir, auth, args.out_dir)
     evidence.publish(document, sanitiser)
     return code
 
