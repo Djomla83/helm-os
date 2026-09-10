@@ -1030,3 +1030,186 @@ by the same hand that wrote the code under review, and **a final bounded indepen
 of exactly these fixes is required before D-7.**
 
 **D-7 remains not authorised. LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of ZERO.**
+
+---
+
+## 19. Final bounded independent verification of R-1 … R-5
+
+**Scope:** the correction delta `378fce2..dc1149f` only. Sections 1–18 are preserved unchanged.
+**This section records the verification result before any further correction, and corrects
+nothing.** No experiment source, definition or manifest was modified — all remain byte-identical to
+`dc1149f`. No case posed, no helper or spike executed, no generated HELM ELF traced, D-7 flag never
+passed. **LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of ZERO.**
+
+### 19.1 Independently reconstructed state
+
+| Claim | Method | Result |
+|---|---|---|
+| working tree / branch | `git status --short` | clean, `docs/helm-launch-architecture` |
+| candidate | `git rev-parse HEAD` | `dc1149f` ✓ |
+| delta scope | `git diff --stat` | 8 files: Python, tests, docs, manifest |
+| C / workflow change | `git diff --name-only -- '*.c' '*.h' '*.yml'` | **none** |
+| source hashes | independent SHA-256 | **16/16 exact** |
+| definition hashes | independent SHA-256 | **3/3 exact** |
+| partition | **AST parse, no import** | **72 / 54 / 11 / 7** |
+| traced set | **AST parse, no import** | **E1, E7, F4, F7, M1, M2, M3, M4** — eight |
+| driver | `completeness()` | **72 handlers**, 0 missing / duplicate / unknown |
+| posability | `unposable_cases()` | **72 posable, 0 unposable** |
+| status / D-7 | manifest | `NOT_RUN` / `false` |
+| C vs clean Build 5 | digest comparison against `002e1e4` | **all six identical** |
+| suite | `unittest discover` | 312 tests, all pass |
+
+### 19.2 The strace contract is now grounded — and the 5.4 floor holds
+
+The previous review resolved the *existence* of the direct rendering. This one checked whether the
+**declared floor** actually provides every rendering the frozen parser needs, by inspecting the
+**`v5.4` tag itself** rather than release notes:
+
+| Required rendering | Evidence at `v5.4` |
+|---|---|
+| `clone3` decoded, flags symbolic | `PRINT_FIELD_FLAGS(..., clone_flags, "CLONE_???")` — `CLONE_PIDFD` renders by name |
+| `clone_args.pidfd` on **entry** (fact C) | `if (arg.flags & CLONE_PIDFD) PRINT_FIELD_ADDR64(", ", arg, pidfd)` |
+| pidfd write-back on **exit** (fact E) | `if (arg.flags & CLONE_PIDFD) { tprintf("%spidfd=", pfx); printnum_fd(tcp, arg.pidfd); }` under `" => {"` |
+| `waitid` idtype as `P_PIDFD` (fact G) | `printxval(waitid_types, tcp->u_arg[0], "P_???")`, and `xlat/waitid_types.in` contains `P_PIDFD 3` |
+| `si_pid` in siginfo (fact G) | `printsiginfo_at(tcp, tcp->u_arg[2])` |
+| unfinished / resumed | long-standing strace behaviour, unchanged |
+
+**`STRACE_MIN_VERSION = (5, 4)` is defensible.** An initial reading of the mailing-list archive
+suggested `P_PIDFD` decoding post-dated 5.7; inspecting the tag disproved that — the xlat entry and
+the exit-time write-back are both present at 5.4, which is consistent with `P_PIDFD` having landed
+in Linux 5.4 (2019-11) and strace 5.4 shipping the same month. One caveat recorded for
+completeness: the automated read of `v5.4/clone.c` gave a narrative sentence contradicting its own
+quoted code about the entry branch; the **quoted code** shows the entry printing, and the
+master-branch read agrees, so the conclusion rests on the code rather than the narration.
+
+### 19.3 Findings
+
+#### BLOCKER
+
+**V-1 — a `clone3` record with no parseable return value still becomes `clone3_failed`, a FAIL, and
+therefore `MECHANISM_REJECTED`.**
+
+R-1 closed the *split* rendering. It did not close the *truncated* one. A record whose final line is
+cut — the tracer killed, the file read while still being written, a full disk — pairs its fragments
+**successfully**, so every R-1 integrity counter reads zero:
+
+```
+111 clone3({flags=CLONE_PIDFD, pidfd=0x7ffd0000, exit_signal=SIGCHLD} <unfinished ...>
+[pid 222] execveat(3, "", NULL, NULL, AT_EMPTY_PATH) = 0
+111 <... clone3 resumed> => {pidfd=[4]}, 88          <-- record ends here
+```
+
+Observed against the frozen parser: `fragments_unmatched=0, fragments_orphaned=0,
+fragments_ambiguous=0, lines_malformed=0`, `clone3_return=None`, `clone3_succeeded=False` →
+token **`clone3_failed`** → **FAIL** → aggregate **`MECHANISM_REJECTED`**. A single-line
+(unsplit) `clone3` truncated the same way reaches the identical outcome.
+
+*Root cause:* `clone3_succeeded` is derived as `clone3_return > 0`, which conflates **"the syscall
+returned an error"** with **"no return value was observed"**. The first is a mechanism result; the
+second is missing evidence.
+
+*Why the author's test did not catch it:* `test_truncated_final_line_is_invalid` removes the
+trailing newline, which **glues the following `poll(...)` line onto the resumed fragment**. The
+joined text then ends `…88111   poll([{fd=4…}], 1, 5000) = 1`, and the return-value regex picks up
+`= 1` — so the test observes `clone3_return=1, clone3_succeeded=True` and passes for a reason
+unrelated to truncation. That is a second, quieter defect in the same place: **a return value was
+silently adopted from an adjacent line**, yielding a wrong direct-child pid.
+
+*Consequence:* the exact failure class R-1 was raised to eliminate — a tracer/IO artefact producing
+the strongest possible wrong verdict — remains reachable.
+*Disposition:* **must be fixed before D-7.** Treat an absent return value as INVALID, distinct from
+an observed error return; and bound the joined text so a fragment cannot absorb the next line.
+
+#### IMPORTANT
+
+**V-2 — a self-contradictory record is accepted: the same pidfd reaping two different children
+still PASSes.**
+
+With `waitid(P_PIDFD, 4, {si_pid=222})` **and** `waitid(P_PIDFD, 4, {si_pid=333})` after
+`clone3(…) = 222`, the si_pid filter keeps only the first, leaves a single descriptor, and the case
+scores **PASS**. A pidfd refers to exactly one process, so such a record cannot be a faithful
+rendering of anything — it indicates a tracer or parser problem, and accepting it discards that
+signal. §7 of the verification instruction names this case explicitly.
+*Disposition:* a descriptor whose `si_pid` values conflict should be INVALID.
+
+**V-3 — the checker accepts an empty trace object as a syscall record.**
+
+`checker.score_case` tests `record.get("trace") is None`, so `{}`, `[]`, `""` and `0` all satisfy the
+traced-case requirement and score **PASS**. The verification instruction states directly that no
+fabricated or default empty trace object may satisfy checker requirements.
+
+Not currently reachable through the driver — `parse_strace_child_window` returns `None` or a
+populated dict, and `evaluate()` copies that through — so this is **latent**, not live. But the
+guarantee the definition relies on is weaker than it reads.
+*Disposition:* require a mapping carrying a non-empty `child_syscalls`.
+
+#### MINOR
+
+**V-4 — E1, E7, F4 and F7 declare `traced: true` and nothing ever reads their trace.**
+
+A deliberately malformed trace (`child_syscalls` not a list, stage sequence outside the frozen
+vocabulary) still yields **PASS** for these four, because their outcome rules consume the receipt
+and the helper report, not the syscall window; only M1, M2, M3 and M4 examine trace content. The
+checker requires merely that a trace *exists*. The definition offers the trace as establishing that
+"`execveat(...)` was the syscall used on the pinned descriptor and that the child window contains
+nothing else" — for these four that is not checked.
+
+Pre-existing, **not created by this delta** — recorded because this verification exercised it, and
+because V-3 would otherwise let an empty object satisfy even the existence requirement.
+
+### 19.4 What was verified sound
+
+- **R-1, for every case except truncation.** Fragments are keyed on the traced task **and** the
+  syscall name; a resume naming a different call is refused rather than spliced. Verified INVALID
+  (never FAIL): lost resumed half, orphan resume, mismatched resume, two unfinished from one task,
+  a resume attributed to another task, malformed prefix, empty record, line noise. Verified PASS:
+  the split rendering itself, interleaving from a third task, `strace: Process N attached` and
+  `+++ exited +++` noise, a `--- SIGCHLD … si_pid=222 ---` delivery line, three task-prefix
+  spellings, and whitespace variation. Simultaneous unfinished `clone3` from two tasks rejoin
+  correctly and are then refused as ambiguous — the honest answer.
+- **The regex backtracking class was re-checked.** The malformed-prefix trap the author hit is gone;
+  the well-formed prefix is matched first and the patterns are anchored with no nested quantifiers
+  over shared alphabets.
+- **R-2 is complete.** `EVIDENCE_CLOSURE` does not exist. All six alternate routes — `dup2`,
+  `pidfd_getfd`, `/proc/<pid>`, legacy `clone(CLONE_PIDFD)`, a second `fork()` child, `SCM_RIGHTS` —
+  and the bare no-write-back baseline are all **INVALID**. Absence of `pidfd_open` is one required
+  fact, not proof of origin.
+- **R-3 correlates properly.** Verified: pid match PASSes; mismatch, absent `si_pid`, two
+  descriptors claiming the same child, and a clone3/lifecycle descriptor mismatch are all INVALID;
+  an unrelated child's reap and a repeated reap on the same descriptor do not disturb it.
+  **Ignoring a later `ECHILD` is sound**: the frozen lifecycle reaps once, `ECHILD` renders no
+  `si_pid`, and treating a post-reap failure as erasing an earlier correct observation would let a
+  benign second call destroy valid evidence.
+- **R-4 matches the owner's choice.** `strace` is the sole tracer; no `ptrace`, eBPF, helper binary
+  or root path was added (verified by a code-only grep that excludes comments). Missing, old,
+  unreadable-version and unusable tracers each HALT. No halt record mentions `clone3_unavailable`,
+  and `no_tracer` yields no block cause for M3. The halt provably precedes any posing: in
+  `run_trial` the `HALT_PREFLIGHT` return sits before the case loop.
+- **R-5 is done.** No stale "seven" remains in active text; the single remaining occurrence is
+  inside the blockquote explicitly marked **SUPERSEDED**, which is correct to leave.
+- **P-14 holds for reconstructed traces.** A trace containing pid `31337`, pointer `0x7ffd1234`,
+  `/home/runner/.netrc` and the account name leaked none of them; the raw text is withheld by key,
+  the digest survives, and the normalised facts carry `DIRECT_CHILD` / `DIRECT_CHILD_PIDFD`.
+- **The seven non-M3 traced cases did not regress**: all score PASS with evidence and INVALID
+  without it.
+
+### 19.5 On static posability
+
+`72 handlers / 72 posable / 0 unposable` is confirmed. It proves **case-path completeness only** —
+that every preregistered case has a construction, an evidence channel and a scoring path. It is
+**not** mechanism acceptance, not a prediction of runtime success, not compatibility, not readiness,
+and not D-7 authorisation. The manifest's own wording is consistent with this.
+
+## 20. Final verification classification
+
+**`FINAL_BOUNDED_NEEDS_PRETRIAL_FIXES`.**
+
+R-2, R-3, R-4 and R-5 are correctly resolved. **R-1 is not**: the truncated-record path (**V-1**)
+still lets an incomplete trace produce `MECHANISM_REJECTED`, which is the exact defect class R-1
+existed to close, and the test intended to cover it passes for an unrelated reason. Two IMPORTANT
+findings (**V-2**, **V-3**) and one MINOR (**V-4**) accompany it.
+
+All four are bounded and repairable within the semantics already chosen; none requires a new owner
+decision. The strace contract is grounded, the 5.4 floor is defensible, the `ptrace_scope` gate is
+correct, freeze integrity holds, and **D-7 remains not authorised with a valid trial count of
+ZERO.**
