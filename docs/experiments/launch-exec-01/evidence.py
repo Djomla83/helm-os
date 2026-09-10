@@ -32,6 +32,8 @@ import hashlib
 import json
 import re
 
+import frozen_cases as fc
+
 # Names the report may reproduce verbatim. Everything else is reported as
 # <UNDECLARED:xxxxxxxx>. This is about NAMES only -- see the module docstring for
 # why no value is ever reproduced regardless of its name.
@@ -122,23 +124,96 @@ _WINDOWS_PATH_RE = re.compile(r"(?<![>\w])[A-Za-z]:\\(?:[^\\/:*?\"<>|\r\n]+\\?)*
 _TEMP_ROOTS = ("/tmp/", "/var/tmp/", "/private/var/folders/")
 
 
+# --------------------------------------------------- V-5: what is structural
+# The sanitiser used to redact the account name with a bare
+# ``text.replace(username, "<USER>")``. That is unbounded substring
+# replacement, so a short or common account name corrupted unrelated evidence:
+# "ci" turned ``specific`` into ``spe<USER>fic``, "run" turned ``truncated``
+# into ``t<USER>cated``. It over-redacted rather than leaking, but it damaged
+# field names, syscall names and frozen tokens alike.
+#
+# Sanitisation is now STRUCTURE-AWARE. Redaction happens to VALUES, according
+# to what a value is, and never by rewriting identifiers that happen to contain
+# a username-shaped substring.
+
+# The frozen vocabulary, taken from the manifest rather than restated, so a
+# token added there cannot silently start being redacted here. Importing
+# frozen_cases executes nothing.
+def _frozen_vocabulary():
+    words = set()
+    for case in fc.CASES:
+        words.add(case["case"])
+        if case["predict"]:
+            words.add(case["predict"])
+        for member in case["safe"] or ():
+            words.add(member)
+        for gate in case["gates"]:
+            words.add(gate)
+    words |= set(fc.STAGES)
+    words |= set(fc.BLOCK_REASONS)
+    words |= set(fc.CHILD_PERMITTED_SYSCALLS)
+    words |= set(fc.CHILD_FORBIDDEN_SYSCALLS)
+    words |= set(fc.CHILD_TEST_INJECTION_SYSCALLS)
+    words |= set(fc.CHILD_INJECTION_MODES)
+    words |= set(fc.PARENT_CONTROL_MODES)
+    words |= set(fc.DECISIONS) | set(fc.DECISIONS.values())
+    # Vocabulary the experiment publishes that is not itself a case field.
+    words |= {
+        "CompleteAtEof", "WriterRetainedAfterChildExit",
+        "DIRECT_CHILD", "DIRECT_CHILD_PIDFD",
+        "ExecFailed", "ExecStatusIndeterminate", "ExitStatusUnobservable",
+        "TimedOut", "Exited", "Signaled", "PreExecTimeout",
+        "TerminationFailed", "ExitedDuringGrace", "KilledByLauncher",
+        "NotRegularFile", "SetIdBitsPresent", "ElfNotInCohort",
+        "DescriptorModeUnsuitable",
+        "MECHANISM_ACCEPTED", "MECHANISM_REJECTED", "MECHANISM_INCONCLUSIVE",
+        "observed_success", "observed_error", "not_observed",
+        "complete", "truncated", "malformed", "absent", "stream_incomplete",
+        "waitid_p_pidfd", "pidfd_send_signal", "poll",
+        "child_syscalls", "stage_sequence", "integrity_ok",
+        "clone3", "clone3_pidfd", "CLONE_PIDFD", "pidfd_open", "waitid",
+        "execveat", "direct", "receipt", "payload", "report", "trace",
+        "liveness", "threaded_launcher", "rejected_arm",
+    }
+    # Composite tokens are also published in their parts.
+    for word in list(words):
+        for part in str(word).replace(":", " ").split():
+            words.add(part)
+    return frozenset(w for w in words if isinstance(w, str) and w)
+
+
+VOCABULARY = _frozen_vocabulary()
+
+# Fields whose VALUE is an explicit host identity. The whole value is redacted,
+# because that is what the field means -- never an arbitrary substring of some
+# other field that happens to contain the same letters.
+HOST_IDENTITY_KEYS = frozenset({
+    "user", "username", "login", "account", "owner", "hostname", "host",
+    "runner_name", "logname",
+})
+
+HOST_IDENTITY = "<USER>"
+
+_PATH_SPLIT = re.compile(r"([\\/])")
+
+
 def _digest8(text):
     return hashlib.sha256(text.encode("utf-8", "surrogateescape")).hexdigest()[:8]
 
 
 class Sanitiser:
-    """Deterministic redaction for everything published from a trial.
+    """Deterministic, structure-aware redaction for everything published.
 
-    Constructed once per trial from the roots preflight recorded, then applied to
-    every record. It holds no state that changes between calls, so the same input
-    always produces the same output.
+    Constructed once per trial from the roots preflight recorded, then applied
+    to every record. It holds no state that changes between calls, and no rule
+    depends on dictionary iteration order or on the order substrings happen to
+    appear, so the same input always serialises to the same bytes.
     """
 
     def __init__(self, work=None, home=None, user=None, build=None,
                  extra_roots=()):
-        # Longest first, so /home/u/work is replaced before /home/u and a nested
-        # root can never be half-substituted. This is the order dependence the
-        # original two-line sanitise_path had.
+        # Longest first, so /home/u/work is replaced before /home/u and a
+        # nested root can never be half-substituted.
         roots = []
         if build:
             roots.append((str(build), "<BUILD>"))
@@ -148,21 +223,29 @@ class Sanitiser:
             roots.append((str(home), "<HOME>"))
         for root in extra_roots:
             roots.append((str(root), "<ROOT>"))
-        self._roots = sorted((r for r in roots if r[0]),
-                             key=lambda pair: len(pair[0]), reverse=True)
+        ordered = sorted((r for r in roots if r[0]),
+                         key=lambda pair: len(pair[0]), reverse=True)
+        # A root only matches at a PATH BOUNDARY. Without this, a short root
+        # such as "/w" would rewrite "/work" and "/warm" alike -- the same
+        # substring defect V-5 names, one level up.
+        self._roots = [(re.compile(re.escape(root) + r"(?![A-Za-z0-9._+-])"),
+                        label) for root, label in ordered]
         self._user = str(user) if user else None
 
     # -------------------------------------------------------------- primitives
     def text(self, value):
-        """Redact one string. Non-strings are returned unchanged."""
+        """Redact one free-text VALUE. Non-strings are returned unchanged.
+
+        The account name is deliberately NOT replaced here. A username is only
+        private as a path component or as an explicit host-identity value, and
+        both are handled where that structure is known. Redacting it in
+        arbitrary text is what corrupted ``truncated`` and ``specific``.
+        """
         if not isinstance(value, str):
             return value
         out = value
-        for root, label in self._roots:
-            out = out.replace(root, label)
-        if self._user:
-            # After the roots, so <HOME> has already absorbed /home/<user>.
-            out = out.replace(self._user, "<USER>")
+        for pattern, label in self._roots:
+            out = pattern.sub(label, out)
         for pattern in _CREDENTIAL_PATTERNS:
             out = pattern.sub("<CREDENTIAL>", out)
         out = _WINDOWS_PATH_RE.sub(self._path_token, out)
@@ -170,10 +253,27 @@ class Sanitiser:
         out = _OPAQUE_RE.sub(self._opaque_token, out)
         return out
 
+    def host_identity(self, value):
+        """A field that IS a host identity: the whole value goes."""
+        if not isinstance(value, str) or not value:
+            return value
+        return HOST_IDENTITY
+
+    def _redact_user_components(self, path):
+        """Replace path COMPONENTS equal to the account name, nothing less.
+
+        ``/opt/runtime`` with user "run" is untouched, because ``runtime`` is
+        not ``run``.
+        """
+        if not self._user:
+            return path
+        return "".join(HOST_IDENTITY if part == self._user else part
+                       for part in _PATH_SPLIT.split(path))
+
     def _path_token(self, match):
         path = match.group(0)
         if path.startswith(SYSTEM_PATH_PREFIXES):
-            return path
+            return self._redact_user_components(path)
         if path in ("/", "/proc", "/sys", "/dev", "/tmp"):
             return path
         for root in _TEMP_ROOTS:
@@ -181,11 +281,16 @@ class Sanitiser:
                 return "<TMPPATH>"
         if path.startswith("/") or _WINDOWS_PATH_RE.fullmatch(path):
             return "<ABSPATH>"
-        return path
+        return self._redact_user_components(path)
 
     def _opaque_token(self, match):
         token = match.group(0)
         if _DIGEST_RE.match(token):
+            return token
+        if token in VOCABULARY:
+            # Frozen vocabulary is published evidence, not an opaque blob.
+            # WriterRetainedAfterChildExit is exactly 28 characters and used to
+            # be redacted by the generic high-entropy rule.
             return token
         if token.startswith(("<UNDECLARED:", "<VALUE:")):
             return token
@@ -221,9 +326,16 @@ class Sanitiser:
     def record(self, value, _key=None):
         """Recursively sanitise a record. Structure is preserved exactly.
 
-        Keys are sanitised too: a dict keyed by pathname would otherwise leak
-        through its keys. ``environ`` arrays get the value-suppressing treatment
-        wherever they appear, at any depth.
+        **V-5: KEYS ARE IMMUTABLE.** They are structural identifiers -- field
+        names, case ids, stage names -- not data, and rewriting them is how
+        ``stage_sequence`` became ``stage_seq<USER>ence``. The only key-level
+        operation is the INTERNAL_ONLY withholding below, which replaces a
+        VALUE and leaves its key byte-exact so the reader can see what was
+        withheld.
+
+        ``environ`` arrays get the value-suppressing treatment wherever they
+        appear, at any depth, and a field that IS a host identity is redacted
+        whole rather than by substring.
         """
         if isinstance(value, dict):
             out = {}
@@ -233,8 +345,11 @@ class Sanitiser:
                     # an encoded blob for secrets is a game the scanner loses.
                     out[k] = WITHHELD
                     continue
-                out[self.text(k) if isinstance(k, str) else k] = self.record(
-                    v, _key=k)
+                if isinstance(k, str) and k in HOST_IDENTITY_KEYS:
+                    out[k] = self.host_identity(v) if isinstance(v, str) \
+                        else self.record(v, _key=k)
+                    continue
+                out[k] = self.record(v, _key=k)
             return out
         if isinstance(value, list):
             if _key == "environ":

@@ -892,8 +892,24 @@ class Sanitisation(unittest.TestCase):
         self.assertEqual(self.s.text("/home/runner/work/helm/a"), "<WORK>/a")
         self.assertEqual(self.s.text("/home/runner/.cache"), "<HOME>/.cache")
 
-    def test_username_is_redacted_even_outside_a_path(self):
-        self.assertEqual(self.s.text("owned by runner"), "owned by <USER>")
+    def test_a_username_in_free_text_is_NOT_substring_redacted(self):
+        """V-5. A username is private as a path component or an identity
+        field, not as a run of letters inside arbitrary evidence."""
+        self.assertEqual(self.s.text("owned by runner"), "owned by runner")
+        self.assertEqual(self.s.text("truncated"), "truncated")
+
+    def test_an_explicit_host_identity_field_is_redacted_whole(self):
+        out = self.s.record({"user": "runner", "hostname": "vm-7",
+                             "owner": "runner"})
+        self.assertEqual(out, {"user": evidence.HOST_IDENTITY,
+                               "hostname": evidence.HOST_IDENTITY,
+                               "owner": evidence.HOST_IDENTITY})
+
+    def test_a_username_path_COMPONENT_is_redacted(self):
+        s = evidence.Sanitiser(user="runner")
+        self.assertEqual(s.text("/usr/lib/runner/x"), "/usr/lib/<USER>/x")
+        self.assertEqual(s.text("/usr/lib/runner-tools/x"),
+                         "/usr/lib/runner-tools/x")
 
     def test_linux_home_of_another_account_is_not_republished(self):
         self.assertEqual(self.s.text("/home/someoneelse/secrets.txt"),
@@ -960,9 +976,150 @@ class Sanitisation(unittest.TestCase):
         self.assertTrue(entry.startswith("HOME=<VALUE:"))
         self.assertNotIn("/home/runner", entry)
 
-    def test_dict_keys_are_sanitised_too(self):
-        out = self.s.record({"/home/runner/work/helm/a": 1})
-        self.assertIn("<WORK>/a", out)
+    def test_keys_are_immutable(self):
+        """V-5. Keys are structural identifiers, never rewritten."""
+        record = {"stage_sequence": 1, "truncated": 2,
+                  "child_syscalls": ["clone3"],
+                  "nested": {"specific": {"latest_status": 3}}}
+
+        def keys(value):
+            found = set()
+            if isinstance(value, dict):
+                for k, v in value.items():
+                    found.add(k)
+                    found |= keys(v)
+            elif isinstance(value, list):
+                for item in value:
+                    found |= keys(item)
+            return found
+
+        for user in ("ci", "run", "test", "u", "id", "exec", "clone", "wait"):
+            s = evidence.Sanitiser(work="/home/%s/w" % user,
+                                   home="/home/" + user, user=user)
+            out = s.record(record)
+            self.assertEqual(keys(out), keys(record), "username " + user)
+
+    def test_the_only_key_level_operation_is_internal_withholding(self):
+        out = self.s.record({"capture_prefix_base64": "AAAA", "keep": 1})
+        self.assertEqual(sorted(out), ["capture_prefix_base64", "keep"])
+        self.assertEqual(out["capture_prefix_base64"], evidence.WITHHELD)
+
+
+class FixedVocabularyIsNeverRewritten(unittest.TestCase):
+    """V-5 section 6. Adversarial usernames against the frozen schema."""
+
+    USERNAMES = ("ci", "run", "test", "id", "pid", "fd", "exec", "clone",
+                 "wait", "user", "root", "u", "a")
+
+    def _vocabulary(self):
+        words = {"specific", "truncated", "latest_status", "child_syscalls",
+                 "stage_sequence", "clone3", "waitid", "pidfd_open",
+                 "ExecStatusIndeterminate", "WriterRetainedAfterChildExit",
+                 "DIRECT_CHILD", "DIRECT_CHILD_PIDFD", "execution",
+                 "stream_incomplete", "CompleteAtEof", "integrity_ok",
+                 "observed_success", "observed_error", "not_observed"}
+        # Straight from the frozen schema, so a token added there is covered.
+        for case in fc.CASES:
+            words.add(case["case"])
+            if case["predict"]:
+                words.add(case["predict"])
+            words.update(case["safe"] or ())
+            words.update(case["gates"])
+        words.update(fc.STAGES)
+        words.update(fc.BLOCK_REASONS)
+        words.update(fc.CHILD_PERMITTED_SYSCALLS)
+        words.update(fc.CHILD_FORBIDDEN_SYSCALLS)
+        return sorted(words)
+
+    def test_every_frozen_token_survives_every_adversarial_username(self):
+        vocabulary = self._vocabulary()
+        self.assertGreater(len(vocabulary), 60)
+        for user in self.USERNAMES:
+            s = evidence.Sanitiser(work="/home/%s/w" % user,
+                                   home="/home/" + user, user=user)
+            for token in vocabulary:
+                self.assertEqual(s.text(token), token,
+                                 "username %r corrupted %r" % (user, token))
+
+    def test_the_generic_opaque_rule_spares_frozen_vocabulary(self):
+        """WriterRetainedAfterChildExit is exactly 28 characters."""
+        s = evidence.Sanitiser()
+        self.assertEqual(len("WriterRetainedAfterChildExit"), 28)
+        self.assertEqual(s.text("WriterRetainedAfterChildExit"),
+                         "WriterRetainedAfterChildExit")
+        self.assertEqual(s.text("never_reports_unobserved_exit_status"),
+                         "never_reports_unobserved_exit_status")
+
+    def test_a_genuinely_opaque_run_is_still_redacted(self):
+        s = evidence.Sanitiser()
+        self.assertIn("<OPAQUE:", s.text("Zk9" + "q7Lm2Xv" * 5))
+
+    def test_serialised_evidence_is_deterministic_under_any_username(self):
+        document = {"b": {"a": "/home/ci/x"}, "a": ["/tmp/ci/y"],
+                    "tok": "truncated"}
+        for user in self.USERNAMES:
+            s = evidence.Sanitiser(work="/home/%s/w" % user,
+                                   home="/home/" + user, user=user)
+            first = evidence.serialise(s.record(document))
+            second = evidence.serialise(s.record(document))
+            self.assertEqual(first, second, user)
+
+
+class HostIdentityStillRedacted(unittest.TestCase):
+    """V-5 section 7. The fix must not weaken P-14."""
+
+    def setUp(self):
+        self.s = evidence.Sanitiser(work="/home/alice/work/helm",
+                                    home="/home/alice",
+                                    build="/home/alice/work/helm/target/x",
+                                    user="alice")
+
+    def test_host_paths_are_still_redacted(self):
+        cases = {
+            "/home/alice/.ssh/id_ed25519": "<HOME>",
+            "/home/bob/secret.txt": "<ABSPATH>",
+            "/tmp/alice-build-123/helper": "<TMPPATH>",
+            "/home/alice/work/helm/target/x/h": "<BUILD>",
+        }
+        for raw, expected in cases.items():
+            out = self.s.text(raw)
+            self.assertIn(expected, out, raw)
+            self.assertNotIn("alice", out, raw)
+            self.assertNotIn("bob", out, raw)
+
+    def test_a_windows_profile_path_is_still_redacted(self):
+        out = self.s.text(r"C:\Users\alice\AppData\Local\Temp\x")
+        self.assertNotIn("alice", out)
+        self.assertIn("<ABSPATH>", out)
+
+    def test_credentials_are_still_redacted(self):
+        for token in ("ghp_" + "A" * 36, "AKIAIOSFODNN7EXAMPLE",
+                      "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ4In0.sig12345"):
+            self.assertNotIn(token, self.s.text("v=" + token))
+
+    def test_environment_values_are_still_never_reproduced(self):
+        out = self.s.record({"environ": ["ACTIONS_RUNTIME_TOKEN=ghp_" + "B" * 36,
+                                         "HOME=/home/alice"]})
+        text = evidence.serialise(out)
+        self.assertNotIn("ghp_B", text)
+        self.assertNotIn("/home/alice", text)
+        self.assertIn("<VALUE:", text)
+
+    def test_child_pid_remains_withheld(self):
+        out = self.s.record({"trace": {"child_pid": 31337,
+                                       "child_syscalls": ["clone3"]}})
+        self.assertEqual(out["trace"]["child_pid"], evidence.WITHHELD)
+        self.assertNotIn("31337", evidence.serialise(out))
+
+    def test_raw_internal_fields_remain_withheld(self):
+        payload = {k: "sensitive" for k in evidence.INTERNAL_ONLY_KEYS}
+        out = self.s.record(payload)
+        for key in evidence.INTERNAL_ONLY_KEYS:
+            self.assertEqual(out[key], evidence.WITHHELD, key)
+
+    def test_the_fix_did_not_simply_disable_user_redaction(self):
+        """A username as a real path component must still go."""
+        self.assertNotIn("alice", self.s.text("/usr/lib/alice/plugin.so"))
 
     def test_non_strings_pass_through_unchanged(self):
         record = {"n": 42, "b": True, "none": None, "f": 1.5}

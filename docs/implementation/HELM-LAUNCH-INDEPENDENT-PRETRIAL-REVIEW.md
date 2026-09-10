@@ -1328,3 +1328,75 @@ final review examined.
 **One final short independent delta verification is required before D-7**, and it must also dispose
 of **V-5**. **D-7 remains not authorised. LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of
 ZERO.**
+
+---
+
+## 23. Disposition of V-5
+
+**Appended after sections 19–22, which are preserved unchanged.** V-5 was recorded OPEN at freeze
+`2621381`; the owner authorised a bounded fix. **LAUNCH-EXEC-01 remains NOT_RUN, D-7 is not
+granted, and the valid trial count is ZERO.**
+
+### 23.1 The old algorithm, and what it actually did
+
+```python
+out = out.replace(self._user, "<USER>")          # unbounded substring
+out[self.text(k)] = self.record(v, _key=k)       # and it rewrote KEYS
+```
+
+Both are gone. Re-verifying also found a **third** corruption the finding had not named: the
+generic high-entropy rule `[A-Za-z0-9_\-+/=]{28,}` destroyed frozen vocabulary independently of any
+username — `WriterRetainedAfterChildExit` is **exactly 28 characters** and became
+`<OPAQUE:2a78fa59>`, as did `never_reports_unobserved_exit_status`. A completeness value and an M5
+gate name, both published evidence.
+
+### 23.2 The new algorithm
+
+Redaction now happens to **values**, according to what a value *is*:
+
+| Class | Rule |
+|---|---|
+| **Structural keys** | **never rewritten.** The only key-level operation is `INTERNAL_ONLY_KEYS` withholding, which replaces the value and leaves the key byte-exact |
+| **Frozen vocabulary** | taken from the manifest — case ids, predictions, safe sets, gates, stages, block reasons, syscall lists, injection and control modes, decisions — and never rewritten. Derived from `frozen_cases`, so a token added there is covered without editing the sanitiser |
+| **Path roots** | matched only at a **path boundary** (`(?![A-Za-z0-9._+-])`), so a short root like `/w` can no longer rewrite `/work` |
+| **Username** | redacted **only** as a whole path **component**, or as the value of an explicit host-identity field |
+| **Environment values** | unchanged — never reproduced; name plus length and digest prefix |
+| **Host-identity fields** | `user`, `username`, `login`, `account`, `owner`, `hostname`, … — the **whole value** is redacted |
+
+`/opt/runtime`, `/tmp/truncated-output` and `/var/lib/runner-tools` are untouched by username
+`run`, because `runtime` is not `run`.
+
+### 23.3 Verification
+
+- **204 checks** — 12 adversarial usernames (`ci`, `run`, `test`, `id`, `pid`, `fd`, `exec`,
+  `clone`, `wait`, `user`, `root`, `u`) × 17 vocabulary tokens — **zero corruptions**. A second
+  test drives every token straight out of `frozen_cases` (60+ tokens) against 13 usernames.
+- **Key immutability** is asserted by recursively capturing every mapping key before and after
+  sanitisation, for eight adversarial usernames.
+- **P-14 was not weakened.** Still redacted or withheld: Linux home paths, another account's home,
+  Windows profile paths, temp directories below a profile, the build/work roots, GitHub PATs, AWS
+  key ids, JWTs, every environment value, every `INTERNAL_ONLY` field, and `child_pid`. A test
+  asserts the fix did **not** simply disable username redaction — `/usr/lib/alice/plugin.so` still
+  loses the component.
+- **Determinism** holds: the same document serialises byte-identically across repeated runs, for
+  every adversarial username.
+- **V-1 … V-4 and R-1 … R-5 all re-verified**, including the full adverse-verdict path, which
+  reports **no deviations**.
+
+### 23.4 What did not change
+
+Partition **72 / 54 / 11 / 7**, traced set the same **eight**, **72 handlers / 72 posable / 0
+unposable**, `status` `NOT_RUN`, `d7_execution_authorised` `false`, and **no C source byte
+changed** — all six digests identical to the source Build 5 compiled clean. No case membership,
+classification, outcome vocabulary, checker algebra, M3 evidence semantic, strace preflight or D-7
+gate was touched: V-5 is an evidence-sanitisation fix only.
+
+## 24. Status after V-1 … V-5
+
+**`FINAL_SANITISER_FIX_READY_FOR_SHORT_REVIEW`.**
+
+360 tests pass. This is **not** a readiness statement and is deliberately not self-certified: the
+corrections were made by the same hand that wrote the code the final review examined.
+
+**One final short independent delta verification of V-1 through V-5 is required before D-7.**
+**D-7 remains not authorised. LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of ZERO.**

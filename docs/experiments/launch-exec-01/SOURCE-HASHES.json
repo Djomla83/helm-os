@@ -7,7 +7,7 @@
     "recorded": 7,
     "total": 72
   },
-  "classification": "FINAL_FIXES_READY_FOR_SHORT_REVIEW",
+  "classification": "FINAL_SANITISER_FIX_READY_FOR_SHORT_REVIEW",
   "d7_execution_authorised": false,
   "definition_sha256": {
     "docs/adr/ADR-0024-launch-authority.md": "c1f3cce88438439aab6632a9c56450ae98d1c64adb31b13c742e2febb1476351",
@@ -74,11 +74,11 @@
     "R-3": "FIXED at freeze dc1149f - waitid requires si_pid == clone3 return",
     "R-4": "FIXED at freeze dc1149f - mandatory strace preflight, no fallback",
     "R-5": "FIXED at freeze dc1149f - docstring corrected to eight",
-    "V-1": "FIXED at this freeze - three-state return and bounded logical record",
-    "V-2": "FIXED at this freeze - contradictory waitid identity is INVALID",
-    "V-3": "FIXED at this freeze - shared structural traced-evidence gate",
-    "V-4": "FIXED at this freeze - the gate covers all eight traced cases",
-    "V-5": "OPEN, IMPORTANT, found while re-verifying P-14 and deliberately NOT fixed in this task: evidence.Sanitiser replaces the account name by unbounded substring match, so a short or common username (ci, run, test) corrupts unrelated evidence text - 'specific' becomes 'spe<USER>fic'. It over-redacts rather than leaking, and it is a new finding outside the V-1..V-4 disposition."
+    "V-1": "FIXED at freeze 2621381 - three-state return, bounded logical record",
+    "V-2": "FIXED at freeze 2621381 - contradictory waitid identity is INVALID",
+    "V-3": "FIXED at freeze 2621381 - shared structural traced-evidence gate",
+    "V-4": "FIXED at freeze 2621381 - the gate covers all eight traced cases",
+    "V-5": "FIXED at this freeze - structure-aware sanitisation; keys immutable, frozen vocabulary never rewritten, username redacted only as a path component or an explicit host-identity value"
   },
   "owner_decisions": {
     "D-1": "arm_i_scoped_unsafe_backend",
@@ -93,14 +93,14 @@
     "D-9": "refuse_set_id_objects_at_admission"
   },
   "pre_execution_review_tip": "55f0f78c18e7bc9b980e1b99169018a7ea5566b4",
-  "requires": "ONE final short independent delta verification of V-1 through V-4 before D-7, which must also dispose of the new finding V-5; this freeze is NOT a readiness statement",
+  "requires": "ONE final short independent delta verification of V-1 through V-5 before D-7; this freeze is NOT a readiness statement and grants nothing",
   "reviewed_architecture_tip": "a5f09f8df8c3868b7ec2f3f6f9d973058c164a44",
   "scope": "Execution definition and disposable experiment sources frozen before the first preregistered LAUNCH-EXEC-01 trial. NOT_RUN: no trial has been executed and no case has been posed. D-7 (execution authorisation) is NOT granted.",
   "sha256": {
     "README.md": "2519b48dfe495ea67eb7fccd213dfd55d4de509d65f49b21c1c1d562eefb07a2",
     "checker.py": "6201a2dcaa1be1b48667b1d0ceedfbd2d6619668fb78a1043b408ebfd7a7f9b0",
     "driver.py": "7725ac53b582869c6414d0da9ec18196956c0a2fc933b8994449e2d676e761a9",
-    "evidence.py": "c44c717587914d8e714e853227128e7c112b8d3631431ee7a12c648ee856ca74",
+    "evidence.py": "a4732213a8b78945b59c2687e4ab8e9e60566be725d363c6874e52fe9fe88acb",
     "frozen_cases.py": "02e2d76fa434353c76e48f8b4129749b1e04a39b9d86e1428dae61e74131e2ef",
     "harness.py": "1a9d0e9040bdefbf6320b7d92f0cf342a8cb6a42c63aeb1b7877506f36e03550",
     "helper_alt.c": "7993aa631abdca6796171fe4ffafb2d296f2a00b61ea2322ee8e624731b99113",
@@ -115,8 +115,8 @@
     "run_launch_exec_01.py": "3eb71b2b5f4434912c91eb9b7613ce763d1791b7c3b135b08ace8b4224838a76"
   },
   "status": "NOT_RUN",
-  "supersedes": "dc1149f9062bce8971a1a09dd132e1742fd02013",
-  "supersession_reason": "applies the final bounded verification's findings V-1 through V-4, recorded at b107ff9 BEFORE correction and preserved there. V-1: the syscall return is now a THREE-state fact (observed success / observed error / not observed), so a truncated record is INVALID instead of clone3_failed - which had let an incomplete trace reach MECHANISM_REJECTED - and a record is parsed as ONE logical unit by counting its own parentheses, so a fragment can no longer adopt the next line's '= N'. V-2: a descriptor observed reaping two different children is self-contradictory and INVALID, detected BEFORE any filtering. V-3 and V-4: one shared checker gate, valid_trace_record(), makes a structurally valid syscall record mandatory for all eight traced cases - rejecting None, {}, [], '', 0, a missing or wrongly-typed or empty child_syscalls, and records marked integrity-invalid or truncated - which also closes the case where E1/E7/F4/F7 could PASS carrying a malformed record because their own rules read the receipt rather than the window. A P-14 leak found while re-verifying is also closed: the parsed child window carried the direct child's RAW pid into published evidence, and child_pid is now withheld by key. No C source byte changed. Earlier freezes and every review record are preserved unchanged.",
+  "supersedes": "262138159263cbf2b7c84fbae705c3c4e3fbfcc5",
+  "supersession_reason": "fixes V-5, the sanitiser defect recorded OPEN at the previous freeze. evidence.Sanitiser redacted the account name with an unbounded substring replacement, so a short or common username corrupted unrelated evidence - 'ci' turned specific into spe<USER>fic, 'run' turned truncated into t<USER>cated - and it rewrote mapping KEYS as well as values. Re-verifying also showed the generic high-entropy rule destroying frozen vocabulary: WriterRetainedAfterChildExit is exactly 28 characters and became an <OPAQUE:...> token, as did never_reports_unobserved_exit_status. Sanitisation is now STRUCTURE-AWARE: keys are immutable, the frozen vocabulary is taken from the manifest and never rewritten, a username is redacted only as a whole path COMPONENT or as the value of an explicit host-identity field, and path roots match only at a path boundary. P-14 strength is unchanged - host paths, Windows profiles, temp directories, credentials, environment values and child_pid are all still redacted or withheld. No C source byte changed. Earlier freezes and every review record are preserved unchanged.",
   "traced_cases": {
     "amended_by": "M3-T",
     "cases": [
