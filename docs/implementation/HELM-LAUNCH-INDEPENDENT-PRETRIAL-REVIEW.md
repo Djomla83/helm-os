@@ -1750,3 +1750,158 @@ This fix was written by the same author who wrote the code it corrects, and the 
 it are the author's own. One final independent M-1 check is required before D-7.
 
 **D-7 remains not authorised. LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of ZERO.**
+
+## 32. Final independent M-1 check of `c418284`
+
+Frozen candidate `c41828477a776e8ce55c00a02d6ee452f3680dc1`, clean tree, branch
+`docs/helm-launch-architecture`, 10 commits unpushed. Review only; the candidate is byte-identical
+after it. No case posed, no ELF executed, no tracer attached to a HELM binary.
+
+### 32.1 Freeze
+
+16/16 source and 3/3 definition hashes exact. Recomputed by AST parse of `frozen_cases.py` rather
+than by importing it: **72 total, 54 mandatory, 11 conditional, 7 recorded**, zero duplicate ids,
+traced set exactly **E1 E7 F4 F7 M1 M2 M3 M4**. Driver: **72 handlers, 72 posable, 0 unposable**.
+`status = NOT_RUN`, `d7_execution_authorised = false`, **valid trial count ZERO**. `git diff 002e1e4
+HEAD -- *.c` is empty and all six C digests match the manifest, so **Build 5 still applies**.
+
+### 32.2 The accessor design, attacked directly
+
+The interesting claim is 3C — that whenever `registry_vocabulary` exists, the registries it returns
+are already complete. Stubbing a module cannot test that, so this check executed **driver's real
+module body one top-level statement at a time**, installing each prefix in `sys.modules` as the
+genuine partially-initialised module, and asked `evidence` for the vocabulary after every prefix.
+The cache was **never reset** across the whole sweep, so any poisonable state would have shown up at
+the end.
+
+```
+top-level statements in driver.py    : 95
+prefixes that executed and REFUSED   : 94
+prefixes that executed and ANSWERED  :  1   (prefix 95 -- the complete body)
+incorrect answers / poisoned caches  : NONE
+final real import, same interpreter  : 379 tokens, F-1 token present, frozenset
+```
+
+Every proper prefix refused. Exactly one prefix answered, and it answered completely. By AST:
+`registry_vocabulary` is the last of the 95 top-level statements, is bound exactly once, carries no
+decorator and no default expression, calls only `tuple` and `sorted`, and no module-level statement
+rebinds or deletes `SETUPS`, `PARENT_STATES`, `POSED_CHECKS` or `ALL_CHANNELS` after their single
+assignment (indices 30, 31, 32, 22 of 95).
+
+3F: no Python `threading`, `_thread`, `multiprocessing`, `concurrent.futures` or `importlib.reload`
+appears anywhere in the experiment or its tests — the only threading in the model is
+`launcher_spike.c`'s own, in the process under test. The frozen use model is a single-threaded,
+single-shot CLI, so no second importer can observe an incomplete snapshot.
+
+One residual, recorded as an observation rather than a finding: under `importlib.reload(driver)` the
+attribute stays bound from the previous execution while the body re-runs, which is the one state
+where the last-statement convention alone would not hold. The **content validation** catches it
+independently — a re-run body resets the registries to empty and an empty registry is refused — and
+nothing in the candidate reloads anything. The design does not rest on the convention alone.
+
+**`ACCESSOR_READINESS_SOUND`.**
+
+### 32.3 Failure and recovery matrix
+
+Thirty rows, each a fresh interpreter, asserting four things directly rather than parsing a report:
+refusal, nothing emitted, nothing cached, full recovery. Seven public routes were attempted per row
+— `vocabulary()`, two `Sanitiser.text` calls, two `Sanitiser.record` calls, and two `serialise`
+calls.
+
+| state | result |
+|---|---|
+| evidence first / driver first / checker first / evidence alone | 379 tokens, frozenset |
+| import failure; registries absent; registries empty | refused 7/7, emitted 0, cached nothing |
+| one registry missing; wrong registry type; registry holds `None`, `''` or a number | refused 7/7 |
+| accessor raises; accessor not callable; snapshot is a list; snapshot is `None` | refused 7/7 |
+| recovery after every one of the above | 379 tokens, F-1 token present |
+| 50 repeated queries | one size, one object id |
+
+Rows with any failure: **0**.
+
+### 32.4 No content-dependent bypass
+
+`_opaque_token` is the only consumer of the vocabulary and fires only on runs of at least 28
+characters, so the pre-fix code would have published a short record without ever checking. With a
+partially initialised driver installed and a record whose longest string is four characters:
+
+```
+Sanitiser.text           HALTED
+Sanitiser.record         HALTED
+serialise                HALTED
+record then serialise    HALTED
+nothing cached           True
+```
+
+Bypass hunt: the only routes in the trial path that produce sanitised bytes are `Sanitiser.text`,
+`Sanitiser.record` and `serialise`, and all three are guarded. `receipt_view` and
+`evidence_document` only rearrange and their output must still pass `serialise`; `host_identity`,
+`env_name` and `env_entry` are reducers that can only emit a fixed label or a digest. The runner's
+other `json.dumps` sites (`--verify-freeze`, `--driver-completeness`) print file names, digests and
+driver registry names, and `harness.py` / `oracles.py` print only from their `__main__` blocks.
+
+### 32.5 Current vocabulary
+
+Enumerated independently of `evidence.vocabulary()` and of the author's test helper, by walking the
+published structures themselves: **434 fixed symbolic tokens**, 39 of them at least 28 characters,
+checked against **17** adversarial usernames — **7,378 checks, 0 corrupted**.
+
+66 of the 434 are absent from the sanitiser's derived allowlist. Every one was classified: 19 are
+multi-word prose (help strings and notes), 11 are numeric strings, 29 are short CLI flags — none has
+a 28-character contiguous run, so the opaque rule can never fire on them — 6 are SHA-256 digests
+preserved by the digest rule, and the last is A4's 4096-byte argument, which is the intended
+negative control. **Fixed symbolic tokens missing or corrupted: zero.**
+
+`sigterm_blocked_sigpipe_ignored` is T6's real `plan["parent"]` and byte-exact after `record()` under
+all 17 usernames. `returned_before_descendant_lifetime` is registered, referenced by no plan, and
+protected.
+
+**`CURRENT_VOCABULARY_CLOSED`.**
+
+### 32.6 P-14 and negative controls
+
+A4's argument is still `<OPAQUE:a2e659da>` and absent from the vocabulary. All seven credential
+shapes redacted; SHA-1 and SHA-256 digests preserved. Keys byte-exact; `user`, `hostname` and
+`logname` redacted whole; environment values reduced to length and digest while a declared name
+survives; every `INTERNAL_ONLY` key withheld. Against the shapes the driver actually builds — a
+parsed strace window and a parsed acquisition — the serialised document contains **no** direct-child
+pid, **no** pointer, **no** raw `si_pid` and **no** tracer text; `acquisition_normalised` publishes
+only the `DIRECT_CHILD` / `DIRECT_CHILD_PIDFD` roles. Serialization deterministic over repeated runs.
+
+### 32.7 Prior-fix regression
+
+R-3 correlates on a well-formed record and V-2 returns `None` — INVALID, never FAIL — on a
+contradictory `si_pid`. The V-3/V-4 gate rejects a missing, non-mapping, structurally-invalid,
+truncated or syscall-less record for all eight traced cases. R-2 is intact: `closure` survives only
+in comments recording its removal, `launcher_spike.c` has no `pidfd_acquisition` field and the rule
+reads none. R-4: `STRACE_MIN_VERSION` is `(5, 4)`; absent, unreadable and 5.3 tracers all fail
+preflight and 5.4 passes; no ptrace or eBPF fallback exists. 109 targeted tests and the full 390-test
+suite pass.
+
+### 32.8 Finding
+
+**P-16 — IMPORTANT — the published preflight reproduces the host name.** `harness.preflight()`
+records `uname -a`, whose value embeds the machine's hostname. `uname` is not in
+`HOST_IDENTITY_KEYS`, and the string contains no 28-character run, so the sanitiser passes it
+through unchanged; `kernel_release` already records `uname -r` separately, so the `-a` variant
+contributes the hostname and little else. It reaches published evidence by two routes: the sanitised
+success document, and the `HALT_PREFLIGHT` document, which `run_trial` returns **unsanitised** and
+`main` writes through `serialise`. Demonstrated with a fabricated preflight block; nothing was
+executed.
+
+This is **pre-existing and unrelated to M-1** — `run_launch_exec_01.py` and `harness.py` are
+untouched by `c418284` and by `f1f49ca` — and it is not a secret disclosure. It is recorded because
+the check criteria name "host identity remains redacted" explicitly, and because the first artefact a
+D-7 trial publishes is a preflight block.
+
+### 32.9 Classification
+
+**`FINAL_M1_CHECK_NEEDS_OWNER_DECISION`.**
+
+M-1 itself passes every criterion: `ACCESSOR_READINESS_SOUND`, `CURRENT_VOCABULARY_CLOSED`,
+fail-closed publication verified against seven routes in thirty states, recovery verified from every
+partial state, P-14 otherwise intact, freeze exact, trial count ZERO. The M-1 fix is finished. What
+remains is the owner's call on P-16 — correct it before D-7, or accept it and proceed — which is a
+decision, not a defect in this fix.
+
+**D-7 remains not authorised. LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of ZERO.**
