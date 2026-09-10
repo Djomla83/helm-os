@@ -503,6 +503,50 @@ static void run_rejected_acquisition_arm(struct rejected_arm *arm)
     if (arm->pidfd >= 0) { close(arm->pidfd); }
 }
 
+/* ============================================== TEST/CONTROL ONLY: post-pin
+ * A barrier the HARNESS uses to land a preregistered adversarial change on the
+ * external object AFTER this process has pinned, measured and admitted it, and
+ * BEFORE anything is cloned or executed.
+ *
+ * It exists because several frozen cases -- E2, E3, E4, E6, E6b, E6c, E6d, X1 --
+ * are defined by a change that must happen in exactly that window. Trial #1's
+ * driver declared those changes and never performed them, so those cases ran
+ * against an unmodified object and tested nothing.
+ *
+ * This is NOT part of the candidate mechanism. It is inactive unless
+ * --post-pin-control-fd is passed, it lives only in the parent, it never
+ * touches child setup, it adds no helper descriptor, and it is CLOSED before
+ * clone3 so no control descriptor can reach the child or the executed image.
+ * The mutation itself is never performed here: C only synchronises, and the
+ * Python harness is the actor that changes the object.
+ */
+#define POST_PIN_CONTROL_TIMEOUT_MS 60000
+
+static int post_pin_barrier(int fd)
+{
+    /* READY: pinned, measured, admitted, nothing cloned. One byte. */
+    const char ready = 'R';
+    ssize_t w;
+    do { w = write(fd, &ready, 1); } while (w < 0 && errno == EINTR);
+    if (w != 1) { return -1; }
+
+    /* Bounded, never indefinite: a harness that dies must not hang a trial. */
+    struct pollfd p;
+    p.fd = fd;
+    p.events = POLLIN;
+    for (;;) {
+        int r = poll(&p, 1, POST_PIN_CONTROL_TIMEOUT_MS);
+        if (r < 0) { if (errno == EINTR) { continue; } return -1; }
+        if (r == 0) { errno = ETIMEDOUT; return -1; }
+        break;
+    }
+    char go = 0;
+    ssize_t n;
+    do { n = read(fd, &go, 1); } while (n < 0 && errno == EINTR);
+    if (n != 1 || go != 'C') { if (n >= 0) { errno = EPROTO; } return -1; }
+    return 0;
+}
+
 /* ==================================================================== main */
 static void die(const char *msg)
 {
@@ -518,6 +562,7 @@ int main(int argc, char **argv)
     int bypass_admission = 0, exec_fd_no_cloexec = 0, skip_nnp = 0;
     int die_before_exec = 0, exec_fd_o_path = 0;
     int extra_threads = 0, rejected_arm_requested = 0;
+    int post_pin_control_fd = -1;
     long max_capture_bytes = 64 * 1024;   /* MAX_CAPTURE_BYTES */
     char *child_argv[64];
     int child_argc = 0;
@@ -543,6 +588,11 @@ int main(int argc, char **argv)
          * and neither runs unless its flag is passed. */
         else if (!strcmp(a, "--extra-threads") && v) { extra_threads = atoi(v); i++; }
         else if (!strcmp(a, "--rejected-acquisition-arm")) { rejected_arm_requested = 1; }
+        /* TEST/CONTROL ONLY, and inactive without it: an inherited descriptor
+         * the harness uses to land a preregistered change after the pin. */
+        else if (!strcmp(a, "--post-pin-control-fd") && v) {
+            post_pin_control_fd = atoi(v); i++;
+        }
         else if (!strcmp(a, "--arg") && v) {
             if (child_argc < 63) { child_argv[child_argc++] = (char *)v; }
             i++;
@@ -627,6 +677,23 @@ int main(int argc, char **argv)
         printf("{\"admission\":\"refused\",\"refusal\":\"%s\","
                "\"exec_reached\":false}\n", refusal);
         return 0;
+    }
+
+    /* ---- TEST/CONTROL ONLY: the post-pin barrier ------------------------
+     * EXACTLY here, and the location is frozen. Above this line the executable
+     * has been opened and pinned, fstat'ed and classified, measured where
+     * applicable, and admitted. Below it nothing has yet been cloned, no child
+     * descriptor has been set up and no image has been executed. That is the
+     * only window in which E2/E3/E4/E6/E6b/E6c/E6d/X1 mean what they claim.
+     *
+     * The control descriptor is closed immediately, well before clone3, so it
+     * cannot be inherited by the child or survive into the executed image. */
+    if (post_pin_control_fd >= 0) {
+        if (post_pin_barrier(post_pin_control_fd) != 0) {
+            die("post-pin control barrier");
+        }
+        close(post_pin_control_fd);
+        post_pin_control_fd = -1;
     }
 
     /* ---- pipes, all CLOEXEC ------------------------------------------- */

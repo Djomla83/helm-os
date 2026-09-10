@@ -32,6 +32,7 @@ import driver
 import evidence
 import harness
 import journal
+import oracles
 import observations
 from frozen_cases import (
     DECISIONS,
@@ -260,11 +261,24 @@ def run_trial(build_dir, auth, out_dir):
         # ---------------------------------------------- the case loop
         records, cases = {}, {}
         for index, name in enumerate(MEMBERSHIP):
-            # Durable BEFORE the case is posed. Trial #1 entered E5b and died
+            # Durable BEFORE anything is prepared. Trial #1 entered E5b and died
             # in its setup, and only a stack trace showed which case that was.
             jrnl.case_entered(name, index)
             plan = driver.CASE_PLANS[name]
-            observation = driver.observe(plan, ctx, auth)
+
+            prepared = driver.prepare(plan, ctx, auth)
+            if prepared["ready"]:
+                # THE IMMUTABILITY BOUNDARY. Durable and fsynced before the
+                # launcher exists, so a death between this record and the actual
+                # process still counts as an execution. The bias is deliberate:
+                # it can never permit a second execution under one D-7.
+                jrnl.case_pose_started(name, index)
+                observation = driver.pose(plan, ctx, auth, prepared)
+            else:
+                # Blocked, unposable, or an object this trial cannot name. The
+                # mechanism is never invoked, so the boundary is not crossed.
+                observation = prepared["observation"]
+
             record = driver.evaluate(plan, observation)
             status, reason = checker.score_case(name, record)
             # Durable the moment the frozen status is final, and once only.
@@ -299,8 +313,14 @@ def run_trial(build_dir, auth, out_dir):
             "freeze": freeze,
             "uncontrolled": uncontrolled,
         })
+        # A trial_end carrying an aggregate is written only when every
+        # membership case has a durable completed record; the journal refuses
+        # it otherwise, so a crashed trial can never acquire one.
         jrnl.trial_end(status="RUN", aggregate=report["aggregate"],
-                       detail=report["detail"], counts=report["counts"])
+                       detail=report["detail"], counts=report["counts"],
+                       membership=list(MEMBERSHIP),
+                       input_digest=oracles.digest_of(
+                           evidence.serialise_line(records).encode("utf-8")))
 
     _write(out, EVIDENCE_FILE, document, sanitiser)
     return 0, document, sanitiser

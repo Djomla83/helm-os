@@ -2126,7 +2126,7 @@ class TracerPreflightRequirement(unittest.TestCase):
 
         poses = [n.lineno for n in ast.walk(run_trial)
                  if isinstance(n, ast.Call)
-                 and ast.unparse(n.func) == "driver.observe"]
+                 and ast.unparse(n.func) in ("driver.observe", "driver.pose")]
         self.assertTrue(poses, "run_trial no longer poses anything")
         self.assertLess(max(halt_returns), min(poses),
                         "the preflight halt must precede any posing")
@@ -3024,6 +3024,13 @@ class P16OriginalLeakCannotRecur(unittest.TestCase):
 # launcher_spike. Where a file is needed it is a throwaway byte pattern in a
 # temporary directory.
 
+# subprocess pass_fds, os.pread/pwrite, POSIX mode bits and unprivileged
+# symlinks are all Unix-only. Their absence on Windows is exactly why the
+# Trial #1 defect survived to the trial, so these run on Linux CI and are
+# skipped here rather than quietly weakened.
+POSIX_ONLY = unittest.skipUnless(
+    os.name == "posix", "POSIX-only; Linux CI is the authority for this")
+
 TRIAL2_FD_READS = {"read", "pread", "readv", "preadv"}
 TRIAL2_FD_WRITES = {"write", "pwrite", "writev", "pwritev"}
 
@@ -3333,7 +3340,7 @@ class Trial2BuildIdentity(unittest.TestCase):
         hashed = line_of("harness.build_identity")
         journalled = line_of("jrnl.build_identity")
         entered = line_of("jrnl.case_entered")
-        posed = line_of("driver.observe")
+        posed = line_of("driver.pose")
         for name, value in (("build_identity", hashed),
                             ("journal build_identity", journalled),
                             ("case_entered", entered), ("observe", posed)):
@@ -3513,7 +3520,8 @@ class Trial2RunnerCrashSimulation(unittest.TestCase):
             "build": harness.build,
             "identity": harness.build_identity,
             "verify": driver.verify_build_identity,
-            "observe": driver.observe,
+            "prepare": driver.prepare,
+            "pose": driver.pose,
             "evaluate": driver.evaluate,
         }
         harness.preflight = lambda: {"kernel_name": "Linux", "block_reasons": {}}
@@ -3529,16 +3537,22 @@ class Trial2RunnerCrashSimulation(unittest.TestCase):
         harness.build = self.saved["build"]
         harness.build_identity = self.saved["identity"]
         driver.verify_build_identity = self.saved["verify"]
-        driver.observe = self.saved["observe"]
+        driver.prepare = self.saved["prepare"]
+        driver.pose = self.saved["pose"]
         driver.evaluate = self.saved["evaluate"]
         shutil.rmtree(self.tmp, ignore_errors=True)
 
+    def _ready(self, plan, ctx, auth):
+        return {"ready": True, "built": {"exec_path": "x"}, "binding": {}}
+
     def _abort_at(self, target):
-        def observe(plan, ctx, auth):
+        """Abort inside pose(), i.e. AFTER case_pose_started is durable."""
+        def pose(plan, ctx, auth, prepared):
             if plan.case == target:
                 raise OSError(9, "Bad file descriptor")
             return {"case": plan.case}
-        driver.observe = observe
+        driver.prepare = self._ready
+        driver.pose = pose
         driver.evaluate = lambda plan, obs: {"launch_returned": True,
                                              "fabricated": True}
 
@@ -3581,7 +3595,8 @@ class Trial2RunnerCrashSimulation(unittest.TestCase):
         self.assertEqual(state["completed"], {})
 
     def test_a_completed_run_writes_every_declared_artifact_file(self):
-        driver.observe = lambda plan, ctx, auth: {"case": plan.case}
+        driver.prepare = self._ready
+        driver.pose = lambda plan, ctx, auth, prepared: {"case": plan.case}
         driver.evaluate = lambda plan, obs: {"launch_returned": True}
         code, document, _ = runner.run_trial(self.tmp, None, str(self.out))
         self.assertEqual(code, 0)
@@ -3600,7 +3615,7 @@ class Trial2RunnerCrashSimulation(unittest.TestCase):
     def test_the_halt_path_journals_its_end_and_poses_nothing(self):
         runner.preflight_gates = lambda preflight, build_dir: [
             {"gate": "clone3", "detail": "clone3 is unavailable"}]
-        driver.observe = self._never
+        driver.pose = self._never
         code, document, _ = runner.run_trial(self.tmp, None, str(self.out))
         self.assertEqual(code, 6)
         self.assertEqual(document["status"], "HALT_PREFLIGHT")
@@ -3612,7 +3627,7 @@ class Trial2RunnerCrashSimulation(unittest.TestCase):
     def test_a_build_identity_deviation_halts_before_the_first_case(self):
         driver.verify_build_identity = lambda ctx: [
             {"artefact": "helper_report", "detail": "changed"}]
-        driver.observe = self._never
+        driver.pose = self._never
         code, document, _ = runner.run_trial(self.tmp, None, str(self.out))
         self.assertEqual(code, 6)
         self.assertEqual(document["status"], "HALT_BUILD_IDENTITY")
@@ -3628,7 +3643,8 @@ class Trial2RunnerCrashSimulation(unittest.TestCase):
                                      "uname": "Linux secret-host-2 6.1",
                                      "user": "secret-user-2",
                                      "block_reasons": {}}
-        driver.observe = lambda plan, ctx, auth: {"case": plan.case}
+        driver.prepare = self._ready
+        driver.pose = lambda plan, ctx, auth, prepared: {"case": plan.case}
         driver.evaluate = lambda plan, obs: {"launch_returned": True,
                                              "child_pid": 4242}
         runner.run_trial(self.tmp, None, str(self.out))
@@ -3637,6 +3653,582 @@ class Trial2RunnerCrashSimulation(unittest.TestCase):
             text = (self.out / name).read_text(encoding="utf-8")
             for leak in ("secret-host-2", "secret-user-2", "4242"):
                 self.assertNotIn(leak, text, "%s leaked into %s" % (leak, name))
+
+
+class Trial2SetupContract(unittest.TestCase):
+    """T2-R1. No setup-produced semantic directive may be producer-only.
+
+    Trial #1's setups declared post_pin, hold_writer, mutated_marker and
+    cleanup and nothing read any of them, so ten cases ran without the
+    adversarial condition that defines them. These tests are derived from the
+    real plans and the real source, not from a hand-maintained list of the keys
+    that happened to be broken.
+    """
+
+    def setUp(self):
+        self.tree = ast.parse((EXP / "driver.py").read_text(encoding="utf-8"))
+
+    def _setup_functions(self):
+        for fn in [n for n in ast.walk(self.tree)
+                   if isinstance(n, ast.FunctionDef)]:
+            names = [dec.args[0].value for dec in fn.decorator_list
+                     if isinstance(dec, ast.Call)
+                     and getattr(dec.func, "id", "") == "_setup"]
+            if names:
+                yield names[0], fn
+
+    def produced_keys(self):
+        """Every key any setup can return, derived from the source."""
+        produced = {}
+        for name, fn in self._setup_functions():
+            keys, body = set(), ast.unparse(fn)
+            for node in ast.walk(fn):
+                if isinstance(node, ast.Dict):
+                    keys.update(k.value for k in node.keys
+                                if isinstance(k, ast.Constant)
+                                and isinstance(k.value, str)
+                                and not k.value.startswith("_"))
+                if isinstance(node, ast.Call) and \
+                        getattr(node.func, "id", "") == "dict":
+                    keys.update(kw.arg for kw in node.keywords if kw.arg)
+            if "_setup_copy(ctx, plan)" in body or "_setup_none(ctx, plan)" in body:
+                keys |= {"exec_path", "not_posed"}
+            produced[name] = keys
+        return produced
+
+    def test_every_produced_key_is_in_the_closed_schema(self):
+        undeclared = {}
+        for name, keys in self.produced_keys().items():
+            extra = sorted(k for k in keys
+                           if k not in driver.SETUP_RESULT_SCHEMA)
+            if extra:
+                undeclared[name] = extra
+        self.assertEqual(undeclared, {},
+                         "a setup returns a key the schema does not name")
+
+    def test_every_semantic_key_has_an_execution_consumer(self):
+        """A producer-only semantic key is the Trial #1 defect, and fails here."""
+        source = (EXP / "driver.py").read_text(encoding="utf-8")
+        consumers = {
+            "post_pin": 'built.get("post_pin")',
+            "hold_writer": 'built.get("hold_writer")',
+            "mutated_marker": 'built.get("mutated_marker")',
+            "cleanup": 'built.get("cleanup")',
+            "liveness_fifo": 'built.get("liveness_fifo")',
+            "extra_helper_args": 'built.get("extra_helper_args"',
+        }
+        for key in sorted(driver.SEMANTIC_SETUP_KEYS):
+            self.assertIn(key, consumers, key + " has no declared consumer")
+            self.assertIn(consumers[key], source,
+                          key + " is produced but never read")
+
+    def test_the_schema_covers_exactly_what_setups_produce(self):
+        produced = set()
+        for keys in self.produced_keys().values():
+            produced |= keys
+        self.assertEqual(produced - set(driver.SETUP_RESULT_SCHEMA), set())
+
+    def test_every_post_pin_directive_has_an_implementation(self):
+        directives = set()
+        for _, fn in self._setup_functions():
+            for node in ast.walk(fn):
+                if isinstance(node, ast.Tuple) and node.elts and \
+                        isinstance(node.elts[0], ast.Constant) and \
+                        isinstance(node.elts[0].value, str):
+                    parent = ast.unparse(node)
+                    if parent.startswith("("):
+                        directives.add(node.elts[0].value)
+        named = {d for d in directives if d in driver.POST_PIN_ACTIONS}
+        self.assertTrue(named, "no post-pin directives were found at all")
+        for action in ("rename_over", "rename_away_and_unlink",
+                       "retarget_symlink", "pwrite_marker", "truncate_rewrite",
+                       "mmap_write", "fchmod"):
+            self.assertIn(action, driver.POST_PIN_ACTIONS, action)
+
+    def test_the_affected_case_set_is_derived_and_includes_x1_and_x8(self):
+        """The independent review named eight cases; the real set is ten."""
+        produced = self.produced_keys()
+        affected = sorted(
+            p.case for p in driver._PLAN_LIST
+            if produced.get(p.setup, set()) & driver.SEMANTIC_SETUP_KEYS
+            - {"extra_helper_args", "liveness_fifo"})
+        # The independent review named eight; deriving it from the plans
+        # finds ten, because X1 shares E6d's setup and X8 owns `cleanup`.
+        self.assertEqual(affected, ["E2", "E3", "E4", "E5", "E6", "E6b",
+                                    "E6c", "E6d", "X1", "X8"])
+
+    def test_every_post_pin_action_reports_whether_it_landed(self):
+        for name, action in driver.POST_PIN_ACTIONS.items():
+            source = ast.unparse(ast.parse(
+                (EXP / "driver.py").read_text(encoding="utf-8")))
+            self.assertIn("_landed", source, name)
+        self.assertTrue(all(callable(a) for a in driver.POST_PIN_ACTIONS.values()))
+
+
+class Trial2PostPinActions(unittest.TestCase):
+    """The actions themselves, on inert files. No launcher is involved."""
+
+    def setUp(self):
+        self.tmp = pathlib.Path(tempfile.mkdtemp(prefix="postpin-"))
+        self.body = b"\x7fELF" + bytes(range(256)) * 4
+        (self.tmp / "helper_report").write_bytes(self.body)
+        (self.tmp / "helper_alt").write_bytes(b"\x7fELF" + b"ALT!" * 200)
+        self.identity = harness.build_identity(str(self.tmp))
+        self.ctx = driver.TrialContext(
+            build=str(self.tmp), work=str(self.tmp), preflight={}, freeze={},
+            sanitiser=evidence.Sanitiser(), build_identity=self.identity)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _built(self, name="obj.bin", data=None):
+        path = self.tmp / name
+        path.write_bytes(self.body if data is None else data)
+        return {"exec_path": str(path)}
+
+    def test_rename_over_replaces_the_body_and_proves_it(self):
+        built = self._built()
+        replacement = self.tmp / "replacement"
+        replacement.write_bytes(b"\x7fELFDIFFERENT" * 9)
+        fact = driver.POST_PIN_ACTIONS["rename_over"](
+            self.ctx, driver.CASE_PLANS["E2"], built, str(replacement))
+        self.assertTrue(fact["landed"], fact)
+        self.assertEqual(pathlib.Path(built["exec_path"]).read_bytes(),
+                         b"\x7fELFDIFFERENT" * 9)
+        self.assertNotEqual(fact["pinned_body_sha256"],
+                            fact["path_body_sha256_after"])
+
+    def test_rename_away_and_unlink_removes_the_pathname(self):
+        built = self._built()
+        fact = driver.POST_PIN_ACTIONS["rename_away_and_unlink"](
+            self.ctx, driver.CASE_PLANS["E3"], built, None)
+        self.assertTrue(fact["landed"], fact)
+        self.assertFalse(pathlib.Path(built["exec_path"]).exists())
+
+    @POSIX_ONLY
+    def test_retarget_symlink_moves_the_link(self):
+        link = self.tmp / "link"
+        link.symlink_to(self.tmp / "helper_report")
+        built = {"exec_path": str(link)}
+        fact = driver.POST_PIN_ACTIONS["retarget_symlink"](
+            self.ctx, driver.CASE_PLANS["E4"], built, str(self.tmp / "helper_alt"))
+        self.assertTrue(fact["landed"], fact)
+        self.assertNotEqual(fact["target_before"], fact["target_after"])
+
+    @POSIX_ONLY
+    def test_pwrite_marker_is_length_preserving(self):
+        built = self._built()
+        built["mutated_marker"] = b"ABCDEFGH"
+        before = pathlib.Path(built["exec_path"]).stat().st_size
+        fact = driver.POST_PIN_ACTIONS["pwrite_marker"](
+            self.ctx, driver.CASE_PLANS["E6"], built, 16)
+        self.assertTrue(fact["landed"], fact)
+        self.assertTrue(fact["length_preserved"])
+        self.assertEqual(pathlib.Path(built["exec_path"]).stat().st_size, before)
+        self.assertNotEqual(fact["body_sha256_before"], fact["body_sha256_after"])
+
+    def test_pwrite_marker_refuses_without_recorded_marker_bytes(self):
+        fact = driver.POST_PIN_ACTIONS["pwrite_marker"](
+            self.ctx, driver.CASE_PLANS["E6"], self._built(), 16)
+        self.assertFalse(fact["landed"])
+        self.assertIn("no marker bytes", fact["detail"])
+
+    def test_truncate_rewrite_changes_the_length(self):
+        built = self._built()
+        fact = driver.POST_PIN_ACTIONS["truncate_rewrite"](
+            self.ctx, driver.CASE_PLANS["E6b"], built, None)
+        self.assertTrue(fact["landed"], fact)
+        self.assertNotEqual(fact["size_before"], fact["size_after"])
+
+    def test_mmap_write_mutates_and_keeps_the_mapping_after_the_fd_closes(self):
+        built = self._built()
+        fact = driver.POST_PIN_ACTIONS["mmap_write"](
+            self.ctx, driver.CASE_PLANS["E6c"], built, None)
+        self.assertTrue(fact["landed"], fact)
+        self.assertTrue(fact["descriptor_closed"])
+        self.assertTrue(fact["mapping_retained"])
+        self.assertEqual(len(built["_open_mappings"]), 1)
+        self.assertEqual(driver.release_setup_resources(built), [])
+        self.assertEqual(built.get("_open_mappings", []), [])
+
+    @POSIX_ONLY
+    def test_fchmod_clears_the_mode(self):
+        built = self._built()
+        fact = driver.POST_PIN_ACTIONS["fchmod"](
+            self.ctx, driver.CASE_PLANS["E6d"], built, 0)
+        self.assertTrue(fact["landed"], fact)
+        self.assertNotEqual(fact["mode_before"], fact["mode_after"])
+
+    def test_a_failed_action_reports_landed_false_rather_than_raising(self):
+        built = {"exec_path": str(self.tmp / "does-not-exist")}
+        fact = driver.POST_PIN_ACTIONS["retarget_symlink"](
+            self.ctx, driver.CASE_PLANS["E4"], built, str(self.tmp / "helper_alt"))
+        self.assertFalse(fact["landed"])
+
+    @unittest.skipUnless(hasattr(os, "pwrite"), "Unix-only; Linux CI runs it")
+    def test_hold_writer_proves_the_inode_rather_than_the_pathname(self):
+        built = self._built()
+        landed, facts = driver.perform_post_pin(
+            self.ctx, driver.CASE_PLANS["E5"],
+            dict(built, hold_writer=True))
+        self.assertTrue(landed, facts)
+        fact = facts[0]
+        self.assertEqual(fact["access_mode"], "O_WRONLY")
+        self.assertIn("st_ino", fact)
+        self.assertIn("st_dev", fact)
+
+    def test_cleanup_removes_a_case_private_copy(self):
+        target = self.tmp / "x8_copy"
+        target.write_bytes(b"x")
+        built = {"exec_path": str(target), "cleanup": str(target)}
+        self.assertEqual(driver.release_setup_resources(built), [])
+        self.assertFalse(target.exists())
+
+    def test_cleanup_of_a_missing_file_is_not_a_problem(self):
+        built = {"cleanup": str(self.tmp / "never-existed")}
+        self.assertEqual(driver.release_setup_resources(built), [])
+
+
+@POSIX_ONLY
+class Trial2MockBarrier(unittest.TestCase):
+    """The harness side of the post-pin protocol, against a harmless mock peer.
+
+    launcher_spike is never executed. The peer is a plain Python process that
+    speaks the same three bytes.
+    """
+
+    def setUp(self):
+        self.tmp = pathlib.Path(tempfile.mkdtemp(prefix="barrier-"))
+        (self.tmp / "helper_report").write_bytes(b"\x7fELF" + b"Z" * 400)
+        self.identity = harness.build_identity(str(self.tmp))
+        self.ctx = driver.TrialContext(
+            build=str(self.tmp), work=str(self.tmp), preflight={}, freeze={},
+            sanitiser=evidence.Sanitiser(), build_identity=self.identity)
+        self.plan = driver.CASE_PLANS["E6d"]
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _peer(self, behaviour):
+        """argv for a mock peer that reads --post-pin-control-fd like the spike."""
+        code = (
+            "import os,sys\n"
+            "fd=int(sys.argv[sys.argv.index('--post-pin-control-fd')+1])\n"
+            + behaviour)
+        return [sys.executable, "-c", code]
+
+    def _built(self):
+        path = self.tmp / "target.bin"
+        path.write_bytes(b"\x7fELF" + b"Z" * 400)
+        return {"exec_path": str(path), "post_pin": ("fchmod", 0)}
+
+    def _run(self, behaviour, built=None):
+        return driver._run_with_post_pin(
+            self._peer(behaviour), None, 20.0, self.ctx, self.plan,
+            built if built is not None else self._built())
+
+    def test_ready_action_continue(self):
+        out = self._run("os.write(fd,b'R')\n"
+                        "assert os.read(fd,1)==b'C'\n"
+                        "sys.exit(0)\n")
+        self.assertNotIn("not_posed", out)
+        self.assertEqual(out["rc"], 0)
+        self.assertTrue(out["post_pin"][0]["landed"], out["post_pin"])
+
+    def test_missing_ready_is_not_a_mechanism_result(self):
+        out = self._run("import time\ntime.sleep(0.2)\nsys.exit(3)\n")
+        self.assertIn("not_posed", out)
+        self.assertIn("post-pin control", out["not_posed"])
+
+    def test_a_wrong_message_is_refused(self):
+        out = self._run("os.write(fd,b'X')\nsys.exit(0)\n")
+        self.assertIn("not_posed", out)
+        self.assertIn("instead of READY", out["not_posed"])
+
+    def test_peer_death_before_ready_is_refused(self):
+        out = self._run("os._exit(9)\n")
+        self.assertIn("not_posed", out)
+
+    def test_an_action_that_cannot_land_stops_the_case(self):
+        built = {"exec_path": str(self.tmp / "absent.bin"),
+                 "post_pin": ("fchmod", 0)}
+        out = self._run("os.write(fd,b'R')\n"
+                        "os.read(fd,1)\n"
+                        "sys.exit(0)\n", built=built)
+        self.assertIn("not_posed", out)
+        self.assertIn("did not land", out["not_posed"])
+        self.assertFalse(out["post_pin"][0]["landed"])
+
+    def test_an_unknown_directive_stops_the_case(self):
+        built = {"exec_path": str(self.tmp / "helper_report"),
+                 "post_pin": ("no_such_action", None)}
+        out = self._run("os.write(fd,b'R')\nos.read(fd,1)\nsys.exit(0)\n",
+                        built=built)
+        self.assertIn("not_posed", out)
+        self.assertIn("no implementation", out["post_pin"][0]["detail"])
+
+    def test_the_control_descriptor_does_not_outlive_the_call(self):
+        built = self._built()
+        out = self._run("os.write(fd,b'R')\nassert os.read(fd,1)==b'C'\n"
+                        "sys.exit(0)\n", built=built)
+        self.assertNotIn("not_posed", out)
+        # Both socket ends are closed by _run_with_post_pin; nothing leaks into
+        # the observation it returns.
+        self.assertNotIn("control", out)
+
+    def test_a_case_without_a_directive_never_opens_a_control_socket(self):
+        self.assertFalse(driver.needs_post_pin({"exec_path": "x"}))
+        self.assertTrue(driver.needs_post_pin({"post_pin": ("fchmod", 0)}))
+        self.assertTrue(driver.needs_post_pin({"hold_writer": True}))
+
+
+class Trial2BuildIdentityCoverage(unittest.TestCase):
+    """T2-R3. One central binding, and every case classified."""
+
+    def setUp(self):
+        self.tmp = pathlib.Path(tempfile.mkdtemp(prefix="bind-"))
+        for name in ("helper_report", "helper_alt", "helper_fork",
+                     "helper_dynamic", "helper_setid", "helper_foreign.elf",
+                     "unloadable_in_cohort.elf", "script_fixture.sh"):
+            (self.tmp / name).write_bytes(b"\x7fELF" + name.encode() * 8)
+        self.identity = harness.build_identity(str(self.tmp))
+        self.ctx = driver.TrialContext(
+            build=str(self.tmp), work=str(self.tmp), preflight={}, freeze={},
+            sanitiser=evidence.Sanitiser(), build_identity=self.identity)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_every_plan_classifies_its_object(self):
+        """No case may be skipped by accident: each is classified explicitly."""
+        unclassified = []
+        for plan in driver._PLAN_LIST:
+            declared = driver.SETUP_OBJECT_CLASS.get(plan.setup)
+            if declared is not None:
+                continue
+            base = plan.binary
+            if base in self.identity:
+                continue
+            unclassified.append((plan.case, plan.setup, base))
+        self.assertEqual(unclassified, [],
+                         "a plan's object is neither declared nor derivable")
+
+    def test_direct_base_is_verified_exactly(self):
+        built = {"exec_path": str(self.tmp / "helper_dynamic")}
+        fact = driver.bind_build_identity(self.ctx, driver.CASE_PLANS["E7"], built)
+        self.assertTrue(fact["bound"], fact)
+        self.assertEqual(fact["classification"], driver.DIRECT_BASE)
+        self.assertEqual(fact["object_sha256"], fact["base_sha256"])
+
+    def test_a_drifted_direct_base_is_not_bound(self):
+        (self.tmp / "helper_dynamic").write_bytes(b"changed")
+        built = {"exec_path": str(self.tmp / "helper_dynamic")}
+        fact = driver.bind_build_identity(self.ctx, driver.CASE_PLANS["E7"], built)
+        self.assertFalse(fact["bound"])
+
+    def test_a_case_copy_must_start_equal_to_its_base(self):
+        copy = self.tmp / "E1_helper_report"
+        shutil.copy2(self.tmp / "helper_report", copy)
+        fact = driver.bind_build_identity(self.ctx, driver.CASE_PLANS["E1"],
+                                          {"exec_path": str(copy)})
+        self.assertTrue(fact["bound"], fact)
+        self.assertEqual(fact["base_artefact"], "helper_report")
+
+    def test_a_mutation_target_is_bound_by_its_STARTING_bytes(self):
+        copy = self.tmp / "E6_helper_report"
+        shutil.copy2(self.tmp / "helper_report", copy)
+        fact = driver.bind_build_identity(self.ctx, driver.CASE_PLANS["E6"],
+                                          {"exec_path": str(copy)})
+        self.assertTrue(fact["bound"], fact)
+        self.assertEqual(fact["classification"],
+                         driver.INTENTIONAL_MUTATION_TARGET)
+        # After the frozen intentional mutation the base digest is NOT required.
+        copy.write_bytes(b"mutated by the case")
+        self.assertNotEqual(driver._digest(copy), fact["base_sha256"])
+
+    def test_a_non_build_object_is_classified_not_skipped(self):
+        target = self.tmp / "X5_dir"
+        target.mkdir()
+        fact = driver.bind_build_identity(self.ctx, driver.CASE_PLANS["X5"],
+                                          {"exec_path": str(target)})
+        self.assertTrue(fact["bound"])
+        self.assertEqual(fact["classification"], driver.NON_BUILD_OBJECT)
+
+    def test_a_symlink_is_bound_through_its_target(self):
+        link = self.tmp / "E4_link"
+        link.symlink_to(self.tmp / "helper_report")
+        fact = driver.bind_build_identity(self.ctx, driver.CASE_PLANS["E4"],
+                                          {"exec_path": str(link)})
+        self.assertTrue(fact["bound"], fact)
+        self.assertEqual(fact["classification"], driver.SYMLINK_TO_BASE)
+
+    def test_an_unclassifiable_object_is_not_bound(self):
+        stray = self.tmp / "stray.bin"
+        stray.write_bytes(b"x")
+        fact = driver.bind_build_identity(self.ctx, driver.CASE_PLANS["E1"],
+                                          {"exec_path": str(stray)})
+        self.assertFalse(fact["bound"])
+        self.assertIn("not classified", fact["detail"])
+
+    def test_the_binding_runs_for_every_case_from_one_place(self):
+        source = (EXP / "driver.py").read_text(encoding="utf-8")
+        # Defined once, called once: one central binding, not ten ad-hoc
+        # checks bolted onto whichever setups happened to have one.
+        tree = ast.parse(source)
+        defs = [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)
+                and n.name == "bind_build_identity"]
+        calls = [n for n in ast.walk(tree) if isinstance(n, ast.Call)
+                 and ast.unparse(n.func) == "bind_build_identity"]
+        self.assertEqual(len(defs), 1)
+        self.assertEqual(len(calls), 1)
+
+
+class Trial2FrozenAbortSemantics(unittest.TestCase):
+    """T2-R2. What a partial journal MEANS is frozen before the trial."""
+
+    def setUp(self):
+        self.tmp = pathlib.Path(tempfile.mkdtemp(prefix="abort-"))
+        self.path = self.tmp / "journal.jsonl"
+        self.s = evidence.Sanitiser()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _replay(self):
+        return journal.replay(journal.read(self.path)[0])
+
+    def test_no_pose_started_means_the_boundary_was_not_crossed(self):
+        with journal.Journal(self.path, self.s) as j:
+            j.case_entered("E1", 0)
+            j.case_completed("E1", checker.BLOCKED, "environment", {})
+        status = journal.project_status(self._replay())
+        self.assertEqual(status["trial_status"], journal.TRIAL_NOT_STARTED)
+        self.assertFalse(status["d7_consumed"])
+        self.assertIsNone(status["aggregate"])
+
+    def test_one_pose_started_consumes_d7_and_crosses_the_boundary(self):
+        with journal.Journal(self.path, self.s) as j:
+            j.case_entered("E1", 0)
+            j.case_pose_started("E1", 0)
+        state = self._replay()
+        self.assertTrue(state["boundary_crossed"])
+        status = journal.project_status(state)
+        self.assertEqual(status["trial_status"],
+                         journal.TRIAL_ABORTED_AFTER_BOUNDARY)
+        self.assertTrue(status["d7_consumed"])
+        self.assertEqual(status["aggregate"], journal.AGGREGATE_NOT_DERIVABLE)
+
+    def test_an_incomplete_case_has_a_frozen_review_status_not_a_case_status(self):
+        with journal.Journal(self.path, self.s) as j:
+            j.case_entered("E1", 0)
+            j.case_pose_started("E1", 0)
+        state = self._replay()
+        self.assertEqual(state["incomplete_case_status"]["E1"],
+                         journal.UNKNOWN_FROM_PRESERVED_EVIDENCE)
+        self.assertNotIn(journal.UNKNOWN_FROM_PRESERVED_EVIDENCE,
+                         (checker.PASS, checker.FAIL, checker.INVALID,
+                          checker.BLOCKED))
+        self.assertNotIn("E1", journal.recovered_records(state))
+
+    def test_completed_cases_keep_exactly_their_recorded_status(self):
+        with journal.Journal(self.path, self.s) as j:
+            j.case_entered("E1", 0)
+            j.case_pose_started("E1", 0)
+            j.case_completed("E1", checker.FAIL, "the real reason", {"r": 1})
+            j.case_entered("E2", 1)
+            j.case_pose_started("E2", 1)
+        state = self._replay()
+        self.assertEqual(state["completed"]["E1"]["status"], checker.FAIL)
+        self.assertEqual(state["completed"]["E1"]["reason"], "the real reason")
+        self.assertEqual(state["entered_not_completed"], ["E2"])
+
+    def test_a_trial_end_with_an_aggregate_needs_every_case_completed(self):
+        with journal.Journal(self.path, self.s) as j:
+            j.case_entered("E1", 0)
+            j.case_completed("E1", checker.PASS, "ok", {})
+            with self.assertRaises(journal.JournalError):
+                j.trial_end(status="RUN", aggregate=checker.ACCEPTED,
+                            membership=["E1", "E2"])
+
+    def test_a_trial_end_without_an_aggregate_is_allowed_for_a_halt(self):
+        with journal.Journal(self.path, self.s) as j:
+            j.trial_end(status="HALT_PREFLIGHT", halts=[{"gate": "clone3"}])
+        status = journal.project_status(self._replay())
+        self.assertEqual(status["trial_status"], journal.TRIAL_NOT_STARTED)
+
+    def test_replay_never_synthesises_a_trial_end(self):
+        with journal.Journal(self.path, self.s) as j:
+            j.case_entered("E1", 0)
+            j.case_pose_started("E1", 0)
+            j.case_completed("E1", checker.PASS, "ok", {})
+        self.assertIsNone(self._replay()["trial_end"])
+
+
+class Trial2ReplayIntegrity(unittest.TestCase):
+    """T2-R4. The reader refuses impossible histories instead of repairing them."""
+
+    def setUp(self):
+        self.tmp = pathlib.Path(tempfile.mkdtemp(prefix="replay-"))
+        self.path = self.tmp / "j.jsonl"
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _write(self, *records):
+        text = "".join(evidence.serialise_line(dict(r, n=i))
+                       for i, r in enumerate(records))
+        self.path.write_bytes(text.encode("utf-8"))
+        return journal.read(self.path)[0]
+
+    def _refuses(self, *records):
+        with self.assertRaises(journal.JournalError):
+            journal.replay(self._write(*records))
+
+    def test_completion_before_entry_is_refused(self):
+        self._refuses({"kind": journal.CASE_COMPLETED, "case": "E1",
+                       "status": "PASS", "reason": "", "record": {}})
+
+    def test_pose_start_before_entry_is_refused(self):
+        self._refuses({"kind": journal.CASE_POSE_STARTED, "case": "E1", "index": 0})
+
+    def test_duplicate_pose_start_is_refused(self):
+        self._refuses({"kind": journal.CASE_ENTERED, "case": "E1", "index": 0},
+                      {"kind": journal.CASE_POSE_STARTED, "case": "E1", "index": 0},
+                      {"kind": journal.CASE_POSE_STARTED, "case": "E1", "index": 0})
+
+    def test_duplicate_entry_is_refused(self):
+        self._refuses({"kind": journal.CASE_ENTERED, "case": "E1", "index": 0},
+                      {"kind": journal.CASE_ENTERED, "case": "E1", "index": 0})
+
+    def test_duplicate_completion_is_refused(self):
+        self._refuses({"kind": journal.CASE_ENTERED, "case": "E1", "index": 0},
+                      {"kind": journal.CASE_COMPLETED, "case": "E1",
+                       "status": "PASS", "reason": "", "record": {}},
+                      {"kind": journal.CASE_COMPLETED, "case": "E1",
+                       "status": "FAIL", "reason": "", "record": {}})
+
+    def test_pose_start_after_completion_is_refused(self):
+        self._refuses({"kind": journal.CASE_ENTERED, "case": "E1", "index": 0},
+                      {"kind": journal.CASE_COMPLETED, "case": "E1",
+                       "status": "PASS", "reason": "", "record": {}},
+                      {"kind": journal.CASE_POSE_STARTED, "case": "E1", "index": 0})
+
+    def test_events_after_trial_end_are_refused(self):
+        self._refuses({"kind": journal.TRIAL_END, "status": "RUN"},
+                      {"kind": journal.CASE_ENTERED, "case": "E1", "index": 0})
+
+    def test_two_trial_ends_are_refused(self):
+        self._refuses({"kind": journal.TRIAL_END, "status": "RUN"},
+                      {"kind": journal.TRIAL_END, "status": "RUN"})
+
+    def test_a_valid_history_is_accepted(self):
+        state = journal.replay(self._write(
+            {"kind": journal.CASE_ENTERED, "case": "E1", "index": 0},
+            {"kind": journal.CASE_POSE_STARTED, "case": "E1", "index": 0},
+            {"kind": journal.CASE_COMPLETED, "case": "E1", "status": "PASS",
+             "reason": "ok", "record": {}}))
+        self.assertEqual(state["pose_started"], ["E1"])
+        self.assertEqual(state["completed"]["E1"]["status"], "PASS")
 
 
 class Trial2Membership(unittest.TestCase):

@@ -677,3 +677,101 @@ makes it runnable. `run_launch_exec_01.py` refuses to pose a case without both a
 freeze and an explicit owner-authorisation flag, and the case-posing driver is deliberately left
 unimplemented until D-7 is granted, so that no path in this repository can pose a case by
 accident.
+
+## 9. Trial #2 execution protocol
+
+Trial #1 ran under this definition, crossed its immutability boundary and aborted; it is closed as
+**`TRIAL_ABORTED_AFTER_BOUNDARY`** with **no derivable aggregate**, and its D-7 is consumed. Two
+things it exposed are preregistered here rather than decided afterwards, because Trial #1 had to
+invent both of them with a result already in hand.
+
+### 9.1 The post-pin barrier — the harness is the actor
+
+Several cases are defined by a change to the executable object that must land **after** the launcher
+has pinned it and **before** anything is executed. Trial #1's driver declared those changes and
+performed none of them, so E2, E3, E4, E5, E6, E6b, E6c, E6d, X1 and X8 ran without the condition
+that defines them.
+
+The launcher gains one **TEST/CONTROL-ONLY** hook, inactive unless `--post-pin-control-fd` is given.
+Its location is frozen: **after** the object is opened and pinned, `fstat`ed and classified, measured
+where applicable and admitted; **before** `clone3`, any child setup and `execveat`. It announces
+`READY` on an inherited control socket, waits under a bounded timeout, and closes that descriptor
+**before `clone3`**, so no control descriptor can reach the child or the executed image. It adds no
+helper descriptor and does not alter the `{0,1,2}` invariant or the production path.
+
+**The launcher never performs the mutation.** It only synchronises. The harness performs the
+preregistered action, produces structured evidence that the action landed, and only then answers
+`CONTINUE`. A mechanism that mutated its own target would be testing itself.
+
+**An action that cannot be proven to have landed does not pose its case.** The harness closes the
+control socket without `CONTINUE`, the launcher ends at its own barrier, and the case is recorded as
+not posed — which the checker scores INVALID. A control failure — no `READY`, a malformed channel,
+an action that fails, verification that fails, `CONTINUE` undeliverable, the launcher dying first —
+is never a mechanism PASS or FAIL.
+
+Every key a setup returns is declared in a closed schema with its role, and a semantic key with no
+execution consumer is a test failure. That is the durable form of the Trial #1 correction: the
+defect was not a missing feature but a directive nobody read.
+
+### 9.2 Build identity at the point of use
+
+The build happens once. Every file in the build directory is hashed before the first case and the
+identity is made durable. Each case's **starting** object is then bound to that identity through one
+central mechanism, classified as `DIRECT_BASE`, `BYTE_IDENTICAL_CASE_COPY`,
+`INTENTIONAL_MUTATION_TARGET`, `SYMLINK_TO_BASE` or `NON_BUILD_OBJECT`. An object that matches none
+of these and is not declared does not pose its case.
+
+A case that deliberately mutates its own copy is bound by its **starting** bytes only. Build
+identity, the case-private starting identity, the launcher's pre-exec measurement, the intentional
+post-pin mutation and the execution observation are five different facts and are never collapsed:
+E6 and E6b exist precisely because a pre-exec measurement is not proof of the bytes that ran.
+
+### 9.3 Durable progress, and what a partial journal means
+
+The trial writes an append-only journal, one JSON record per line, flushed and `fsync`ed before the
+next is attempted. Its events are `trial_begin`, `preflight`, `build_identity`, `case_entered`,
+`case_pose_started`, `case_completed` and `trial_end`.
+
+* **`case_entered`** — the runner has begun preparing this case.
+* **`case_pose_started`** — every setup and forced-state prerequisite has landed and the mechanism is
+  about to be invoked.
+* **`case_completed`** — a final frozen status exists. A status is assigned once and never revised.
+
+A case that is BLOCKED, or that cannot be posed as written, never reaches `case_pose_started`, and
+its completed record never claims the mechanism ran.
+
+**The Trial #2 D-7 authorisation is CONSUMED, and the immutability boundary is crossed, at the moment
+the first `case_pose_started` record is successfully fsynced.** That record is written *before* the
+launcher process exists, so a death between the record and the process still counts as an execution.
+The bias is deliberate: it can never accidentally permit a second execution under one authorisation,
+whereas the opposite bias could.
+
+The reading of a journal is fixed **now**, so no reader chooses it later:
+
+| journal state | trial status | D-7 | aggregate |
+|---|---|---|---|
+| no `case_pose_started`, no valid `trial_end` | `TRIAL_NOT_STARTED` | not consumed by execution | none |
+| ≥1 `case_pose_started`, no valid `trial_end` | `TRIAL_ABORTED_AFTER_BOUNDARY` | **consumed** | `AGGREGATE_NOT_DERIVABLE_FROM_FROZEN_EVIDENCE` |
+| valid `trial_end` with an aggregate | `TRIAL_COMPLETED` | consumed | the frozen checker's verdict |
+
+A case with `case_entered` and/or `case_pose_started` but no `case_completed` has **no** frozen
+PASS/FAIL/INVALID/BLOCKED status, then or afterwards. Its review-level status is
+**`UNKNOWN_FROM_PRESERVED_EVIDENCE`**, and a fabricated INVALID is never fed to the checker. Cases
+with a durable `case_completed` keep exactly their recorded status and reason. Cases with no journal
+entry have no status.
+
+A `trial_end` carrying an aggregate may be written **only** when every membership case has a durable
+completed record, no case has two, and the aggregate was computed by the frozen checker from exactly
+those records, recorded with the digest of its input. A crash before those conditions leaves no
+`trial_end`, and replay never synthesises one. Replay refuses impossible histories — completion
+before entry, pose-start before entry, duplicate pose-start, duplicate completion, events after
+`trial_end` — rather than repairing them.
+
+### 9.4 Public artefacts
+
+`preflight.json`, `build-identity.json`, `journal.jsonl`, and `evidence.json` when a trial completes.
+All four are P-14 sanitised **before** the disk write, so a later upload is never the first privacy
+boundary. The final document is a summary of durable facts, never their only copy: a missing
+`evidence.json` after an abort is expected, and the other three remain authoritative. Cleanup
+failures are recorded beside a case and never rewrite its mechanism result.
+

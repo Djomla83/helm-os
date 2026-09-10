@@ -39,8 +39,10 @@ NOT_RUN: no trial has been executed and no case has been posed.
 import json
 import os
 import pathlib
+import mmap
 import select
 import shutil
+import socket
 import signal
 import subprocess
 import time
@@ -268,6 +270,323 @@ def _check(name):
     return register
 
 
+
+
+# ================================================= the closed setup-result schema
+# T2-R1. Trial #1's setups produced directives -- post_pin, hold_writer,
+# mutated_marker, cleanup -- that NOTHING consumed, so ten cases ran without the
+# adversarial condition that defines them and E5's mandatory expectation could
+# never be met. A key that nobody reads is worse than a missing feature: it
+# looks like the case is doing something.
+#
+# Every key a setup may return is declared here with its role, and a test fails
+# if a setup produces a key this schema does not name or if a semantic key has
+# no execution consumer. The schema is the contract; the list is not maintained
+# by hand from the keys that happen to exist today.
+
+EXEC_PATH = "EXEC_PATH"
+IMMEDIATE_SETUP_FACT = "IMMEDIATE_SETUP_FACT"
+POST_PIN_ACTION = "POST_PIN_ACTION"
+HELD_RESOURCE = "HELD_RESOURCE"
+POSED_ASSERTION_INPUT = "POSED_ASSERTION_INPUT"
+CLEANUP_RESOURCE = "CLEANUP_RESOURCE"
+
+SETUP_RESULT_SCHEMA = {
+    "exec_path": EXEC_PATH,
+    "not_posed": IMMEDIATE_SETUP_FACT,
+    "extra_helper_args": POSED_ASSERTION_INPUT,
+    "liveness_fifo": HELD_RESOURCE,
+    "post_pin": POST_PIN_ACTION,
+    "hold_writer": POST_PIN_ACTION,
+    "mutated_marker": POSED_ASSERTION_INPUT,
+    "cleanup": CLEANUP_RESOURCE,
+}
+
+# Keys whose absence from the execution path changes what a case tests.
+SEMANTIC_SETUP_KEYS = frozenset(
+    name for name, role in SETUP_RESULT_SCHEMA.items()
+    if role in (POST_PIN_ACTION, HELD_RESOURCE, POSED_ASSERTION_INPUT,
+                CLEANUP_RESOURCE))
+
+
+# ===================================================== the post-pin barrier
+# The launcher reaches a frozen hook AFTER it has pinned, measured and admitted
+# the object and BEFORE it clones or executes anything, announces READY on an
+# inherited control socket, and waits. The HARNESS performs the preregistered
+# change, proves it landed, and answers CONTINUE. The launcher then closes the
+# control descriptor -- before clone3, so it can never reach the child -- and
+# proceeds.
+#
+# The mutation is always the harness's act. The launcher only synchronises: a
+# mechanism that mutated its own target would be testing itself.
+
+POST_PIN_READY = b"R"
+POST_PIN_CONTINUE = b"C"
+POST_PIN_READY_TIMEOUT_S = 30.0
+POST_PIN_ACTIONS = {}
+
+
+def _post_pin(name):
+    def register(fn):
+        POST_PIN_ACTIONS[name] = fn
+        return fn
+    return register
+
+
+def _digest(path):
+    try:
+        return oracles.digest_of(pathlib.Path(path).read_bytes())
+    except OSError:
+        return None
+
+
+def _landed(action, ok, detail, **evidence):
+    """One structured harness fact about whether the forced state arrived."""
+    out = {"action": action, "landed": bool(ok), "detail": detail}
+    out.update(evidence)
+    return out
+
+
+@_post_pin("rename_over")
+def _pp_rename_over(ctx, plan, built, arg):
+    """E2: a DIFFERENT body is renamed over the pathname after the pin.
+
+    The replacement is a case-private copy: renaming the canonical helper_alt
+    would destroy a build artefact every later case still needs.
+    """
+    target = pathlib.Path(built["exec_path"])
+    replacement = pathlib.Path(arg)
+    before, incoming = _digest(target), _digest(replacement)
+    try:
+        os.replace(str(replacement), str(target))
+    except OSError as exc:                                  # noqa: BLE001
+        return _landed("rename_over", False, "rename failed: %r" % (exc,))
+    after = _digest(target)
+    return _landed("rename_over", after == incoming and after != before,
+                   "the pathname now resolves to the replacement body",
+                   pinned_body_sha256=before, replacement_sha256=incoming,
+                   path_body_sha256_after=after)
+
+
+@_post_pin("rename_away_and_unlink")
+def _pp_rename_away_and_unlink(ctx, plan, built, arg):
+    """E3: the pinned path is renamed away and then unlinked."""
+    target = pathlib.Path(built["exec_path"])
+    away = target.with_name(target.name + ".renamed-away")
+    before = _digest(target)
+    try:
+        os.replace(str(target), str(away))
+        os.unlink(str(away))
+    except OSError as exc:                                  # noqa: BLE001
+        return _landed("rename_away_and_unlink", False, "failed: %r" % (exc,))
+    gone = not target.exists() and not away.exists()
+    return _landed("rename_away_and_unlink", gone,
+                   "the pathname and the renamed-away name are both gone",
+                   pinned_body_sha256=before, path_exists=target.exists(),
+                   renamed_away_exists=away.exists())
+
+
+@_post_pin("retarget_symlink")
+def _pp_retarget_symlink(ctx, plan, built, arg):
+    """E4: the symlink is retargeted after the launcher resolved and pinned it."""
+    link = pathlib.Path(built["exec_path"])
+    new_target = pathlib.Path(arg)
+    try:
+        before = os.readlink(str(link))
+    except OSError as exc:                                  # noqa: BLE001
+        return _landed("retarget_symlink", False, "not a symlink: %r" % (exc,))
+    try:
+        link.unlink()
+        link.symlink_to(new_target)
+        after = os.readlink(str(link))
+    except OSError as exc:                                  # noqa: BLE001
+        return _landed("retarget_symlink", False, "retarget failed: %r" % (exc,))
+    return _landed("retarget_symlink",
+                   after == str(new_target) and after != before,
+                   "the symlink now resolves elsewhere",
+                   target_before=before, target_after=after,
+                   new_target_sha256=_digest(new_target))
+
+
+@_post_pin("pwrite_marker")
+def _pp_pwrite_marker(ctx, plan, built, arg):
+    """E6: a length-preserving in-place mutation, after the measurement."""
+    path = pathlib.Path(built["exec_path"])
+    offset, original = int(arg), built.get("mutated_marker")
+    if not isinstance(original, (bytes, bytearray)) or not original:
+        return _landed("pwrite_marker", False,
+                       "the setup recorded no marker bytes to replace")
+    before, size_before = _digest(path), path.stat().st_size
+    replacement = bytes((b + 1) % 256 for b in original)
+    fd = os.open(str(path), os.O_WRONLY)
+    try:
+        written = os.pwrite(fd, replacement, offset)
+    finally:
+        os.close(fd)
+    after, size_after = _digest(path), path.stat().st_size
+    return _landed("pwrite_marker",
+                   written == len(replacement) and after != before
+                   and size_after == size_before,
+                   "the marker region was rewritten in place",
+                   bytes_written=written, length_preserved=size_after == size_before,
+                   body_sha256_before=before, body_sha256_after=after)
+
+
+@_post_pin("truncate_rewrite")
+def _pp_truncate_rewrite(ctx, plan, built, arg):
+    """E6b: the body is truncated and rewritten, so its LENGTH changes."""
+    path = pathlib.Path(built["exec_path"])
+    before, size_before = _digest(path), path.stat().st_size
+    fd = os.open(str(path), os.O_WRONLY | os.O_TRUNC)
+    try:
+        os.write(fd, b"HELM-E6B-REWRITTEN\n")
+    finally:
+        os.close(fd)
+    after, size_after = _digest(path), path.stat().st_size
+    return _landed("truncate_rewrite",
+                   after != before and size_after != size_before,
+                   "the body was truncated and rewritten at a new length",
+                   size_before=size_before, size_after=size_after,
+                   body_sha256_before=before, body_sha256_after=after)
+
+
+@_post_pin("mmap_write")
+def _pp_mmap_write(ctx, plan, built, arg):
+    """E6c: a SHARED writable mapping mutates the body while the fd closes.
+
+    The descriptor is closed immediately and the mapping is kept -- that exact
+    lifetime is the case. The mapping is released in cleanup, after the
+    launcher has returned.
+    """
+    path = pathlib.Path(built["exec_path"])
+    before = _digest(path)
+    fd = os.open(str(path), os.O_RDWR)
+    try:
+        mapping = mmap.mmap(fd, 0, access=mmap.ACCESS_WRITE)
+    except (OSError, ValueError) as exc:                    # noqa: BLE001
+        os.close(fd)
+        return _landed("mmap_write", False, "mmap failed: %r" % (exc,))
+    os.close(fd)                       # the DESCRIPTOR goes; the mapping stays
+    try:
+        mapping[0:1] = bytes([(mapping[0] + 1) % 256])
+        mapping.flush()
+    except (OSError, ValueError, IndexError) as exc:        # noqa: BLE001
+        mapping.close()
+        return _landed("mmap_write", False, "write through mapping failed: %r"
+                       % (exc,))
+    built.setdefault("_open_mappings", []).append(mapping)
+    after = _digest(path)
+    return _landed("mmap_write", after != before,
+                   "the body was mutated through a shared mapping whose "
+                   "descriptor is already closed",
+                   descriptor_closed=True, mapping_retained=True,
+                   body_sha256_before=before, body_sha256_after=after)
+
+
+@_post_pin("fchmod")
+def _pp_fchmod(ctx, plan, built, arg):
+    """E6d and X1: the mode is changed after the admission fact was recorded."""
+    path = pathlib.Path(built["exec_path"])
+    before = path.stat().st_mode & 0o7777
+    try:
+        os.chmod(str(path), int(arg))
+    except OSError as exc:                                  # noqa: BLE001
+        return _landed("fchmod", False, "chmod failed: %r" % (exc,))
+    after = path.stat().st_mode & 0o7777
+    return _landed("fchmod", after == (int(arg) & 0o7777) and after != before,
+                   "the mode changed after admission",
+                   mode_before=oct(before), mode_after=oct(after))
+
+
+def _hold_writer(ctx, plan, built):
+    """E5: a second O_WRONLY descriptor on the SAME inode, held across exec.
+
+    The inode is proved by (st_dev, st_ino) taken through the descriptor
+    itself. Pathname equality is never the evidence.
+    """
+    path = pathlib.Path(built["exec_path"])
+    try:
+        fd = os.open(str(path), os.O_WRONLY)
+    except OSError as exc:                                  # noqa: BLE001
+        return _landed("hold_writer", False, "could not open a writer: %r" % (exc,))
+    try:
+        by_fd, by_path = os.fstat(fd), os.stat(str(path))
+    except OSError as exc:                                  # noqa: BLE001
+        os.close(fd)
+        return _landed("hold_writer", False, "stat failed: %r" % (exc,))
+    same = (by_fd.st_dev, by_fd.st_ino) == (by_path.st_dev, by_path.st_ino)
+    if not same:
+        os.close(fd)
+        return _landed("hold_writer", False,
+                       "the writer is not on the executable's inode")
+    built.setdefault("_open_writers", []).append(fd)
+    return _landed("hold_writer", True,
+                   "an O_WRONLY descriptor is held on the executable's inode "
+                   "across exec",
+                   st_dev=by_fd.st_dev, st_ino=by_fd.st_ino,
+                   access_mode="O_WRONLY")
+
+
+def perform_post_pin(ctx, plan, built):
+    """Every forced state this case declares, at the barrier. Structured facts.
+
+    Returns ``(landed, [evidence...])``. A case whose forced state cannot be
+    proven to have landed is NOT posed: running it anyway is how Trial #1's
+    E-series produced results about manipulations that never happened.
+    """
+    facts = []
+    directive = built.get("post_pin")
+    if directive:
+        name, arg = directive
+        action = POST_PIN_ACTIONS.get(name)
+        if action is None:
+            facts.append(_landed(name, False, "no implementation for this "
+                                              "post-pin action"))
+        else:
+            try:
+                facts.append(action(ctx, plan, built, arg))
+            except Exception as exc:                        # noqa: BLE001
+                facts.append(_landed(name, False, "action raised: %r" % (exc,)))
+    if built.get("hold_writer"):
+        try:
+            facts.append(_hold_writer(ctx, plan, built))
+        except Exception as exc:                            # noqa: BLE001
+            facts.append(_landed("hold_writer", False, "raised: %r" % (exc,)))
+    return all(f["landed"] for f in facts) and bool(facts), facts
+
+
+def needs_post_pin(built):
+    return bool(built.get("post_pin") or built.get("hold_writer"))
+
+
+def release_setup_resources(built):
+    """Deterministic cleanup of everything a setup held open or created.
+
+    Runs after the case's status is final, and its failures are recorded
+    separately: a cleanup problem must never rewrite a mechanism result.
+    """
+    problems = []
+    for fd in built.pop("_open_writers", []):
+        try:
+            os.close(fd)
+        except OSError as exc:                              # noqa: BLE001
+            problems.append("writer close failed: %r" % (exc,))
+    for mapping in built.pop("_open_mappings", []):
+        try:
+            mapping.close()
+        except (OSError, ValueError) as exc:                # noqa: BLE001
+            problems.append("mapping close failed: %r" % (exc,))
+    target = built.get("cleanup")
+    if target:
+        try:
+            pathlib.Path(target).unlink()
+        except FileNotFoundError:
+            pass
+        except OSError as exc:                              # noqa: BLE001
+            problems.append("cleanup unlink failed: %r" % (exc,))
+    return problems
+
+
 # ---------------------------------------------------------------- setup steps
 # Each returns a dict describing what it built: at minimum {"exec_path": ...},
 # or {"not_posed": reason}. They touch only the disposable build directory.
@@ -316,6 +635,107 @@ def verify_build_identity(ctx):
     return deviations
 
 
+
+
+# ======================================= T2-R3: build identity at point of use
+# One central binding rather than a check bolted onto whichever setups happened
+# to have one. Every case's starting object is tied to the identity hashed
+# before the first case, and its relationship to that identity is CLASSIFIED
+# rather than assumed -- because a case that deliberately mutates its own copy
+# must not be required to keep the base digest afterwards, and a case that
+# quietly ran different bytes must not pass.
+
+DIRECT_BASE = "DIRECT_BASE"
+BYTE_IDENTICAL_CASE_COPY = "BYTE_IDENTICAL_CASE_COPY"
+INTENTIONAL_MUTATION_TARGET = "INTENTIONAL_MUTATION_TARGET"
+NON_BUILD_OBJECT = "NON_BUILD_OBJECT"
+SYMLINK_TO_BASE = "SYMLINK_TO_BASE"
+
+# Setups whose object cannot be classified from its name. Everything else is
+# derived: a basename the build identity knows is a DIRECT_BASE, and a
+# "<CASE>_<artefact>" name is that artefact's case-private copy. A setup that
+# matches neither and is not declared here does not pose its case, which is what
+# "explicitly classified, never accidentally skipped" has to mean in code.
+SETUP_OBJECT_CLASS = {
+    "symlink_retarget": (SYMLINK_TO_BASE, "helper_report"),
+    "noexec_copy": (BYTE_IDENTICAL_CASE_COPY, "helper_report"),
+    "directory_capability": (NON_BUILD_OBJECT, None),
+    "privileged_setid": (NON_BUILD_OBJECT, None),
+}
+
+# Setups that deliberately change their object AFTER the starting check. The
+# starting bytes are still bound; the base digest is simply not required to
+# survive the change the case exists to make.
+MUTATING_SETUPS = frozenset({
+    "rename_alt_over", "rename_then_unlink", "symlink_retarget",
+    "mutate_marker_in_place", "truncate_and_rewrite",
+    "shared_writable_mapping", "fchmod_zero_after_admission",
+    "never_executable",
+})
+
+
+def _classify_object(ctx, plan, path):
+    """``(classification, base artefact name)`` for a case's starting object."""
+    declared = SETUP_OBJECT_CLASS.get(plan.setup)
+    if declared is not None:
+        return declared
+    name = pathlib.Path(path).name
+    identity = getattr(ctx, "build_identity", None) or {}
+    if name in identity:
+        return (INTENTIONAL_MUTATION_TARGET if plan.setup in MUTATING_SETUPS
+                else DIRECT_BASE), name
+    prefix = plan.case + "_"
+    if name.startswith(prefix) and name[len(prefix):] in identity:
+        return (INTENTIONAL_MUTATION_TARGET if plan.setup in MUTATING_SETUPS
+                else BYTE_IDENTICAL_CASE_COPY), name[len(prefix):]
+    return None, None
+
+
+def bind_build_identity(ctx, plan, built):
+    """Tie this case's starting object to the pre-boundary build identity.
+
+    Returns a structured fact. ``bound`` false means the case is not posed:
+    evidence about bytes the trial cannot name is not evidence.
+    """
+    path = built.get("exec_path")
+    if not path:
+        return {"bound": False, "classification": None,
+                "detail": "the setup produced no exec_path"}
+    classification, base = _classify_object(ctx, plan, path)
+    if classification is None:
+        return {"bound": False, "classification": None,
+                "detail": "the object %s is not classified against the build "
+                          "identity" % pathlib.Path(path).name}
+    fact = {"classification": classification, "base_artefact": base,
+            "object": pathlib.Path(path).name}
+    if classification == NON_BUILD_OBJECT:
+        fact.update(bound=True, detail="not a build artefact, classified "
+                                       "explicitly rather than skipped")
+        return fact
+    identity = (getattr(ctx, "build_identity", None) or {}).get(base)
+    if identity is None:
+        fact.update(bound=False, detail="the trial recorded no build identity "
+                                        "for " + str(base))
+        return fact
+    resolved = path
+    if classification == SYMLINK_TO_BASE:
+        try:
+            resolved = os.path.realpath(path)
+        except OSError as exc:                              # noqa: BLE001
+            fact.update(bound=False, detail="unreadable symlink: %r" % (exc,))
+            return fact
+        if pathlib.Path(resolved).name != base:
+            fact.update(bound=False, detail="the symlink does not start at " + base)
+            return fact
+    actual = _digest(resolved)
+    fact.update(base_sha256=identity.get("sha256"), object_sha256=actual,
+                bound=actual is not None and actual == identity.get("sha256"))
+    fact["detail"] = ("the starting bytes are the artefact this trial hashed"
+                      if fact["bound"] else
+                      "the starting bytes are not the artefact this trial hashed")
+    return fact
+
+
 @_setup("none")
 def _setup_none(ctx, plan):
     path, reason = _verified_source(ctx, plan.binary)
@@ -343,7 +763,17 @@ def _setup_rename_alt_over(ctx, plan):
     the pinned descriptor must keep running helper_report.
     """
     info = _setup_copy(ctx, plan)
-    return dict(info, post_pin=("rename_over", str(ctx.build / "helper_alt")))
+    if "not_posed" in info:
+        return info
+    # A case-private replacement. Renaming the canonical helper_alt would
+    # consume a build artefact every later case still needs, and a trial that
+    # eats its own inputs is not repeatable.
+    alt, reason = _verified_source(ctx, "helper_alt")
+    if alt is None:
+        return {"not_posed": reason}
+    private = ctx.build / (plan.case + "_replacement_helper_alt")
+    shutil.copy2(alt, private)
+    return dict(info, post_pin=("rename_over", str(private)))
 
 
 @_setup("rename_then_unlink")
@@ -356,12 +786,20 @@ def _setup_rename_then_unlink(ctx, plan):
 @_setup("symlink_retarget")
 def _setup_symlink_retarget(ctx, plan):
     """E4: the pinned leaf was a symlink whose target is retargeted after the pin."""
+    base, reason = _verified_source(ctx, "helper_report")
+    if base is None:
+        return {"not_posed": reason}
+    alt, reason = _verified_source(ctx, "helper_alt")
+    if alt is None:
+        return {"not_posed": reason}
+    private = ctx.build / (plan.case + "_retarget_helper_alt")
+    shutil.copy2(alt, private)
     link = ctx.build / (plan.case + "_link")
     if link.is_symlink() or link.exists():
         link.unlink()
-    link.symlink_to(ctx.build / "helper_report")
+    link.symlink_to(base)
     return {"exec_path": str(link),
-            "post_pin": ("retarget_symlink", str(ctx.build / "helper_alt"))}
+            "post_pin": ("retarget_symlink", str(private))}
 
 
 @_setup("writer_open_held")
@@ -1326,30 +1764,75 @@ def observe(plan, ctx, auth):
     it anyway would produce a receipt that looks like a result, and the honest
     record is that the case could not be posed.
     """
+    prepared = prepare(plan, ctx, auth)
+    if not prepared["ready"]:
+        return prepared["observation"]
+    return pose(plan, ctx, auth, prepared)
+
+
+def prepare(plan, ctx, auth):
+    """Everything a case needs BEFORE the mechanism is invoked. Poses nothing.
+
+    Split out of :func:`observe` so the runner has somewhere to put the
+    ``case_pose_started`` record: that event is the Trial #2 immutability
+    boundary, and it must be durable before the launcher exists, not after.
+
+    ``ready`` false means the case has a terminal observation already -- a
+    channel the mechanism cannot supply, a frozen environment block, a fixture
+    that could not be built, or a starting object that is not the one this trial
+    hashed. None of those invoke the mechanism, so none of them crosses the
+    boundary.
+    """
     _require_authorisation(auth)
 
     missing = plan.missing_channels(ctx.supplied_channels)
     if missing:
-        return {"not_posed": "the mechanism supplies no channel for " +
-                             ", ".join(missing) + ": " +
-                             "; ".join(CHANNEL_UNAVAILABLE_REASON.get(c, c)
-                                       for c in missing),
-                "launch_returned": None}
+        return {"ready": False, "observation": {
+            "not_posed": "the mechanism supplies no channel for " +
+                         ", ".join(missing) + ": " +
+                         "; ".join(CHANNEL_UNAVAILABLE_REASON.get(c, c)
+                                   for c in missing),
+            "launch_returned": None}}
 
     cause = blocked_cause_for(plan, ctx)
     if cause is not None:
-        return {"blocked": cause, "launch_returned": None}
+        return {"ready": False,
+                "observation": {"blocked": cause, "launch_returned": None}}
 
     built = SETUPS[plan.setup](ctx, plan)
     if built.get("not_posed"):
-        return {"not_posed": built["not_posed"], "launch_returned": None}
+        return {"ready": False, "observation": {
+            "not_posed": built["not_posed"], "launch_returned": None}}
+
+    # T2-R3. The starting object is tied to the identity hashed before the
+    # first case, and its relationship to that identity is classified.
+    binding = bind_build_identity(ctx, plan, built)
+    if not binding.get("bound"):
+        return {"ready": False, "observation": {
+            "not_posed": "build identity: " + str(binding.get("detail")),
+            "build_identity_binding": binding, "launch_returned": None}}
+
+    return {"ready": True, "built": built, "binding": binding}
+
+
+def pose(plan, ctx, auth, prepared):
+    """Invoke the mechanism for one prepared case. THIS crosses the boundary."""
+    _require_authorisation(auth)
+    built, binding = prepared["built"], prepared["binding"]
 
     parent_state = PARENT_STATES[plan.parent](ctx, plan)
-    trials = [_run_once(plan, ctx, built, parent_state)
-              for _ in range(plan.repeat)]
+    try:
+        trials = [_run_once(plan, ctx, built, parent_state)
+                  for _ in range(plan.repeat)]
+    finally:
+        # Deterministic release of everything the setup held. Its problems are
+        # recorded beside the case, never folded into its mechanism result.
+        cleanup_problems = release_setup_resources(built)
 
     obs = dict(trials[0])
     obs["repeat_observations"] = trials
+    obs["build_identity_binding"] = binding
+    obs["cleanup_problems"] = cleanup_problems
 
     # M2's control arm: the SAME plan with no extra threads. Its child window is
     # the baseline the threaded arm must match, and it is collected here rather
@@ -1452,16 +1935,27 @@ def _run_once(plan, ctx, built, parent_state, flags=None):
     bound_s = (plan.total_bound_ms() + 5000) / 1000.0
 
     started = time.monotonic()
-    try:
-        proc = subprocess.run(argv, capture_output=True, env=env,
-                              timeout=bound_s)
-        returned = True
-        stdout, stderr, rc = proc.stdout, proc.stderr, proc.returncode
-    except subprocess.TimeoutExpired as expired:
-        returned = False
-        stdout = expired.stdout or b""
-        stderr = expired.stderr or b""
-        rc = None
+    post_pin_facts = None
+    if needs_post_pin(built):
+        outcome = _run_with_post_pin(argv, env, bound_s, ctx, plan, built)
+        post_pin_facts = outcome["post_pin"]
+        if outcome.get("not_posed"):
+            return {"not_posed": outcome["not_posed"],
+                    "post_pin_evidence": post_pin_facts,
+                    "launch_returned": None}
+        returned, stdout, stderr, rc = (outcome["returned"], outcome["stdout"],
+                                        outcome["stderr"], outcome["rc"])
+    else:
+        try:
+            proc = subprocess.run(argv, capture_output=True, env=env,
+                                  timeout=bound_s)
+            returned = True
+            stdout, stderr, rc = proc.stdout, proc.stderr, proc.returncode
+        except subprocess.TimeoutExpired as expired:
+            returned = False
+            stdout = expired.stdout or b""
+            stderr = expired.stderr or b""
+            rc = None
     elapsed_ms = int((time.monotonic() - started) * 1000)
 
     spike = observations.parse_spike_stdout(stdout)
@@ -1514,7 +2008,68 @@ def _run_once(plan, ctx, built, parent_state, flags=None):
         "elapsed_ms": elapsed_ms,
         "spike_exit": rc,
         "spike_stderr": (stderr or b"").decode("utf-8", "replace")[-2000:],
+        "post_pin_evidence": post_pin_facts,
     }
+
+
+
+
+def _run_with_post_pin(argv, env, bound_s, ctx, plan, built):
+    """Launch, wait for READY, land the forced state, prove it, then CONTINUE.
+
+    Every wait is bounded. A control failure is never a mechanism result: if
+    READY does not arrive, or the harness action cannot be proven to have
+    landed, the control socket is closed WITHOUT sending CONTINUE, the launcher
+    dies at its own barrier, and the case is reported as not posed.
+    """
+    parent_sock, child_sock = socket.socketpair()
+    control = child_sock.fileno()
+    argv = list(argv) + ["--post-pin-control-fd", str(control)]
+    facts, note = [], None
+    try:
+        proc = subprocess.Popen(argv, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, env=env,
+                                pass_fds=(control,))
+    except OSError as exc:                                  # noqa: BLE001
+        parent_sock.close()
+        child_sock.close()
+        return {"not_posed": "the launcher could not be started: %r" % (exc,),
+                "post_pin": facts}
+    child_sock.close()          # the parent drops its copy of the child's end
+
+    try:
+        parent_sock.settimeout(POST_PIN_READY_TIMEOUT_S)
+        try:
+            ready = parent_sock.recv(1)
+        except (socket.timeout, OSError) as exc:            # noqa: BLE001
+            ready, note = b"", "READY never arrived: %r" % (exc,)
+        if ready != POST_PIN_READY:
+            note = note or ("the control channel produced %r instead of READY"
+                            % (ready,))
+        else:
+            landed, facts = perform_post_pin(ctx, plan, built)
+            if landed:
+                try:
+                    parent_sock.sendall(POST_PIN_CONTINUE)
+                except OSError as exc:                      # noqa: BLE001
+                    note = "CONTINUE could not be delivered: %r" % (exc,)
+            else:
+                note = "the preregistered forced state did not land"
+    finally:
+        parent_sock.close()     # closing without CONTINUE ends the launcher
+
+    try:
+        stdout, stderr = proc.communicate(timeout=bound_s)
+        returned, rc = True, proc.returncode
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        stdout, stderr = proc.communicate()
+        returned, rc = False, None
+
+    if note is not None:
+        return {"not_posed": "post-pin control: " + note, "post_pin": facts}
+    return {"post_pin": facts, "returned": returned, "stdout": stdout,
+            "stderr": stderr, "rc": rc}
 
 
 def _descendant_alive(built, plan, timeout_ms=3000):
