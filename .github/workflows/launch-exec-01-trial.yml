@@ -1,0 +1,141 @@
+# LAUNCH-EXEC-01 authorised trial.
+#
+# This workflow EXECUTES the preregistered experiment. It exists because the
+# frozen definition preregisters the trial environment and the workflow
+# discipline, and no such workflow existed:
+#
+#   "Recommended first environment: a GitHub-hosted ubuntu-24.04 runner."
+#   "The experiment workflow sets cancel-in-progress: false ..., has no
+#    pull_request trigger, and runs only on workflow_dispatch. GitHub's
+#    're-run failed jobs' is forbidden; any re-run is a NEW TRIAL with its own
+#    report. Evidence is preserved under docs/experiments/evidence/."
+#
+# D-7 was authorised by the owner on 2026-09-10 for EXACTLY ONE valid trial,
+# bound to freeze 89c923a147ff16182d4d0ae14a0bd7bb6e62723d. See
+# docs/DECISIONS.md#d-7-authorised.
+#
+# The first execution of the first preregistered case is the IMMUTABILITY
+# BOUNDARY. Dispatching this workflow is the act that crosses it.
+name: launch-exec-01 authorised trial
+
+# workflow_dispatch ONLY. The definition requires it, and it is the control that
+# makes firing the trial a deliberate act rather than a side effect of a push.
+on:
+  workflow_dispatch:
+    inputs:
+      freeze_sha256:
+        description: >-
+          SOURCE-HASHES.json SHA-256 the owner authorised. Must match exactly or
+          the job stops before posing anything.
+        required: true
+        default: '9fb861602d477a00f014f14f0a31b5979947af18fa2b620b95ac803ab5bfc365'
+      i_understand_this_is_the_only_trial:
+        description: >-
+          Type RUN-ONE-VALID-TRIAL to confirm. Any re-run is a NEW trial.
+        required: true
+        default: ''
+
+permissions:
+  contents: read
+
+# Never cancel a trial midway: a truncated trial is worse than none, and there
+# is no re-run that is not a new trial.
+concurrency:
+  group: launch-exec-01-trial
+  cancel-in-progress: false
+
+jobs:
+  trial:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: docs/experiments/launch-exec-01
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ---------------------------------------------- gates, before anything
+      - name: Confirm the dispatch is deliberate
+        run: |
+          set -eu
+          test "${{ inputs.i_understand_this_is_the_only_trial }}" = "RUN-ONE-VALID-TRIAL"
+          echo "confirmation accepted"
+
+      - name: Bind this run to the exact authorised freeze
+        run: |
+          set -eu
+          actual=$(sha256sum SOURCE-HASHES.json | cut -d' ' -f1)
+          echo "SOURCE-HASHES.json sha256: $actual"
+          if [ "$actual" != "${{ inputs.freeze_sha256 }}" ]; then
+            echo "HALT: this tree is not the authorised freeze; nothing was posed."
+            exit 1
+          fi
+          echo "bound to the authorised freeze"
+
+      - name: Verify the source freeze
+        run: python3 run_launch_exec_01.py --verify-freeze
+
+      - name: Driver completeness and static posability
+        run: python3 run_launch_exec_01.py --driver-completeness
+
+      # The runner's own mandatory preflight runs inside run_trial, immediately
+      # before the case loop. This step runs the SAME inventory through the
+      # non-posing flag first, so the environment is on the record and a
+      # hopeless host is visible before the boundary rather than after it.
+      # --preflight-only poses nothing and builds nothing.
+      - name: Preflight inventory (poses no case)
+        run: |
+          set -eu
+          python3 run_launch_exec_01.py --preflight-only | tee preflight.json
+          python3 - <<'PY'
+          import json, sys
+          p = json.load(open("preflight.json"))["preflight"]
+          print("kernel:", p.get("kernel_name"), p.get("kernel_release"), p.get("arch"))
+          print("strace:", p.get("strace"), p.get("strace_version"))
+          print("ptrace_scope:", p.get("ptrace_scope"), "euid:", p.get("geteuid"))
+          print("clone3:", (p.get("clone3") or {}).get("available"))
+          print("blocks:", sorted((p.get("block_reasons") or {})))
+          PY
+
+      # ------------------------------------------------ THE IMMUTABILITY LINE
+      # Everything above this point poses nothing. This step is the trial.
+      - name: THE AUTHORISED TRIAL — poses every preregistered case once
+        id: trial
+        run: |
+          set +e
+          python3 run_launch_exec_01.py --i-have-owner-authorisation-d7 \
+            > evidence.json
+          code=$?
+          set -e
+          echo "runner exit code: $code"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Trial summary
+        if: always()
+        run: |
+          set -eu
+          test -s evidence.json || { echo "no evidence document produced"; exit 1; }
+          sha256sum evidence.json
+          python3 - <<'PY'
+          import json
+          d = json.load(open("evidence.json"))
+          print("status   :", d.get("status"))
+          print("aggregate:", d.get("aggregate"))
+          print("counts   :", json.dumps(d.get("counts"), sort_keys=True))
+          PY
+
+      # Uploaded unconditionally: a trial that ends badly still has to be
+      # preserved exactly as it happened.
+      - name: Preserve the evidence document
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: launch-exec-01-evidence
+          path: |
+            docs/experiments/launch-exec-01/evidence.json
+            docs/experiments/launch-exec-01/preflight.json
+          if-no-files-found: warn
+          retention-days: 90

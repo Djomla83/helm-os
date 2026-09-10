@@ -89,3 +89,42 @@ Proces je u [master planu](../HELM_MASTER_PLAN.md#s31). Licencna odluka ostaje z
 | ADR-0022 | [Observe explicit targets without interpreting desired state](adr/ADR-0022-observation-authority.md) — [architecture analysis](research/HELM-OBSERVE-ARCHITECTURE.md), [independent review with Amendment 1](implementation/HELM-OBSERVE-INDEPENDENT-REVIEW.md), [execution definition](experiments/obs-fs-01/) and [OBS-FS-01 PASS](experiments/OBS-FS-01-EXECUTION-REPORT.md). **Bounded acceptance**: Linux x86_64 and ext4 cohort only; descendant bind mounts excluded and unverified; three implementation-binding obligations, all met and independently verified on the review branch. [Owner clarification 2026-09-09](adr/ADR-0022-observation-authority.md#cohort-attestation-clarification): cohort membership is a caller precondition, not an observer attestation; `0xEF53` is a necessary ext-family guard only; no new authority added; scope unchanged. **Experimental helm-observe 0.1 is implemented, independently reviewed and owner-merged to main on 2026-09-09** at reviewed tip `626de914000263cc3206d28479db692ad0b40724`; schema and API unstabilised, `publish = false`, not a release | **Accepted 2026-09-08, clarified 2026-09-09** |
 | ADR-0023 | [Compare desired claims with actual observations without producing a satisfaction verdict](adr/ADR-0023-binding-authority.md) — [design report](research/HELM-BIND-ARCHITECTURE.md). A pure, authority-free `helm-bind` 0.1 with no satisfaction, compatibility or readiness verdict, a two-axis result whose coverage can never be complete in 0.1, an explicit identity-bearing binding plan instead of target-ID heuristics, and no change to any existing crate. Owner corrections of 2026-09-09: both entry-point comparators require `regular_file_sha256` and bind the desired path byte for byte; the caller assertion is named `asserted_prefix_root_id` and is conditional; the claim universe excludes contextual metadata and selector keys; the coverage theorem is at least four unsupported claims. **Experimental helm-bind 0.1 is implemented, [independently reviewed](implementation/HELM-BIND-INDEPENDENT-REVIEW-0.1.md) and owner-merged to main on 2026-09-09** at reviewed tip `4f51c1b2bc7e59b8142ccc4c328e2641c89327d3`, product-code tip `78e26de4ca952b7125032e5c9fa468e6dc85af7c`; no BLOCKER and no unresolved IMPORTANT; unsupported coverage stays at least four; `asserted_prefix_root_id` stays an assertion, never an attestation; schema and API unstabilised, `publish = false`, not a release | **Accepted 2026-09-09** |
 | ADR-0024 | [Execute one explicitly authorized object without granting authority from comparison](adr/ADR-0024-launch-authority.md) — [design report and falsification plan](research/HELM-LAUNCH-ARCHITECTURE.md), [LAUNCH-EXEC-01 preregistered definition](experiments/LAUNCH-EXEC-01-DEFINITION.md), **NOT_RUN**. A single-crate, Linux x86_64, capability-driven launcher for exactly one already-open regular ELF object, with no satisfaction, compatibility, readiness or success verdict. Parsing a LaunchPlan and holding a BindingReport both grant **zero** execution authority; `NoClaimContradicted` is never permission. Direct-child lifecycle only, **no process-tree containment**, and **not a sandbox** — the child runs with the caller's own credentials. Depends on no HELM crate; context travels as opaque digests. Requires a scoped `unsafe` backend or a weaker descriptor claim (owner decision D-1), because the workspace `forbid(unsafe_code)` cannot be locally relaxed and rustix provides no `close_range`. **Narrowed on 2026-09-09 by the [three-workstream pre-execution review](implementation/HELM-LAUNCH-PRE-EXECUTION-REVIEW.md)**, sixteen BLOCKERs among 53 findings, classification NEEDS_ARCHITECTURE_OWNER_REVIEW: the executable digest is a pre-execution measurement of the main file body (`pre_exec_body_sha256`) and never the identity of the body that ran, `ETXTBSY` does not cover the measure-to-exec window, the child runs with the caller's credentials **except** for a set-user-ID or capability-bearing object, clean EOF does not prove exec, direct-child lifecycle does not imply direct-child liveness, and the receipt becomes a product of one process disposition and one per-stream completeness. LAUNCH-EXEC-01 re-frozen at **71 cases** with a total aggregate precedence. **Owner decisions of 2026-09-09**: D-1 **arm (i)** (scoped unsafe backend; FD isolation not weakened to keep crate-wide `forbid`), D-2 to D-6 and D-8 accepted (D-4 as corrected), **D-9** refuse `S_ISUID`/`S_ISGID` at admission, **D-10** environment **exactly empty** with `explicit` removed from 0.1, and new **D-11** `PR_SET_NO_NEW_PRIVS` before exec because D-9 does not cover file capabilities. Definition re-frozen at **72 cases** (56 mandatory / 9 conditional / 7 recorded) against a machine-readable manifest, with the disposable [experiment sources](experiments/launch-exec-01/) committed and hashed. **Pre-trial implementation only: D-7 is NOT granted, LAUNCH-EXEC-01 remains NOT_RUN, and `crates/helm-launch` must not be created before it has run and been reviewed** | **Proposed 2026-09-09** |
+
+
+<a id="d-7-authorised"></a>
+
+### Owner decision 2026-09-10 — **D-7 AUTHORISED** for exactly one LAUNCH-EXEC-01 trial
+
+**D-7 — execution authorisation — is GRANTED**, bound to one exact frozen object and to **exactly
+one valid trial**.
+
+| Binding | Value |
+|---|---|
+| Freeze commit | `89c923a147ff16182d4d0ae14a0bd7bb6e62723d` |
+| `SOURCE-HASHES.json` SHA-256 | `9fb861602d477a00f014f14f0a31b5979947af18fa2b620b95ac803ab5bfc365` |
+| `SOURCE-HASHES.json` Git blob | `4561daf32acb398ec6a601acbe7e986bce0b1105` |
+| Final independent review tip | `64f7d94225e17fac3d1cd0c7aedf564f9ed9295b` |
+| Pretrial classification | `READY_FOR_OWNER_D7` |
+| Compile-only validation | run `34491770021` SUCCESS; Rust workspace run `34491769999` SUCCESS |
+| Scope | **exactly one** valid LAUNCH-EXEC-01 trial |
+
+**The frozen source, definition and manifest remain immutable.** This authorisation is recorded
+here, outside the freeze, precisely so that granting it changes no frozen byte.
+`d7_execution_authorised: false` inside `SOURCE-HASHES.json` is left untouched: that field records
+the state at which the immutable freeze was cut, and this external decision supersedes it for
+execution authority without mutating the artefact it authorises.
+
+Authorised only for: the exact frozen candidate above, the exact preregistered definition, the
+exact 72-case membership (54 mandatory / 11 conditional / 7 recorded), the eight traced cases
+E1 E7 F4 F7 M1 M2 M3 M4, the preregistered trial environment and preflight contract, and one valid
+trial.
+
+**Not authorised:** modifying the frozen experiment before or during the trial; a different freeze
+SHA; retries to obtain a better result; rerunning failed, invalid or blocked cases; Wine, Proton,
+A0, 7-Zip or another experiment; creating `crates/helm-launch`; accepting ADR-0024; or changing
+checker or verdict semantics after observing results.
+
+The first execution of the first preregistered case is the **immutability boundary**. A preflight
+HALT poses zero cases and does not consume it. Any re-run is a **new trial** with its own report.
+After the trial, the result requires an independent review before ADR-0024 or `crates/helm-launch`
+may advance.

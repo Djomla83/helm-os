@@ -1,5 +1,31 @@
 # Stanje projekta
 
+<a id="launch-exec-01-d7"></a>
+
+## Owner decision, 2026-09-10 — **D-7 AUTHORISED**, LAUNCH-EXEC-01 still NOT_RUN
+
+The owner has granted **D-7** for **exactly one** LAUNCH-EXEC-01 trial, bound to freeze commit
+`89c923a147ff16182d4d0ae14a0bd7bb6e62723d`, whose `SOURCE-HASHES.json` has SHA-256
+`9fb861602d477a00f014f14f0a31b5979947af18fa2b620b95ac803ab5bfc365` and Git blob
+`4561daf32acb398ec6a601acbe7e986bce0b1105`. The full record is in
+[DECISIONS.md](DECISIONS.md#d-7-authorised).
+
+The authorisation is recorded **outside** the freeze. No frozen source, definition or manifest byte
+changed, and `d7_execution_authorised: false` inside `SOURCE-HASHES.json` is deliberately left as it
+was: it describes the state at which the immutable freeze was cut, not the owner's later authority.
+
+**LAUNCH-EXEC-01 is still NOT_RUN and the valid trial count is still ZERO.** Authorising a trial is
+not running one. The preregistered environment is a GitHub-hosted `ubuntu-24.04` runner and the
+definition requires the experiment workflow to run **only** on `workflow_dispatch`, so the trial
+begins when that workflow is deliberately dispatched — see
+[`launch-exec-01-trial.yml`](../.github/workflows/launch-exec-01-trial.yml), which verifies the
+freeze identity against the authorised SHA-256 before it will pose anything, runs the non-posing
+preflight first, and refuses to start if either check fails.
+
+The first execution of the first preregistered case is the immutability boundary. A preflight HALT
+poses zero cases and does not consume it. Any re-run is a new trial. The result requires an
+independent review before ADR-0024 or `crates/helm-launch` may advance.
+
 <a id="launch-exec-01-frozen"></a>
 
 ## Owner decisions and pre-trial freeze, 2026-09-09 — LAUNCH-EXEC-01 at 72 cases, still NOT_RUN
