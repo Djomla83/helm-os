@@ -45,7 +45,7 @@ was: it describes the state at which the immutable freeze was cut, not the owner
 not running one. The preregistered environment is a GitHub-hosted `ubuntu-24.04` runner and the
 definition requires the experiment workflow to run **only** on `workflow_dispatch`, so the trial
 begins when that workflow is deliberately dispatched — see
-[`launch-exec-01-trial.yml`](../.github/workflows/launch-exec-01-trial.yml), which verifies the
+`.github/workflows/launch-exec-01-trial.yml`, which verifies the
 freeze identity against the authorised SHA-256 before it will pose anything, runs the non-posing
 preflight first, and refuses to start if either check fails.
 
