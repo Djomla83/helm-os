@@ -529,6 +529,170 @@ def parse_strace_child_window(text):
             "child_pid": child_pid}
 
 
+# ------------------------------------------------- M3-T: pidfd acquisition
+# Owner amendment M3-T. M3 is now a traced case, and its expectation rests on
+# the EXTERNAL syscall record. Nothing here reads a launcher field naming its
+# own acquisition mode: a receipt saying "I used clone3" is precisely the
+# self-assertion M3 exists to avoid, and this module refuses to accept one.
+#
+# The bounded claim is about THIS execution's direct child only. It is not a
+# claim about Linux pidfds in general and not a claim that the kernel is atomic;
+# frozen_cases.M3_CLAIM_EXCLUSIONS states that in the manifest itself.
+
+# strace renders clone3 with its clone_args struct decoded, optionally followed
+# by an output block for the fields the kernel writes back.
+_CLONE3_LINE = re.compile(r"clone3\(\{(?P<args>[^}]*)\}"
+                          r"(?:\s*=>\s*\{(?P<out>[^}]*)\})?")
+_CLONE3_RESULT = re.compile(r"\)\s*=\s*(?P<ret>-?\d+)")
+_FLAGS = re.compile(r"flags\s*=\s*(?P<flags>[A-Za-z0-9_|]+)")
+_PIDFD_PTR = re.compile(r"pidfd\s*=\s*(?P<ptr>0x[0-9a-fA-F]+)")
+_PIDFD_OUT = re.compile(r"pidfd\s*=\s*\[(?P<fd>\d+)\]")
+_PIDFD_OPEN = re.compile(r"pidfd_open\(\s*(?P<pid>\d+)")
+_WAITID_PIDFD = re.compile(r"waitid\(\s*P_PIDFD\s*,\s*(?P<fd>\d+)")
+_PIDFD_SEND = re.compile(r"pidfd_send_signal\(\s*(?P<fd>\d+)")
+_POLL_FD = re.compile(r"fd\s*=\s*(?P<fd>\d+)")
+
+# The frozen lifecycle operations that can correlate a descriptor with the
+# launcher's direct-child handle. waitid(P_PIDFD, N) is the decisive one: it
+# reaps THE direct child through N, so N is that child's handle by construction.
+LIFECYCLE_WAITID = "waitid_p_pidfd"
+LIFECYCLE_SEND_SIGNAL = "pidfd_send_signal"
+LIFECYCLE_POLL = "poll"
+
+# How fact E was established. Recorded so a reviewer can see which, rather than
+# having to infer it from a bare boolean.
+EVIDENCE_DIRECT = "direct"        # the tracer printed the kernel's pidfd output
+EVIDENCE_CLOSURE = "closure"      # no pidfd_open exists anywhere in the record
+
+
+def parse_pidfd_acquisition(text):
+    """Extract the M3 acquisition facts from a syscall record.
+
+    Returns a dict of RAW facts, or ``None`` when the record cannot be read at
+    all. Raw pids and descriptor numbers are experiment-local identifiers: they
+    are used here for correlation and are normalised away before publication by
+    :func:`normalise_acquisition`.
+
+    This parser reads text. It runs no tracer and executes nothing.
+    """
+    if text is None:
+        return None
+    if isinstance(text, bytes):
+        text = text.decode("utf-8", "replace")
+    if not text.strip():
+        return None
+
+    facts = {
+        "clone3_seen": False,
+        "clone3_flags": [],
+        "clone_pidfd_flag": False,
+        "pidfd_output_pointer_supplied": False,
+        "clone3_return": None,
+        "clone3_succeeded": False,
+        "pidfd_from_clone3": None,
+        "pidfd_open_calls": [],
+        "lifecycle_uses": [],
+        "evidence_form": None,
+        "clone3_call_count": 0,
+    }
+
+    for line in text.splitlines():
+        match = _CLONE3_LINE.search(line)
+        if match:
+            facts["clone3_call_count"] += 1
+            if facts["clone3_seen"]:
+                # More than one clone3 in the record. The direct child cannot be
+                # identified unambiguously, and guessing is how a wrong pidfd
+                # would get correlated with the right child.
+                continue
+            facts["clone3_seen"] = True
+            args = match.group("args") or ""
+            flags = _FLAGS.search(args)
+            if flags:
+                facts["clone3_flags"] = [f for f in flags.group("flags").split("|")
+                                         if f]
+                facts["clone_pidfd_flag"] = "CLONE_PIDFD" in facts["clone3_flags"]
+            facts["pidfd_output_pointer_supplied"] = bool(_PIDFD_PTR.search(args))
+            out = match.group("out")
+            if out:
+                written = _PIDFD_OUT.search(out)
+                if written:
+                    facts["pidfd_from_clone3"] = int(written.group("fd"))
+                    facts["evidence_form"] = EVIDENCE_DIRECT
+            result = _CLONE3_RESULT.search(line)
+            if result:
+                facts["clone3_return"] = int(result.group("ret"))
+                facts["clone3_succeeded"] = facts["clone3_return"] > 0
+
+        opened = _PIDFD_OPEN.search(line)
+        if opened:
+            result = _CLONE3_RESULT.search(line)
+            facts["pidfd_open_calls"].append({
+                "target_pid": int(opened.group("pid")),
+                "returned": int(result.group("ret")) if result else None,
+            })
+
+        reaped = _WAITID_PIDFD.search(line)
+        if reaped:
+            facts["lifecycle_uses"].append(
+                {"op": LIFECYCLE_WAITID, "fd": int(reaped.group("fd"))})
+        signalled = _PIDFD_SEND.search(line)
+        if signalled:
+            facts["lifecycle_uses"].append(
+                {"op": LIFECYCLE_SEND_SIGNAL, "fd": int(signalled.group("fd"))})
+        if "poll(" in line:
+            for polled in _POLL_FD.finditer(line):
+                facts["lifecycle_uses"].append(
+                    {"op": LIFECYCLE_POLL, "fd": int(polled.group("fd"))})
+
+    if not facts["clone3_seen"]:
+        return facts        # a real observation: no clone3 in the record
+    return facts
+
+
+def _correlated_pidfd(facts):
+    """The descriptor the frozen lifecycle actually used for the direct child.
+
+    ``waitid(P_PIDFD, N)`` reaps THE direct child through N, so N is that
+    child's handle by construction. Only that operation is decisive; a poll or a
+    signal on N corroborates but cannot identify the child on its own.
+    """
+    reaps = {use["fd"] for use in facts.get("lifecycle_uses", ())
+             if use["op"] == LIFECYCLE_WAITID}
+    if len(reaps) == 1:
+        return next(iter(reaps))
+    return None             # none, or ambiguous: refuse to pick one
+
+
+def normalise_acquisition(facts):
+    """The publishable form: no raw pid, no raw descriptor number.
+
+    Raw pids and fds are experiment-local identifiers and must not become part
+    of a receipt's identity. They are replaced by the two roles that carry the
+    meaning, and everything else is a boolean or a decoded flag name.
+    """
+    if not isinstance(facts, dict):
+        return None
+    correlated = _correlated_pidfd(facts)
+    return {
+        "clone3_seen": bool(facts.get("clone3_seen")),
+        "clone3_call_count": facts.get("clone3_call_count", 0),
+        "clone3_flags": list(facts.get("clone3_flags") or ()),
+        "clone_pidfd_flag": bool(facts.get("clone_pidfd_flag")),
+        "pidfd_output_pointer_supplied":
+            bool(facts.get("pidfd_output_pointer_supplied")),
+        "clone3_succeeded": bool(facts.get("clone3_succeeded")),
+        "direct_child": "DIRECT_CHILD" if facts.get("clone3_succeeded") else None,
+        "direct_child_pidfd": (
+            "DIRECT_CHILD_PIDFD" if correlated is not None else None),
+        "pidfd_from_same_syscall": facts.get("pidfd_from_clone3") is not None,
+        "pidfd_open_call_count": len(facts.get("pidfd_open_calls") or ()),
+        "lifecycle_ops": sorted({use["op"]
+                                 for use in facts.get("lifecycle_uses") or ()}),
+        "evidence_form": facts.get("evidence_form"),
+    }
+
+
 def _usable_report(obs):
     """The helper report, but ONLY when it is complete and interpretable.
 
@@ -1024,16 +1188,89 @@ def rule_pidfd_acquired_atomically(obs):
     genuine mechanism result and NOT the host condition: the host condition was
     already settled, without creating a child, before any case was posed.
     """
-    acquisition = obs.get("pidfd_acquisition")
-    if acquisition is None:
-        return None, "the harness recorded no pidfd acquisition mode"
-    if acquisition == "clone3_pidfd":
-        return ("pidfd_acquired_atomically",
-                "the pidfd was obtained atomically from clone3(CLONE_PIDFD)")
-    if acquisition in ("fork_pidfd_open", "none"):
+    facts = obs.get("acquisition")
+    if not isinstance(facts, dict):
+        return None, ("a traced case produced no syscall record of the "
+                      "acquisition")
+
+    # A launcher field naming its own acquisition mode is never consulted. If
+    # one ever appears in a receipt it is ignored here on purpose: M3 exists to
+    # evidence the acquisition externally, not to relay the launcher's account
+    # of itself.
+
+    # A -- a parent-side clone3 call occurred.
+    if not facts.get("clone3_seen"):
+        return None, ("no clone3 call is present in the record; a tracer that "
+                      "did not decode it and a launcher that did not call it "
+                      "are indistinguishable from here")
+    if facts.get("clone3_call_count", 0) > 1:
+        return None, ("the record contains more than one clone3 call, so the "
+                      "direct child cannot be identified unambiguously")
+
+    # B -- its flags contain CLONE_PIDFD.
+    if not facts.get("clone_pidfd_flag"):
         return ("pidfd_not_acquired_atomically",
-                "the pidfd was not obtained atomically: " + acquisition)
-    return None, "unrecognised pidfd acquisition mode: " + repr(acquisition)
+                "clone3 was called without CLONE_PIDFD, so no pidfd could be "
+                "returned by the syscall that created the child")
+
+    # D -- the call actually created the direct child.
+    if not facts.get("clone3_succeeded"):
+        return ("clone3_failed",
+                "clone3 did not create a child, so no acquisition occurred")
+
+    # C -- an output location was supplied for the kernel to write into.
+    if not facts.get("pidfd_output_pointer_supplied"):
+        return None, ("CLONE_PIDFD was requested but no clone_args.pidfd output "
+                      "location was decoded; the record cannot show where the "
+                      "kernel would have written the descriptor")
+
+    child_pid = facts.get("clone3_return")
+    opens = facts.get("pidfd_open_calls") or ()
+
+    # F -- no separate pidfd_open acquired THIS child's handle. A pidfd_open
+    # aimed at some other process is not this case's concern, which is why the
+    # target pid is compared rather than the mere presence of the call.
+    for call in opens:
+        if call.get("target_pid") == child_pid:
+            return ("pidfd_acquired_by_pidfd_open",
+                    "the direct child's handle was acquired by pidfd_open on "
+                    "its numeric pid after creation, which is exactly the "
+                    "acquisition the primary mechanism rejects")
+
+    # G -- the descriptor is correlated to the launcher's direct-child handle
+    # through the frozen lifecycle. waitid(P_PIDFD, N) reaps THE direct child
+    # through N, so it is the decisive correlation; without it there is nothing
+    # tying any descriptor to this child.
+    correlated = _correlated_pidfd(facts)
+    if correlated is None:
+        return None, ("no unambiguous waitid(P_PIDFD, ...) ties a descriptor to "
+                      "the direct child, so the acquisition cannot be "
+                      "correlated with the launcher's handle")
+
+    # E -- the same syscall yielded the descriptor. Two admissible forms.
+    written = facts.get("pidfd_from_clone3")
+    if written is not None:
+        if written != correlated:
+            return None, ("the descriptor clone3 returned is not the one the "
+                          "lifecycle used; the correlation is ambiguous")
+        form = EVIDENCE_DIRECT
+    else:
+        # The tracer did not print the kernel's write-back. The record can still
+        # close the question, but only if it is COMPLETE about pidfd_open: with
+        # CLONE_PIDFD requested, an output location supplied, a descriptor used
+        # to reap this child, and no pidfd_open anywhere in the record, there is
+        # no other route by which that descriptor could exist.
+        if opens:
+            return None, ("the tracer did not record the kernel's pidfd "
+                          "write-back, and the record contains pidfd_open "
+                          "calls, so the descriptor's origin is not closed")
+        form = EVIDENCE_CLOSURE
+
+    return ("pidfd_acquired_atomically",
+            "clone3 created the direct child with CLONE_PIDFD and an output "
+            "location, the descriptor it yielded is the one waitid(P_PIDFD) "
+            "used to reap that child, and no pidfd_open acquired it "
+            "(evidence form: " + form + ")")
 
 
 def rule_rejected_acquisition(obs):

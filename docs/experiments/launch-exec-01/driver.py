@@ -106,11 +106,14 @@ CH_REPORT = "report"              # the helper's own report, behind the sentinel
 CH_TRACE = "trace"                # an external tracer over the child window
 CH_LIVENESS = "liveness"          # harness-side descendant liveness probe
 CH_THREADED_LAUNCHER = "threaded_launcher"   # a multi-threaded launcher process
-CH_ACQUISITION = "acquisition"    # which pidfd acquisition the launcher used
 CH_REJECTED_ARM = "rejected_arm"  # the rejected fork+pidfd_open acquisition
 
+# CH_ACQUISITION is retired by owner amendment M3-T. It named a launcher field
+# describing its own acquisition mode, which is the self-assertion M3 exists to
+# avoid; M3 now uses CH_TRACE like every other traced case.
+
 ALL_CHANNELS = (CH_RECEIPT, CH_PAYLOAD, CH_REPORT, CH_TRACE, CH_LIVENESS,
-                CH_THREADED_LAUNCHER, CH_ACQUISITION, CH_REJECTED_ARM)
+                CH_THREADED_LAUNCHER, CH_REJECTED_ARM)
 
 # Channels the CURRENT frozen sources can actually deliver.
 #
@@ -124,16 +127,10 @@ ALL_CHANNELS = (CH_RECEIPT, CH_PAYLOAD, CH_REPORT, CH_TRACE, CH_LIVENESS,
 # CH_THREADED_LAUNCHER and CH_REJECTED_ARM are now supplied by the two
 # TEST/CONTROL-ONLY arms M2 and M5 name in their frozen contracts.
 #
-# CH_ACQUISITION is STILL ABSENT, and deliberately so. M3 asks for evidence that
-# the pidfd was acquired ATOMICALLY. The definition's evidence preference order
-# permits a syscall record for exactly seven cases -- E1, E7, F4, F7, M1, M2,
-# M4 -- and M3 is not one of them; the helper cannot observe its parent's
-# acquisition; /proc/<pid>/fd can show that a pidfd exists but not that it was
-# obtained in the same syscall as the child; and the oracles compute recipe
-# digests only. A receipt field naming the acquisition would be the launcher
-# asserting the very thing M3 exists to evidence, which the owner instruction
-# rules insufficient. So M3 stays unposable and is returned as an owner
-# question rather than answered with a self-assertion.
+# M3 is now supplied by CH_TRACE. Owner amendment M3-T made it a traced case
+# before the first valid trial, so the acquisition is established from the
+# external syscall record instead of from a launcher field describing itself.
+# The traced set is amended prospectively from seven cases to eight.
 SPIKE_SUPPLIED_CHANNELS = frozenset({
     CH_RECEIPT, CH_PAYLOAD, CH_REPORT, CH_TRACE, CH_LIVENESS,
     CH_THREADED_LAUNCHER, CH_REJECTED_ARM,
@@ -146,13 +143,6 @@ CHANNEL_UNAVAILABLE_REASON = {
     CH_THREADED_LAUNCHER:
         "launcher_spike.c has no threading mode, so a multi-threaded launcher "
         "parent cannot be constructed",
-    CH_ACQUISITION:
-        "the frozen definition permits a syscall record only for the seven "
-        "cases declared traced:true, and M3 is not among them; no other frozen "
-        "evidence source can show that the pidfd was acquired in the same "
-        "syscall that created the child, and a receipt field naming the "
-        "acquisition would be the launcher asserting what M3 exists to "
-        "evidence. OWNER DECISION REQUIRED",
     CH_REJECTED_ARM:
         "launcher_spike.c implements no fork+pidfd_open acquisition arm, so the "
         "rejected arm has no outcome to record",
@@ -960,7 +950,13 @@ def _build_plans():
                       "the same plan with no threads, and the child window must "
                       "come out identical"))
     add(CasePlan("M3", "helper_report", "pidfd_acquired_atomically",
-                 (CH_RECEIPT, CH_ACQUISITION), helper_args=("--exit", "0")))
+                 (CH_RECEIPT, CH_TRACE), helper_args=("--exit", "0"),
+                 note="owner amendment M3-T: traced, so the acquisition is "
+                      "read from the external syscall record. It carries no "
+                      "injection mode and no parent control arm -- in "
+                      "particular not --rejected-acquisition-arm, whose "
+                      "pidfd_open would put a second acquisition route in the "
+                      "very record this case reads"))
     add(CasePlan("M4", "helper_report", "sequence_matches_frozen_stages",
                  (CH_RECEIPT, CH_TRACE), helper_args=("--exit", "0")))
     add(CasePlan("M5", "helper_report", "rejected_acquisition",
@@ -1121,6 +1117,21 @@ def evaluate(plan, obs):
         return record
     record["outcome"] = token
     record["reason"] = reason
+
+    if spec["traced"]:
+        # checker.score_case scores a traced case INVALID when its record shows
+        # no syscall record, so the trace has to reach the record rather than
+        # stopping at the observation. Only the PARSED window travels: the raw
+        # tracer text stays local and is represented by its digest, which is
+        # what keeps a host-specific record out of published evidence while
+        # still making it re-verifiable.
+        record["trace"] = obs.get("trace")
+        record["trace_sha256"] = obs.get("trace_sha256")
+        if obs.get("acquisition_normalised") is not None:
+            # M3-T. Normalised only: DIRECT_CHILD and DIRECT_CHILD_PIDFD in
+            # place of the raw pid and descriptor number, which are
+            # experiment-local identifiers and never part of a receipt.
+            record["acquisition_normalised"] = obs["acquisition_normalised"]
 
     if spec["gates"]:
         record["gates"] = {gate: obs.get("gates", {}).get(gate)
@@ -1387,9 +1398,16 @@ def _run_once(plan, ctx, built, parent_state, flags=None):
             and spike[name].get("drained_sha256") == want["sha256"]
             for name, want in plan.streams.items())
 
-    trace = None
+    trace, acquisition, trace_digest = None, None, None
     if trace_path is not None and trace_path.exists():
-        trace = observations.parse_strace_child_window(trace_path.read_bytes())
+        raw_trace = trace_path.read_bytes()
+        trace = observations.parse_strace_child_window(raw_trace)
+        # M3-T. Parsed from the same record the other traced cases use; there is
+        # no second tracing framework. The raw text stays local and only its
+        # digest is publishable, so a host-specific record cannot become
+        # evidence by being useful.
+        acquisition = observations.parse_pidfd_acquisition(raw_trace)
+        trace_digest = oracles.digest_of(raw_trace)
 
     return {
         "spike": spike,
@@ -1400,6 +1418,9 @@ def _run_once(plan, ctx, built, parent_state, flags=None):
         "exec_confirmation": observations.exec_confirmation(
             spike, report, payload_is_recipe, report_state),
         "trace": trace,
+        "acquisition": acquisition,
+        "acquisition_normalised": observations.normalise_acquisition(acquisition),
+        "trace_sha256": trace_digest,
         "observed_stage_sequence": (trace or {}).get("stage_sequence"),
         "descendant_alive_after_launch": _descendant_alive(built, plan),
         "launch_returned": returned,

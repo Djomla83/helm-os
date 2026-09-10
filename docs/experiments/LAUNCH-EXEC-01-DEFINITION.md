@@ -164,6 +164,55 @@ and the descriptor that reading consumes is reported by number and is the only o
 > acquisition would be a self-assertion of exactly what M3 exists to evidence, and none was added.
 > M3 is **the only unposable case** and is returned as an owner question.
 
+> **`M3-T` AMENDMENT, by owner decision, made BEFORE the first valid trial.** The gap above is
+> closed by amending the preregistration rather than by weakening the evidence rule. **M3 becomes a
+> traced case**, so the traced set is amended prospectively from seven to **eight**:
+> `E1, E7, F4, F7, M1, M2, `**`M3`**`, M4`. M3 stays **conditional** on `clone3_unavailable`, and
+> the 72 / 54 / 11 / 7 partition is untouched. The earlier freezes are preserved exactly as they
+> were; **none of them contained this rule**, and this note does not pretend otherwise.
+>
+> **The bounded claim, and only this claim** — frozen as `frozen_cases.M3_BOUNDED_CLAIM`:
+>
+> > For the direct child in this candidate execution, the pidfd used by the launcher was returned
+> > through the `CLONE_PIDFD` facility of the **same** `clone3` syscall that created that direct
+> > child, rather than being acquired later by `pidfd_open()` from a numeric PID.
+>
+> M3 does **not** establish that Linux pidfds are universally race-free, that the kernel
+> implementation has been proved atomic, or any general claim beyond this one execution. It runs
+> under a tracer, so it is also **not** evidence about timing-sensitive normal-launch behaviour;
+> its evidence is restricted to the acquisition facts. `frozen_cases.M3_CLAIM_EXCLUSIONS` records
+> those exclusions in the manifest rather than only in prose.
+>
+> **The evidence is external, never a self-assertion.** No `pidfd_acquisition` receipt field was
+> added and none is read; the rule is written against the syscall record alone, and a test asserts
+> that a receipt claiming `clone3` produces no token. The normalised trace must establish all of
+> `frozen_cases.M3_EVIDENCE_FACTS` — **A** a parent-side `clone3` occurred; **B** its flags contain
+> `CLONE_PIDFD`; **C** `clone_args.pidfd` is supplied as the kernel's output location; **D** the
+> call created the direct child; **E** the same syscall yielded a pidfd; **F** no separate
+> `pidfd_open()` acquired that child's handle; **G** the descriptor is correlated to the launcher's
+> direct-child handle through the frozen lifecycle, by `waitid(P_PIDFD, …)`.
+>
+> **Fact E has two admissible forms**, recorded per run as `evidence_form`. *Direct*: the tracer
+> printed the kernel's write-back (`=> {pidfd=[N]}`). *Closure*: it did not, and the record instead
+> contains **no `pidfd_open` at all** alongside B, C, D and G — leaving no other route by which that
+> descriptor could exist. Anything less is INVALID, never PASS.
+>
+> **`pidfd_open` on the direct child is rejected outright**, which is the distinction §5 of the
+> amendment demands: `clone3(CLONE_PIDFD)` acquisition is not the same as
+> `clone3`/`fork` → numeric PID → `pidfd_open(PID)`, and the latter is the design this mechanism
+> rejected. A `pidfd_open` aimed at an unrelated process does not reject.
+>
+> **Host condition unchanged.** M3's only frozen block cause remains `clone3_unavailable`. If
+> `clone3` is supported and the trace fails to establish A–G, that is **not** a legitimate
+> conditional block — it is INVALID. The escape hatch was not broadened. One consequence follows
+> and is stated rather than hidden: a host with no permitted tracer now makes M3 **INVALID** rather
+> than BLOCKED, because `no_tracer` is not one of M3's frozen causes. The recommended runner has
+> `strace`, directly observed, so M3 is posable there.
+>
+> **Raw identifiers stay local.** Pids and descriptor numbers are experiment-local; published
+> evidence carries `DIRECT_CHILD` and `DIRECT_CHILD_PIDFD` plus booleans, decoded flag names and
+> counts. The raw tracer text is never published — only its SHA-256.
+
 **Frozen output recipe.** `byte[i] = (i * 251 + tag) mod 256`, `tag = 1` for stdout and `2` for
 stderr. `oracles.py` computes every expected count and digest from this and the declared volume
 alone. A byte *volume* is not a byte *recipe*, and without this the O-series oracles are
@@ -362,7 +411,7 @@ exec failure, and S5 is the case it reports as exec success.
 |---|---|---|---|
 | **M1** | conditional (BLOCKED if no_tracer) | `child_syscalls_within_frozen_set` | the traced child window from the clone3 return to execveat. This is the evidence that REPLACES the architecture's assertion of 'no allocation, no locking, no formatting, no panic path' |
 | **M2** | conditional (BLOCKED if no_tracer) | `identical_to_single_threaded_arm` | parent has >=3 extra live threads, one with an allocation in flight and one with a registered pthread_atfork handler. Without this the mechanism is evidenced only for a single-threaded parent, which no real HELM caller is |
-| **M3** | conditional (BLOCKED if clone3_unavailable) | `pidfd_acquired_atomically` | clone3(CLONE_PIDFD) is the PRIMARY acquisition: it removes the three pidfd_open caller preconditions a library cannot establish, and avoids the pthread_atfork surface glibc's fork() opens. CONDITIONAL because a kernel version floor establishes that the syscall EXISTS, not that it is PERMITTED: a seccomp policy can reject clone3 on a supporting kernel. Preflight probes availability without creating a child; an unavailable clone3 disables the whole mechanism and is a preflight gate, so every case is then BLOCKED rather than this one case FAILing |
+| **M3** | conditional (BLOCKED if clone3_unavailable); **traced** under amendment `M3-T` | `pidfd_acquired_atomically` | **Amended `M3-T`:** established from the EXTERNAL syscall record, never from a launcher field naming its own acquisition. The bounded claim, the seven facts A–G and the two admissible forms of fact E are in the `M3-T` note in section 2. clone3(CLONE_PIDFD) is the PRIMARY acquisition: it removes the three pidfd_open caller preconditions a library cannot establish, and avoids the pthread_atfork surface glibc's fork() opens. CONDITIONAL because a kernel version floor establishes that the syscall EXISTS, not that it is PERMITTED: a seccomp policy can reject clone3 on a supporting kernel. Preflight probes availability without creating a child; an unavailable clone3 disables the whole mechanism and is a preflight gate, so every case is then BLOCKED rather than this one case FAILing |
 | **M4** | conditional (BLOCKED if no_tracer) | `sequence_matches_frozen_stages` | the implemented child sequence is matched syscall-for-syscall against the frozen STAGES order, including that CHDIR precedes CLOSE_RANGE and NO_NEW_PRIVS precedes EXEC. A spike whose sequence differs is INVALID, not PASS |
 | **M5** | recorded; gated: `never_reports_unobserved_exit_status` | safe set: `pidfd_open_esrch`, `waitid_echild`, `pidfd_open_succeeded` | the REJECTED fork+pidfd_open acquisition under SIGCHLD=SIG_IGN, recorded to evidence why clone3(CLONE_PIDFD) is primary rather than asserting it. Not a candidate mechanism |
 
@@ -373,8 +422,8 @@ Authoritative evidence, in preference order:
 1. **The helper's own report**, on descriptor 1 behind the frozen sentinel — the primary evidence
    for argv, environ, descriptors, signal state, `NoNewPrivs`, credentials and cwd identity,
    because it is observed from inside the executed image.
-2. **A syscall record of the launcher**, collected **only** for the seven cases declared
-   `traced: true` — **E1, E7, F4, F7, M1, M2, M4** — establishing that
+2. **A syscall record of the launcher**, collected **only** for the eight cases declared
+   `traced: true` — **E1, E7, F4, F7, M1, M2, M3, M4** — establishing that
    `execveat(exec_fd, "", …, AT_EMPTY_PATH)` was the syscall used on the pinned descriptor and
    that the child window contains nothing else. Collected with `strace` if preflight finds it,
    otherwise a purpose-built parent-side `ptrace` tracer if `ptrace_scope <= 1`, otherwise those

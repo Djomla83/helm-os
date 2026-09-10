@@ -42,8 +42,18 @@ preserved rather than tidied away.
 > owner chose the launcher-side observation channel; see
 > [section 12](#12-pre-d7-b1-corrected-launcher-side-observation-channel). **71 of 72 cases are
 > now posable.** The one that is not is **M3**, which section 12.4 returns as an owner question
-> rather than answering with a self-assertion. Current classification:
+> rather than answering with a self-assertion. That freeze's classification was
 > [`DRIVER_CORRECTION_NEEDS_OWNER_DECISION`](#13-status-after-the-pre-d7-b1-correction).
+
+> **The owner answered that question: amendment `M3-T`, made before the first valid trial.** M3
+> becomes a **traced** case, so its acquisition is established from the external syscall record
+> instead of a launcher self-assertion, and the traced set is amended prospectively from seven
+> cases to eight. **All 72 cases are now posable.** See
+> [section 14](#14-m3-t-m3-amended-to-a-traced-case-still-not_run) — including the one residual
+> uncertainty (14.3) and a defect it surfaced that would have made *every* traced case INVALID
+> (14.5). Current classification:
+> [`M3_FREEZE_READY_FOR_BOUNDED_REVIEW`](#15-status-after-m3-t) — which is a request for review,
+> not an authorisation.
 
 ## 1. Independently reconstructed state
 
@@ -593,3 +603,140 @@ This is **not** a readiness statement. The corrected descendant freeze still req
 independent pre-trial re-review already mandated, and that review must examine the mechanism delta
 — a change to `launcher_spike.c`, which is the artefact under test. **D-7 remains not authorised
 and LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of ZERO.**
+
+---
+
+## 14. M3-T: M3 amended to a traced case (still NOT_RUN)
+
+**Appended after sections 1–13, which are preserved unchanged.** Section 12.4 returned M3 as an
+owner question. The owner answered it by **amending the preregistration before the first valid
+trial**, which is permitted precisely because no trial has begun. Earlier freezes are preserved and
+**none of them contained this rule**; nothing here is backdated.
+
+### 14.1 The amendment
+
+**M3 becomes a traced case.** The traced set is amended prospectively:
+
+| | Traced set |
+|---|---|
+| Before | `E1, E7, F4, F7, M1, M2, M4` — seven |
+| After | `E1, E7, F4, F7, M1, M2, `**`M3`**`, M4` — eight |
+
+M3 stays **conditional** on `clone3_unavailable`. The 72 / 54 / 11 / 7 partition is untouched. The
+historical traced-set reading in [section 1](#1-independently-reconstructed-state) is left exactly as
+recorded — it states what was true at `a8a7f19` and remains accurate for that commit.
+
+### 14.2 The bounded claim, and what it is not
+
+Frozen in the manifest as `M3_BOUNDED_CLAIM`:
+
+> For the direct child in this candidate execution, the pidfd used by the launcher was returned
+> through the `CLONE_PIDFD` facility of the **same** `clone3` syscall that created that direct
+> child, rather than being acquired later by `pidfd_open()` from a numeric PID.
+
+`M3_CLAIM_EXCLUSIONS` records, in the manifest rather than only in prose, that M3 does **not**
+establish that Linux pidfds are universally race-free, that the kernel implementation has been
+proved atomic, any general pidfd claim beyond this execution, or anything about timing-sensitive
+normal-launch behaviour — M3 runs under a tracer, and section 8 of the amendment forbids
+generalising a traced run into evidence about untraced timing.
+
+### 14.3 External evidence only
+
+**No `pidfd_acquisition` receipt field was added, and none is read.** A test asserts that a receipt
+carrying `"pidfd_acquisition": "clone3"` yields **no token**, and a second test greps the rule's own
+source to confirm it never consults such a field. A launcher describing its own behaviour is exactly
+the self-assertion M3 exists to avoid.
+
+The rule consumes the normalised syscall record and requires **all** of `M3_EVIDENCE_FACTS`:
+
+| Fact | Established by |
+|---|---|
+| **A** | a `clone3(` line in the record; more than one is ambiguous and refused |
+| **B** | `CLONE_PIDFD` among the decoded `flags=` |
+| **C** | `pidfd=0x…` present in `clone_args`, i.e. an output location was supplied |
+| **D** | the call's return value is a pid > 0 |
+| **E** | see below — two admissible forms |
+| **F** | no `pidfd_open()` whose target pid is the direct child |
+| **G** | `waitid(P_PIDFD, N, …)` reaps **that** child through `N`, so `N` is its handle by construction |
+
+**Fact E has two admissible forms**, and which one was used is recorded per run as `evidence_form`
+rather than left to inference:
+
+- **`direct`** — the tracer printed the kernel's write-back, `=> {pidfd=[N]}`, and `N` must equal the
+  descriptor the lifecycle used. A mismatch is INVALID.
+- **`closure`** — the tracer did not print it. The record can still close the question, but only if
+  it contains **no `pidfd_open` at all**: with `CLONE_PIDFD` requested, an output location supplied,
+  a descriptor used to reap this child, and no `pidfd_open` anywhere, there is no other route by
+  which that descriptor could exist. If any `pidfd_open` is present in this form, the origin is not
+  closed and the result is INVALID.
+
+**Why two forms.** `strace`'s rendering of `clone_args` output fields could not be observed
+first-hand: the local Ubuntu distribution has **no `strace`**, and §13 forbids tracing a HELM binary
+to find out. Rather than fabricate a format from memory and then test the parser against the same
+fabrication — which would be self-confirming — the parser accepts either rendering and refuses
+anything ambiguous. Preflight now also records `strace_version`, so a trial's evidence names the
+tracer that produced it. **This is the one residual uncertainty in M3-T and the bounded reviewer
+should weigh it**; the failure mode is INVALID, never a false PASS.
+
+**`pidfd_open` on the direct child is rejected outright** — `pidfd_acquired_by_pidfd_open` — which is
+the distinction the amendment demands between `clone3(CLONE_PIDFD)` and `clone3`/`fork` → numeric
+PID → `pidfd_open(PID)`. A `pidfd_open` aimed at an unrelated process does **not** reject, which is
+why the target pid is compared rather than the mere presence of the call.
+
+### 14.4 Host condition, and one consequence stated plainly
+
+M3's only frozen block cause remains `clone3_unavailable`. The escape hatch was **not** broadened: if
+`clone3` is supported and the trace fails to establish A–G, that is INVALID, not a legitimate
+conditional block. A test asserts that a `no_tracer` environment does **not** produce a block cause
+for M3.
+
+**The consequence, which the amendment implies and which is not hidden here:** a host with no
+permitted tracer now makes M3 **INVALID** rather than BLOCKED, because `no_tracer` is not one of M3's
+frozen causes — and an INVALID conditional case makes the aggregate `MECHANISM_INCONCLUSIVE`. The
+recommended runner has `strace` at `/usr/bin/strace` with `ptrace_scope 1`, directly observed and
+recorded in the definition, so M3 is posable there. Adding `no_tracer` as a second cause would have
+broadened the escape hatch, which §6 of the amendment forbids.
+
+### 14.5 A defect found while wiring this
+
+**Every traced case would have scored INVALID at trial time.** `checker.score_case` fails a traced
+case whose record shows no syscall record, and `driver.evaluate()` never put one there — so E1, E7,
+F4, F7, M1, M2 and M4 were all affected, not just M3, and the aggregate would have been
+`MECHANISM_INCONCLUSIVE`. This predates M3-T; it surfaced only because M3 becoming traced made the
+traced path load-bearing enough to test end to end. Fixed, and a test now scores all eight traced
+cases through the checker with proper evidence.
+
+### 14.6 Privacy
+
+Raw pids and descriptor numbers are experiment-local identifiers and must not become part of a
+receipt's identity. `normalise_acquisition()` publishes `DIRECT_CHILD` and `DIRECT_CHILD_PIDFD` plus
+booleans, decoded flag names and counts — never a raw number. The raw facts and the raw tracer text
+are withheld **by key** (`acquisition`, `lifecycle_uses`, `pidfd_open_calls`, `raw_trace`,
+`trace_text`, `strace_output`), the same wholesale rule PRE-D7-B1 established for the capture prefix;
+only the trace's SHA-256 is publishable. Tests assert that a record containing a host path inside
+tracer text cannot reach serialised evidence.
+
+### 14.7 Posability
+
+| | Before M3-T | After |
+|---|---|---|
+| Driver plans | 72 | 72 (0 missing, 0 duplicate, 0 unknown) |
+| Posable | 71 | **72** |
+| Unposable | 1 (`M3`) | **0** |
+
+The D-7 preflight gate is unchanged and still halts unless `unposable_cases() == []`; it simply no
+longer fires. The retired `CH_ACQUISITION` channel was **removed** rather than left defined, so a
+self-asserted acquisition channel does not exist to be used.
+
+## 15. Status after M3-T
+
+**`M3_FREEZE_READY_FOR_BOUNDED_REVIEW`.**
+
+All 72 cases are posable, the driver is complete, P-12 and P-14 hold, and no C source changed — the
+clean Build 5 compile evidence still covers the mechanism exactly.
+
+This is **not** an authorisation and **not** a readiness statement for D-7. The bounded independent
+pre-trial re-review is still required, and it now has three specific things to weigh: the M3-T
+amendment itself, the `strace` clone3-rendering uncertainty in 14.3, and the traced-record defect in
+14.5. **D-7 remains not authorised and LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of
+ZERO.**

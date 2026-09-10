@@ -56,6 +56,20 @@ INTERNAL_ONLY_KEYS = frozenset({
     "capture_prefix",
     "raw_capture",
     "decoded_capture",
+    # M3-T. The raw acquisition facts carry the direct child's pid, the
+    # descriptor numbers and the pidfd_open target pids. They are
+    # experiment-local identifiers used for correlation, never part of a
+    # receipt's identity, so only observations.normalise_acquisition() output
+    # is publishable -- under the DIFFERENT key acquisition_normalised.
+    "acquisition",
+    "lifecycle_uses",
+    "pidfd_open_calls",
+    # The tracer's own text. Host paths, unrelated processes and environment
+    # values pass through a syscall record; its SHA-256 is publishable, it is
+    # not.
+    "raw_trace",
+    "trace_text",
+    "strace_output",
 })
 
 WITHHELD = "<WITHHELD:internal-observation-input>"

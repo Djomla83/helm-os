@@ -111,6 +111,44 @@ PARENT_CONTROL_MODES = {
                                   "candidate mechanism",
 }
 
+# --------------------------------------------------- M3-T: the bounded claim
+# Owner amendment M3-T, decided BEFORE the first valid trial. M3 becomes a
+# traced case so its expectation rests on the external syscall record rather
+# than on the launcher describing its own behaviour.
+#
+# The claim is deliberately narrow. This experiment cannot and does not test the
+# kernel, so M3 says nothing about pidfds in general.
+M3_BOUNDED_CLAIM = (
+    "For the direct child in this candidate execution, the pidfd used by the "
+    "launcher was returned through the CLONE_PIDFD facility of the SAME clone3 "
+    "syscall that created that direct child, rather than being acquired later "
+    "by pidfd_open() from a numeric PID."
+)
+
+# What M3 must NOT be read as establishing. Recorded so the boundary is part of
+# the frozen manifest and not merely of the prose around it.
+M3_CLAIM_EXCLUSIONS = (
+    "Linux pidfds are universally race-free",
+    "the kernel implementation has been proved atomic",
+    "any general claim about pidfd behaviour beyond this one execution",
+    "any timing-sensitive normal-launch behaviour: M3 runs under a tracer, and "
+    "its evidence is restricted to the acquisition facts below",
+)
+
+# The facts the normalised trace must establish. All of them, or the case is
+# INVALID -- partial evidence never yields the success token.
+M3_EVIDENCE_FACTS = {
+    "A": "a parent-side clone3 call occurred",
+    "B": "its flags contain CLONE_PIDFD",
+    "C": "clone_args.pidfd is supplied as the kernel output location",
+    "D": "the clone3 call successfully created the direct child",
+    "E": "the same syscall yields a pidfd output",
+    "F": "no separate pidfd_open() acquired the direct child's pidfd",
+    "G": "the returned pidfd is subsequently used by the frozen pidfd "
+         "lifecycle, correlating the acquisition with the launcher's "
+         "direct-child handle",
+}
+
 # ------------------------------------------------------------- output recipe
 # byte[i] = (i * 251 + tag) mod 256. A volume is not a recipe; oracles.py
 # computes every expected count and digest from this and the declared volume
@@ -474,7 +512,7 @@ CASES = [
               "flight and one with a registered pthread_atfork handler. Without "
               "this the mechanism is evidenced only for a single-threaded "
               "parent, which no real HELM caller is"),
-    case("M3", "M", CONDITIONAL, blocked_if="clone3_unavailable",
+    case("M3", "M", CONDITIONAL, blocked_if="clone3_unavailable", traced=True,
          predict="pidfd_acquired_atomically",
          note="clone3(CLONE_PIDFD) is the PRIMARY acquisition: it removes the "
               "three pidfd_open caller preconditions a library cannot "
@@ -484,7 +522,13 @@ CASES = [
               "policy can reject clone3 on a supporting kernel. Preflight "
               "probes availability without creating a child; an unavailable "
               "clone3 disables the whole mechanism and is a preflight gate, so "
-              "every case is then BLOCKED rather than this one case FAILing"),
+              "every case is then BLOCKED rather than this one case FAILing. "
+              "TRACED under owner amendment M3-T, decided before the first "
+              "valid trial: the acquisition is established from the EXTERNAL "
+              "syscall record, never from a launcher receipt field naming its "
+              "own acquisition mode, because a self-assertion is exactly what "
+              "this case exists to avoid. See M3_BOUNDED_CLAIM and "
+              "M3_EVIDENCE_FACTS"),
     case("M4", "M", CONDITIONAL, blocked_if="no_tracer", traced=True,
          predict="sequence_matches_frozen_stages",
          note="the implemented child sequence is matched syscall-for-syscall "

@@ -7,11 +7,11 @@
     "recorded": 7,
     "total": 72
   },
-  "classification": "DRIVER_CORRECTION_NEEDS_OWNER_DECISION",
+  "classification": "M3_FREEZE_READY_FOR_BOUNDED_REVIEW",
   "d7_execution_authorised": false,
   "definition_sha256": {
     "docs/adr/ADR-0024-launch-authority.md": "c1f3cce88438439aab6632a9c56450ae98d1c64adb31b13c742e2febb1476351",
-    "docs/experiments/LAUNCH-EXEC-01-DEFINITION.md": "7aa36f55b40e2b538bfaa6f5738232dcb633aa7f5d56a56b9d01531a22a8ccc6",
+    "docs/experiments/LAUNCH-EXEC-01-DEFINITION.md": "477d09ef0ad090d51bd236076488d499b373bdc9c959020d6aaedbb8a5252732",
     "docs/research/HELM-LAUNCH-ARCHITECTURE.md": "97fbf0d8a602c68b0cf20529c4c1bb238ae2790a6089fa8ff6818c054b443151"
   },
   "driver": {
@@ -19,8 +19,8 @@
     "complete": true,
     "duplicates": [],
     "missing": [],
-    "note": "a case definition in frozen_cases.py and a plan in driver.py are both necessary and neither is sufficient: the mechanism must be able to deliver the observation the frozen expectation is written against. D-7 execution HALTS at preflight unless unposable_against_this_freeze is empty.",
-    "posable_against_this_freeze": 71,
+    "note": "D-7 execution HALTS at preflight unless unposable_against_this_freeze is empty.",
+    "posable_against_this_freeze": 72,
     "supplied_evidence_channels": [
       "liveness",
       "payload",
@@ -31,19 +31,43 @@
       "trace"
     ],
     "unknown": [],
-    "unposable_against_this_freeze": [
-      "M3"
-    ],
+    "unposable_against_this_freeze": [],
     "unposable_mandatory": []
   },
   "experiment": "LAUNCH-EXEC-01",
+  "m3_t": {
+    "block_causes_unchanged": [
+      "clone3_unavailable"
+    ],
+    "bounded_claim": "For the direct child in this candidate execution, the pidfd used by the launcher was returned through the CLONE_PIDFD facility of the SAME clone3 syscall that created that direct child, rather than being acquired later by pidfd_open() from a numeric PID.",
+    "claim_exclusions": [
+      "Linux pidfds are universally race-free",
+      "the kernel implementation has been proved atomic",
+      "any general claim about pidfd behaviour beyond this one execution",
+      "any timing-sensitive normal-launch behaviour: M3 runs under a tracer, and its evidence is restricted to the acquisition facts below"
+    ],
+    "evidence_facts": {
+      "A": "a parent-side clone3 call occurred",
+      "B": "its flags contain CLONE_PIDFD",
+      "C": "clone_args.pidfd is supplied as the kernel output location",
+      "D": "the clone3 call successfully created the direct child",
+      "E": "the same syscall yields a pidfd output",
+      "F": "no separate pidfd_open() acquired the direct child's pidfd",
+      "G": "the returned pidfd is subsequently used by the frozen pidfd lifecycle, correlating the acquisition with the launcher's direct-child handle"
+    },
+    "evidence_forms": [
+      "direct",
+      "closure"
+    ],
+    "self_assertion_rejected": "no pidfd_acquisition receipt field exists in launcher_spike.c and the rule never reads one"
+  },
   "not_hashed_here": {
     "BUILD-EVIDENCE.md": "append-only build record that grows AFTER the freeze; hashing it would make this manifest mutable, which is the defect it exists to avoid",
     "SOURCE-HASHES.json": "a manifest cannot hash itself; OBS-FS-01 convention"
   },
   "open_findings": {
-    "M3": "OWNER DECISION REQUIRED. The definition permits a syscall record only for the seven cases declared traced:true and M3 is not among them, so no frozen evidence source can show that the pidfd was acquired in the same syscall that created the child. No self-asserting receipt field was added.",
-    "PRE-D7-B1": "CORRECTED at this freeze; see review section 12"
+    "M3": "RESOLVED by owner amendment M3-T at this freeze; see review section 14. Residual uncertainty recorded in 14.3: strace's rendering of the clone3 clone_args output could not be observed first-hand because the local distribution has no strace, so the parser accepts both renderings and refuses anything ambiguous.",
+    "PRE-D7-B1": "CORRECTED at freeze a7ae6b9/002e1e4; see review section 12"
   },
   "owner_decisions": {
     "D-1": "arm_i_scoped_unsafe_backend",
@@ -58,16 +82,16 @@
     "D-9": "refuse_set_id_objects_at_admission"
   },
   "pre_execution_review_tip": "55f0f78c18e7bc9b980e1b99169018a7ea5566b4",
-  "requires": "bounded independent pre-trial re-review before D-7, which must examine the launcher_spike.c delta; this freeze is NOT a readiness statement",
+  "requires": "bounded independent pre-trial re-review before D-7, which must weigh the M3-T amendment, the strace clone3-rendering uncertainty and the traced-record defect; this freeze is NOT a readiness statement and grants nothing",
   "reviewed_architecture_tip": "a5f09f8df8c3868b7ec2f3f6f9d973058c164a44",
   "scope": "Execution definition and disposable experiment sources frozen before the first preregistered LAUNCH-EXEC-01 trial. NOT_RUN: no trial has been executed and no case has been posed. D-7 (execution authorisation) is NOT granted.",
   "sha256": {
     "README.md": "2519b48dfe495ea67eb7fccd213dfd55d4de509d65f49b21c1c1d562eefb07a2",
     "checker.py": "b45c5a2567cc35b121c5550c19bbba1a745531e36b095c8b539e968af3c65c3b",
-    "driver.py": "15f9b5f9cf8b3a7ec2e8e8c8ac7d1f1a39189287bb3764ad66a78801fa6ac130",
-    "evidence.py": "eeb64218a45e5ce7b37c3f1cca6c016899d9ee54bd822467fc42bf6c0794c209",
-    "frozen_cases.py": "098fecd2ef1ff5cd989f6e4271898f93ae0a65e944aab34431d7531f8697b76c",
-    "harness.py": "a8379b680a1194ffe253fefa2495e4031b911ef4c1a5bdf54e28fbc36cf97c2a",
+    "driver.py": "ab13f5a2d513a91677f40106dda43c7c68feed3796cbe1898d8d9a410af33548",
+    "evidence.py": "3ebf42208aaa2f937e25e316ce95a5d8bb46a9a5e7ca09949f7610b2b73fe533",
+    "frozen_cases.py": "d99040f89d05479c9045dd3ebbb35b2339fd1e597a119688a0bdab27ee19ea62",
+    "harness.py": "1a9d0e9040bdefbf6320b7d92f0cf342a8cb6a42c63aeb1b7877506f36e03550",
     "helper_alt.c": "7993aa631abdca6796171fe4ffafb2d296f2a00b61ea2322ee8e624731b99113",
     "helper_dynamic.c": "b3c398d840c16dfa4e0dbc56593b905b4019bfe2316fc339049b8a69930350a0",
     "helper_fork.c": "a62a6a1e2bbb9cc6ef8a346ae9322c7b7435b1c7f0b6c3710b3aadb9cc2ba0b0",
@@ -75,11 +99,35 @@
     "helper_setid.c": "c609755d105122eea304f5fe12685d8dcc24064d77659295a11a76d42b86329f",
     "launcher_spike.c": "10df2c7c0e6bc7f03e8c1b8141a5d2f06a27812596fd3c6d9fa94b367bda9018",
     "make_fixtures.py": "19ebbb6487b412afd0ba1f17db5a329ff3a686c10b91eaf928cf3344919cec9b",
-    "observations.py": "3d399de8837e58dbcedeb6269ffe9a9c60cca15905d3e055ae5cdf28ce2bee55",
+    "observations.py": "6dfa2ce79b854af97e2e52bb38168a58a743eb4fc38bfd2a5bb47f05ed2c5faa",
     "oracles.py": "83beb81102f9f60e3796c9469d4bd5265e8acac3d4383f7873840fb9c40b4842",
     "run_launch_exec_01.py": "6740f174f5a58b70a80ba44d16ea6ebdfdd64d8d77ec8bdedb5cdb2bbbfc20dd"
   },
   "status": "NOT_RUN",
-  "supersedes": "a7ae6b9bc44b6db58fd4474fb617ef132e9bc664",
-  "supersession_reason": "PRE-D7-B1 corrected by owner decision, launcher-side: launcher_spike.c now emits the bounded capture prefix it already retained, base64-encoded, inside each stream block. bytes_drained, drained_sha256 and completeness are unchanged, and NO descriptor was added to the helper - the report still arrives on descriptor 1 and the executed image still sees exactly {0,1,2}. M2 and M5 gained the TEST/CONTROL-ONLY arms their frozen contracts name (--extra-threads, --rejected-acquisition-arm). Posable cases went from 29 to 71. M3 remains unposable and is returned as an owner question rather than answered with a self-asserting receipt field. The superseded freezes 66bf4b6, 5729458 and 575727f are preserved unchanged. This freeze additionally corrects a defect the compile-only run 34408977185 surfaced in the PRE-D7-B1 receipt split: the wait_errno format specifier was duplicated, so the second %d read a vararg that did not exist - undefined behaviour emitting a garbage duplicate key. -Wall -Wextra caught it; the defective compile evidence is preserved in BUILD-EVIDENCE.md rather than discarded."
+  "supersedes": "4da94b52636334fc3aafc3bc65741f16cce6efd8",
+  "supersession_reason": "owner amendment M3-T, decided BEFORE the first valid trial: M3 becomes a TRACED case, so the pidfd acquisition is established from the external syscall record instead of from a launcher field describing its own behaviour. No such receipt field was added and none is read. The traced set is amended prospectively from seven cases to eight - E1, E7, F4, F7, M1, M2, M3, M4 - while M3 stays CONDITIONAL on clone3_unavailable and the 72/54/11/7 partition is untouched. All 72 cases are now posable, up from 71. Wiring this also fixed a defect that predates it: driver.evaluate() never put the syscall record into the case record, so EVERY traced case would have scored INVALID at trial time. No C source byte changed, so the clean Build 5 compile evidence still covers the mechanism exactly. The superseded freezes 66bf4b6, 5729458, 575727f, a7ae6b9 and 4da94b5 are preserved unchanged.",
+  "traced_cases": {
+    "amended_by": "M3-T",
+    "cases": [
+      "E1",
+      "E7",
+      "F4",
+      "F7",
+      "M1",
+      "M2",
+      "M3",
+      "M4"
+    ],
+    "count": 8,
+    "note": "a syscall record is collected ONLY for these cases. R, T, O, P and S cases are never traced, because ptrace notifies the tracer before the real parent and those cases measure the launcher's own waitid classification.",
+    "previously": [
+      "E1",
+      "E7",
+      "F4",
+      "F7",
+      "M1",
+      "M2",
+      "M4"
+    ]
+  }
 }

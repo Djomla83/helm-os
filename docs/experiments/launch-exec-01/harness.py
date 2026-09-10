@@ -60,6 +60,11 @@ def preflight():
         "geteuid": os.geteuid() if hasattr(os, "geteuid") else None,
         "ptrace_scope": _read("/proc/sys/kernel/yama/ptrace_scope"),
         "strace": shutil.which("strace"),
+        # Recorded because M3-T made the acquisition evidence depend on how the
+        # tracer renders clone3's clone_args, and a record that does not say
+        # which tracer produced it cannot be re-verified later. Availability is
+        # still re-probed here and never assumed.
+        "strace_version": run(["strace", "--version"]).splitlines()[:1],
         "gcc": run(["gcc", "--version"]).splitlines()[:1],
         "glibc": run(["ldd", "--version"]).splitlines()[:1],
         "pagesize": run(["getconf", "PAGESIZE"]),

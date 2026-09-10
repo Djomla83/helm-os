@@ -226,14 +226,14 @@ class EvidenceChannels(unittest.TestCase):
             [n for n, i in un.items()
              if driver.CH_REPORT in i["missing_channels"]], [])
 
-    def test_only_m3_remains_unposable(self):
-        """M2 and M5 gained their frozen control arms; M3 is an owner question."""
-        self.assertEqual(sorted(driver.unposable_cases()), ["M3"])
+    def test_every_case_is_now_posable(self):
+        """Owner amendment M3-T closed the last gap: M3 is a traced case."""
+        self.assertEqual(driver.unposable_cases(), {})
 
-    def test_m3_is_unposable_for_the_acquisition_channel(self):
-        info = driver.unposable_cases()["M3"]
-        self.assertEqual(info["missing_channels"], [driver.CH_ACQUISITION])
-        self.assertIn("OWNER DECISION REQUIRED", info["reasons"][0])
+    def test_the_retired_acquisition_channel_is_gone(self):
+        """A self-asserted acquisition channel must not exist to be used."""
+        self.assertFalse(hasattr(driver, "CH_ACQUISITION"))
+        self.assertNotIn("acquisition", driver.ALL_CHANNELS)
 
     def test_removing_a_channel_makes_its_cases_unposable_again(self):
         """The gate must react to a channel loss, not to a hard-coded list."""
@@ -721,16 +721,6 @@ class LifecycleAndTraceTokens(unittest.TestCase):
         obs = observation(observed_stage_sequence=["DUP2", "TELEPORT"])
         self.assertIsNone(ob.derive("sequence_matches_frozen_stages", obs)[0])
 
-    def test_pidfd_acquisition_modes(self):
-        atomic = observation(pidfd_acquisition="clone3_pidfd")
-        self.assertEqual(ob.derive("pidfd_acquired_atomically", atomic)[0],
-                         "pidfd_acquired_atomically")
-        forked = observation(pidfd_acquisition="fork_pidfd_open")
-        self.assertEqual(ob.derive("pidfd_acquired_atomically", forked)[0],
-                         "pidfd_not_acquired_atomically")
-        self.assertIsNone(
-            ob.derive("pidfd_acquired_atomically", observation())[0])
-
     def test_rejected_acquisition_outcomes(self):
         """M5 derives from the arm's RAW errnos, never from a self-named token."""
         cases = (
@@ -852,12 +842,12 @@ class RecordsAndAggregate(unittest.TestCase):
         self.assertEqual(aggregate, checker.ACCEPTED)
         self.assertIn("N2", detail["conditional_blocked_with_cause"])
 
-    def test_the_current_unposable_set_makes_a_trial_inconclusive(self):
-        """The honest consequence of the missing report channel, in the checker."""
+    def test_an_unposable_case_would_still_make_a_trial_inconclusive(self):
+        """Nothing is unposable now, so the consequence is asserted directly."""
+        self.assertEqual(driver.unposable_cases(), {})
         records = _all_passing()
-        for name in driver.unposable_cases():
-            records[name] = {"not_posed": "no evidence channel",
-                             "launch_returned": None}
+        records["M3"] = {"not_posed": "no evidence channel",
+                         "launch_returned": None}
         aggregate, _ = checker.verdict(checker.score_all(records))
         self.assertEqual(aggregate, checker.INCONCLUSIVE)
 
@@ -1342,12 +1332,12 @@ class ControlArms(unittest.TestCase):
                                          exit_status=0))})
         self.assertFalse(lying["never_reports_unobserved_exit_status"])
 
-    def test_m3_has_no_arm_and_is_returned_as_a_question(self):
-        """M3 must NOT gain a self-asserting receipt field."""
+    def test_m3_gained_no_arm_and_no_receipt_field(self):
+        """M3-T uses the external trace; it must NOT gain a spike mode."""
         plan = driver.CASE_PLANS["M3"]
         self.assertEqual(plan.spike_flags, ())
-        self.assertIn(driver.CH_ACQUISITION, plan.channels)
-        self.assertNotIn(driver.CH_ACQUISITION, driver.SPIKE_SUPPLIED_CHANNELS)
+        spike = (EXP / "launcher_spike.c").read_text(encoding="utf-8")
+        self.assertNotIn("pidfd_acquisition", spike)
 
     def test_helper_fd_set_is_unchanged_by_the_correction(self):
         """No case gained an inherited helper descriptor."""
@@ -1382,11 +1372,11 @@ class PreflightGate(unittest.TestCase):
         gates = [h["gate"] for h in halts]
         self.assertIn("evidence_channels", gates)
 
-    def test_the_current_state_halts_on_m3_alone(self):
+    def test_the_current_state_raises_no_channel_halt(self):
+        """After M3-T every case is posable, so this gate no longer fires."""
         halts = self._gates(driver.SPIKE_SUPPLIED_CHANNELS)
-        channel_halts = [h for h in halts if h["gate"] == "evidence_channels"]
-        self.assertEqual(len(channel_halts), 1)
-        self.assertEqual(sorted(channel_halts[0]["evidence"]), ["M3"])
+        self.assertEqual([h for h in halts if h["gate"] == "evidence_channels"],
+                         [])
 
     def test_a_fully_posable_set_raises_no_channel_halt(self):
         halts = self._gates(set(driver.ALL_CHANNELS))
@@ -1403,6 +1393,301 @@ class PreflightGate(unittest.TestCase):
         finally:
             runner.harness.static_link_gate = real_gate
         self.assertIn("clone3", [h["gate"] for h in halts])
+
+
+# ============================================ M3-T: external acquisition trace
+def acq_trace(flags="CLONE_PIDFD", ptr="0x7ffd0000", out_fd=4, ret=222,
+              lifecycle_fd=4, pidfd_open=None, extra="", with_out=True,
+              with_waitid=True):
+    """A fabricated syscall record. No tracer is run and nothing is executed."""
+    out = " => {pidfd=[%d]}" % out_fd if with_out else ""
+    flag_field = "flags=%s, " % flags if flags else ""
+    lines = [
+        "111   clone3({%spidfd=%s, exit_signal=SIGCHLD}%s, 88) = %d"
+        % (flag_field, ptr, out, ret) if ptr else
+        "111   clone3({%sexit_signal=SIGCHLD}%s, 88) = %d"
+        % (flag_field, out, ret),
+        "[pid   %d] execveat(3, \"\", NULL, NULL, AT_EMPTY_PATH) = 0" % ret,
+        "111   poll([{fd=%d, events=POLLIN}], 1, 5000) = 1" % lifecycle_fd,
+    ]
+    if pidfd_open is not None:
+        lines.append("111   pidfd_open(%d, 0)                = 7" % pidfd_open)
+    if with_waitid:
+        lines.append(
+            "111   waitid(P_PIDFD, %d, {si_pid=%d, si_code=CLD_EXITED, "
+            "si_status=0}, WEXITED, NULL) = 0" % (lifecycle_fd, ret))
+    if extra:
+        lines.append(extra)
+    return "\n".join(lines) + "\n"
+
+
+def acq_obs(text, **over):
+    facts = ob.parse_pidfd_acquisition(text)
+    return observation(acquisition=facts, **over)
+
+
+class M3AcquisitionEvidence(unittest.TestCase):
+    """Owner amendment M3-T. All evidence is external; none is self-asserted."""
+
+    def _token(self, text, **over):
+        return ob.derive("pidfd_acquired_atomically", acq_obs(text, **over))
+
+    # -- the success path, both admissible forms of fact E -------------------
+    def test_direct_form_passes(self):
+        token, reason = self._token(acq_trace())
+        self.assertEqual(token, fc.BY_NAME["M3"]["predict"])
+        self.assertIn(ob.EVIDENCE_DIRECT, reason)
+
+    def test_closure_form_passes_when_no_pidfd_open_exists(self):
+        """The tracer did not print the write-back, but the record is closed."""
+        token, reason = self._token(acq_trace(with_out=False))
+        self.assertEqual(token, "pidfd_acquired_atomically")
+        self.assertIn(ob.EVIDENCE_CLOSURE, reason)
+
+    def test_the_frozen_facts_are_all_named_in_the_manifest(self):
+        self.assertEqual(sorted(fc.M3_EVIDENCE_FACTS), list("ABCDEFG"))
+        self.assertIn("SAME clone3", fc.M3_BOUNDED_CLAIM)
+        self.assertTrue(fc.M3_CLAIM_EXCLUSIONS)
+
+    # -- B: CLONE_PIDFD absent ----------------------------------------------
+    def test_clone3_without_clone_pidfd_fails(self):
+        token, _ = self._token(acq_trace(flags="CLONE_VM"))
+        self.assertEqual(token, "pidfd_not_acquired_atomically")
+        self.assertNotEqual(token, "pidfd_acquired_atomically")
+
+    def test_clone3_with_no_flags_field_fails(self):
+        token, _ = self._token(acq_trace(flags=""))
+        self.assertEqual(token, "pidfd_not_acquired_atomically")
+
+    # -- D: clone3 failure ---------------------------------------------------
+    def test_clone3_failure_is_not_success(self):
+        token, _ = self._token(acq_trace(ret=-1, with_out=False,
+                                         with_waitid=False))
+        self.assertEqual(token, "clone3_failed")
+
+    # -- C: no output location decoded --------------------------------------
+    def test_pidfd_output_pointer_absent_is_invalid(self):
+        token, reason = self._token(acq_trace(ptr="", with_out=False))
+        self.assertIsNone(token)
+        self.assertIn("output location", reason)
+
+    # -- F: pidfd_open acquisition ------------------------------------------
+    def test_pidfd_open_on_the_direct_child_is_rejected(self):
+        """Exactly the acquisition design the primary mechanism rejects."""
+        token, reason = self._token(acq_trace(pidfd_open=222))
+        self.assertEqual(token, "pidfd_acquired_by_pidfd_open")
+        self.assertIn("numeric pid", reason)
+
+    def test_an_unrelated_pidfd_open_does_not_reject(self):
+        """A pidfd_open aimed at another process is not this case's concern."""
+        token, _ = self._token(acq_trace(pidfd_open=999))
+        self.assertEqual(token, "pidfd_acquired_atomically")
+
+    def test_closure_form_refuses_when_any_pidfd_open_exists(self):
+        """Without the write-back, the record must be complete about pidfd_open."""
+        token, reason = self._token(acq_trace(with_out=False, pidfd_open=999))
+        self.assertIsNone(token)
+        self.assertIn("not closed", reason)
+
+    # -- G: correlation ------------------------------------------------------
+    def test_no_waitid_correlation_is_invalid(self):
+        token, reason = self._token(acq_trace(with_waitid=False))
+        self.assertIsNone(token)
+        self.assertIn("correlated", reason)
+
+    def test_ambiguous_correlation_is_invalid(self):
+        extra = ("111   waitid(P_PIDFD, 9, {si_pid=333, si_code=CLD_EXITED}, "
+                 "WEXITED, NULL) = 0")
+        token, reason = self._token(acq_trace(extra=extra))
+        self.assertIsNone(token)
+        self.assertIn("correlated", reason)
+
+    def test_a_descriptor_mismatch_is_invalid(self):
+        """clone3 returned one descriptor and the lifecycle used another."""
+        token, reason = self._token(acq_trace(out_fd=4, lifecycle_fd=5))
+        self.assertIsNone(token)
+        self.assertIn("ambiguous", reason)
+
+    # -- A: ambiguity and malformed input ------------------------------------
+    def test_two_clone3_calls_are_ambiguous(self):
+        text = acq_trace() + acq_trace(ret=444)
+        token, reason = self._token(text)
+        self.assertIsNone(token)
+        self.assertIn("more than one clone3", reason)
+
+    def test_malformed_trace_is_invalid(self):
+        for text in ("", "   ", "garbage without any syscall\n",
+                     "111 open(\"/etc/passwd\", O_RDONLY) = 3\n"):
+            token, _ = self._token(text)
+            self.assertIsNone(token, repr(text))
+
+    def test_truncated_trace_is_invalid(self):
+        """The record stops before the lifecycle correlates anything."""
+        text = "111   clone3({flags=CLONE_PIDFD, pidfd=0x7ffd0000, exit_s"
+        token, _ = self._token(text)
+        self.assertIsNone(token)
+
+    def test_no_acquisition_facts_at_all_is_invalid(self):
+        token, reason = ob.derive("pidfd_acquired_atomically", observation())
+        self.assertIsNone(token)
+        self.assertIn("no syscall record", reason)
+
+    # -- the rule must never read a launcher self-assertion -------------------
+    def test_a_receipt_field_claiming_clone3_is_ignored(self):
+        """A launcher describing its own acquisition proves nothing."""
+        spike = receipt(pidfd_acquisition="clone3")
+        obs = observation(spike=spike, acquisition=None,
+                          pidfd_acquisition="clone3_pidfd")
+        token, _ = ob.derive("pidfd_acquired_atomically", obs)
+        self.assertIsNone(token, "a self-asserted field produced a token")
+
+    def test_the_source_never_reads_an_acquisition_receipt_field(self):
+        source = (EXP / "observations.py").read_text(encoding="utf-8")
+        rule = source[source.index("def rule_pidfd_acquired_atomically"):]
+        rule = rule[:rule.index("\ndef ")]
+        self.assertNotIn('"pidfd_acquisition"', rule)
+        self.assertNotIn("spike", rule.split("Returns")[0] if "Returns" in rule
+                         else rule.split("\n\n")[0])
+
+    # -- host condition ------------------------------------------------------
+    def test_clone3_unavailable_remains_the_only_block_cause(self):
+        self.assertEqual(fc.BY_NAME["M3"]["blocked_if"], "clone3_unavailable")
+        self.assertEqual(fc.BY_NAME["M3"]["cls"], fc.CONDITIONAL)
+        ctx = _ctx(block_reasons={"clone3_unavailable":
+                                  fc.BLOCK_REASONS["clone3_unavailable"]})
+        cause = driver.blocked_cause_for(driver.CASE_PLANS["M3"], ctx)
+        self.assertEqual(cause, "clone3_unavailable")
+        record = driver.evaluate(driver.CASE_PLANS["M3"],
+                                 {"blocked": cause, "launch_returned": None})
+        self.assertEqual(checker.score_case("M3", record)[0], checker.BLOCKED)
+
+    def test_a_tracer_failure_is_not_a_legitimate_block(self):
+        """If clone3 is supported and the trace fails, that is not BLOCKED."""
+        ctx = _ctx(block_reasons={"no_tracer": fc.BLOCK_REASONS["no_tracer"]})
+        self.assertIsNone(driver.blocked_cause_for(driver.CASE_PLANS["M3"], ctx))
+
+    def test_the_block_escape_hatch_was_not_broadened(self):
+        conditional = {n: fc.BY_NAME[n]["blocked_if"]
+                       for n in fc.CONDITIONAL_CASES}
+        self.assertEqual(conditional["M3"], "clone3_unavailable")
+        for name, cause in conditional.items():
+            self.assertIn(cause, fc.BLOCK_REASONS, name)
+
+
+class M3TracedSetAmendment(unittest.TestCase):
+    def test_the_traced_set_is_now_eight(self):
+        self.assertEqual(
+            sorted(fc.TRACED_CASES),
+            ["E1", "E7", "F4", "F7", "M1", "M2", "M3", "M4"])
+        self.assertEqual(len(fc.TRACED_CASES), 8)
+
+    def test_the_partition_is_untouched(self):
+        s = fc.summary()
+        self.assertEqual((s["total"], s["mandatory"], s["conditional"],
+                          s["recorded"]), (72, 54, 11, 7))
+
+    def test_m3_is_traced_in_the_plan_too(self):
+        self.assertTrue(driver.CASE_PLANS["M3"].traced)
+        self.assertIn(driver.CH_TRACE, driver.CASE_PLANS["M3"].channels)
+
+    def test_m3_carries_no_injection_or_control_mode(self):
+        """A pidfd_open from the M5 arm would pollute the record M3 reads."""
+        plan = driver.CASE_PLANS["M3"]
+        self.assertEqual(plan.spike_flags, ())
+        self.assertEqual(driver.declared_injection_modes(plan), [])
+        self.assertEqual(set(plan.spike_flags) & set(fc.PARENT_CONTROL_MODES),
+                         set())
+
+    def test_no_wait_classifying_series_became_traced(self):
+        for name in fc.TRACED_CASES:
+            self.assertNotIn(fc.BY_NAME[name]["series"], {"R", "T", "O", "P", "S"})
+
+    def test_every_traced_record_carries_its_trace(self):
+        """checker scores a traced case INVALID without one.
+
+        Each traced case is given the evidence its own rule needs, so the record
+        reaches the trace block instead of short-circuiting at not_posed. That
+        short-circuit is itself correct: checker.score_case tests not_posed
+        before it tests the trace.
+        """
+        permitted = list(fc.CHILD_PERMITTED_SYSCALLS)
+        for name in fc.TRACED_CASES:
+            plan = driver.CASE_PLANS[name]
+            obs = observation(
+                rep=report(), trace={"child_syscalls": permitted},
+                trace_sha256="a" * 64,
+                single_threaded_child_syscalls=permitted,
+                observed_stage_sequence=list(fc.STAGES),
+                acquisition=ob.parse_pidfd_acquisition(acq_trace()),
+                expected_argv=["helper_report"])
+            record = driver.evaluate(plan, obs)
+            self.assertNotIn("not_posed", record,
+                             name + ": " + str(record.get("not_posed")))
+            self.assertIn("trace", record, name)
+            self.assertIsNotNone(record["trace"], name)
+            self.assertEqual(record["trace_sha256"], "a" * 64, name)
+            status, why = checker.score_case(name, record)
+            self.assertNotEqual(status, checker.INVALID, name + ": " + why)
+
+    def test_a_traced_case_without_a_trace_is_invalid(self):
+        record = driver.evaluate(driver.CASE_PLANS["M3"],
+                                 observation(acquisition=None))
+        status, _ = checker.score_case("M3", record)
+        self.assertEqual(status, checker.INVALID)
+
+
+class M3Privacy(unittest.TestCase):
+    """Section 11: raw trace identifiers must not reach published evidence."""
+
+    def setUp(self):
+        self.s = evidence.Sanitiser(work="/home/runner/work/helm",
+                                    home="/home/runner", user="runner")
+        self.facts = ob.parse_pidfd_acquisition(acq_trace(pidfd_open=999))
+
+    def test_normalisation_replaces_raw_identifiers_with_roles(self):
+        norm = ob.normalise_acquisition(self.facts)
+        self.assertEqual(norm["direct_child"], "DIRECT_CHILD")
+        self.assertEqual(norm["direct_child_pidfd"], "DIRECT_CHILD_PIDFD")
+        text = evidence.serialise(norm)
+        for raw in ("222", "999", "0x7ffd0000"):
+            self.assertNotIn(raw, text, "raw identifier " + raw + " survived")
+
+    def test_normalisation_keeps_only_booleans_flags_and_counts(self):
+        norm = ob.normalise_acquisition(self.facts)
+        self.assertNotIn("pidfd_open_calls", norm)
+        self.assertNotIn("lifecycle_uses", norm)
+        self.assertNotIn("clone3_return", norm)
+        self.assertNotIn("pidfd_from_clone3", norm)
+        self.assertEqual(norm["clone3_flags"], ["CLONE_PIDFD"])
+        self.assertEqual(norm["pidfd_open_call_count"], 1)
+
+    def test_raw_acquisition_facts_are_withheld_by_key(self):
+        out = self.s.record({"cases": {"M3": {"acquisition": self.facts}}})
+        self.assertEqual(out["cases"]["M3"]["acquisition"], evidence.WITHHELD)
+
+    def test_raw_tracer_text_is_withheld_by_key(self):
+        blob = acq_trace() + "111 openat(AT_FDCWD, \"/home/runner/.netrc\", 0) = 9\n"
+        out = self.s.record({"raw_trace": blob, "trace_text": blob,
+                             "strace_output": blob})
+        text = evidence.serialise(out)
+        self.assertNotIn(".netrc", text)
+        self.assertNotIn("clone3", text)
+
+    def test_the_trace_digest_is_publishable(self):
+        digest = oracles.digest_of(acq_trace().encode())
+        out = self.s.record({"trace_sha256": digest})
+        self.assertEqual(out["trace_sha256"], digest)
+
+    def test_a_traced_record_publishes_normalised_facts_only(self):
+        plan = driver.CASE_PLANS["M3"]
+        record = driver.evaluate(plan, acq_obs(
+            acq_trace(), trace={"child_syscalls": ["dup2"]},
+            trace_sha256="b" * 64,
+            acquisition_normalised=ob.normalise_acquisition(self.facts)))
+        self.assertIn("acquisition_normalised", record)
+        self.assertNotIn("acquisition", record)
+        text = evidence.serialise(self.s.record(record))
+        self.assertNotIn("0x7ffd0000", text)
 
 
 # The tokens this suite has demonstrated a derivation for. The universe test
