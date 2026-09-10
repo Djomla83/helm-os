@@ -2493,6 +2493,196 @@ class AdverseVerdictPathV(unittest.TestCase):
             self.assertEqual(aggregate, checker.REJECTED, label)
 
 
+# =========================================== F-1 / F-3: current-vocabulary closure
+ADVERSARIAL_USERNAMES = ("ci", "run", "test", "id", "pid", "fd", "exec",
+                         "clone", "wait", "u", "a", "user", "root")
+
+
+def sanitisers():
+    for user in ADVERSARIAL_USERNAMES:
+        yield user, evidence.Sanitiser(work="/home/%s/w" % user,
+                                       home="/home/" + user,
+                                       build="/home/%s/b" % user, user=user)
+
+
+def independent_vocabulary():
+    """Enumerate the CURRENT fixed public symbolic vocabulary INDEPENDENTLY.
+
+    Deliberately NOT ``evidence.vocabulary()``. This walks the registries
+    itself, so if the sanitiser's own derivation ever drops a source, the two
+    disagree and this test fails -- which is the whole point. Deriving both
+    sides from one helper would make the test agree with any mistake.
+    """
+    words = set()
+    for case in fc.CASES:
+        words.add(case["case"])
+        if case["predict"]:
+            words.add(case["predict"])
+        words.update(case["safe"] or ())
+        words.update(case["gates"])
+    words.update(fc.STAGES)
+    words.update(fc.BLOCK_REASONS)
+    words.update(fc.CHILD_PERMITTED_SYSCALLS)
+    words.update(fc.CHILD_FORBIDDEN_SYSCALLS)
+    words.update(fc.CHILD_TEST_INJECTION_SYSCALLS)
+    words.update(fc.CHILD_INJECTION_MODES)
+    words.update(fc.PARENT_CONTROL_MODES)
+    words.update(fc.DECISIONS)
+    words.update(fc.DECISIONS.values())
+    words.update(fc.M3_EVIDENCE_FACTS)
+
+    words.update(ob.RULES)
+    words.update(ob.SPIKE_DISPOSITIONS)
+    words.update(ob.SPIKE_TIMEOUT_DISPOSITIONS)
+    words.update(ob.SPIKE_REFUSALS)
+    words.update(ob.SIGNAL_NAMES.values())
+    words.update(ob.ERRNO_NAMES.values())
+    words.update(ob.REPORT_STATES)
+    words.update({ob.RETURN_OBSERVED_SUCCESS, ob.RETURN_OBSERVED_ERROR,
+                  ob.RETURN_NOT_OBSERVED, ob.EVIDENCE_DIRECT,
+                  ob.LIFECYCLE_WAITID, ob.LIFECYCLE_SEND_SIGNAL,
+                  ob.LIFECYCLE_POLL, ob.EXEC_PRE_EXEC_ERROR,
+                  ob.EXEC_DIED_BEFORE_EXEC, ob.EXEC_REACHED,
+                  ob.EXEC_UNINTERPRETABLE})
+
+    words.update({checker.PASS, checker.FAIL, checker.INVALID, checker.BLOCKED,
+                  checker.ACCEPTED, checker.REJECTED, checker.INCONCLUSIVE})
+
+    # The driver's fixed symbolic registries -- the class F-1 named.
+    words.update(driver.SETUPS)
+    words.update(driver.PARENT_STATES)
+    words.update(driver.POSED_CHECKS)
+    words.update(driver.ALL_CHANNELS)
+
+    # Published observation schema and role names.
+    normalised = ob.normalise_acquisition({}) or {}
+    words.update(normalised)
+    words.update(normalised.get("trace_integrity") or {})
+    words.update({"DIRECT_CHILD", "DIRECT_CHILD_PIDFD", "CompleteAtEof",
+                  "WriterRetainedAfterChildExit", "child_syscalls",
+                  "stage_sequence", "integrity_ok"})
+    return sorted(w for w in words if isinstance(w, str) and w)
+
+
+class CurrentVocabularyClosure(unittest.TestCase):
+    """F-1 / F-3. Every reachable fixed symbolic token survives byte-exact."""
+
+    def test_the_enumeration_is_substantial(self):
+        vocabulary = independent_vocabulary()
+        self.assertGreater(len(vocabulary), 200)
+        # The two tokens the final review named must be in the enumeration, or
+        # the test would pass by not looking.
+        self.assertIn("sigterm_blocked_sigpipe_ignored", vocabulary)
+        self.assertIn("returned_before_descendant_lifetime", vocabulary)
+
+    def test_every_current_token_survives_every_adversarial_username(self):
+        vocabulary = independent_vocabulary()
+        broken = []
+        for user, s in sanitisers():
+            for token in vocabulary:
+                if s.text(token) != token:
+                    broken.append((user, token, s.text(token)))
+        self.assertEqual(broken, [], "corrupted fixed vocabulary")
+
+    def test_the_sanitiser_derivation_covers_the_independent_enumeration(self):
+        """If a registry is dropped from evidence.vocabulary(), this fails."""
+        missing = sorted(set(independent_vocabulary()) - evidence.vocabulary())
+        self.assertEqual(missing, [])
+
+    def test_driver_registries_are_a_derivation_source(self):
+        for name in ("SETUPS", "PARENT_STATES", "POSED_CHECKS"):
+            registry = getattr(driver, name)
+            self.assertTrue(registry, name + " is empty")
+            for token in registry:
+                self.assertIn(token, evidence.vocabulary(), name + ":" + token)
+
+    def test_a_newly_registered_symbol_would_be_protected(self):
+        """The fix must close the CLASS, not the two named instances."""
+        driver.PARENT_STATES["a_freshly_registered_parent_state_name"] = None
+        evidence._DRIVER_VOCABULARY = None          # re-derive
+        try:
+            token = "a_freshly_registered_parent_state_name"
+            self.assertGreaterEqual(len(token), 28)
+            for _, s in sanitisers():
+                self.assertEqual(s.text(token), token)
+        finally:
+            driver.PARENT_STATES.pop(
+                "a_freshly_registered_parent_state_name", None)
+            evidence._DRIVER_VOCABULARY = None
+
+
+class F1RealPlanRegression(unittest.TestCase):
+    """F-1, against the REAL T6 plan rather than the token in isolation."""
+
+    def test_t6_parent_is_the_named_token(self):
+        self.assertEqual(driver.CASE_PLANS["T6"].as_dict()["parent"],
+                         "sigterm_blocked_sigpipe_ignored")
+
+    def test_t6_parent_survives_public_sanitisation(self):
+        plan = driver.CASE_PLANS["T6"].as_dict()
+        for user, s in sanitisers():
+            out = s.record({"cases": {"T6": {"plan": plan}}})
+            self.assertEqual(out["cases"]["T6"]["plan"]["parent"],
+                             "sigterm_blocked_sigpipe_ignored", user)
+
+    def test_every_plan_symbolic_field_survives(self):
+        """The whole published plan table, not just T6."""
+        fields = ("case", "binary", "rule", "setup", "parent", "argv0",
+                  "posed_when")
+        for user, s in sanitisers():
+            for plan in driver._PLAN_LIST:
+                published = plan.as_dict()
+                out = s.record(published)
+                for field in fields:
+                    self.assertEqual(out[field], published[field],
+                                     "%s %s under %r" % (plan.case, field, user))
+                self.assertEqual(out["channels"], published["channels"],
+                                 plan.case)
+
+
+class F3UnreachableButRegistered(unittest.TestCase):
+    def test_the_unreferenced_check_is_still_protected(self):
+        token = "returned_before_descendant_lifetime"
+        self.assertIn(token, driver.POSED_CHECKS)
+        for user, s in sanitisers():
+            self.assertEqual(s.text(token), token, user)
+
+    def test_it_is_still_referenced_by_no_plan(self):
+        """Protected because it is registered, not by being made reachable."""
+        users = [p.case for p in driver._PLAN_LIST
+                 if p.posed_when == "returned_before_descendant_lifetime"]
+        self.assertEqual(users, [])
+
+
+class F2LongDataStaysOpaque(unittest.TestCase):
+    """The negative control: vocabulary protection is not a length exemption."""
+
+    def test_a4s_long_argument_may_still_be_opaque(self):
+        long_args = [a for a in driver.CASE_PLANS["A4"].as_dict()["helper_args"]
+                     if len(a) > 100]
+        self.assertTrue(long_args, "A4 no longer carries a long argument")
+        s = evidence.Sanitiser(user="ci")
+        self.assertIn("<OPAQUE:", s.text(long_args[0]))
+
+    def test_genuinely_opaque_values_are_still_redacted(self):
+        s = evidence.Sanitiser(user="ci")
+        for probe in ("Zk9q7Lm2XvQp4Rt8Nw1Ys6Bd3Hg5Jc0",
+                      "ghp_" + "A" * 36, "AKIAIOSFODNN7EXAMPLE",
+                      "x7Yq" * 12):
+            self.assertNotEqual(s.text(probe), probe, probe[:20])
+
+    def test_digests_are_still_preserved(self):
+        s = evidence.Sanitiser(user="ci")
+        self.assertEqual(s.text("a" * 64), "a" * 64)
+        self.assertEqual(s.text("b" * 40), "b" * 40)
+
+    def test_argv_and_environment_data_are_not_vocabulary(self):
+        s = evidence.Sanitiser(user="ci")
+        self.assertNotIn("x" * 4096, evidence.vocabulary())
+        out = s.record({"environ": ["SECRET=" + "q" * 40]})
+        self.assertNotIn("q" * 40, evidence.serialise(out))
+
+
 # The tokens this suite has demonstrated a derivation for. The universe test
 # above compares the frozen expectations against exactly this list, so a frozen
 # token nobody can produce is a test failure rather than a discovery at trial

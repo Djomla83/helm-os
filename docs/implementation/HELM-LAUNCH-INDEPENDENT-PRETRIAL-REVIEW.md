@@ -1479,3 +1479,71 @@ freeze integrity is exact, and the trial count is ZERO. The single obstacle to
 F-1 and F-3 share one bounded fix.
 
 **D-7 remains not authorised. LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of ZERO.**
+
+---
+
+## 27. Disposition of F-1 and F-3
+
+**Appended after sections 25–26, which are preserved unchanged — the final short verification's
+findings stand as recorded.** **LAUNCH-EXEC-01 remains NOT_RUN, D-7 is not granted, and the valid
+trial count is ZERO.**
+
+| ID | Severity | Disposition |
+|---|---|---|
+| **F-1** | IMPORTANT | **FIXED** — vocabulary derived from every symbolic registry |
+| **F-2** | — | **NOT A DEFECT**, unchanged: A4's long argument stays `<OPAQUE:…>` |
+| **F-3** | MINOR | **RESOLVED** by the same derivation, without being made reachable |
+
+### 27.1 The class, not the instance
+
+`sigterm_blocked_sigpipe_ignored` was missing because the allowlist was **hand-written**. Adding
+that one string would have fixed the instance and left the class open, so the fixed vocabulary is
+now **derived from the registries**:
+
+| Source | Contributes |
+|---|---|
+| `frozen_cases` | case ids, predictions, safe sets, gates, stages, block reasons, syscall lists, injection and control modes, decisions, M3 evidence facts |
+| `observations` | `RULES`, spike dispositions and refusals, signal and errno tables, report states, return states, lifecycle and exec constants |
+| `checker` | per-case statuses and aggregate verdicts |
+| published schema | `normalise_acquisition()` field names, trace-integrity fields, role names |
+| **`driver`** | **`SETUPS`, `PARENT_STATES`, `POSED_CHECKS`, `ALL_CHANNELS`** |
+
+`driver` imports `evidence`, so a module-level import back would be circular; it is imported
+**lazily** and cached only on success. Nothing in `driver`'s module body sanitises anything, so the
+registries are always populated by the time a value is redacted. Verified under five import orders
+and with `driver` deliberately not pre-imported — **379 tokens protected** in every case.
+
+### 27.2 Not over-broadened
+
+Argv contents, environment values, host paths, captured bytes and tracer text are **not**
+vocabulary. The negative control is explicit and tested: **A4's 4096-byte argument is still
+published as `<OPAQUE:a2e659da>`**, because it is data. Genuinely opaque probes, GitHub PATs, AWS
+key ids and JWTs are still redacted, and SHA-1/SHA-256 digests are still preserved.
+
+### 27.3 The closure test is not circular
+
+`independent_vocabulary()` in the suite walks the registries **itself** rather than calling
+`evidence.vocabulary()`, and a separate test asserts the sanitiser's derivation covers that
+independent enumeration. If a source is ever dropped from the sanitiser, the two disagree and the
+test fails — which is the point; deriving both sides from one helper would make the test agree with
+any mistake. A further test registers a fresh 38-character `PARENT_STATES` key at runtime and
+asserts it is protected, proving the class is closed rather than the two named strings.
+
+The whole published plan table is also exercised: every symbolic field of all **72** plans, under
+**13 adversarial usernames**, byte-exact.
+
+### 27.4 What did not change
+
+Partition **72 / 54 / 11 / 7**, traced set the same **eight**, **72 handlers / 72 posable / 0
+unposable**, `status` `NOT_RUN`, `d7_execution_authorised` `false`, and **no C source byte
+changed**. V-1…V-5, R-1…R-5, PRE-D7-B1 and M3 were all re-verified and remain closed, including the
+full adverse-verdict path, which reports no deviations.
+
+## 28. Status after F-1 / F-3
+
+**`VOCABULARY_FIX_READY_FOR_MICRO_REVIEW`.**
+
+374 tests pass and the current vocabulary is closed. Not self-certified: this fix was made by the
+same hand, and **one final micro-review of the F-1/F-3 delta is required before D-7.**
+
+**D-7 remains not authorised. LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of ZERO.**

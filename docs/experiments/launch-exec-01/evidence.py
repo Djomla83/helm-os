@@ -32,7 +32,9 @@ import hashlib
 import json
 import re
 
+import checker
 import frozen_cases as fc
+import observations as ob
 
 # Names the report may reproduce verbatim. Everything else is reported as
 # <UNDECLARED:xxxxxxxx>. This is about NAMES only -- see the module docstring for
@@ -136,19 +138,36 @@ _TEMP_ROOTS = ("/tmp/", "/var/tmp/", "/private/var/folders/")
 # to what a value is, and never by rewriting identifiers that happen to contain
 # a username-shaped substring.
 
-# The frozen vocabulary, taken from the manifest rather than restated, so a
-# token added there cannot silently start being redacted here. Importing
-# frozen_cases executes nothing.
-def _frozen_vocabulary():
+# The frozen vocabulary, DERIVED FROM THE REGISTRIES rather than restated, so a
+# symbol added to any of them cannot silently start being redacted here. This is
+# finding F-1: `sigterm_blocked_sigpipe_ignored` is a driver PARENT_STATES key,
+# 31 characters, reachable in published evidence as T6's plan["parent"], and a
+# hand-written allowlist had simply missed it. Adding that one string would have
+# fixed the instance and left the class open, so every fixed symbolic registry
+# is enumerated instead.
+#
+# What is NOT vocabulary, and must stay redactable: argv contents, environment
+# values, host paths, captured bytes, tracer text and anything high-entropy.
+# A4's 4096-byte argument is data and still becomes an <OPAQUE:...> token.
+
+# Receipt vocabulary that launcher_spike.c prints and no Python registry owns.
+_SPIKE_RECEIPT_VOCABULARY = frozenset({
+    "accepted", "refused", "empty",
+    "CompleteAtEof", "WriterRetainedAfterChildExit",
+})
+
+# Role names normalise_acquisition() substitutes for raw identifiers.
+_NORMALISED_ROLES = frozenset({"DIRECT_CHILD", "DIRECT_CHILD_PIDFD"})
+
+
+def _manifest_vocabulary():
     words = set()
     for case in fc.CASES:
         words.add(case["case"])
         if case["predict"]:
             words.add(case["predict"])
-        for member in case["safe"] or ():
-            words.add(member)
-        for gate in case["gates"]:
-            words.add(gate)
+        words.update(case["safe"] or ())
+        words.update(case["gates"])
     words |= set(fc.STAGES)
     words |= set(fc.BLOCK_REASONS)
     words |= set(fc.CHILD_PERMITTED_SYSCALLS)
@@ -157,32 +176,97 @@ def _frozen_vocabulary():
     words |= set(fc.CHILD_INJECTION_MODES)
     words |= set(fc.PARENT_CONTROL_MODES)
     words |= set(fc.DECISIONS) | set(fc.DECISIONS.values())
-    # Vocabulary the experiment publishes that is not itself a case field.
-    words |= {
-        "CompleteAtEof", "WriterRetainedAfterChildExit",
-        "DIRECT_CHILD", "DIRECT_CHILD_PIDFD",
-        "ExecFailed", "ExecStatusIndeterminate", "ExitStatusUnobservable",
-        "TimedOut", "Exited", "Signaled", "PreExecTimeout",
-        "TerminationFailed", "ExitedDuringGrace", "KilledByLauncher",
-        "NotRegularFile", "SetIdBitsPresent", "ElfNotInCohort",
-        "DescriptorModeUnsuitable",
-        "MECHANISM_ACCEPTED", "MECHANISM_REJECTED", "MECHANISM_INCONCLUSIVE",
-        "observed_success", "observed_error", "not_observed",
-        "complete", "truncated", "malformed", "absent", "stream_incomplete",
-        "waitid_p_pidfd", "pidfd_send_signal", "poll",
-        "child_syscalls", "stage_sequence", "integrity_ok",
-        "clone3", "clone3_pidfd", "CLONE_PIDFD", "pidfd_open", "waitid",
-        "execveat", "direct", "receipt", "payload", "report", "trace",
-        "liveness", "threaded_launcher", "rejected_arm",
-    }
-    # Composite tokens are also published in their parts.
-    for word in list(words):
-        for part in str(word).replace(":", " ").split():
-            words.add(part)
-    return frozenset(w for w in words if isinstance(w, str) and w)
+    words |= set(fc.M3_EVIDENCE_FACTS)
+    return words
 
 
-VOCABULARY = _frozen_vocabulary()
+def _observation_vocabulary():
+    words = set(ob.RULES)
+    words |= set(ob.SPIKE_DISPOSITIONS)
+    words |= set(ob.SPIKE_TIMEOUT_DISPOSITIONS)
+    words |= set(ob.SPIKE_REFUSALS)
+    words |= set(ob.SIGNAL_NAMES.values())
+    words |= set(ob.ERRNO_NAMES.values())
+    words |= set(ob.REPORT_STATES)
+    words |= {ob.RETURN_OBSERVED_SUCCESS, ob.RETURN_OBSERVED_ERROR,
+              ob.RETURN_NOT_OBSERVED, ob.EVIDENCE_DIRECT,
+              ob.LIFECYCLE_WAITID, ob.LIFECYCLE_SEND_SIGNAL, ob.LIFECYCLE_POLL,
+              ob.EXEC_PRE_EXEC_ERROR, ob.EXEC_DIED_BEFORE_EXEC,
+              ob.EXEC_REACHED, ob.EXEC_UNINTERPRETABLE}
+    return words
+
+
+def _checker_vocabulary():
+    return {checker.PASS, checker.FAIL, checker.INVALID, checker.BLOCKED,
+            checker.ACCEPTED, checker.REJECTED, checker.INCONCLUSIVE}
+
+
+def _schema_vocabulary():
+    """Field names of the published observation objects.
+
+    Keys are immutable, so these are already safe in key position. They are
+    registered anyway because the SCHEMA is fixed symbolic vocabulary of the
+    same class, and a future record that carried one as a VALUE would otherwise
+    reopen exactly the omission F-1 named.
+    """
+    words = set()
+    normalised = ob.normalise_acquisition({}) or {}
+    words |= set(normalised)
+    words |= set(normalised.get("trace_integrity") or {})
+    words |= {"child_syscalls", "stage_sequence", "integrity_ok", "child_pid",
+              "trace_sha256", "acquisition_normalised"}
+    return words
+
+
+_STATIC_VOCABULARY = None
+_DRIVER_VOCABULARY = None
+
+
+def _expand(words):
+    """Composite tokens are published in their parts too."""
+    out = set()
+    for word in words:
+        if not isinstance(word, str) or not word:
+            continue
+        out.add(word)
+        for part in word.replace(":", " ").split():
+            if part:
+                out.add(part)
+    return frozenset(out)
+
+
+def _driver_vocabulary():
+    """The driver's fixed symbolic registries, imported LAZILY.
+
+    ``driver`` imports this module, so a module-level import here would be
+    circular. Nothing in driver's module body sanitises anything, so by the time
+    a value is redacted the registries are fully populated. The result is cached
+    only on success, so a partially-initialised import cannot freeze an empty
+    set in place.
+    """
+    global _DRIVER_VOCABULARY
+    if _DRIVER_VOCABULARY is not None:
+        return _DRIVER_VOCABULARY
+    try:
+        import driver
+        words = (set(driver.SETUPS) | set(driver.PARENT_STATES)
+                 | set(driver.POSED_CHECKS) | set(driver.ALL_CHANNELS))
+    except Exception:                                  # noqa: BLE001
+        return frozenset()
+    _DRIVER_VOCABULARY = _expand(words)
+    return _DRIVER_VOCABULARY
+
+
+def vocabulary():
+    """Every fixed symbolic value that may reach published evidence."""
+    global _STATIC_VOCABULARY
+    if _STATIC_VOCABULARY is None:
+        _STATIC_VOCABULARY = _expand(
+            _manifest_vocabulary() | _observation_vocabulary()
+            | _checker_vocabulary() | _schema_vocabulary()
+            | _SPIKE_RECEIPT_VOCABULARY | _NORMALISED_ROLES)
+    return _STATIC_VOCABULARY | _driver_vocabulary()
+
 
 # Fields whose VALUE is an explicit host identity. The whole value is redacted,
 # because that is what the field means -- never an arbitrary substring of some
@@ -287,7 +371,7 @@ class Sanitiser:
         token = match.group(0)
         if _DIGEST_RE.match(token):
             return token
-        if token in VOCABULARY:
+        if token in vocabulary():
             # Frozen vocabulary is published evidence, not an opaque blob.
             # WriterRetainedAfterChildExit is exactly 28 characters and used to
             # be redacted by the generic high-entropy rule.

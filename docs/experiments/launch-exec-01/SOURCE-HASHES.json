@@ -7,7 +7,7 @@
     "recorded": 7,
     "total": 72
   },
-  "classification": "FINAL_SANITISER_FIX_READY_FOR_SHORT_REVIEW",
+  "classification": "VOCABULARY_FIX_READY_FOR_MICRO_REVIEW",
   "d7_execution_authorised": false,
   "definition_sha256": {
     "docs/adr/ADR-0024-launch-authority.md": "c1f3cce88438439aab6632a9c56450ae98d1c64adb31b13c742e2febb1476351",
@@ -67,6 +67,9 @@
     "SOURCE-HASHES.json": "a manifest cannot hash itself; OBS-FS-01 convention"
   },
   "open_findings": {
+    "F-1": "FIXED at this freeze - fixed vocabulary derived from every symbolic registry, including the driver's, rather than hand-listed",
+    "F-2": "NOT A DEFECT - A4's long argument is data, not symbolic vocabulary, and may remain <OPAQUE:...>",
+    "F-3": "RESOLVED at this freeze - protected because it is registered, without being made reachable",
     "M3": "RESOLVED by owner amendment M3-T at freeze 5d0b801; review section 14",
     "PRE-D7-B1": "CORRECTED at freeze a7ae6b9/002e1e4; review section 12",
     "R-1": "FIXED at freeze dc1149f - strace fragments rejoined per task",
@@ -93,14 +96,14 @@
     "D-9": "refuse_set_id_objects_at_admission"
   },
   "pre_execution_review_tip": "55f0f78c18e7bc9b980e1b99169018a7ea5566b4",
-  "requires": "ONE final short independent delta verification of V-1 through V-5 before D-7; this freeze is NOT a readiness statement and grants nothing",
+  "requires": "ONE final micro-review of the F-1/F-3 delta before D-7; this freeze is NOT a readiness statement and grants nothing",
   "reviewed_architecture_tip": "a5f09f8df8c3868b7ec2f3f6f9d973058c164a44",
   "scope": "Execution definition and disposable experiment sources frozen before the first preregistered LAUNCH-EXEC-01 trial. NOT_RUN: no trial has been executed and no case has been posed. D-7 (execution authorisation) is NOT granted.",
   "sha256": {
     "README.md": "2519b48dfe495ea67eb7fccd213dfd55d4de509d65f49b21c1c1d562eefb07a2",
     "checker.py": "6201a2dcaa1be1b48667b1d0ceedfbd2d6619668fb78a1043b408ebfd7a7f9b0",
     "driver.py": "7725ac53b582869c6414d0da9ec18196956c0a2fc933b8994449e2d676e761a9",
-    "evidence.py": "a4732213a8b78945b59c2687e4ab8e9e60566be725d363c6874e52fe9fe88acb",
+    "evidence.py": "80a80106a3c16311b9c13d78f651aa718273eb265977a020342724fd7de33798",
     "frozen_cases.py": "02e2d76fa434353c76e48f8b4129749b1e04a39b9d86e1428dae61e74131e2ef",
     "harness.py": "1a9d0e9040bdefbf6320b7d92f0cf342a8cb6a42c63aeb1b7877506f36e03550",
     "helper_alt.c": "7993aa631abdca6796171fe4ffafb2d296f2a00b61ea2322ee8e624731b99113",
@@ -115,8 +118,8 @@
     "run_launch_exec_01.py": "3eb71b2b5f4434912c91eb9b7613ce763d1791b7c3b135b08ace8b4224838a76"
   },
   "status": "NOT_RUN",
-  "supersedes": "262138159263cbf2b7c84fbae705c3c4e3fbfcc5",
-  "supersession_reason": "fixes V-5, the sanitiser defect recorded OPEN at the previous freeze. evidence.Sanitiser redacted the account name with an unbounded substring replacement, so a short or common username corrupted unrelated evidence - 'ci' turned specific into spe<USER>fic, 'run' turned truncated into t<USER>cated - and it rewrote mapping KEYS as well as values. Re-verifying also showed the generic high-entropy rule destroying frozen vocabulary: WriterRetainedAfterChildExit is exactly 28 characters and became an <OPAQUE:...> token, as did never_reports_unobserved_exit_status. Sanitisation is now STRUCTURE-AWARE: keys are immutable, the frozen vocabulary is taken from the manifest and never rewritten, a username is redacted only as a whole path COMPONENT or as the value of an explicit host-identity field, and path roots match only at a path boundary. P-14 strength is unchanged - host paths, Windows profiles, temp directories, credentials, environment values and child_pid are all still redacted or withheld. No C source byte changed. Earlier freezes and every review record are preserved unchanged.",
+  "supersedes": "3f735d554d41722fb509a004d820613861837ea1",
+  "supersession_reason": "closes F-1 and F-3, the current-vocabulary gap the final short independent verification recorded at abe747f. T6's published plan carries parent = sigterm_blocked_sigpipe_ignored, a 31-character driver PARENT_STATES key that the hand-written allowlist had missed, so the generic opaque rule rewrote it in published evidence. Rather than adding that string, the fixed-vocabulary set is now DERIVED FROM THE REGISTRIES: frozen_cases, observations (RULES, dispositions, refusals, signal and errno tables, report and return states, lifecycle and exec constants), checker statuses, the published observation schema, and the driver's SETUPS, PARENT_STATES, POSED_CHECKS and ALL_CHANNELS - the last imported lazily because driver imports evidence. F-3, returned_before_descendant_lifetime, is protected by the same derivation although no plan references it, and was NOT made reachable to test it. F-2 remains a non-defect: A4's 4096-byte argument is data, not symbolic vocabulary, and is still published as an opaque token. The opaque rule still redacts genuine secrets and still preserves digests. No C source byte changed. Earlier freezes and every review record are preserved unchanged.",
   "traced_cases": {
     "amended_by": "M3-T",
     "cases": [
@@ -150,5 +153,17 @@
       5,
       4
     ]
+  },
+  "vocabulary": {
+    "closure": "CURRENT_VOCABULARY_CLOSED",
+    "derivation_sources": [
+      "frozen_cases (cases, predictions, safe sets, gates, stages, block reasons, syscall lists, injection and control modes, decisions, M3 evidence facts)",
+      "observations (RULES, spike dispositions and refusals, signal and errno tables, report states, return states, lifecycle and exec constants)",
+      "checker (per-case statuses and aggregate verdicts)",
+      "published observation schema and normalised role names",
+      "driver (SETUPS, PARENT_STATES, POSED_CHECKS, ALL_CHANNELS), imported lazily to avoid the driver -> evidence cycle"
+    ],
+    "not_vocabulary": "argv contents, environment values, host paths, captured bytes, tracer text and any high-entropy value remain redactable; A4's 4096-byte argument is still published as <OPAQUE:...>",
+    "tokens_protected": 379
   }
 }
