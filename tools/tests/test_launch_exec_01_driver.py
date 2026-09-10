@@ -818,7 +818,7 @@ class RecordsAndAggregate(unittest.TestCase):
             if name in fc.DOCUMENTATION_GATES:
                 records[name]["documentation_gate"] = True
             if fc.BY_NAME[name]["traced"]:
-                records[name]["trace"] = []
+                records[name]["trace"] = {"child_syscalls": ["dup2", "execveat"], "integrity_ok": True}
         del records["R1"]
         statuses = checker.score_all(records)
         self.assertEqual(statuses["R1"][0], checker.INVALID)
@@ -870,7 +870,7 @@ def _all_passing():
         record = {"outcome": spec["predict"] or spec["safe"][0],
                   "launch_returned": True}
         if spec["traced"]:
-            record["trace"] = []
+            record["trace"] = {"child_syscalls": ["dup2", "execveat"], "integrity_ok": True}
         if spec["gates"]:
             record["gates"] = {g: True for g in spec["gates"]}
         if name in fc.DOCUMENTATION_GATES:
@@ -1524,7 +1524,7 @@ class M3AcquisitionEvidence(unittest.TestCase):
                  "WEXITED, NULL) = 0")
         token, reason = self._token(acq_trace(extra=extra))
         self.assertIsNone(token)
-        self.assertIn("waitid", reason)
+        self.assertIn("more than one descriptor", reason)
 
     def test_unrelated_child_activity_does_not_break_correlation(self):
         """R-3: si_pid filtering means another child's reap is simply ignored."""
@@ -1972,6 +1972,368 @@ class TracerPreflightRequirement(unittest.TestCase):
         body = body[:body.index(chr(10) * 3)]
         self.assertIn("strace", body)
         self.assertIn("return None", body)
+
+
+# ====================================== V-1: three-state return, bounded record
+def clone3_line(flags="CLONE_PIDFD", ptr="0x7ffd0000", out="[4]", ret="222",
+                suffix=""):
+    o = " => {pidfd=%s}" % out if out else ""
+    return ("111   clone3({flags=%s, pidfd=%s, exit_signal=SIGCHLD}%s, 88)"
+            " = %s%s" % (flags, ptr, o, ret, suffix))
+
+
+WAITID = ("111   waitid(P_PIDFD, 4, {si_pid=222, si_code=CLD_EXITED, "
+          "si_status=0}, WEXITED, NULL) = 0")
+
+
+class ReturnStateModel(unittest.TestCase):
+    """V-1. "The kernel said no" and "we never saw" are different facts."""
+
+    def _token(self, text):
+        return ob.derive("pidfd_acquired_atomically",
+                         observation(acquisition=ob.parse_pidfd_acquisition(text)))
+
+    def test_the_three_states_exist_and_are_distinct(self):
+        states = {ob.RETURN_OBSERVED_SUCCESS, ob.RETURN_OBSERVED_ERROR,
+                  ob.RETURN_NOT_OBSERVED}
+        self.assertEqual(len(states), 3)
+
+    def test_parse_return_state_classifies_each(self):
+        cases = (
+            (" = 222", ob.RETURN_OBSERVED_SUCCESS, 222),
+            (" = 0", ob.RETURN_OBSERVED_SUCCESS, 0),
+            (" = -1 EPERM (Operation not permitted)",
+             ob.RETURN_OBSERVED_ERROR, -1),
+            (" = -1 ENOSYS", ob.RETURN_OBSERVED_ERROR, -1),
+            (" = ?", ob.RETURN_NOT_OBSERVED, None),
+            ("", ob.RETURN_NOT_OBSERVED, None),
+            (None, ob.RETURN_NOT_OBSERVED, None),
+            ("  nonsense  ", ob.RETURN_NOT_OBSERVED, None),
+        )
+        for text, state, value in cases:
+            got_state, got_value, _ = ob.parse_return_state(text)
+            self.assertEqual(got_state, state, repr(text))
+            self.assertEqual(got_value, value, repr(text))
+
+    def test_a_missing_return_is_invalid_never_a_failure_token(self):
+        text = "111   clone3({flags=CLONE_PIDFD, pidfd=0x1} => {pidfd=[4]}, 88\n"
+        token, reason = self._token(text)
+        self.assertIsNone(token)
+        for forbidden in ("clone3_failed", "pidfd_not_acquired_atomically"):
+            self.assertNotEqual(token, forbidden)
+        self.assertIn("truncated", reason)
+
+    def test_an_observed_error_is_a_mechanism_failure(self):
+        text = clone3_line(out=None, ret="-1 EPERM (Operation not permitted)")
+        token, reason = self._token(text + "\n")
+        self.assertEqual(token, "clone3_failed")
+        self.assertIn("EPERM", reason)
+
+    def test_an_observed_success_proceeds(self):
+        self.assertEqual(self._token(clone3_line() + "\n" + WAITID + "\n")[0],
+                         "pidfd_acquired_atomically")
+
+
+class LogicalRecordBoundary(unittest.TestCase):
+    """V-1. A record must never absorb the line that follows it."""
+
+    def _facts(self, text):
+        return ob.parse_pidfd_acquisition(text)
+
+    def _token(self, text):
+        return ob.derive("pidfd_acquired_atomically",
+                         observation(acquisition=self._facts(text)))
+
+    # -- the five scenarios the owner instruction names ----------------------
+    def test_A_resumed_without_return_then_poll(self):
+        """The exact defect: "= 1" from the next line must NOT be adopted."""
+        text = ("111   clone3({flags=CLONE_PIDFD, pidfd=0x1, "
+                "exit_signal=SIGCHLD} <unfinished ...>\n"
+                "111   <... clone3 resumed> => {pidfd=[4]}, 88\n"
+                "111   poll([{fd=4, events=POLLIN}], 1, 5000) = 1\n")
+        facts = self._facts(text)
+        self.assertIsNone(facts["clone3_return"])
+        self.assertNotEqual(facts["clone3_return"], 1)
+        self.assertEqual(facts["clone3_return_state"], ob.RETURN_NOT_OBSERVED)
+        self.assertIsNone(self._token(text)[0])
+
+    def test_B_resumed_truncated_before_the_equals(self):
+        text = ("111   clone3({flags=CLONE_PIDFD, pidfd=0x1, "
+                "exit_signal=SIGCHLD} <unfinished ...>\n"
+                "111   <... clone3 resumed> => {pidfd=[4]}, 88")
+        self.assertIsNone(self._facts(text)["clone3_return"])
+        self.assertIsNone(self._token(text)[0])
+
+    def test_C_proper_resume_then_poll_keeps_its_own_return(self):
+        text = ("111   clone3({flags=CLONE_PIDFD, pidfd=0x1, "
+                "exit_signal=SIGCHLD} <unfinished ...>\n"
+                "111   <... clone3 resumed> => {pidfd=[4]}, 88) = 222\n"
+                "111   poll([{fd=4, events=POLLIN}], 1, 5000) = 1\n"
+                + WAITID + "\n")
+        facts = self._facts(text)
+        self.assertEqual(facts["clone3_return"], 222)
+        self.assertEqual(facts["clone3_return_state"],
+                         ob.RETURN_OBSERVED_SUCCESS)
+        self.assertEqual(self._token(text)[0], "pidfd_acquired_atomically")
+
+    def test_D_genuine_error_ignores_the_unrelated_next_return(self):
+        text = ("111   clone3({flags=CLONE_PIDFD, pidfd=0x1, "
+                "exit_signal=SIGCHLD} <unfinished ...>\n"
+                "111   <... clone3 resumed>, 88) = -1 EPERM (Operation not "
+                "permitted)\n"
+                "111   read(3, \"abcdefg\", 7)            = 7\n")
+        facts = self._facts(text)
+        self.assertEqual(facts["clone3_return_state"],
+                         ob.RETURN_OBSERVED_ERROR)
+        self.assertNotEqual(facts["clone3_return"], 7)
+        self.assertEqual(self._token(text)[0], "clone3_failed")
+
+    def test_E_newline_like_noise_inside_a_record(self):
+        """A quoted argument containing escapes must not shift the boundary."""
+        parts = ob.split_syscall_record(
+            'write(2, "line one\\nline two = 99", 21) = 21')
+        self.assertIsNotNone(parts)
+        self.assertEqual(parts[0], "write")
+        state, value, _ = ob.parse_return_state(parts[2])
+        self.assertEqual((state, value), (ob.RETURN_OBSERVED_SUCCESS, 21))
+
+    # -- the splitter itself -------------------------------------------------
+    def test_parentheses_inside_quoted_arguments_do_not_unbalance(self):
+        parts = ob.split_syscall_record('execveat(3, "a(b)c", NULL) = 0')
+        self.assertIsNotNone(parts)
+        self.assertEqual(parts[0], "execveat")
+
+    def test_an_unclosed_record_is_rejected(self):
+        for text in ("clone3({flags=CLONE_PIDFD, pidfd=0x1}, 88",
+                     "clone3({flags=CLONE_PIDFD",
+                     "clone3("):
+            self.assertIsNone(ob.split_syscall_record(text), text)
+
+    def test_trailing_text_that_is_not_a_result_is_rejected(self):
+        parts = ob.split_syscall_record("clone3({a}, 88) = 222 then poll(1) = 2")
+        self.assertIsNotNone(parts)
+        self.assertEqual(ob.parse_return_state(parts[2])[0],
+                         ob.RETURN_NOT_OBSERVED)
+
+    def test_the_record_is_bounded_flag_is_recorded(self):
+        good = self._facts(clone3_line() + "\n")
+        bad = self._facts("111   clone3({flags=CLONE_PIDFD, pidfd=0x1}, 88\n")
+        self.assertTrue(good["clone3_record_bounded"])
+        self.assertFalse(bad["clone3_record_bounded"])
+
+
+class ContradictoryWaitidIdentity(unittest.TestCase):
+    """V-2. The evidence set must be internally consistent BEFORE filtering."""
+
+    def _token(self, *waitids):
+        text = clone3_line() + "\n" + "\n".join(waitids) + "\n"
+        return ob.derive("pidfd_acquired_atomically",
+                         observation(acquisition=ob.parse_pidfd_acquisition(text)))
+
+    def w(self, fd, si_pid=None, result="0"):
+        info = "{si_pid=%d, si_code=CLD_EXITED}" % si_pid if si_pid else "{}"
+        return ("111   waitid(P_PIDFD, %d, %s, WEXITED, NULL) = %s"
+                % (fd, info, result))
+
+    def test_same_pidfd_same_child_twice_is_valid(self):
+        self.assertEqual(self._token(self.w(4, 222), self.w(4, 222))[0],
+                         "pidfd_acquired_atomically")
+
+    def test_same_pidfd_then_echild_without_si_pid_stays_valid(self):
+        self.assertEqual(
+            self._token(self.w(4, 222),
+                        self.w(4, None, "-1 ECHILD (No child processes)"))[0],
+            "pidfd_acquired_atomically")
+
+    def test_same_pidfd_two_different_children_is_invalid(self):
+        token, reason = self._token(self.w(4, 222), self.w(4, 333))
+        self.assertIsNone(token)
+        self.assertIn("self-contradictory", reason)
+
+    def test_only_a_foreign_child_on_the_candidate_descriptor_is_invalid(self):
+        token, reason = self._token(self.w(4, 333))
+        self.assertIsNone(token)
+        self.assertIn("si_pid", reason)
+
+    def test_two_descriptors_identifying_the_same_child_is_ambiguous(self):
+        token, reason = self._token(self.w(4, 222), self.w(9, 222))
+        self.assertIsNone(token)
+        self.assertIn("more than one descriptor", reason)
+
+    def test_an_unrelated_descriptor_for_another_child_does_not_contaminate(self):
+        self.assertEqual(self._token(self.w(4, 222), self.w(9, 333))[0],
+                         "pidfd_acquired_atomically")
+
+    def test_the_contradiction_is_found_before_filtering(self):
+        """Even when a matching observation exists, the conflict wins."""
+        token, _ = self._token(self.w(4, 222), self.w(4, 999))
+        self.assertIsNone(token, "the contradictory entry was filtered away")
+
+
+# ================================== V-3 / V-4: one shared traced-evidence gate
+INVALID_TRACES = (
+    ("none", None),
+    ("empty dict", {}),
+    ("empty list", []),
+    ("empty string", ""),
+    ("zero", 0),
+    ("no child_syscalls", {"stage_sequence": ["DUP2"]}),
+    ("child_syscalls not a collection", {"child_syscalls": "dup2"}),
+    ("child_syscalls empty", {"child_syscalls": []}),
+    ("child_syscalls wrong element type", {"child_syscalls": [1, 2]}),
+    ("marked integrity-invalid",
+     {"child_syscalls": ["dup2"], "integrity_ok": False}),
+    ("marked truncated", {"child_syscalls": ["dup2"], "truncated": True}),
+)
+
+VALID_TRACE = {"child_syscalls": ["dup2", "execveat"],
+               "stage_sequence": ["DUP2", "EXEC"], "integrity_ok": True}
+
+
+def traced_record(name, trace):
+    spec = fc.BY_NAME[name]
+    record = {"outcome": spec["predict"] or spec["safe"][0],
+              "launch_returned": True, "trace": trace}
+    if spec["gates"]:
+        record["gates"] = {g: True for g in spec["gates"]}
+    if name in fc.DOCUMENTATION_GATES:
+        record["documentation_gate"] = True
+    return record
+
+
+class TracedEvidenceGate(unittest.TestCase):
+    """V-3 and V-4. Presence alone is not evidence."""
+
+    def test_the_gate_rejects_every_invalid_shape(self):
+        for label, trace in INVALID_TRACES:
+            ok, why = checker.valid_trace_record(trace)
+            self.assertFalse(ok, label + " was accepted")
+            self.assertTrue(why)
+
+    def test_the_gate_accepts_a_structurally_valid_record(self):
+        ok, _ = checker.valid_trace_record(VALID_TRACE)
+        self.assertTrue(ok)
+
+    def test_every_traced_case_rejects_every_invalid_shape(self):
+        """All eight, including the four whose rules never read the trace."""
+        for name in sorted(fc.TRACED_CASES):
+            for label, trace in INVALID_TRACES:
+                status, why = checker.score_case(name, traced_record(name, trace))
+                self.assertEqual(status, checker.INVALID,
+                                 "%s accepted %s: %s" % (name, label, why))
+
+    def test_every_traced_case_still_scores_with_a_valid_record(self):
+        for name in sorted(fc.TRACED_CASES):
+            status, why = checker.score_case(name, traced_record(name, VALID_TRACE))
+            self.assertEqual(status, checker.PASS, name + ": " + why)
+
+    def test_malformed_evidence_is_invalid_and_never_fail(self):
+        for name in sorted(fc.TRACED_CASES):
+            for _, trace in INVALID_TRACES:
+                status, _ = checker.score_case(name, traced_record(name, trace))
+                self.assertNotEqual(status, checker.FAIL, name)
+
+    def test_an_untraced_case_is_unaffected_by_the_gate(self):
+        for name in ("R1", "T1", "O1", "P1"):
+            self.assertFalse(fc.BY_NAME[name]["traced"])
+            record = traced_record(name, None)
+            record.pop("trace")
+            self.assertNotEqual(checker.score_case(name, record)[0],
+                                checker.INVALID)
+
+    def test_a_blocked_traced_case_does_not_need_a_trace(self):
+        record = {"blocked": "clone3_unavailable", "launch_returned": None}
+        self.assertEqual(checker.score_case("M3", record)[0], checker.BLOCKED)
+
+    def test_the_gate_lives_in_one_place(self):
+        """No per-case rule may be responsible for remembering the invariant."""
+        source = (EXP / "checker.py").read_text(encoding="utf-8")
+        self.assertEqual(source.count("def valid_trace_record"), 1)
+        self.assertEqual(source.count("valid_trace_record(record.get"), 1)
+
+    def test_the_child_window_does_not_publish_a_raw_pid(self):
+        """P-14: child_syscalls and stage_sequence are evidence; the pid is not."""
+        nl = chr(10)
+        text = (clone3_line(ret="31337") + nl
+                + "[pid 31337] execveat(3) = 0" + nl
+                + WAITID.replace("222", "31337") + nl)
+        window = ob.parse_strace_child_window(text)
+        self.assertEqual(window["child_pid"], 31337)
+        # A realistic account name. NOTE: a very short one corrupts unrelated
+        # text by substring replacement -- recorded as finding V-5 and
+        # deliberately NOT fixed in this task.
+        s = evidence.Sanitiser(work="/home/runner/w", home="/home/runner",
+                               user="runner")
+        out = evidence.serialise(s.record({"trace": window}))
+        self.assertNotIn("31337", out)
+        self.assertIn("child_syscalls", out)
+        self.assertIn("stage_sequence", out)
+        self.assertEqual(s.record({"trace": window})["trace"]["child_pid"],
+                         evidence.WITHHELD)
+
+    def test_the_driver_marks_window_integrity(self):
+        good = ob.parse_strace_child_window(
+            clone3_line() + "\n[pid   222] execveat(3) = 0\n")
+        self.assertIs(good["integrity_ok"], True)
+        orphan = ob.parse_strace_child_window(
+            "111   <... clone3 resumed> => {pidfd=[4]}, 88) = 222\n"
+            "[pid   222] execveat(3) = 0\n")
+        self.assertTrue(orphan is None or orphan["integrity_ok"] is False)
+
+
+class AdverseVerdictPathV(unittest.TestCase):
+    """The load-bearing invariant, end to end."""
+
+    def _aggregate(self, text):
+        facts = ob.parse_pidfd_acquisition(text)
+        obs = observation(acquisition=facts,
+                          trace={"child_syscalls": ["dup2"], "integrity_ok": True},
+                          trace_sha256="a" * 64)
+        record = driver.evaluate(driver.CASE_PLANS["M3"], obs)
+        statuses = {n: (checker.PASS, "ok") for n in fc.MEMBERSHIP}
+        statuses["M3"] = checker.score_case("M3", record)
+        return statuses["M3"][0], checker.verdict(statuses)[0]
+
+    def test_the_exact_v1_example_no_longer_rejects(self):
+        """The record that previously produced the strongest wrong verdict."""
+        text = ("111   clone3({flags=CLONE_PIDFD, pidfd=0x7ffd0000, "
+                "exit_signal=SIGCHLD} <unfinished ...>\n"
+                "[pid   222] execveat(3, \"\", NULL, NULL, AT_EMPTY_PATH) = 0\n"
+                "111   <... clone3 resumed> => {pidfd=[4]}, 88")
+        status, aggregate = self._aggregate(text)
+        self.assertEqual(status, checker.INVALID)
+        self.assertEqual(aggregate, checker.INCONCLUSIVE)
+        self.assertNotEqual(aggregate, checker.REJECTED)
+
+    def test_incomplete_malformed_and_ambiguous_never_reject(self):
+        cases = {
+            "lost resume": ("111   clone3({flags=CLONE_PIDFD, pidfd=0x1} "
+                            "<unfinished ...>\n"),
+            "orphan resume": ("111   <... clone3 resumed> => {pidfd=[4]}, 88) "
+                              "= 222\n"),
+            "malformed prefix": "[pid   ??? ] clone3({flags=CLONE_PIDFD}, 88) = 1\n",
+            "truncated single line": ("111   clone3({flags=CLONE_PIDFD, "
+                                      "pidfd=0x1}, 88"),
+            "two clone3": clone3_line() + "\n" + clone3_line(ret="333") + "\n",
+            "empty": "",
+            "noise": "some unrelated text\n",
+        }
+        for label, text in cases.items():
+            status, aggregate = self._aggregate(text)
+            self.assertEqual(status, checker.INVALID, label)
+            self.assertEqual(aggregate, checker.INCONCLUSIVE, label)
+
+    def test_only_reconstructed_facts_reach_a_mechanism_fail(self):
+        cases = {
+            "observed error": clone3_line(out=None, ret="-1 EPERM (x)") + "\n",
+            "no CLONE_PIDFD": clone3_line(flags="CLONE_VM") + "\n" + WAITID + "\n",
+            "pidfd_open on the child":
+                clone3_line() + "\n111   pidfd_open(222, 0) = 4\n" + WAITID + "\n",
+        }
+        for label, text in cases.items():
+            status, aggregate = self._aggregate(text)
+            self.assertEqual(status, checker.FAIL, label)
+            self.assertEqual(aggregate, checker.REJECTED, label)
 
 
 # The tokens this suite has demonstrated a derivation for. The universe test

@@ -64,6 +64,10 @@ INTERNAL_ONLY_KEYS = frozenset({
     "acquisition",
     "lifecycle_uses",
     "pidfd_open_calls",
+    # The parsed child window carries the direct child's raw pid for
+    # correlation. child_syscalls and stage_sequence are legitimate published
+    # evidence; the pid is an experiment-local identifier and is not.
+    "child_pid",
     # The tracer's own text. Host paths, unrelated processes and environment
     # values pass through a syscall record; its SHA-256 is publishable, it is
     # not.

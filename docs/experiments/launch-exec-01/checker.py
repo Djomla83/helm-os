@@ -31,6 +31,45 @@ INCONCLUSIVE = "MECHANISM_INCONCLUSIVE"
 ACCEPTED = "MECHANISM_ACCEPTED"
 
 
+# ------------------------------------------------ traced evidence (V-3, V-4)
+# ONE shared gate, so no individual case rule has to remember the invariant.
+#
+# The final bounded review found two holes. V-3: this file tested only
+# ``trace is None``, so ``{}``, ``[]``, ``""`` and ``0`` all satisfied the
+# traced requirement. V-4: E1, E7, F4 and F7 declare ``traced: true`` but their
+# outcome rules read the receipt and the helper report, never the syscall
+# window -- so a malformed record still scored PASS for them.
+#
+# The gate is deliberately STRUCTURAL. It establishes that a syscall record
+# exists, is the expected shape, is non-empty and is not marked malformed. It
+# does not require particular syscalls: what a given case's window must contain
+# is that case's own frozen business, and demanding more here would invent
+# expectations the manifest never promised.
+def valid_trace_record(trace):
+    """``(ok, reason)`` for the structural validity of one syscall record."""
+    if trace is None:
+        return False, "a traced case produced no syscall record"
+    if not isinstance(trace, dict):
+        return False, ("the syscall record is " + type(trace).__name__ +
+                       ", not the expected mapping")
+    if trace.get("integrity_ok") is False:
+        return False, ("the syscall record is marked structurally invalid: "
+                       "fragments did not reconstruct cleanly")
+    if trace.get("truncated") is True:
+        return False, "the syscall record is marked truncated"
+    if "child_syscalls" not in trace:
+        return False, "the syscall record carries no child_syscalls"
+    calls = trace["child_syscalls"]
+    if not isinstance(calls, (list, tuple)):
+        return False, ("child_syscalls is " + type(calls).__name__ +
+                       ", not the expected collection")
+    if not calls:
+        return False, "child_syscalls is empty, so no window was observed"
+    if not all(isinstance(c, str) and c for c in calls):
+        return False, "child_syscalls contains a non-syscall-name entry"
+    return True, "structurally valid syscall record"
+
+
 def score_case(name, record):
     """Status and reason for one case from one recorded trial.
 
@@ -51,8 +90,14 @@ def score_case(name, record):
         return INVALID, ("observed under a tracer while declared traced:false; "
                          "ptrace reports a tracee's exit to the tracer before "
                          "the real parent, and the launcher is the real parent")
-    if spec["traced"] and record.get("trace") is None and not record.get("blocked"):
-        return INVALID, "a traced case produced no syscall record"
+    if spec["traced"] and not record.get("blocked"):
+        # Structurally invalid evidence is an evidence problem, never a
+        # demonstrated mechanism failure, so it lands INVALID and it lands here
+        # -- before any PASS expectation is considered. Nothing below repairs a
+        # record, and the status assigned is never revised.
+        trace_ok, why = valid_trace_record(record.get("trace"))
+        if not trace_ok:
+            return INVALID, why
 
     # Environment blocks. ONLY a conditional case may absorb one, and only with
     # the cause its own manifest entry names. Letting any class absorb a block

@@ -26,7 +26,10 @@ def passing_record(name):
     outcome = spec["predict"] if spec["predict"] is not None else spec["safe"][0]
     record = {"outcome": outcome, "launch_returned": True}
     if spec["traced"]:
-        record["trace"] = []
+        # A structurally valid syscall record. An empty list used to satisfy
+        # the checker; the V-3 gate now requires a real window, so the fixture
+        # supplies one rather than relying on the hole.
+        record["trace"] = {"child_syscalls": ["dup2", "execveat"], "integrity_ok": True}
     if spec["gates"]:
         record["gates"] = {g: True for g in spec["gates"]}
     if name in fc.DOCUMENTATION_GATES:

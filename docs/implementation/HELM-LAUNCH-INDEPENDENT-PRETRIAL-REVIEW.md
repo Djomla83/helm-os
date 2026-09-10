@@ -1213,3 +1213,118 @@ All four are bounded and repairable within the semantics already chosen; none re
 decision. The strace contract is grounded, the 5.4 floor is defensible, the `ptrace_scope` gate is
 correct, freeze integrity holds, and **D-7 remains not authorised with a valid trial count of
 ZERO.**
+
+---
+
+## 21. Disposition of final bounded findings V-1 through V-4
+
+**Appended after sections 19–20, which are preserved unchanged — the findings stand as recorded
+before any correction.** This section records what was done about them, and one new finding the
+work surfaced. **LAUNCH-EXEC-01 remains NOT_RUN, D-7 is not granted, and the valid trial count is
+ZERO.**
+
+| ID | Severity | Disposition |
+|---|---|---|
+| **V-1** | BLOCKER | **FIXED** — three-state return, and a bounded logical record |
+| **V-2** | IMPORTANT | **FIXED** — contradictory `waitid` identity is INVALID |
+| **V-3** | IMPORTANT | **FIXED** — one shared structural traced-evidence gate |
+| **V-4** | MINOR | **FIXED** — the gate covers all eight traced cases |
+| **V-5** | IMPORTANT | **NEW, OPEN** — not fixed here; see 21.5 |
+
+### 21.1 V-1 — the return is three-state, and the record is bounded
+
+`clone3_succeeded` is gone. `parse_return_state()` returns `RETURN_OBSERVED_SUCCESS`,
+`RETURN_OBSERVED_ERROR` or `RETURN_NOT_OBSERVED`, and the rule treats them as three different
+facts: an observed error is `clone3_failed`, a **missing** return is **INVALID**, and no absent
+return can produce any mechanism-failure token.
+
+`split_syscall_record()` delimits the argument list by counting the syscall's **own** parentheses,
+skipping quoted strings so a path containing `(` cannot unbalance it, and requires everything after
+the matching close to be the result and nothing else. A record that never closes — truncated, or run
+together with the following line — yields no return at all rather than borrowing one.
+
+All five scenarios the instruction named are pinned by test:
+
+| | Input | Result |
+|---|---|---|
+| **A** | resumed with no return, then `poll(...) = 1` | INVALID; `clone3_return` is **not** 1 |
+| **B** | resumed truncated before `= …` | INVALID |
+| **C** | proper resume `= 222`, then `poll(...) = 1` | return **222** |
+| **D** | resume `= -1 EPERM`, then an unrelated `= 7` | `clone3_failed`; the 7 ignored |
+| **E** | quoted argument containing `\n`-like noise | boundary unmoved |
+
+**The exact record that previously produced `MECHANISM_REJECTED` now produces INVALID →
+`MECHANISM_INCONCLUSIVE`**, asserted end-to-end through join → parser → P-12 → checker → aggregate.
+
+### 21.2 V-2 — consistency before filtering
+
+`_correlated_pidfd()` now groups `waitid(P_PIDFD, …)` observations by descriptor **first**. A
+descriptor carrying more than one distinct `si_pid` makes the record self-contradictory and
+**INVALID** — a pidfd refers to exactly one process, so filtering to the wanted child and discarding
+the conflict would hide a tracer or parser fault behind a PASS. Only after that check does it
+require a unique descriptor whose `si_pid` equals the `clone3` return. Entries with no rendered
+`si_pid` are still ignored, so an `ECHILD` retry cannot erase an earlier correct observation.
+
+### 21.3 V-3 / V-4 — one gate, all eight cases
+
+`checker.valid_trace_record()` is the single place the invariant lives, and a test asserts it is
+defined once and called once. For **every** `traced: true` case it rejects `None`, `{}`, `[]`, `""`,
+`0`, a mapping without `child_syscalls`, a `child_syscalls` of the wrong type or empty or holding
+non-names, and a record marked `integrity_ok: False` or `truncated: True` — **INVALID, before any
+PASS expectation, and never FAIL**. `parse_strace_child_window()` now carries `integrity_ok` so the
+gate can see reconstruction failures it did not itself parse.
+
+This closes V-4 directly: E1, E7, F4 and F7 read the receipt and the helper report rather than the
+window, and could previously PASS while carrying a malformed record. The gate is deliberately
+**structural** — what a window must *contain* remains each case's own frozen business.
+
+Two fixtures that had been relying on the hole (`record["trace"] = []`) were corrected rather than
+the gate loosened.
+
+### 21.4 What did not change
+
+Partition **72 / 54 / 11 / 7**, traced set the same **eight**, `status` `NOT_RUN`,
+`d7_execution_authorised` `false`, **72 handlers / 72 posable / 0 unposable**, and **no C source
+byte changed** — all six digests identical to the source Build 5 compiled clean. R-1 through R-5
+were re-checked and none regressed.
+
+### 21.5 V-5 — a new finding, recorded and NOT fixed
+
+**IMPORTANT. `evidence.Sanitiser` redacts the account name by unbounded substring replacement.**
+
+Re-running P-14 surfaced it. `Sanitiser.text()` does `out.replace(self._user, "<USER>")`, so any
+username that appears as a substring of evidence text corrupts it:
+
+| username | text | becomes |
+|---|---|---|
+| `ci` | `specific` | `spe<USER>fic` |
+| `run` | `truncated` | `t<USER>cated` |
+| `test` | `latest_status` | `la<USER>_status` |
+| `u` | `stage_sequence` | `stage_seq<USER>ence` |
+
+These are realistic CI account names. It **over-redacts rather than leaking**, so it damages
+evidence instead of exposing it — field names, syscall names and stage names are all reachable, and
+a hex-like username could corrupt a digest.
+
+*Disposition:* **not fixed in this task.** It is a new finding outside the V-1…V-4 disposition the
+owner authorised, and this repository's discipline is review → owner decision → fix. It is recorded
+here and in the freeze's `open_findings` so it cannot be lost, and the test that exposed it carries
+a comment naming it.
+
+*Also closed while re-verifying P-14:* the parsed child window carried the direct child's **raw
+pid** into published evidence via `record["trace"]["child_pid"]`. `child_pid` is now withheld by
+key, alongside the other experiment-local identifiers; `child_syscalls` and `stage_sequence` remain
+published, and the trace digest still survives.
+
+## 22. Status after V-1 … V-4
+
+**`FINAL_FIXES_READY_FOR_SHORT_REVIEW`.**
+
+346 tests pass, static posability is 72/72/0, and the adverse-verdict path is closed for every
+incomplete, malformed and ambiguous record tested. This is **not** a readiness statement and is
+deliberately not self-certified: the corrections were made by the same hand that wrote the code the
+final review examined.
+
+**One final short independent delta verification is required before D-7**, and it must also dispose
+of **V-5**. **D-7 remains not authorised. LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of
+ZERO.**

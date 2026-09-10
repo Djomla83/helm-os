@@ -226,6 +226,31 @@ and the descriptor that reading consumes is reported by number and is the only o
 > one the lifecycle used; `waitid(P_PIDFD, …)` reporting `si_pid ==` the clone3 return; and no
 > `pidfd_open(DIRECT_CHILD_PID)`.
 
+> **`V-1`…`V-4` corrections, after the final bounded verification.**
+>
+> **`V-1` — the syscall return is a THREE-state fact.** `RETURN_OBSERVED_SUCCESS`,
+> `RETURN_OBSERVED_ERROR` and `RETURN_NOT_OBSERVED`. "The kernel said no" and "we never saw what it
+> said" are different, and only the first is a mechanism result: a missing return is **INVALID** and
+> can never become `clone3_failed` or any other failure token. A record is also parsed as ONE
+> logical unit — its arguments are delimited by counting its own parentheses, skipping quoted
+> strings, and everything after the matching close must be the result and nothing else. A record
+> that never closes, or that ran together with the following line, is INVALID rather than
+> half-read, so a fragment can no longer adopt the next line's `= N` as its own child pid.
+>
+> **`V-2` — the correlation evidence must be internally consistent first.** A pidfd refers to
+> exactly one process, so a descriptor observed reaping two different children makes the record
+> self-contradictory and **INVALID** — detected *before* any filtering, so a contradiction can no
+> longer be discarded in favour of the wanted child.
+>
+> **`V-3`/`V-4` — one shared traced-evidence gate.** `checker.valid_trace_record()` is the single
+> place the invariant lives. For **every** case declared `traced: true` a structurally valid syscall
+> record is mandatory: `None`, `{}`, `[]`, `""`, `0`, a mapping without `child_syscalls`, a
+> `child_syscalls` of the wrong type or empty, and a record marked integrity-invalid or truncated
+> are each **INVALID** — before any PASS expectation is considered, and never FAIL. This closes the
+> case where E1, E7, F4 and F7 could PASS carrying a malformed record simply because their own
+> outcome rules read the receipt and the helper report rather than the window. The gate is
+> deliberately structural; what a window must *contain* remains each case's own frozen business.
+
 > **`R-4` — a usable `strace` is a MANDATORY pretrial requirement, and there is no fallback.**
 > Frozen as `STRACE_MIN_VERSION` (5.4) and `TRACER_REQUIREMENT`. For 0.1 the strace-based tracer is
 > the **sole** supported external syscall-record mechanism for the eight traced cases; no `ptrace`

@@ -497,6 +497,92 @@ def _split_task(line):
     return None, text, False
 
 
+# ------------------------------------------------- V-1: logical record bounds
+# A reconstructed syscall must be parsed as ONE logical record. The final
+# bounded review found two ways this went wrong:
+#
+#   * a truncated record has no return value at all, and deriving "success"
+#     from `return > 0` silently turned MISSING EVIDENCE into an observed
+#     failure -- clone3_failed, a FAIL, and therefore MECHANISM_REJECTED;
+#   * a return-value regex that scans the whole text can wander past the end of
+#     the syscall and adopt the NEXT line's "= N", inventing a child pid.
+#
+# Both are closed by finding the syscall's own closing parenthesis and
+# requiring everything after it to be exactly the result. Anything else is an
+# unbounded record, which is incomplete evidence rather than a mechanism fact.
+_RESULT_TAIL = re.compile(
+    r"\A\s*=\s*(?P<ret>-?\d+|\?)"
+    r"(?:\s+(?P<errno>[A-Z][A-Z0-9_]*))?"
+    r"(?:\s*\([^)]*\))?\s*\Z")
+
+# How the syscall's return value was observed. Three states, never two: the
+# difference between "the kernel said no" and "we never saw what it said" is
+# the difference between a result and a gap in the evidence.
+RETURN_OBSERVED_SUCCESS = "observed_success"
+RETURN_OBSERVED_ERROR = "observed_error"
+RETURN_NOT_OBSERVED = "not_observed"
+
+
+def split_syscall_record(text):
+    """``(name, args, result_text)`` for ONE logical syscall record, or None.
+
+    The argument list is delimited by counting parentheses from the syscall's
+    own opening one, skipping quoted strings so a path containing ``(`` cannot
+    unbalance it. Everything after the matching close must be the result and
+    nothing else, so a record that ran into a following syscall -- or that
+    stops before its own close -- is rejected rather than half-read.
+    """
+    if not isinstance(text, str):
+        return None
+    match = _CALL_NAME.match(text.strip())
+    if not match:
+        return None
+    body = text.strip()
+    name = match.group("call")
+    i = match.end() - 1            # index of the opening parenthesis
+    depth, in_string, escaped = 0, False, False
+    close = -1
+    while i < len(body):
+        ch = body[i]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+        elif ch == '"':
+            in_string = True
+        elif ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                close = i
+                break
+        i += 1
+    if close < 0:
+        return None                # never closed: truncated or absorbed
+    return name, body[match.end():close], body[close + 1:]
+
+
+def parse_return_state(result_text):
+    """``(state, value, errno_name)`` from the text after the closing paren."""
+    if result_text is None:
+        return RETURN_NOT_OBSERVED, None, None
+    match = _RESULT_TAIL.match(result_text)
+    if not match:
+        return RETURN_NOT_OBSERVED, None, None
+    raw = match.group("ret")
+    if raw == "?":
+        return RETURN_NOT_OBSERVED, None, None
+    value = int(raw)
+    errno_name = match.group("errno")
+    if value < 0 or errno_name:
+        return RETURN_OBSERVED_ERROR, value, errno_name
+    return RETURN_OBSERVED_SUCCESS, value, None
+
+
 def join_trace_fragments(text):
     """Rejoin ``<unfinished ...>`` / ``<... call resumed>`` pairs per task.
 
@@ -580,13 +666,29 @@ def parse_strace_child_window(text):
     if joined is None:
         return None
 
+    # V-3/V-4: the integrity of the record travels WITH the window, so one
+    # shared checker gate can reject a malformed trace for every traced case,
+    # including the four whose outcome rules never read the window.
+    integrity_ok = not any(joined[k] for k in
+                           ("unmatched_unfinished", "orphan_resumed",
+                            "ambiguous", "malformed"))
+
     child_pid = None
     for record in joined["records"]:
-        if record["call"] == "clone3":
-            match = _CLONE3_RESULT.search(record["text"])
-            if match and int(match.group("ret")) > 0:
-                child_pid = int(match.group("ret"))
-                break
+        if record["call"] != "clone3":
+            continue
+        parts = split_syscall_record(record["text"])
+        if parts is None:
+            # Unbounded or truncated: no return value was observed, which is
+            # not the same as a clone3 that returned an error.
+            integrity_ok = False
+            break
+        state, value, _ = parse_return_state(parts[2])
+        if state == RETURN_OBSERVED_SUCCESS:
+            child_pid = value
+        else:
+            integrity_ok = integrity_ok and state == RETURN_OBSERVED_ERROR
+        break
     if child_pid is None:
         return None
 
@@ -613,7 +715,7 @@ def parse_strace_child_window(text):
             stages.append(stage)
             last = stage
     return {"child_syscalls": calls, "stage_sequence": stages,
-            "child_pid": child_pid}
+            "child_pid": child_pid, "integrity_ok": integrity_ok}
 
 
 # ------------------------------------------------- M3-T: pidfd acquisition
@@ -683,7 +785,9 @@ def parse_pidfd_acquisition(text):
         "clone_pidfd_flag": False,
         "pidfd_output_pointer_supplied": False,
         "clone3_return": None,
-        "clone3_succeeded": False,
+        "clone3_return_state": RETURN_NOT_OBSERVED,
+        "clone3_errno": None,
+        "clone3_record_bounded": None,
         "pidfd_from_clone3": None,
         "pidfd_open_calls": [],
         "lifecycle_uses": [],
@@ -722,10 +826,21 @@ def parse_pidfd_acquisition(text):
                     if written:
                         facts["pidfd_from_clone3"] = int(written.group("fd"))
                         facts["evidence_form"] = EVIDENCE_DIRECT
-                result = _CLONE3_RESULT.search(line)
-                if result:
-                    facts["clone3_return"] = int(result.group("ret"))
-                    facts["clone3_succeeded"] = facts["clone3_return"] > 0
+                # V-1. The return value is read from the syscall's OWN
+                # logical record: everything after its matching close
+                # parenthesis, and nothing else. A record that never closed --
+                # truncated, or run together with the following line -- yields
+                # RETURN_NOT_OBSERVED, never an observed failure.
+                parts = split_syscall_record(line)
+                facts["clone3_record_bounded"] = parts is not None
+                if parts is not None:
+                    state, value, errno_name = parse_return_state(parts[2])
+                    facts["clone3_return_state"] = state
+                    facts["clone3_errno"] = errno_name
+                    if state == RETURN_OBSERVED_SUCCESS:
+                        facts["clone3_return"] = value
+                    elif state == RETURN_OBSERVED_ERROR:
+                        facts["clone3_return"] = value
 
         opened = _PIDFD_OPEN.search(line)
         if opened:
@@ -755,23 +870,47 @@ def parse_pidfd_acquisition(text):
 
 
 def _correlated_pidfd(facts):
-    """The descriptor the frozen lifecycle used FOR THE DIRECT CHILD.
+    """``(descriptor, reason)`` for the lifecycle handle of the DIRECT CHILD.
 
     R-3: a ``waitid(P_PIDFD, N)`` only correlates when the siginfo it renders
-    names the direct child. Without that check a descriptor referring to some
-    other process satisfies the correlation, which is what the bounded review
-    demonstrated. Entries with no rendered ``si_pid`` -- an ECHILD retry, for
-    instance -- are ignored rather than fatal, so a later failed reap cannot
-    erase an earlier correct one.
+    names the direct child. Entries with no rendered ``si_pid`` -- an ECHILD
+    retry, for instance -- are ignored rather than fatal, so a later failed reap
+    cannot erase an earlier correct one.
+
+    V-2: the evidence set must first be INTERNALLY CONSISTENT. A pidfd refers to
+    exactly one process, so a descriptor that reaps two different pids is a
+    contradictory record. Filtering to the wanted child and discarding the
+    contradiction would hide a tracer or parser fault behind a PASS, so the
+    contradiction is detected BEFORE any filtering.
     """
     child_pid = facts.get("clone3_return")
     if child_pid is None:
-        return None
-    matched = {use["fd"] for use in facts.get("lifecycle_uses", ())
-               if use["op"] == LIFECYCLE_WAITID and use.get("si_pid") == child_pid}
-    if len(matched) == 1:
-        return next(iter(matched))
-    return None             # none, or ambiguous: refuse to pick one
+        return None, "no observed clone3 child pid to correlate against"
+
+    by_fd = {}
+    for use in facts.get("lifecycle_uses", ()):
+        if use.get("op") != LIFECYCLE_WAITID:
+            continue
+        pid = use.get("si_pid")
+        if pid is None:
+            continue
+        by_fd.setdefault(use["fd"], set()).add(pid)
+
+    contradictory = [fd for fd, pids in by_fd.items() if len(pids) > 1]
+    if contradictory:
+        return None, ("one descriptor reaped more than one distinct child; a "
+                      "pidfd refers to exactly one process, so this record is "
+                      "self-contradictory")
+
+    candidates = [fd for fd, pids in by_fd.items()
+                  if next(iter(pids)) == child_pid]
+    if len(candidates) == 1:
+        return candidates[0], None
+    if not candidates:
+        return None, ("no waitid(P_PIDFD, ...) reports si_pid == the clone3 "
+                      "return, so nothing ties a descriptor to the direct child")
+    return None, ("more than one descriptor claims the direct child; the "
+                  "correlation is ambiguous")
 
 
 def normalise_acquisition(facts):
@@ -783,7 +922,7 @@ def normalise_acquisition(facts):
     """
     if not isinstance(facts, dict):
         return None
-    correlated = _correlated_pidfd(facts)
+    correlated, _ = _correlated_pidfd(facts)
     return {
         "clone3_seen": bool(facts.get("clone3_seen")),
         "clone3_call_count": facts.get("clone3_call_count", 0),
@@ -791,9 +930,12 @@ def normalise_acquisition(facts):
         "clone_pidfd_flag": bool(facts.get("clone_pidfd_flag")),
         "pidfd_output_pointer_supplied":
             bool(facts.get("pidfd_output_pointer_supplied")),
-        "clone3_succeeded": bool(facts.get("clone3_succeeded")),
+        "clone3_return_state": facts.get("clone3_return_state"),
+        "clone3_record_bounded": facts.get("clone3_record_bounded"),
+        "clone3_errno": facts.get("clone3_errno"),
         "clone3_was_joined": bool(facts.get("clone3_was_joined")),
-        "direct_child": "DIRECT_CHILD" if facts.get("clone3_succeeded") else None,
+        "direct_child": ("DIRECT_CHILD" if facts.get("clone3_return_state")
+                         == RETURN_OBSERVED_SUCCESS else None),
         "direct_child_pidfd": (
             "DIRECT_CHILD_PIDFD" if correlated is not None else None),
         "pidfd_from_same_syscall": facts.get("pidfd_from_clone3") is not None,
@@ -1394,17 +1536,32 @@ def rule_pidfd_acquired_atomically(obs):
         return None, ("the record contains more than one clone3 call, so the "
                       "direct child cannot be identified unambiguously")
 
+    # V-1 -- the record must be BOUNDED before anything in it means anything.
+    # An unclosed argument list means the record was truncated, or ran together
+    # with the following line; either way its "= N" is not this syscall's.
+    if facts.get("clone3_record_bounded") is False:
+        return None, ("the clone3 record does not close its own argument list, "
+                      "so it was truncated or ran into another record; no "
+                      "return value can be attributed to it")
+
+    # D -- THREE states, never two. "The kernel said no" and "we never saw what
+    # it said" are different facts, and only the first is a mechanism result.
+    state = facts.get("clone3_return_state")
+    if state == RETURN_NOT_OBSERVED:
+        return None, ("the clone3 record carries no observed return value; "
+                      "missing evidence is not an observed failure")
+    if state == RETURN_OBSERVED_ERROR:
+        errno_name = facts.get("clone3_errno")
+        return ("clone3_failed",
+                "clone3 returned an observed error" +
+                ((" (" + errno_name + ")") if errno_name else "") +
+                ", so no child was created and no acquisition occurred")
+
     # B -- its flags contain CLONE_PIDFD.
     if not facts.get("clone_pidfd_flag"):
         return ("pidfd_not_acquired_atomically",
                 "clone3 was called without CLONE_PIDFD, so no pidfd could be "
                 "returned by the syscall that created the child")
-
-    # D -- the call actually created the direct child. Reached only after the
-    # fragments rejoined, so a genuine error return is a genuine result.
-    if not facts.get("clone3_succeeded"):
-        return ("clone3_failed",
-                "clone3 did not create a child, so no acquisition occurred")
 
     # C -- an output location was supplied for the kernel to write into.
     if not facts.get("pidfd_output_pointer_supplied"):
@@ -1439,11 +1596,9 @@ def rule_pidfd_acquired_atomically(obs):
     # G -- the descriptor is correlated to the launcher's DIRECT-CHILD handle.
     # R-3: waitid(P_PIDFD, N) only correlates when the siginfo it renders names
     # the direct child; otherwise N could refer to any process.
-    correlated = _correlated_pidfd(facts)
+    correlated, why = _correlated_pidfd(facts)
     if correlated is None:
-        return None, ("no unambiguous waitid(P_PIDFD, ...) reporting "
-                      "si_pid == the clone3 return ties a descriptor to the "
-                      "direct child")
+        return None, why
 
     # F -- and it is the same descriptor clone3 yielded.
     if written != correlated:
