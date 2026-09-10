@@ -774,4 +774,3 @@ All four are P-14 sanitised **before** the disk write, so a later upload is neve
 boundary. The final document is a summary of durable facts, never their only copy: a missing
 `evidence.json` after an abort is expected, and the other three remain authoritative. Cleanup
 failures are recorded beside a case and never rewrite its mechanism result.
-
