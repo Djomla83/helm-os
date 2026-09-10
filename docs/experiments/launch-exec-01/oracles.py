@@ -104,11 +104,15 @@ def total_bound_ms(timeout_ms, grace_ms, spawn_confirm_ms, post_exit_drain_ms):
 
 
 if __name__ == "__main__":
-    import json
-    print(json.dumps({
+    # P-16. These are digests of synthetic byte patterns and carry no host
+    # fact, but they still leave through the one boundary rather than a second
+    # serializer -- the invariant is "no module emits JSON of its own".
+    import evidence
+
+    evidence.publish({
         "stdout_4k_sha256": stream_digest("stdout", 4096),
         "stderr_4k_sha256": stream_digest("stderr", 4096),
         "stdout_512_sha256": stream_digest("stdout", 512),
         "stdout_8m_sha256": stream_digest("stdout", 8 * 1024 * 1024),
         "empty_sha256": digest_of(b""),
-    }, indent=2, sort_keys=True))
+    })

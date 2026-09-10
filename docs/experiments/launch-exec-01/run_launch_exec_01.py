@@ -173,11 +173,18 @@ def preflight_gates(preflight, build_dir):
 
 
 def run_trial(build_dir, auth):
-    """Pose every frozen case once and emit one sanitised evidence document.
+    """Pose every frozen case once and return the evidence document RAW.
 
     Reached only with an :class:`driver.Authorisation`. Every case in the
     membership produces a record -- absence is never an omission.
+
+    **P-16: this function no longer sanitises.** It returns the document and
+    the sanitiser it built, and :func:`evidence.publish` applies P-14 once, at
+    the boundary. Sanitising at each return site is how the ``HALT_PREFLIGHT``
+    document came to be published raw: it was the one return that did not
+    remember. Returning raw from every path makes forgetting impossible.
     """
+    sanitiser = evidence.public_sanitiser(build=build_dir)
     preflight = harness.preflight()
     halts = preflight_gates(preflight, build_dir)
     if halts:
@@ -185,12 +192,9 @@ def run_trial(build_dir, auth):
                    "reason": "a mandatory preflight invariant is false; no case "
                              "was posed and LAUNCH-EXEC-01 remains NOT_RUN",
                    "halts": halts,
-                   "preflight": preflight}
+                   "preflight": preflight}, sanitiser
 
     built = harness.build(build_dir)
-    sanitiser = evidence.Sanitiser(
-        work=str(pathlib.Path(build_dir).resolve()),
-        home=str(pathlib.Path.home()), build=str(pathlib.Path(build_dir).resolve()))
     ctx = driver.TrialContext(build=build_dir, work=build_dir,
                               preflight=preflight, freeze=frozen_manifest(),
                               sanitiser=sanitiser)
@@ -228,7 +232,7 @@ def run_trial(build_dir, auth):
         "freeze": frozen_manifest(),
         "uncontrolled": uncontrolled,
     })
-    return 0, sanitiser.record(document)
+    return 0, document, sanitiser
 
 
 def main(argv=None):
@@ -249,29 +253,29 @@ def main(argv=None):
 
     if args.verify_freeze:
         ok, detail = verify_freeze()
-        print(json.dumps({"freeze_verified": ok, "detail": detail}, indent=2))
+        evidence.publish({"freeze_verified": ok, "detail": detail})
         return 0 if ok else 1
 
     if args.driver_completeness:
         # Static analysis only: it walks the plan table and never calls a
         # handler, so it is safe to run at any time, D-7 or not.
-        print(json.dumps({
+        evidence.publish({
             "completeness": driver.completeness(),
             "unposable": driver.unposable_cases(),
             "supplied_channels": sorted(driver.SPIKE_SUPPLIED_CHANNELS),
-        }, indent=2, sort_keys=True))
+        })
         return 0
 
     if args.preflight_only:
-        print(json.dumps({
+        evidence.publish({
             "preflight": harness.preflight(),
             "manifest": summary(),
             "driver": driver.completeness(),
-        }, indent=2, sort_keys=True, default=str))
+        })
         return 0
 
     if not args.i_have_owner_authorisation_d7:
-        print(json.dumps({
+        evidence.publish({
             "status": "NOT_RUN",
             "reason": "D-7 (execution authorisation) is not granted. This "
                       "definition is frozen for independent pre-trial review, "
@@ -282,19 +286,19 @@ def main(argv=None):
                 "SPAWN_CONFIRM_TIMEOUT_MS": SPAWN_CONFIRM_TIMEOUT_MS,
                 "POST_EXIT_DRAIN_MS": POST_EXIT_DRAIN_MS,
             },
-        }, indent=2, sort_keys=True))
+        })
         return 3
 
     ok, detail = verify_freeze()
     if not ok:
-        print(json.dumps({"status": "HALT", "reason": detail}, indent=2))
+        evidence.publish({"status": "HALT", "reason": detail})
         return 4
 
     # Past this line a case can be posed. The Authorisation object is the single
     # gate every posing path checks, and it cannot be built without the flag.
     auth = driver.Authorisation(True)
-    code, document = run_trial(args.build_dir, auth)
-    sys.stdout.write(evidence.serialise(document))
+    code, document, sanitiser = run_trial(args.build_dir, auth)
+    evidence.publish(document, sanitiser)
     return code
 
 

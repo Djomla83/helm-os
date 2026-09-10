@@ -8,6 +8,8 @@ generated ELF or any preregistered case, and no test constructs a
 LAUNCH-EXEC-01 remains NOT_RUN.
 """
 import ast
+import contextlib
+import io
 import json
 import pathlib
 import subprocess
@@ -22,6 +24,8 @@ if str(EXP) not in sys.path:
 import checker              # noqa: E402
 import driver               # noqa: E402
 import evidence             # noqa: E402
+import harness              # noqa: E402
+import run_launch_exec_01 as runner   # noqa: E402
 import frozen_cases as fc   # noqa: E402
 import observations as ob   # noqa: E402
 import oracles              # noqa: E402
@@ -2096,15 +2100,32 @@ class TracerPreflightRequirement(unittest.TestCase):
         self.assertIsNone(driver.blocked_cause_for(driver.CASE_PLANS["M3"], ctx))
 
     def test_no_case_is_posed_while_the_tracer_gate_fails(self):
-        """run_trial returns HALT_PREFLIGHT before the case loop is reached."""
-        import run_launch_exec_01 as runner
-        source = (EXP / "run_launch_exec_01.py").read_text(encoding="utf-8")
-        body = source[source.index("def run_trial("):]
-        halt_at = body.index("HALT_PREFLIGHT")
-        pose_at = body.index("driver.observe(")
-        self.assertLess(halt_at, pose_at,
+        """run_trial returns HALT_PREFLIGHT before the case loop is reached.
+
+        Read from the AST rather than by slicing the source text: the previous
+        form searched for the first occurrence of the literal HALT_PREFLIGHT
+        and broke when a docstring mentioned it, which said nothing about the
+        invariant it exists to protect.
+        """
+        tree = ast.parse((EXP / "run_launch_exec_01.py").read_text(encoding="utf-8"))
+        run_trial = [n for n in tree.body
+                     if isinstance(n, ast.FunctionDef) and n.name == "run_trial"][0]
+
+        halt_returns = []
+        for node in ast.walk(run_trial):
+            if isinstance(node, ast.If) and ast.unparse(node.test) == "halts":
+                for inner in ast.walk(node):
+                    if isinstance(inner, ast.Return) and                             "HALT_PREFLIGHT" in ast.unparse(inner):
+                        halt_returns.append(inner.lineno)
+        self.assertTrue(halt_returns,
+                        "no `if halts:` return carries HALT_PREFLIGHT")
+
+        poses = [n.lineno for n in ast.walk(run_trial)
+                 if isinstance(n, ast.Call)
+                 and ast.unparse(n.func) == "driver.observe"]
+        self.assertTrue(poses, "run_trial no longer poses anything")
+        self.assertLess(max(halt_returns), min(poses),
                         "the preflight halt must precede any posing")
-        self.assertIn("if halts:", body[:halt_at])
 
     def test_the_requirement_is_frozen_in_the_manifest(self):
         self.assertEqual(fc.STRACE_MIN_VERSION, (5, 4))
@@ -2683,6 +2704,307 @@ class F2LongDataStaysOpaque(unittest.TestCase):
         self.assertNotIn("x" * 4096, evidence.vocabulary())
         out = s.record({"environ": ["SECRET=" + "q" * 40]})
         self.assertNotIn("q" * 40, evidence.serialise(out))
+
+
+# =========================================================== P-16: host facts
+# The independent M-1 check recorded P-16: harness.preflight() collected
+# ``uname -a``, whose value embeds the machine's nodename, and one publication
+# path -- HALT_PREFLIGHT -- returned its document before the sanitisation
+# boundary. Two things are tested here, because the fix has two halves: the
+# host name is no longer COLLECTED, and no document reaches stdout without
+# passing the same P-14 logic.
+
+HOSTNAME_PROBE = "helm-secret-host-9371"
+BROAD_UNAME = ("Linux " + HOSTNAME_PROBE + " 6.5.0-1015-azure #15-Ubuntu SMP "
+               "Wed Sep 3 12:00:00 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux")
+
+EXPERIMENT_MODULES = sorted(p for p in EXP.glob("*.py"))
+
+
+def tainted_preflight():
+    """A fabricated preflight carrying every class of private value.
+
+    Nothing here is measured: no command runs, no case is posed, and the
+    kernel release and architecture are the harmless facts the experiment does
+    need, so a fix that redacts everything fails this as loudly as a fix that
+    redacts nothing.
+    """
+    return {
+        "uname": BROAD_UNAME,
+        "nodename": HOSTNAME_PROBE,
+        "hostname": HOSTNAME_PROBE,
+        "kernel_name": "Linux",
+        "kernel_release": "6.5.0-1015-azure",
+        "arch": "x86_64",
+        "user": "helm-secret-user",
+        "logname": "helm-secret-user",
+        "home": "/home/helm-secret-user/work/helm",
+        "strace": "/usr/bin/strace",
+        "token": "ghp_" + "Z" * 36,
+        "environ": ["ACTIONS_RUNTIME_TOKEN=" + "s" * 44],
+        "block_reasons": {},
+    }
+
+
+class P16HostCollectionIsMinimal(unittest.TestCase):
+    """P-16 part one: the nodename is never gathered in the first place."""
+
+    def _uname_flags(self):
+        """Every uname invocation in harness.py, read from its source."""
+        tree = ast.parse((EXP / "harness.py").read_text(encoding="utf-8"))
+        flags = []
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call) or not node.args:
+                continue
+            arg = node.args[0]
+            if not isinstance(arg, (ast.List, ast.Tuple)):
+                continue
+            parts = [e.value for e in arg.elts
+                     if isinstance(e, ast.Constant) and isinstance(e.value, str)]
+            if parts and parts[0] == "uname":
+                flags.extend(parts[1:])
+        return flags
+
+    def test_uname_is_only_ever_called_with_narrow_flags(self):
+        flags = self._uname_flags()
+        self.assertTrue(flags, "harness no longer calls uname at all")
+        self.assertEqual(sorted(set(flags)), ["-m", "-r", "-s"])
+
+    def test_the_broad_and_nodename_forms_are_gone(self):
+        for forbidden in ("-a", "-n", "--all", "--nodename"):
+            self.assertNotIn(forbidden, self._uname_flags(), forbidden)
+
+    def test_preflight_declares_no_broad_host_field(self):
+        source = (EXP / "harness.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        keys = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Dict):
+                keys.update(k.value for k in node.keys
+                            if isinstance(k, ast.Constant)
+                            and isinstance(k.value, str))
+        self.assertNotIn("uname", keys)
+        self.assertIn("kernel_name", keys)
+        # The narrow facts the experiment actually needs are still collected.
+        for needed in ("kernel_release", "arch"):
+            self.assertIn(needed, keys, needed)
+
+    def _commands_invoked(self):
+        """Every external command harness.py runs, read from its source.
+
+        Deliberately AST-derived rather than a substring search: the word
+        "hostname" appears in the comments that explain why it is not
+        collected, and a test that cannot tell a comment from a command would
+        fail on its own documentation.
+        """
+        tree = ast.parse((EXP / "harness.py").read_text(encoding="utf-8"))
+        commands = set()
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            name = ast.unparse(node.func)
+            if name.endswith("which") and node.args:
+                if isinstance(node.args[0], ast.Constant):
+                    commands.add(node.args[0].value)
+                continue
+            for arg in node.args:
+                if isinstance(arg, (ast.List, ast.Tuple)) and arg.elts:
+                    first = arg.elts[0]
+                    if isinstance(first, ast.Constant) and                             isinstance(first.value, str):
+                        commands.add(first.value)
+        return commands
+
+    def test_no_host_identity_command_is_invoked(self):
+        invoked = self._commands_invoked()
+        self.assertTrue(invoked, "no commands found; the walk is broken")
+        for forbidden in ("hostname", "hostnamectl", "dnsdomainname",
+                          "domainname", "whoami", "id", "getent", "host"):
+            self.assertNotIn(forbidden, invoked, forbidden)
+
+
+class P16PublicationBoundary(unittest.TestCase):
+    """P-16 part two: one boundary, and every path goes through it."""
+
+    def test_no_module_serialises_json_of_its_own(self):
+        """A whole-tree property, not one line: only evidence may serialise."""
+        offenders = []
+        for path in EXPERIMENT_MODULES:
+            if path.name == "evidence.py":
+                continue
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if (isinstance(node, ast.Call)
+                        and isinstance(node.func, ast.Attribute)
+                        and node.func.attr in ("dumps", "dump")
+                        and getattr(node.func.value, "id", "") == "json"):
+                    offenders.append("%s:%d" % (path.name, node.lineno))
+        self.assertEqual(offenders, [])
+
+    def test_no_module_writes_to_stdout_of_its_own(self):
+        offenders = []
+        for path in EXPERIMENT_MODULES:
+            if path.name == "evidence.py":
+                continue
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Call):
+                    name = (getattr(node.func, "id", None)
+                            or ast.unparse(node.func))
+                    if name == "print" or name.endswith("stdout.write"):
+                        offenders.append("%s:%d %s"
+                                         % (path.name, node.lineno, name))
+        self.assertEqual(offenders, [])
+
+    def test_every_main_block_publishes_through_the_boundary(self):
+        """Every module that can be run directly emits via evidence.publish."""
+        checked = 0
+        for path in EXPERIMENT_MODULES:
+            source = path.read_text(encoding="utf-8")
+            if '__name__ == "__main__"' not in source:
+                continue
+            tree = ast.parse(source)
+            for node in tree.body:
+                if not isinstance(node, ast.If):
+                    continue
+                if '__name__' not in ast.unparse(node.test):
+                    continue
+                body = ast.unparse(node)
+                if "publish" in body or "sys.exit(main())" in body:
+                    checked += 1
+                else:
+                    self.fail("%s emits without the boundary:\n%s"
+                              % (path.name, body[:200]))
+        self.assertGreaterEqual(checked, 5)
+
+    def test_run_trial_returns_a_raw_document_and_its_sanitiser(self):
+        """The boundary must be what removes the taint, not luck upstream."""
+        code, document, sanitiser = self._halt_trial()
+        self.assertEqual(code, 6)
+        self.assertIsInstance(sanitiser, evidence.Sanitiser)
+        # RAW on the way out of run_trial -- this is deliberate.
+        self.assertIn(HOSTNAME_PROBE, json.dumps(document))
+
+    # ------------------------------------------------------------- helpers
+    def _halt_trial(self):
+        """Reach the HALT_PREFLIGHT return with nothing built and nothing posed.
+
+        ``preflight_gates`` is replaced so no static-link probe is compiled, and
+        ``auth`` is None because the halt returns before any case is posed --
+        which is itself the property being relied on.
+        """
+        halt = [{"gate": "clone3", "detail": "clone3 is unavailable",
+                 "evidence": {"available": False}}]
+        real_preflight, real_gates = harness.preflight, runner.preflight_gates
+        harness.preflight = tainted_preflight
+        runner.preflight_gates = lambda preflight, build_dir: halt
+        try:
+            return runner.run_trial("target/launch-exec-01-not-a-real-dir", None)
+        finally:
+            harness.preflight, runner.preflight_gates = real_preflight, real_gates
+
+    def _published(self, argv):
+        buffer = io.StringIO()
+        real = harness.preflight
+        harness.preflight = tainted_preflight
+        try:
+            with contextlib.redirect_stdout(buffer):
+                code = runner.main(argv)
+        finally:
+            harness.preflight = real
+        return code, buffer.getvalue()
+
+    # ------------------------------------------------ behavioural coverage
+    def test_the_not_run_document_goes_through_the_boundary(self):
+        code, text = self._published([])
+        self.assertEqual(code, 3)
+        self.assertEqual(json.loads(text)["status"], "NOT_RUN")
+        self.assertNotIn(HOSTNAME_PROBE, text)
+
+    def test_the_preflight_only_document_is_sanitised(self):
+        code, text = self._published(["--preflight-only"])
+        self.assertEqual(code, 0)
+        published = json.loads(text)["preflight"]
+        self.assertNotIn(HOSTNAME_PROBE, text)
+        self.assertEqual(published["uname"], evidence.HOST_DESCRIPTOR)
+        self.assertEqual(published["nodename"], evidence.HOST_DESCRIPTOR)
+        self.assertEqual(published["hostname"], evidence.HOST_IDENTITY)
+
+    def test_the_driver_completeness_document_goes_through_the_boundary(self):
+        code, text = self._published(["--driver-completeness"])
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(text)["completeness"]["driver_total"], 72)
+
+    def test_the_freeze_verification_document_goes_through_the_boundary(self):
+        _, text = self._published(["--verify-freeze"])
+        self.assertIn("freeze_verified", json.loads(text))
+        self.assertNotIn(HOSTNAME_PROBE, text)
+
+
+class P16OriginalLeakCannotRecur(unittest.TestCase):
+    """P-16 sections 3 and 5: the exact leak, through the exact paths."""
+
+    def _publish(self, document, sanitiser=None):
+        return evidence.publish(document, sanitiser, stream=io.StringIO())
+
+    def test_the_broad_uname_value_never_reaches_public_evidence(self):
+        for key in ("uname", "uname_all", "nodename", "node", "fqdn"):
+            text = self._publish({"preflight": {key: BROAD_UNAME}})
+            self.assertNotIn(HOSTNAME_PROBE, text, key)
+            self.assertIn(evidence.HOST_DESCRIPTOR, text, key)
+
+    def test_the_bare_hostname_never_reaches_public_evidence(self):
+        for key in ("hostname", "host", "runner_name"):
+            text = self._publish({"preflight": {key: HOSTNAME_PROBE}})
+            self.assertNotIn(HOSTNAME_PROBE, text, key)
+
+    def test_the_halt_preflight_document_is_sanitised(self):
+        """Section 5's negative control, through the real halt path."""
+        boundary = P16PublicationBoundary("test_the_not_run_document_"
+                                          "goes_through_the_boundary")
+        code, document, sanitiser = boundary._halt_trial()
+        text = self._publish(document, sanitiser)
+        published = json.loads(text)
+
+        self.assertEqual(code, 6)
+        # Private values gone.
+        self.assertNotIn(HOSTNAME_PROBE, text)
+        self.assertNotIn("helm-secret-user", text)
+        self.assertNotIn("Z" * 36, text)
+        self.assertNotIn("s" * 44, text)
+        # Required platform facts kept.
+        self.assertEqual(published["preflight"]["kernel_release"],
+                         "6.5.0-1015-azure")
+        self.assertEqual(published["preflight"]["arch"], "x86_64")
+        self.assertEqual(published["preflight"]["kernel_name"], "Linux")
+        # The halt itself still says what happened.
+        self.assertEqual(published["status"], "HALT_PREFLIGHT")
+        self.assertIn("no case was posed", published["reason"])
+        self.assertEqual(published["halts"][0]["gate"], "clone3")
+
+    def test_the_fix_is_not_blanket_redaction(self):
+        text = self._publish({"preflight": tainted_preflight()})
+        published = json.loads(text)["preflight"]
+        self.assertEqual(published["kernel_name"], "Linux")
+        self.assertEqual(published["kernel_release"], "6.5.0-1015-azure")
+        self.assertEqual(published["arch"], "x86_64")
+        self.assertEqual(published["strace"], "/usr/bin/strace")
+
+    def test_the_boundary_inherits_the_m1_fail_closed_rule(self):
+        """A document cannot be published while the vocabulary is unavailable."""
+        import types
+        real = sys.modules.get("driver")
+        evidence._reset_vocabulary_cache()
+        sys.modules["driver"] = types.ModuleType("driver")
+        try:
+            with self.assertRaises(evidence.VocabularyUnavailable):
+                self._publish({"status": "NOT_RUN"})
+        finally:
+            if real is not None:
+                sys.modules["driver"] = real
+            else:
+                sys.modules.pop("driver", None)
+            evidence._reset_vocabulary_cache()
+        self.assertIn("NOT_RUN", self._publish({"status": "NOT_RUN"}))
 
 
 # ============================================ M-1: fail-closed lazy vocabulary

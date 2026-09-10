@@ -107,8 +107,12 @@ def write(out_dir):
 
 
 if __name__ == "__main__":
-    import json
+    # P-16. write() returns the absolute path of every fixture it wrote, so this
+    # diagnostic emitted host paths raw. It leaves through the one publication
+    # boundary now, like everything else this experiment prints.
+    import evidence
+
     if len(sys.argv) > 1:
-        print(json.dumps(write(sys.argv[1]), indent=2, sort_keys=True))
+        evidence.publish(write(sys.argv[1]))
     else:
-        print(json.dumps(digests(), indent=2, sort_keys=True))
+        evidence.publish(digests())

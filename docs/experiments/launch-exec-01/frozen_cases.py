@@ -675,5 +675,10 @@ def summary():
 
 
 if __name__ == "__main__":
-    import json
-    print(json.dumps(summary(), indent=2, sort_keys=True))
+    # P-16. This module has no imports at all, so it cannot reach a host fact
+    # and summary() is pure frozen data. It still leaves through the one
+    # boundary, so the invariant is "no module emits JSON of its own" with no
+    # exceptions to remember.
+    import evidence
+
+    evidence.publish(summary())

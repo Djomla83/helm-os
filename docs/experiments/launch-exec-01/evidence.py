@@ -37,7 +37,9 @@ NOT_RUN: no trial has been executed and no case has been posed.
 """
 import hashlib
 import json
+import pathlib
 import re
+import sys
 
 import checker
 import frozen_cases as fc
@@ -380,6 +382,25 @@ HOST_IDENTITY_KEYS = frozenset({
 
 HOST_IDENTITY = "<USER>"
 
+# Fields whose VALUE is a BROAD HOST DESCRIPTOR. P-16.
+#
+# ``uname -a`` buries the machine's nodename in the middle of an otherwise
+# useful string -- "Linux <nodename> <release> #<build> <arch> GNU/Linux" -- and
+# there is no reliable way to find a hostname inside free text: it is a short
+# arbitrary token, so no length, entropy or shape rule can separate it from the
+# kernel build string beside it. The value therefore goes WHOLE.
+#
+# The first line of defence is that the harness no longer collects it: kernel
+# name, release and architecture are recorded as three narrow fields, none of
+# which can carry a nodename. This set is the second line, so a field of that
+# shape reappearing cannot quietly publish the host's name.
+HOST_DESCRIPTOR_KEYS = frozenset({
+    "uname", "uname_all", "uname_a", "nodename", "node", "domainname",
+    "fqdn", "hostname_fqdn",
+})
+
+HOST_DESCRIPTOR = "<WITHHELD:host-descriptor>"
+
 _PATH_SPLIT = re.compile(r"([\\/])")
 
 
@@ -539,6 +560,12 @@ class Sanitiser:
                     # an encoded blob for secrets is a game the scanner loses.
                     out[k] = WITHHELD
                     continue
+                if isinstance(k, str) and k in HOST_DESCRIPTOR_KEYS:
+                    # P-16. Withheld by KEY, whole, before the content is read.
+                    # A hostname cannot be found reliably inside free text, so
+                    # the field goes and its key stays byte-exact.
+                    out[k] = HOST_DESCRIPTOR if v else v
+                    continue
                 if isinstance(k, str) and k in HOST_IDENTITY_KEYS:
                     out[k] = self.host_identity(v) if isinstance(v, str) \
                         else self.record(v, _key=k)
@@ -573,6 +600,55 @@ def serialise(document):
     return json.dumps(document, indent=2, sort_keys=True,
                       separators=(",", ": "), ensure_ascii=False,
                       default=str) + "\n"
+
+
+def public_sanitiser(build=None, work=None, home=None, user=None):
+    """The redaction roots for anything this process publishes.
+
+    Derived from the running account rather than passed from each call site, so
+    a diagnostic path cannot publish with weaker roots than the trial does
+    simply by forgetting an argument. Every root is optional: a missing home
+    directory leaves absolute paths to the generic ``<ABSPATH>`` rule rather
+    than failing.
+    """
+    if home is None:
+        try:
+            home = str(pathlib.Path.home())
+        except Exception:                                  # noqa: BLE001
+            home = None
+    if build is not None:
+        try:
+            build = str(pathlib.Path(build).resolve())
+        except Exception:                                  # noqa: BLE001
+            build = str(build)
+    if work is None:
+        work = build
+    if user is None and home:
+        user = pathlib.PurePath(home).name or None
+    return Sanitiser(work=work, home=home, build=build, user=user)
+
+
+def publish(document, sanitiser=None, stream=None):
+    """THE publication boundary. Everything this experiment emits goes here.
+
+    **P-16.** Sanitisation used to happen at each return site, which meant every
+    new return site had to remember -- and ``HALT_PREFLIGHT`` did not. A failed
+    mandatory preflight is not more trustworthy than a completed trial: it
+    carries the same host-derived environment inventory, and it was published
+    raw. Sanitising HERE, once, removes the thing that has to be remembered.
+
+    Returns the serialised text as well as writing it, so a test can assert on
+    what the boundary actually produced rather than on how a caller reached it.
+
+    ``record`` and ``serialise`` each establish the fixed vocabulary first, so
+    the M-1 fail-closed rule covers this boundary too: an unavailable driver
+    vocabulary halts publication instead of emitting corrupted evidence.
+    """
+    if sanitiser is None:
+        sanitiser = public_sanitiser()
+    text = serialise(sanitiser.record(document))
+    (stream if stream is not None else sys.stdout).write(text)
+    return text
 
 
 def receipt_view(spike_receipt):

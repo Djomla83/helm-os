@@ -647,7 +647,7 @@ experimental FAIL** irrespective of its outcome.
 **Recommended first environment: a GitHub-hosted `ubuntu-24.04` runner.** It is unprivileged,
 disposable, already used by this repository's CI, and its kernel is far above the 5.9 floor.
 
-**Preflight inventory, recorded before the first case:** `uname -a`, `/etc/os-release`,
+**Preflight inventory, recorded before the first case:** `uname -s`, `/etc/os-release`,
 `uname -m`, the kernel release, the **glibc version**, the target triple, `geteuid`,
 `kernel.yama.ptrace_scope`, `command -v strace`, the static-link probe, `getconf PAGESIZE`, the
 pipe capacity via `fcntl(F_GETPIPE_SZ)`, **`/proc/sys/fs/binfmt_misc/status` and every

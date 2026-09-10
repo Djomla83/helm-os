@@ -5,7 +5,6 @@ Importing this module executes nothing.
 
 NOT_RUN: no preregistered trial has been executed.
 """
-import json
 import os
 import pathlib
 import shutil
@@ -53,7 +52,12 @@ def preflight():
             return f"<unavailable: {exc}>"
 
     info = {
-        "uname": run(["uname", "-a"]),
+        # P-16. `uname -a` was recorded here and it embeds the machine's
+        # nodename. The architecture and the kernel release were ALREADY
+        # collected separately below, so the broad form contributed the
+        # hostname and nothing else this experiment needs. Only the kernel
+        # NAME is collected in its place: `uname -s` cannot carry a nodename.
+        "kernel_name": run(["uname", "-s"]),
         "arch": run(["uname", "-m"]),
         "kernel_release": run(["uname", "-r"]),
         "os_release": _read("/etc/os-release"),
@@ -288,5 +292,9 @@ def open_non_cloexec_descriptor(path):
 
 
 if __name__ == "__main__":
-    print(json.dumps(preflight(), indent=2, sort_keys=True, default=str))
+    # P-16. Even the local diagnostic goes through the single publication
+    # boundary. There is no path in this experiment that prints host facts raw.
+    import evidence
+
+    evidence.publish(preflight())
     sys.exit(0)

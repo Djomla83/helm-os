@@ -7,11 +7,11 @@
     "recorded": 7,
     "total": 72
   },
-  "classification": "M1_FIX_READY_FOR_FINAL_CHECK",
+  "classification": "P16_FIX_READY_FOR_FINAL_CHECK",
   "d7_execution_authorised": false,
   "definition_sha256": {
     "docs/adr/ADR-0024-launch-authority.md": "c1f3cce88438439aab6632a9c56450ae98d1c64adb31b13c742e2febb1476351",
-    "docs/experiments/LAUNCH-EXEC-01-DEFINITION.md": "6e465324ef96c214eb5c422ad7e00d7935fee526c34852f4b0db424cd2a84f8f",
+    "docs/experiments/LAUNCH-EXEC-01-DEFINITION.md": "a4d80fe8f57c7d152233bbe3bb1f37585047393d92c8d3edc4b13d8acdeae9d9",
     "docs/research/HELM-LAUNCH-ARCHITECTURE.md": "97fbf0d8a602c68b0cf20529c4c1bb238ae2790a6089fa8ff6818c054b443151"
   },
   "driver": {
@@ -35,6 +35,30 @@
     "unposable_mandatory": []
   },
   "experiment": "LAUNCH-EXEC-01",
+  "host_information": {
+    "collected": [
+      "uname -s (kernel name)",
+      "uname -r (kernel release)",
+      "uname -m (machine architecture)"
+    ],
+    "not_collected": [
+      "nodename",
+      "hostname",
+      "domain name",
+      "username"
+    ],
+    "why_by_key": "a hostname is a short arbitrary token, so no length, entropy or shape rule can separate it from the kernel build string beside it; the field goes whole rather than being scanned",
+    "withheld_by_key_if_it_reappears": [
+      "domainname",
+      "fqdn",
+      "hostname_fqdn",
+      "node",
+      "nodename",
+      "uname",
+      "uname_a",
+      "uname_all"
+    ]
+  },
   "m3_t": {
     "block_causes_unchanged": [
       "clone3_unavailable"
@@ -72,6 +96,7 @@
     "F-3": "RESOLVED at this freeze - protected because it is registered, without being made reachable",
     "M-1": "FIXED at this freeze - driver vocabulary acquisition is fail-closed: a failed, partial or invalid registry load raises VocabularyUnavailable, publishes nothing and caches nothing, and a later complete load recovers",
     "M3": "RESOLVED by owner amendment M3-T at freeze 5d0b801; review section 14",
+    "P-16": "FIXED at this freeze - the host nodename is no longer collected (uname -s replaces uname -a; release and architecture were already separate) and every document leaves through one publication boundary, evidence.publish, so HALT_PREFLIGHT is sanitised like any other document",
     "PRE-D7-B1": "CORRECTED at freeze a7ae6b9/002e1e4; review section 12",
     "R-1": "FIXED at freeze dc1149f - strace fragments rejoined per task",
     "R-2": "FIXED at freeze dc1149f - closure evidence form removed",
@@ -97,30 +122,47 @@
     "D-9": "refuse_set_id_objects_at_admission"
   },
   "pre_execution_review_tip": "55f0f78c18e7bc9b980e1b99169018a7ea5566b4",
-  "requires": "ONE final independent M-1 check before D-7; this freeze is NOT a readiness statement and grants nothing",
+  "publication_boundary": {
+    "covered_paths": [
+      "the trial evidence document",
+      "HALT_PREFLIGHT (a failed mandatory preflight)",
+      "HALT (a drifted source freeze)",
+      "the NOT_RUN document emitted without D-7",
+      "--verify-freeze",
+      "--driver-completeness",
+      "--preflight-only",
+      "harness.py, oracles.py, make_fixtures.py and frozen_cases.py run directly"
+    ],
+    "double_sanitisation": "impossible by construction: run_trial returns its document RAW together with the sanitiser it built, and the boundary is the only place P-14 is applied",
+    "function": "evidence.publish(document, sanitiser=None, stream=None)",
+    "invariant": "json.dumps appears in exactly one place in the experiment, evidence.serialise, and no module other than evidence writes to stdout; both are asserted across the whole tree by AST, alongside behavioural tests over the real entry points",
+    "m1_inherited": "record() and serialise() each establish the fixed vocabulary first, so an unavailable driver vocabulary halts publication here too",
+    "rule": "no document reaches stdout without passing Sanitiser.record and serialise; sanitisation happens exactly once, at the boundary, never at a return site"
+  },
+  "requires": "ONE final independent P-16 micro-check before D-7; this freeze is NOT a readiness statement and grants nothing",
   "reviewed_architecture_tip": "a5f09f8df8c3868b7ec2f3f6f9d973058c164a44",
   "scope": "Execution definition and disposable experiment sources frozen before the first preregistered LAUNCH-EXEC-01 trial. NOT_RUN: no trial has been executed and no case has been posed. D-7 (execution authorisation) is NOT granted.",
   "sha256": {
     "README.md": "2519b48dfe495ea67eb7fccd213dfd55d4de509d65f49b21c1c1d562eefb07a2",
     "checker.py": "6201a2dcaa1be1b48667b1d0ceedfbd2d6619668fb78a1043b408ebfd7a7f9b0",
     "driver.py": "549defa36d998ad3e2172730d9f5afb80d8fd090235a8b493afd1ba297a29ce2",
-    "evidence.py": "43fe5a7fad54e992c650cbc01e11b180912f556a92a2b53e7832a063f8977a78",
-    "frozen_cases.py": "02e2d76fa434353c76e48f8b4129749b1e04a39b9d86e1428dae61e74131e2ef",
-    "harness.py": "1a9d0e9040bdefbf6320b7d92f0cf342a8cb6a42c63aeb1b7877506f36e03550",
+    "evidence.py": "b3378cb99ba7060f935b38d3bc2663354a34f88af6e8c778d9888f90d092013a",
+    "frozen_cases.py": "e0afd4152f6435d989da14012f1c6e0c3d1d0e9db795632dce2e1f48e6746a4b",
+    "harness.py": "066666884fb3ade0a72674f800818fe71294701db8533d3307236fe3b583882d",
     "helper_alt.c": "7993aa631abdca6796171fe4ffafb2d296f2a00b61ea2322ee8e624731b99113",
     "helper_dynamic.c": "b3c398d840c16dfa4e0dbc56593b905b4019bfe2316fc339049b8a69930350a0",
     "helper_fork.c": "a62a6a1e2bbb9cc6ef8a346ae9322c7b7435b1c7f0b6c3710b3aadb9cc2ba0b0",
     "helper_report.c": "99770ed8cfdd4049f9bef3624e21850496b6c14a169c3895b54ab7a858d54711",
     "helper_setid.c": "c609755d105122eea304f5fe12685d8dcc24064d77659295a11a76d42b86329f",
     "launcher_spike.c": "10df2c7c0e6bc7f03e8c1b8141a5d2f06a27812596fd3c6d9fa94b367bda9018",
-    "make_fixtures.py": "19ebbb6487b412afd0ba1f17db5a329ff3a686c10b91eaf928cf3344919cec9b",
+    "make_fixtures.py": "14b3c2764f3d07d18b4e387c0ed025f5c512ca4d1e905b6ffc7ae081cb3a3571",
     "observations.py": "e43ee458924cf929b2446ca8c456c51d716f4e639c798b40791592c6b2882283",
-    "oracles.py": "83beb81102f9f60e3796c9469d4bd5265e8acac3d4383f7873840fb9c40b4842",
-    "run_launch_exec_01.py": "3eb71b2b5f4434912c91eb9b7613ce763d1791b7c3b135b08ace8b4224838a76"
+    "oracles.py": "b056c374d39990ef8860062315ebb1af80bd572b737a81321b45687339fd2eeb",
+    "run_launch_exec_01.py": "2745b8fe84b81fa7efdf74f06852753d2bc02299f514eb67026e4bb6c07e438a"
   },
   "status": "NOT_RUN",
-  "supersedes": "f1f49cabc160c955472b1fe6b47748b56efe4769",
-  "supersession_reason": "fixes M-1, the lazy-vocabulary robustness defect the final micro-review recorded at dfbb3e8. evidence._driver_vocabulary() read driver.SETUPS, PARENT_STATES, POSED_CHECKS and ALL_CHANNELS directly after a lazy import. Python publishes a module object in sys.modules before executing its body, so that import can succeed against a HALF-BUILT driver whose decorators have not run; reading the globals cannot tell 'empty because nothing is registered' from 'empty because the body is still running', and the empty answer was then cached permanently - 334 tokens instead of 379, with T6's sigterm_blocked_sigpipe_ignored lost and no recovery. A failed import separately fell back to an empty set and carried on sanitising, which publishes symbolic evidence silently rewritten into <OPAQUE:...> digests. Acquisition is now FAIL-CLOSED through an explicit interface: driver.registry_vocabulary() is defined as the last statement of driver's module body, so its presence is a readiness fact rather than a guess; evidence.py requires it, validates the snapshot registry by registry, raises VocabularyUnavailable on any incomplete state, and caches only a complete validated result as an immutable frozenset. Sanitiser.text, Sanitiser.record and serialise resolve the vocabulary before emitting anything, so the halt depends on the driver's state and not on whether the data happened to contain a long token. Sixteen fresh interpreters cover import order, import failure, both partial-init shapes, four malformed snapshots, recovery from each, and fifty repeated queries. No case membership, case class, checker rule, M3 semantics, trace semantics, strace preflight, P-12 rule or D-7 gate changed. No C source byte changed. Earlier freezes and every review record are preserved unchanged.",
+  "supersedes": "c41828477a776e8ce55c00a02d6ee452f3680dc1",
+  "supersession_reason": "fixes P-16, the host-information and publication-boundary defect the final independent M-1 check recorded at d8475da. harness.preflight() collected `uname -a`, whose value embeds the machine's nodename, while the architecture and the kernel release were ALREADY collected separately - so the broad form contributed the hostname and nothing this experiment needs. `uname` was not a HOST_IDENTITY_KEY and the string carries no 28-character run, so the sanitiser passed it through unchanged. Separately, run_trial sanitised only its success document: the HALT_PREFLIGHT return went to the serializer raw, carrying the whole environment inventory, because sanitising at each return site means every new return site has to remember. Both halves are corrected. Collection is minimised to `uname -s` beside the existing `uname -r` and `uname -m`, and no host-identity command is invoked anywhere. Publication is centralised in evidence.publish(), through which every document now leaves - the trial document, both halts, the NOT_RUN document, all three diagnostic flags, and every module's __main__ - so P-14 is applied exactly once and never at a return site. run_trial returns its document RAW with its sanitiser, which makes double sanitisation impossible by construction. A second line of defence withholds broad host-descriptor fields by key if one ever reappears. Seventeen new tests cover collection minimisation, the whole-tree boundary invariant, the original leak through every public form, and a fabricated preflight failure in which the hostname, username, home path and token are gone while the kernel name, release and architecture survive and the halt stays interpretable. The definition's preflight inventory is amended from `uname -a` to `uname -s` to match. No case membership, case class, checker rule, M3 semantics, trace semantics, strace preflight, P-12 rule or D-7 gate changed. driver.py, checker.py and observations.py are byte-identical. No C source byte changed. Earlier freezes and every review record are preserved unchanged.",
   "traced_cases": {
     "amended_by": "M3-T",
     "cases": [

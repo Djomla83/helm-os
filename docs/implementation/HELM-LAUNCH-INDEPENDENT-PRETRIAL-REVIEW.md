@@ -1905,3 +1905,140 @@ remains is the owner's call on P-16 — correct it before D-7, or accept it and 
 decision, not a defect in this fix.
 
 **D-7 remains not authorised. LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of ZERO.**
+
+## 33. P-16 fix: host minimisation and one publication boundary
+
+Owner decision after section 32: fix **P-16** before D-7. This section records what changed and what
+was verified. It is a fix record, not a readiness statement.
+
+### 33.1 The two halves
+
+P-16 was one finding with two independent causes, and fixing either alone would have left the leak
+reachable.
+
+**Collection.** `harness.preflight()` ran `uname -a`, whose value is
+`Linux <nodename> <release> #<build> <arch> GNU/Linux`. The architecture (`uname -m`) and the kernel
+release (`uname -r`) were **already collected separately**, so the broad form contributed the
+machine's nodename and nothing else this experiment needs. It is now `uname -s` — the kernel name,
+the one narrow fact that was missing. `uname -s` cannot carry a nodename. A test reads harness's AST
+and asserts uname is only ever invoked with `-s`, `-r`, `-m`, never `-a` or `-n`, and that no
+host-identity command (`hostname`, `hostnamectl`, `dnsdomainname`, `whoami`, `id`, `getent`) is
+invoked at all.
+
+**Publication.** `run_trial` sanitised its success document and returned the `HALT_PREFLIGHT`
+document raw, which then went straight to the serializer carrying the whole environment inventory. A
+failed mandatory preflight is not more trustworthy than a completed trial. The defect was structural:
+sanitising at each return site means every new return site has to remember, and this one did not.
+
+### 33.2 One boundary
+
+`evidence.publish(document, sanitiser=None, stream=None)` is now the only way anything leaves this
+process. It sanitises, serialises, writes, and returns the text so a test can assert on what the
+boundary produced rather than on how a caller reached it.
+
+`run_trial` no longer sanitises at all. It returns `(code, document, sanitiser)` with the document
+**raw**, from both its return paths, and the boundary applies P-14 exactly once. Double sanitisation
+is therefore impossible by construction rather than by inspection — there is only one place where it
+happens.
+
+Everything goes through it: the trial document, `HALT_PREFLIGHT`, the freeze-drift `HALT`, the
+`NOT_RUN` document, `--verify-freeze`, `--driver-completeness`, `--preflight-only`, and the
+`__main__` blocks of `harness.py`, `oracles.py`, `make_fixtures.py` and `frozen_cases.py` —
+`make_fixtures.write()` returns the absolute path of every fixture it writes, and was printing them
+raw.
+
+The durable invariant is whole-tree, not a source line: **`json.dumps` occurs in exactly one place in
+the experiment, `evidence.serialise`, and no module other than `evidence` writes to stdout.** Both
+are asserted by walking the AST of every module in the directory, alongside behavioural tests over
+the real entry points.
+
+A second line of defence covers a field of that shape reappearing: `HOST_DESCRIPTOR_KEYS` — `uname`,
+`uname_all`, `uname_a`, `nodename`, `node`, `domainname`, `fqdn`, `hostname_fqdn` — has its **value
+withheld whole**, as `<WITHHELD:host-descriptor>`, with the key left byte-exact. Whole, because a
+hostname is a short arbitrary token: no length, entropy or shape rule can separate it from the kernel
+build string sitting beside it, so scanning is a game the scanner loses.
+
+### 33.3 The original leak, through every public form
+
+`helm-secret-host-9371` injected into a `uname -a`-shaped value:
+
+| form | result |
+|---|---|
+| `uname`, `uname_all`, `nodename`, `node`, `fqdn` values | `<WITHHELD:host-descriptor>` |
+| `hostname`, `host`, `runner_name` values | `<USER>` |
+| `--preflight-only` document | probe absent |
+| `NOT_RUN`, `--verify-freeze`, `--driver-completeness` | probe absent |
+| `HALT_PREFLIGHT` document via the real halt path | probe absent |
+
+The halt test reaches the real `HALT_PREFLIGHT` return with `preflight_gates` replaced so no
+static-link probe is compiled and `auth=None`, which the halt path never touches — that it returns
+before any case is posed is itself the property being relied on. It asserts the document is **raw on
+the way out of `run_trial`** and clean after the boundary, so the boundary is demonstrably what
+removes the taint rather than luck upstream.
+
+### 33.4 Negative controls
+
+The fabricated preflight failure carries a hostname, a username, a home path, a PAT-shaped token, a
+runtime-token environment entry, a kernel release and an architecture. After the boundary:
+
+```
+hostname                gone
+username                gone
+home path               <HOME>-rooted / <ABSPATH>
+token                   <CREDENTIAL>
+environment value       <VALUE:len=44,...>
+kernel_name             Linux
+kernel_release          6.5.0-1015-azure
+arch                    x86_64
+strace                  /usr/bin/strace
+status                  HALT_PREFLIGHT
+reason                  "...no case was posed and LAUNCH-EXEC-01 remains NOT_RUN"
+halts[0].gate           clone3
+```
+
+Data minimisation removed the nodename and kept every fact the experiment needs. The halt remains
+interpretable.
+
+### 33.5 P-14, M-1 and prior findings
+
+`CURRENT_VOCABULARY_CLOSED`: 366 tokens enumerated independently, **0 missing, 0 corrupted** across
+4,758 checks. F-1's token still byte-exact through the real `record()` path; F-3 still protected.
+A4's argument still `<OPAQUE:a2e659da>`; credentials still redacted; digests preserved; keys
+byte-exact; environment values never raw; `INTERNAL_ONLY` fields and `child_pid` withheld;
+serialization deterministic.
+
+M-1 intact and now covering more: `record` and `serialise` each establish the vocabulary first, so
+the new boundary **inherits** the fail-closed rule — a test installs a partially initialised driver
+and asserts `publish` raises rather than emitting. The thirty-row fresh-interpreter matrix still
+passes with zero failures.
+
+R-1…R-5, V-1…V-5, M3-T, PRE-D7-B1, F-1, F-3 and M-1 all re-verified. One prior test was rewritten
+from source-slicing to AST — R-4's "the halt precedes any posing" check searched for the first
+literal `HALT_PREFLIGHT` and broke when a docstring mentioned it, which said nothing about the
+invariant. The invariant it asserts is unchanged and still holds.
+
+### 33.6 Scope
+
+No case membership, case class, checker algebra, M3 evidence, trace parser semantics, strace
+preflight requirement, P-12 token semantics or D-7 gate changed. `driver.py`, `checker.py` and
+`observations.py` are **byte-identical**. **No C source byte changed** — all six digests match and
+Build 5 still applies.
+
+The definition's preflight inventory is amended from `uname -a` to `uname -s`, so
+`LAUNCH-EXEC-01-DEFINITION.md` is re-hashed in `definition_sha256`. That is a change to a
+definition-hashed document and is called out here deliberately: leaving it would have left the
+preregistration describing a collection the harness no longer performs.
+
+407 tests pass (390 + 17). `validate_docs` PASS. `cargo check --workspace --all-targets` exit 0.
+Freeze verification `true`. Partition **72 / 54 / 11 / 7**, traced set **E1 E7 F4 F7 M1 M2 M3 M4**,
+**72 handlers / 72 posable / 0 unposable**, `status = NOT_RUN`, `d7_execution_authorised = false`.
+Zero experimental ELF executions, zero preregistered cases posed.
+
+### 33.7 Classification
+
+**`P16_FIX_READY_FOR_FINAL_CHECK`.**
+
+Written by the same author who wrote the code it corrects, and the tests that exercise it are the
+author's own. One final independent P-16 micro-check is required before D-7.
+
+**D-7 remains not authorised. LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of ZERO.**
