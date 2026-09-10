@@ -1,5 +1,32 @@
 # Stanje projekta
 
+<a id="launch-exec-01-trial-001-closed"></a>
+
+## Trial #1 closed, 2026-09-10 — LAUNCH-EXEC-01 **TRIAL_ABORTED_AFTER_BOUNDARY**
+
+The first and only execution authorised under D-7 has run and is closed. GitHub run `34500901306`
+executed freeze `89c923a147ff16182d4d0ae14a0bd7bb6e62723d`, and the
+[independent result review](implementation/HELM-LAUNCH-EXEC-01-TRIAL-001-RESULT-REVIEW.md) is
+accepted; see [DECISIONS.md](DECISIONS.md#trial-001-accepted).
+
+**Trial #1 started.** Every dispatch gate held, the checkout resolved to the authorised bytes rather
+than a branch tip, and the mandatory preflight **passed** on Linux 6.17 x86_64 with strace 6.8,
+`ptrace_scope 1` and `clone3` available.
+
+**The immutability boundary was crossed**, and then the harness aborted during E5b's fixture setup
+with `OSError: [Errno 9] Bad file descriptor`: it read back through a write-only descriptor, which
+Linux refuses categorically. E1 through E5 were genuinely posed and scored, but their records existed
+only in memory and were lost, so their statuses are permanently
+**`UNKNOWN_FROM_PRESERVED_EVIDENCE`**. The remaining 66 cases were never entered.
+
+**No frozen aggregate is derivable and none was manufactured.** Scoring the missing records INVALID
+would assert that E1–E5 could not be posed, which is false. LAUNCH-EXEC-01 has produced **no**
+`MECHANISM_ACCEPTED`, `MECHANISM_REJECTED` or `MECHANISM_INCONCLUSIVE`.
+
+**D-7 for Trial #1 is consumed.** Trial #1 must not be re-run, resumed or patched, its freeze is
+unchanged, and its dispatcher is retired from the default branch. **Trial #2 is a new preregistered
+trial with its own freeze and its own D-7, which is NOT granted.**
+
 <a id="launch-exec-01-d7"></a>
 
 ## Owner decision, 2026-09-10 — **D-7 AUTHORISED**, LAUNCH-EXEC-01 still NOT_RUN

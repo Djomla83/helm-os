@@ -128,3 +128,39 @@ The first execution of the first preregistered case is the **immutability bounda
 HALT poses zero cases and does not consume it. Any re-run is a **new trial** with its own report.
 After the trial, the result requires an independent review before ADR-0024 or `crates/helm-launch`
 may advance.
+
+
+<a id="trial-001-accepted"></a>
+
+### Owner decision 2026-09-10 — **LAUNCH-EXEC-01 Trial #1 accepted and CLOSED**
+
+The owner accepts the
+[independent Trial #1 result review](implementation/HELM-LAUNCH-EXEC-01-TRIAL-001-RESULT-REVIEW.md).
+
+| | |
+|---|---|
+| Trial | **trial-001**, GitHub run `34500901306`, run number 1, attempt 1 |
+| Frozen candidate executed | `89c923a147ff16182d4d0ae14a0bd7bb6e62723d` |
+| Result-review commit | `f7e5ca07a33ca3ed8365ee0f015bcc5c2a8affa6` |
+| Preflight | **PREFLIGHT_PASSED** |
+| Immutability | **IMMUTABILITY_BOUNDARY_CROSSED** |
+| Aggregate | **AGGREGATE_NOT_DERIVABLE_FROM_FROZEN_EVIDENCE** |
+| Status | **TRIAL_ABORTED_AFTER_BOUNDARY** |
+| D-7 | **D7_AUTHORIZATION_CONSUMED** |
+
+Trial #1 started, passed its mandatory preflight, crossed the immutability boundary, and aborted
+during E5b's fixture setup with `OSError: [Errno 9] Bad file descriptor` — the harness read back
+through a write-only descriptor. E1 through E5 were genuinely posed and scored, but their records
+lived only in memory and were lost with the runner, so their statuses are permanently
+**`UNKNOWN_FROM_PRESERVED_EVIDENCE`**.
+
+**The owner explicitly rejects manufacturing a frozen aggregate by treating every missing record as
+INVALID.** INVALID means *could not be posed*; E1–E5 were posed. No aggregate verdict exists for
+Trial #1, and none may be reconstructed after the fact.
+
+**Trial #1 is closed and is historical evidence.** It must not be re-run, resumed or patched in
+place, and its freeze and `SOURCE-HASHES.json` are unchanged. Its D-7 authorisation is consumed and
+must not be reused; the dispatcher bound to it is retired from the default branch.
+
+Trial #2 is a **new preregistered trial** under a new descendant freeze — not a retry — and requires
+its own D-7 authorisation, which is **not granted**.
