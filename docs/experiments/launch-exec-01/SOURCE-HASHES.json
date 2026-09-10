@@ -7,7 +7,7 @@
     "recorded": 7,
     "total": 72
   },
-  "classification": "P16_FIX_READY_FOR_FINAL_CHECK",
+  "classification": "TRIAL_2_FREEZE_READY_FOR_REVIEW",
   "d7_execution_authorised": false,
   "definition_sha256": {
     "docs/adr/ADR-0024-launch-authority.md": "c1f3cce88438439aab6632a9c56450ae98d1c64adb31b13c742e2febb1476351",
@@ -34,6 +34,74 @@
     "unposable_against_this_freeze": [],
     "unposable_mandatory": []
   },
+  "durable_evidence": {
+    "artifact_contract": {
+      "files": [
+        "preflight.json",
+        "build-identity.json",
+        "journal.jsonl",
+        "evidence.json"
+      ],
+      "final_document": "a summary of durable facts, never their only copy",
+      "never_persisted": [
+        "capture_prefix_base64",
+        "raw strace text",
+        "raw pid/tid/fd values",
+        "environment values",
+        "private host paths",
+        "credentials"
+      ],
+      "preserved_after": [
+        "a completed trial",
+        "MECHANISM_REJECTED",
+        "MECHANISM_INCONCLUSIVE",
+        "a harness exception",
+        "a runner crash, up to the last flushed record"
+      ],
+      "sanitised": "every one, through evidence.publish, before it is written"
+    },
+    "build_identity": {
+      "covers": "every generated executable and fixture in the build directory at that moment",
+      "fields": [
+        "size",
+        "sha256",
+        "kind"
+      ],
+      "kind_source": "the ELF program headers, read directly rather than taken from file(1) or ldd(1) output text",
+      "reuse_proof": "the driver builds nothing, and the two setups that open a pristine build product verify the digest against this identity at the point of use",
+      "when": "hashed from the files on disk after the build and made durable BEFORE the first case"
+    },
+    "journal": {
+      "crash_semantics": "a crash can lose only the record being written; a torn final line is dropped by the reader and reported, never repaired",
+      "entered_vs_completed": "case_entered is written before the case is posed and case_completed when its frozen status is final, so an abort names the last entered and the last completed case without a stack trace; an entered-not-completed case is never given a frozen status",
+      "file": "journal.jsonl",
+      "format": "append-only JSONL, one record per line, flushed and fsynced",
+      "immutability": "no update and no delete; completing a case twice or completing one that was never entered raises",
+      "kinds": [
+        "trial_begin",
+        "preflight",
+        "build_identity",
+        "case_entered",
+        "case_completed",
+        "trial_end"
+      ]
+    }
+  },
+  "e5b_correction": {
+    "case_semantics_unchanged": "E5b remains mandatory with prediction Exited:0 and setup writer_open_closed",
+    "claim_preserved": "the writer is still opened O_WRONLY and is still closed before exec; the descriptor was NOT widened to O_RDWR, which would have changed what E5b tests",
+    "sequence": [
+      "open(path, O_RDONLY)",
+      "pread 1 byte at offset 0",
+      "close the reader",
+      "open(path, O_WRONLY)",
+      "pwrite that byte at offset 0",
+      "close the writer",
+      "launch"
+    ],
+    "short_transfer": "a read or write of other than exactly one byte returns not_posed, which the frozen checker scores INVALID",
+    "trial_001_defect": "os.pwrite(fd, os.pread(fd, 1, 0), 0) on a descriptor opened O_WRONLY; a write-only file description carries no FMODE_READ, so read(2)/pread(2) return EBADF"
+  },
   "experiment": "LAUNCH-EXEC-01",
   "host_information": {
     "collected": [
@@ -58,6 +126,16 @@
       "uname_a",
       "uname_all"
     ]
+  },
+  "lineage": {
+    "trial_001_aggregate": "AGGREGATE_NOT_DERIVABLE_FROM_FROZEN_EVIDENCE",
+    "trial_001_d7": "D7_AUTHORIZATION_CONSUMED; it does not carry into Trial #2",
+    "trial_001_freeze": "89c923a147ff16182d4d0ae14a0bd7bb6e62723d",
+    "trial_001_outcome": "TRIAL_ABORTED_AFTER_BOUNDARY",
+    "trial_001_result_review": "docs/implementation/HELM-LAUNCH-EXEC-01-TRIAL-001-RESULT-REVIEW.md, accepted by the owner at commit f7e5ca0",
+    "trial_001_run": "GitHub run 34500901306, run number 1, attempt 1",
+    "trial_002_is_not": "a retry, a rerun, a resume or a continuation of Trial #1; Trial #1 is closed and remains permanently addressable as trial-001",
+    "trial_002_reason": "HARNESS/PRESERVATION CORRECTION AFTER TRIAL #1: E5b's fixture setup read back through a write-only descriptor and aborted the trial, and every per-case record lived only in memory so five completed cases were lost with the runner"
   },
   "m3_t": {
     "block_causes_unchanged": [
@@ -103,6 +181,10 @@
     "R-3": "FIXED at freeze dc1149f - waitid requires si_pid == clone3 return",
     "R-4": "FIXED at freeze dc1149f - mandatory strace preflight, no fallback",
     "R-5": "FIXED at freeze dc1149f - docstring corrected to eight",
+    "T1-BUILD-IDENTITY": "FIXED at this freeze - harness.build_identity hashes every file the trial consumes and the runner makes it durable before the first case; the driver builds nothing and verifies the digest at the point of use",
+    "T1-E5b": "FIXED at this freeze - E5b's writer stays O_WRONLY and the byte is read first through a separate read-only descriptor, closed before the writer opens; a short read or write does not pose the case",
+    "T1-PRESERVATION": "FIXED at this freeze - preflight, build identity and every completed case status are flushed to an append-only journal before the next step is attempted, so an abort can lose only the record being written",
+    "T2-C-LATENT": "OBSERVED, NOT FIXED, UNREACHABLE - launcher_spike.c would pread an O_PATH descriptor if --bypass-admission and --exec-fd-o-path were passed together, because the O_PATH refusal sits inside the admission branch. No frozen plan passes both, so no case can reach it, and changing C would invalidate Build 5 for a defect this experiment cannot exercise",
     "V-1": "FIXED at freeze 2621381 - three-state return, bounded logical record",
     "V-2": "FIXED at freeze 2621381 - contradictory waitid identity is INVALID",
     "V-3": "FIXED at freeze 2621381 - shared structural traced-evidence gate",
@@ -139,30 +221,31 @@
     "m1_inherited": "record() and serialise() each establish the fixed vocabulary first, so an unavailable driver vocabulary halts publication here too",
     "rule": "no document reaches stdout without passing Sanitiser.record and serialise; sanitisation happens exactly once, at the boundary, never at a return site"
   },
-  "requires": "ONE final independent P-16 micro-check before D-7; this freeze is NOT a readiness statement and grants nothing",
+  "requires": "ONE bounded independent review of the Trial #2 corrections, then a NEW explicit owner D-7 authorisation and a NEW manual dispatch; this freeze is NOT a readiness statement and grants nothing",
   "reviewed_architecture_tip": "a5f09f8df8c3868b7ec2f3f6f9d973058c164a44",
   "scope": "Execution definition and disposable experiment sources frozen before the first preregistered LAUNCH-EXEC-01 trial. NOT_RUN: no trial has been executed and no case has been posed. D-7 (execution authorisation) is NOT granted.",
   "sha256": {
     "README.md": "2519b48dfe495ea67eb7fccd213dfd55d4de509d65f49b21c1c1d562eefb07a2",
     "checker.py": "6201a2dcaa1be1b48667b1d0ceedfbd2d6619668fb78a1043b408ebfd7a7f9b0",
-    "driver.py": "549defa36d998ad3e2172730d9f5afb80d8fd090235a8b493afd1ba297a29ce2",
-    "evidence.py": "b3378cb99ba7060f935b38d3bc2663354a34f88af6e8c778d9888f90d092013a",
+    "driver.py": "bba11b24ec0d57571b3c64d02d4c7f14e4c693717a6d31791156ddeca8632598",
+    "evidence.py": "9be9eead68c08def18726028b9b5e4469f379a8329a1878a3cdedee0e86dfa00",
     "frozen_cases.py": "e0afd4152f6435d989da14012f1c6e0c3d1d0e9db795632dce2e1f48e6746a4b",
-    "harness.py": "066666884fb3ade0a72674f800818fe71294701db8533d3307236fe3b583882d",
+    "harness.py": "38eabf42c4ab82fdc74eafe0580b7587dbeb46b08e9b8c6c8fe9d36d260ef856",
     "helper_alt.c": "7993aa631abdca6796171fe4ffafb2d296f2a00b61ea2322ee8e624731b99113",
     "helper_dynamic.c": "b3c398d840c16dfa4e0dbc56593b905b4019bfe2316fc339049b8a69930350a0",
     "helper_fork.c": "a62a6a1e2bbb9cc6ef8a346ae9322c7b7435b1c7f0b6c3710b3aadb9cc2ba0b0",
     "helper_report.c": "99770ed8cfdd4049f9bef3624e21850496b6c14a169c3895b54ab7a858d54711",
     "helper_setid.c": "c609755d105122eea304f5fe12685d8dcc24064d77659295a11a76d42b86329f",
+    "journal.py": "46ebacd162a38a5eac2e1676d3c08d6c5de3cbb8ff367521e2455e9bac24d23f",
     "launcher_spike.c": "10df2c7c0e6bc7f03e8c1b8141a5d2f06a27812596fd3c6d9fa94b367bda9018",
     "make_fixtures.py": "14b3c2764f3d07d18b4e387c0ed025f5c512ca4d1e905b6ffc7ae081cb3a3571",
     "observations.py": "e43ee458924cf929b2446ca8c456c51d716f4e639c798b40791592c6b2882283",
     "oracles.py": "b056c374d39990ef8860062315ebb1af80bd572b737a81321b45687339fd2eeb",
-    "run_launch_exec_01.py": "2745b8fe84b81fa7efdf74f06852753d2bc02299f514eb67026e4bb6c07e438a"
+    "run_launch_exec_01.py": "01a0a379aafef3b965bf602e777e20d2e4d13b42ee63e6eb16dd03f25dfc0e95"
   },
   "status": "NOT_RUN",
-  "supersedes": "c41828477a776e8ce55c00a02d6ee452f3680dc1",
-  "supersession_reason": "fixes P-16, the host-information and publication-boundary defect the final independent M-1 check recorded at d8475da. harness.preflight() collected `uname -a`, whose value embeds the machine's nodename, while the architecture and the kernel release were ALREADY collected separately - so the broad form contributed the hostname and nothing this experiment needs. `uname` was not a HOST_IDENTITY_KEY and the string carries no 28-character run, so the sanitiser passed it through unchanged. Separately, run_trial sanitised only its success document: the HALT_PREFLIGHT return went to the serializer raw, carrying the whole environment inventory, because sanitising at each return site means every new return site has to remember. Both halves are corrected. Collection is minimised to `uname -s` beside the existing `uname -r` and `uname -m`, and no host-identity command is invoked anywhere. Publication is centralised in evidence.publish(), through which every document now leaves - the trial document, both halts, the NOT_RUN document, all three diagnostic flags, and every module's __main__ - so P-14 is applied exactly once and never at a return site. run_trial returns its document RAW with its sanitiser, which makes double sanitisation impossible by construction. A second line of defence withholds broad host-descriptor fields by key if one ever reappears. Seventeen new tests cover collection minimisation, the whole-tree boundary invariant, the original leak through every public form, and a fabricated preflight failure in which the hostname, username, home path and token are gone while the kernel name, release and architecture survive and the halt stays interpretable. The definition's preflight inventory is amended from `uname -a` to `uname -s` to match. No case membership, case class, checker rule, M3 semantics, trace semantics, strace preflight, P-12 rule or D-7 gate changed. driver.py, checker.py and observations.py are byte-identical. No C source byte changed. Earlier freezes and every review record are preserved unchanged.",
+  "supersedes": "89c923a147ff16182d4d0ae14a0bd7bb6e62723d",
+  "supersession_reason": "Trial #2 preregistration. Trial #1 executed freeze 89c923a, crossed the immutability boundary and aborted in E5b's fixture setup with EBADF, losing E1-E5's already-scored records because they lived only in memory; it is closed as TRIAL_ABORTED_AFTER_BOUNDARY with no derivable aggregate and its D-7 consumed. This freeze is a NEW preregistered trial, not a retry. Two corrections. E5b's setup no longer reads back through its write-only descriptor: the byte is read through a separate read-only descriptor that is closed before the writer opens, the writer stays O_WRONLY so the case's claim is unchanged, and a short transfer does not pose the case. Preservation is no longer deferred to the end: a new append-only journal flushes the preflight, the build identity and each case's final status as they happen, so an abort can lose only the record being written, and case_entered is distinguishable from case_completed. Build identity is hashed from the files on disk and made durable before the first case, the driver builds nothing, and the setups that open a pristine build product verify the digest at the point of use. The descriptor defect class was audited across every module and no other Python instance exists; one unreachable instance in launcher_spike.c is recorded and deliberately not fixed. No case membership, class, prediction, safe set, checker rule, M3 semantics, trace semantics, strace preflight or P-12 rule changed. No C source byte changed and Build 5 remains applicable. Trial #1, its freeze and its result review are preserved unchanged.",
   "traced_cases": {
     "amended_by": "M3-T",
     "cases": [
@@ -197,6 +280,7 @@
       4
     ]
   },
+  "trial": "trial-002",
   "vocabulary": {
     "acquisition": {
       "cache_rule": "only a complete validated snapshot is cached, as an immutable frozenset; failed and partial loads cache nothing, so no partially initialised import can poison the cache for the life of the process",
