@@ -1400,3 +1400,82 @@ corrections were made by the same hand that wrote the code the final review exam
 
 **One final short independent delta verification of V-1 through V-5 is required before D-7.**
 **D-7 remains not authorised. LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of ZERO.**
+
+---
+
+## 25. Final short independent verification of `b107ff9..3f735d5`
+
+**Scope: the V-1…V-5 correction delta only.** Sections 1–24 are preserved unchanged and nothing was
+corrected here. Frozen source, definition and manifest are byte-identical to `3f735d5`, and the
+freeze still verifies. No case posed, no helper or spike executed, no HELM ELF traced.
+**LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of ZERO.**
+
+### 25.1 Verified
+
+| | Result |
+|---|---|
+| Freeze | **16/16** source + **3/3** definition hashes exact; no C changed |
+| Partition / traced set | **72 / 54 / 11 / 7**; **E1, E7, F4, F7, M1, M2, M3, M4** |
+| Handlers / posable / unposable | **72 / 72 / 0**; `NOT_RUN`, D-7 `false` |
+| **V-1** | truncated record → **INVALID → `MECHANISM_INCONCLUSIVE`**, never FAIL; the next line's `= 1` is **not** adopted; a genuine `-1 EPERM` still reaches `clone3_failed` → `MECHANISM_REJECTED` |
+| **V-2** | `222,222` valid · `222,333` on one descriptor **INVALID** · foreign-only INVALID · two descriptors claiming one child INVALID · later `ECHILD` harmless · unrelated child does not contaminate |
+| **V-3 / V-4** | **8 cases × 11 invalid shapes = 88 checks, all INVALID**; valid traces still score; the gate is defined once and called once |
+| **V-5** | no `replace(self._user, …)`; keys never pass through `text()`; keys immutable |
+| **P-14** | home/other-account/Windows/temp paths, PATs, JWTs, env values, all `INTERNAL_ONLY` fields and `child_pid` still redacted or withheld; a username path **component** still goes; serialisation deterministic |
+| **R-1…R-5, M3** | all intact; no `pidfd_acquisition` field exists in `launcher_spike.c`; M3's only cause remains `clone3_unavailable` |
+| Suite | **360 tests, all pass** |
+
+The opaque rule still redacts genuine secrets, and SHA-1/SHA-256 digests are still preserved — the
+vocabulary exemption did not disable P-14.
+
+### 25.2 Vocabulary audit
+
+**473 fixed symbolic values** were enumerated from the actual published shape — every
+`plan.as_dict()` for all 72 cases, `frozen_cases.summary()`, every predict/safe/gate/stage/cause/
+syscall/mode/decision, the checker and observation vocabularies, the normalised acquisition object
+and the child window — and each was driven through the sanitiser under **13 adversarial usernames**.
+**30** are ≥28 characters and therefore at risk from the generic opaque rule.
+
+**Result: `CURRENT_VOCABULARY_INCOMPLETE`** — by exactly one token.
+
+#### F-1 — IMPORTANT — `sigterm_blocked_sigpipe_ignored` is corrupted in published evidence
+
+`plan.as_dict()["parent"]` for case **T6** is `sigterm_blocked_sigpipe_ignored`, 31 characters. It
+is not in the manifest-derived vocabulary and not in the literal allowlist, so the generic
+`[A-Za-z0-9_\-+/=]{28,}` rule rewrites it to `<OPAQUE:dad063b7>` in the published document.
+
+Confirmed by sanitising the **real** document rather than the token in isolation, and it happens
+under **every** username tested — this is the length rule alone, **not** the username defect V-5
+fixed. It is the same class as `WriterRetainedAfterChildExit`, which was caught and allowlisted;
+this one was missed.
+
+*Consequence:* T6's parent-state name is unreadable in evidence. It leaks nothing, changes no
+verdict, and touches neither P-12 nor the checker — but §6's required invariant is that *every*
+legitimate fixed public-evidence token reachable in this candidate is preserved byte-exact, and this
+one is not.
+*Disposition:* add the driver's `PARENT_STATES`, `SETUPS` and `POSED_CHECKS` names to the
+vocabulary, so the allowlist is derived from the driver as well as the manifest.
+
+#### F-2 — MINOR — A4's 4096-byte argument is published as an opaque token
+
+A4's frozen argument is `"x" * MAX_ARG_BYTES`, and `plan.as_dict()["helper_args"]` carries it into
+evidence, where the opaque rule replaces it with `<OPAQUE:a2e659da>`. This is **data, not a fixed
+symbolic token**, the substitution is deterministic, and the case's verdict rests on `argv_exact`
+rather than on the string being readable. Recorded as observed behaviour, not a defect.
+
+#### F-3 — MINOR — a dead posed-check registration
+
+`returned_before_descendant_lifetime` (35 characters) is registered in `POSED_CHECKS` and
+**referenced by no plan**, so it never reaches evidence today. It would be corrupted like F-1 if a
+future plan used it. Recorded so the two findings are fixed together.
+
+## 26. Final short verification classification
+
+**`FINAL_SHORT_REVIEW_NEEDS_FIXES`.**
+
+V-1 through V-5 are genuinely resolved, R-1 through R-5 and M3 remain resolved, P-12 and P-14 hold,
+freeze integrity is exact, and the trial count is ZERO. The single obstacle to
+`READY_FOR_OWNER_D7` is **F-1**: `CURRENT_VOCABULARY_INCOMPLETE`, which §6 makes a precondition.
+F-1 and F-3 share one bounded fix.
+
+**D-7 remains not authorised. LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of ZERO.**
