@@ -55,6 +55,16 @@ preserved rather than tidied away.
 > [`M3_FREEZE_READY_FOR_BOUNDED_REVIEW`](#15-status-after-m3-t) — which is a request for review,
 > not an authorisation.
 
+> **That bounded review has now been done:
+> [section 16](#16-bounded-independent-review-of-the-m3-t-descendant-freeze).** It resolves 14.3's
+> `strace` uncertainty in the affirmative from upstream source, and confirms the freeze, the
+> partition, the traced set and the traced-record fix. It also finds **one BLOCKER** — `strace -f`
+> splits `clone3` across two lines, which currently makes M3 report `clone3_failed`, a **FAIL**
+> that would render the whole run `MECHANISM_REJECTED` from a rendering artefact — and three
+> IMPORTANT findings. Result:
+> [`M3_T_NEEDS_PRETRIAL_FIXES`](#165-classification). **Nothing was corrected in that review**, and
+> D-7 remains not authorised.
+
 ## 1. Independently reconstructed state
 
 Nothing below is taken from the author's summary; every value was recomputed.
@@ -740,3 +750,189 @@ pre-trial re-review is still required, and it now has three specific things to w
 amendment itself, the `strace` clone3-rendering uncertainty in 14.3, and the traced-record defect in
 14.5. **D-7 remains not authorised and LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of
 ZERO.**
+
+---
+
+## 16. Bounded independent review of the M3-T descendant freeze
+
+**Scope:** the delta `4da94b5..5d0b801` only. Sections 1–15 are preserved unchanged and nothing
+earlier is reopened. **This section is the first-pass record and is committed before any
+correction.** No experiment source or manifest was modified by this review. No case was posed, no
+helper or spike was executed, no generated ELF was traced, and the D-7 flag was never passed.
+**LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of ZERO.**
+
+### 16.1 Independently reconstructed state
+
+Every value recomputed, not read from the author's summary.
+
+| Claim | Method | Result |
+|---|---|---|
+| working tree | `git status --short` | clean |
+| HEAD / origin | `git rev-parse` | `5d0b801` local; `origin` at `4da94b5`, so the candidate is local-only |
+| delta scope | `git diff --stat` | 9 files, Python and documentation only |
+| C or workflow change | `git diff --name-only -- '*.c' '*.yml' '*.h'` | **none** |
+| historical commits | tree hashes of ten prior commits | all intact, none amended |
+| attribution | `%(trailers:key=Co-Authored-By)` on the delta commit | **empty** — AGENTS.md policy followed |
+| source hashes | independent SHA-256 | **16/16 exact** |
+| definition hashes | independent SHA-256 | **3/3 exact** |
+| manifest self-reference | key inspection | does not hash itself |
+| partition | manifest + `summary()` | **72 / 54 / 11 / 7** |
+| traced set | manifest + derived list | **E1, E7, F4, F7, M1, M2, M3, M4** — eight |
+| driver | `completeness()` | **72 handlers**, 0 missing, 0 duplicate, 0 unknown |
+| posability | `unposable_cases()` | **0 unposable** |
+| status / D-7 | manifest | `NOT_RUN` / `false` |
+
+### 16.2 What was verified sound
+
+- **The bounded claim holds its boundary.** `M3_BOUNDED_CLAIM` and `M3_CLAIM_EXCLUSIONS` are in the
+  manifest, not only in prose. No document reviewed claims universal pidfd race-freedom, kernel
+  correctness, general atomicity, or timing semantics of the untraced mechanism.
+- **No self-assertion.** `launcher_spike.c` contains no `pidfd_acquisition` field, and the rule's
+  source does not reference one. A fabricated receipt carrying `"pidfd_acquisition": "clone3"`
+  yields no token, confirmed directly.
+- **The traced-record fix is real and does not over-reach.** All **eight** traced cases now carry a
+  syscall record and score PASS through `checker.score_case` with proper fabricated evidence; with
+  the trace absent, the record carries `trace: None` and scores **INVALID**. The fix does not
+  manufacture a trace and does not bypass the checker.
+- **`pidfd_open` discrimination is correct.** `pidfd_open(DIRECT_CHILD_PID)` yields
+  `pidfd_acquired_by_pidfd_open`; `pidfd_open(UNRELATED_PID)` does not create a false failure.
+- **Privacy holds.** Raw pids, descriptor numbers, pointer values, usernames, host paths and raw
+  tracer text are all withheld; a fabricated record containing `31337`, `4242`, `0x7ffd1234`,
+  `runner` and a `.netrc` path leaked none of them into serialised evidence. Normalised output
+  carries only booleans, decoded flag names, counts and the symbolic `DIRECT_CHILD` /
+  `DIRECT_CHILD_PIDFD`.
+- **The BLOCKED escape hatch was not widened.** M3's only frozen cause remains
+  `clone3_unavailable`; a `no_tracer` environment produces no block cause for M3, and
+  `harness._derive_blocks` never maps a missing tracer to `clone3_unavailable`.
+- **Posability wording is honest.** The manifest states the freeze "is NOT a readiness statement and
+  grants nothing", and 72/72 is nowhere presented as acceptance or as a likely PASS.
+- **The strace format is grounded upstream, not fabricated.** `strace/src/clone.c` prints `pidfd`
+  on entry via `PRINT_FIELD_ADDR64` (so fact C's `pidfd=0x…` is real) and on exit via
+  `printnum_fd()` behind `tprint_value_changed_struct_begin()` (so fact E's `=> {pidfd=[N]}` is
+  real). The author's residual uncertainty in 14.3 is **resolved in the affirmative**: the direct
+  form is available, and the closure form is therefore **not required** for M3 to be sound.
+
+### 16.3 Findings
+
+#### BLOCKER
+
+**R-1 — `strace -f` splits `clone3` across two lines, and M3 then reports `clone3_failed`, which is
+a FAIL.**
+
+Under `-f`, a clone-family syscall is routinely rendered split, because the child begins running
+before the parent's syscall returns:
+
+```
+111   clone3({flags=CLONE_PIDFD, pidfd=0x7ffd0000, exit_signal=SIGCHLD} <unfinished ...>
+[pid   222] execveat(3, "", NULL, NULL, AT_EMPTY_PATH) = 0
+111   <... clone3 resumed> => {pidfd=[4]}, 88) = 222
+```
+
+`observations.parse_pidfd_acquisition` matches only `_CLONE3_LINE` (`clone3\(\{…\}`), which appears
+on the **unfinished** line. That line carries neither the return value nor the `=> {pidfd=[N]}`
+block, both of which are on the **resumed** line — and `<... clone3 resumed>` does not match the
+pattern at all. Verified against the frozen parser: `clone3_return=None`,
+`clone3_succeeded=False`, `pidfd_from_clone3=None`.
+
+**Consequence:** the rule returns `clone3_failed`. M3 is conditional and was posed, so
+`checker.verdict` rule 1 fires and the aggregate is **`MECHANISM_REJECTED`** — a tracer *rendering
+artefact* reported as a falsified mechanism claim. This is precisely the misclassification class of
+P-1 and P-2, and it is the strongest possible wrong answer.
+
+*Affected:* `observations.py`, `_CLONE3_LINE` / `_CLONE3_RESULT` and their single-line assumption.
+*Blast radius:* M3 only. `parse_strace_child_window` already handles the resumed form and returns
+the correct child window under the split rendering, so the other seven traced cases are unaffected.
+*Disposition:* **must be fixed before D-7.** The parser must join the unfinished and resumed
+fragments of the same `clone3` before extracting facts D and E. Until then the split rendering must
+never yield `clone3_failed`; an unjoined record is INVALID at worst, never FAIL.
+
+#### IMPORTANT
+
+**R-2 — the closure form is over-permissive: six alternate acquisition routes each yield the M3
+success token.**
+
+Fabricated records exercising each route were classified `pidfd_acquired_atomically`:
+
+| Route | Injected syscall |
+|---|---|
+| duplication | `dup2(4, 7)` then the lifecycle uses `7` |
+| descriptor theft | `pidfd_getfd(9, 3, 0) = 4` |
+| procfs handle | `openat(AT_FDCWD, "/proc/222", O_RDONLY\|O_DIRECTORY) = 4` |
+| legacy clone | `clone(…, flags=CLONE_PIDFD\|SIGCHLD, parent_tid=[4]) = 333` |
+| second child | `fork() = 333` |
+| descriptor passing | `recvmsg(…, SCM_RIGHTS, cmsg_data=[4])` |
+
+The closure argument concludes "no other route by which that descriptor could exist". That
+conclusion is **true for the frozen source** — `launcher_spike.c` never duplicates or relocates the
+pidfd (relocation happens before the clone), never calls `pidfd_getfd`, `recvmsg` or `clone`, opens
+no `/proc/<pid>`, and its only `fork()` is inside the M5 arm, which M3's plan does not enable. But
+**the trace does not exclude any of them and the parser tests for none of them.**
+
+*Consequence:* the closure form's soundness rests on frozen-source invariants that are not
+externally observed — which re-imports exactly the source-trust M3 was created to eliminate. The
+definition's wording ("leaving no other route by which that descriptor could exist") therefore
+**overclaims** what the evidence establishes.
+*Disposition:* since 16.2 establishes that the **direct** form is available on any strace that
+decodes `clone_args`, the cleanest repair is to **remove the closure form** and require fact E
+directly. If it is retained, the parser must additionally require, *from the trace*, the absence of
+every route above.
+
+**R-3 — the `waitid` correlation ignores the rendered `si_pid`.**
+
+Fact G is asserted as "`waitid(P_PIDFD, N, …)` reaps **the direct child** through `N`". The parser
+extracts only `N` and never compares the rendered `si_pid` against `clone3`'s return value. A
+fabricated record in which `waitid(P_PIDFD, 4, {si_pid=999})` follows `clone3(…) = 222` is
+classified `pidfd_acquired_atomically`.
+
+*Consequence:* a descriptor referring to a **different** process satisfies the correlation. strace
+renders `si_pid`, so the check is available and costs nothing.
+*Disposition:* require `si_pid == clone3_return` before treating the `waitid` as correlating; a
+mismatch is INVALID.
+
+**R-4 — the definition's fallback tracer does not exist, and M3-T widened the exposure.**
+
+Section 4 of the definition promises: `strace` if preflight finds it, "otherwise a purpose-built
+parent-side `ptrace` tracer if `ptrace_scope <= 1`, otherwise those cases are BLOCKED". No such
+ptrace tracer is implemented — `driver.tracer_argv` returns `None` whenever `strace` is absent — and
+`harness._derive_blocks` sets `no_tracer` **only** when `ptrace_scope` is *not* in `("0", "1")`.
+
+*Consequence:* on a host with no `strace` but a permissive `ptrace_scope`, no traced case is
+BLOCKED, every traced case is `not_posed` → INVALID, and the aggregate is
+`MECHANISM_INCONCLUSIVE` with no legitimate BLOCKED path. Pre-existing, but the amendment moved M3
+into that set and made it load-bearing for the acquisition claim.
+*Disposition:* implement the promised fallback, or make the preflight gate halt when a traced case
+has no available tracer, or amend the definition to drop the fallback. An owner-visible choice, but
+all three are bounded.
+
+#### MINOR
+
+**R-5 — stale docstring.** `driver.tracer_argv` still reads "Only the seven cases declared
+`traced: true` ever reach here". The amendment made it eight. Documentation only; no behavioural
+effect.
+
+### 16.4 Two propositions kept separate
+
+Section 6 of the review instruction asks that these not be collapsed, and they are not:
+
+1. **The kernel produced a pidfd.** Established by facts A–E: a single decoded `clone3`, with
+   `CLONE_PIDFD` among its flags, an output location supplied, a successful child, and the kernel's
+   write-back rendered.
+2. **The descriptor the lifecycle used is that pidfd.** Established by fact G plus the equality
+   check `written == correlated` in the **direct** form. In the **closure** form this second
+   proposition is *not* independently established — it is inferred from the absence of `pidfd_open`
+   alone, which R-2 shows is insufficient as trace evidence.
+
+This is the precise reason the direct form is sound and the closure form is not.
+
+### 16.5 Classification
+
+**`M3_T_NEEDS_PRETRIAL_FIXES`.**
+
+One BLOCKER (**R-1**) and three IMPORTANT findings (**R-2**, **R-3**, **R-4**), all bounded and all
+repairable within the semantics the owner has already chosen. No new owner decision is required to
+fix them, with the partial exception of R-4, where three acceptable repairs exist and the choice
+between them is small.
+
+Freeze integrity holds, the partition and traced set are exactly as declared, the traced-record fix
+is sound, P-12's refusals hold everywhere except the closure path, P-14 holds, and no C source
+changed. **D-7 remains not authorised and the valid trial count remains ZERO.**
