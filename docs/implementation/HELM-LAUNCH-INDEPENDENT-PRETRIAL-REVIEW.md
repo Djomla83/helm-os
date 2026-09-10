@@ -1618,3 +1618,135 @@ closed, freeze integrity is exact and the trial count is ZERO. The single obstac
 makes the lazy-import mechanism `LAZY_IMPORT_NEEDS_FIX`.
 
 **D-7 remains not authorised. LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of ZERO.**
+
+## 31. M-1 fix: fail-closed driver-vocabulary acquisition
+
+Owner decision after section 30: fix **M-1** before D-7. This section records what changed and what
+was verified. It is a fix record, not a readiness statement.
+
+### 31.1 What was wrong
+
+`evidence._driver_vocabulary()` imported `driver` lazily — necessarily, since `driver` imports
+`evidence` — and then read `driver.SETUPS`, `PARENT_STATES`, `POSED_CHECKS` and `ALL_CHANNELS`
+directly. Python publishes a module object in `sys.modules` **before** executing its body, so
+`import driver` can succeed against a module whose decorators have not run yet. Reading those
+globals cannot distinguish
+
+* *empty because this freeze registers nothing* from
+* *empty because the body is still executing*,
+
+and the empty answer was cached permanently by `if _DRIVER_VOCABULARY is not None`. Measured: 334
+tokens instead of 379, `sigterm_blocked_sigpipe_ignored` lost, no recovery for the life of the
+process. A separate path returned `frozenset()` on import failure and **continued sanitising**, so
+published symbolic evidence would have been silently rewritten into `<OPAQUE:...>` digests.
+
+### 31.2 The interface, not a guess
+
+`driver.registry_vocabulary()` is defined as the **last statement of `driver.py`'s module body**,
+after every registry is populated. Its mere existence is therefore a positive readiness fact rather
+than an inference from globals that may or may not be filled in: a partially initialised driver does
+not have the attribute. A test asserts by AST that it is the last top-level definition, so appending
+anything after it fails rather than silently weakening the signal, and a second test asserts the
+function calls nothing but `tuple` and `sorted` — it is consulted during sanitisation and must never
+act.
+
+It is **not a second source of truth**: it returns the registries themselves, as tuples so a
+consumer cannot mutate the driver through what it is handed.
+
+### 31.3 Failure and cache semantics
+
+`evidence.VocabularyUnavailable` is raised — never swallowed, never replaced by an empty set — on
+every one of: driver import failure; a partially initialised driver with the registries absent;
+registries present but empty; a required registry missing from the snapshot; a registry of the wrong
+type; a registry holding a value that is not a name; an accessor that is not callable or that
+raises; a snapshot that is not a mapping.
+
+| state | cached? |
+|---|---|
+| failed load | **no** |
+| partial load | **no** |
+| complete validated load | yes — as an immutable `frozenset` |
+| later successful calls | identical object |
+
+`Sanitiser.text`, `Sanitiser.record` and `serialise` resolve the vocabulary **before** emitting
+anything. That matters: only `_opaque_token` consults the vocabulary, and only for runs of at least
+28 characters, so a record that happened to contain no long token would otherwise have been
+published having never established that the vocabulary was available. The halt now depends on the
+driver's state, not on which data the case produced.
+
+### 31.4 Import matrix — sixteen fresh interpreters
+
+Import order is a property of a whole interpreter, so every scenario runs in a new one rather than
+by poking `sys.modules` in a process where everything is already imported.
+
+```
+A  evidence first, then driver     COMPLETE 379 True True True
+B  driver first                    COMPLETE 379 True True True
+C  checker+observations first      COMPLETE 379 True True True
+C2 evidence alone                  COMPLETE 379 True True True
+D  driver import FAILS             HALT 4 published=0 not_cached
+E  failure then recovery           HALT 1 published=0 not_cached / COMPLETE 379
+F  partial: registries ABSENT      HALT 4 published=0 not_cached / COMPLETE 379
+G  partial: registries EMPTY       HALT 4 published=0 not_cached / COMPLETE 379
+G2 partial: a registry MISSING     HALT 4 published=0 not_cached / COMPLETE 379
+G3 partial: registry MISTYPED      HALT 4 published=0 not_cached / COMPLETE 379
+G4 accessor RAISES                 HALT 4 published=0 not_cached / COMPLETE 379
+G5 accessor NOT CALLABLE           HALT 4 published=0 not_cached / COMPLETE 379
+G6 snapshot NOT a mapping          HALT 4 published=0 not_cached / COMPLETE 379
+G7 registry holds a non-name       HALT 4 published=0 not_cached / COMPLETE 379
+H  50 repeated queries             STABLE 1 size, 1 object id / COMPLETE 379
+I  import poses nothing            SIDE_EFFECTS False False / COMPLETE 379
+```
+
+`HALT 4` means all four public entry points — `vocabulary()`, `Sanitiser.text`, `Sanitiser.record`
+and `serialise` — refused; `published=0` that nothing was emitted; `not_cached` that both
+`_DRIVER_VOCABULARY` and `_VOCABULARY` were still `None` afterwards. Every refused state then
+recovers to the same complete 379-token set. Distinct complete sizes across the whole matrix: **one**.
+
+### 31.5 Current vocabulary remains closed
+
+The independent oracle — deliberately not `evidence.vocabulary()` — enumerates **366** fixed
+symbolic tokens by walking the registries itself.
+
+| | |
+|---|---|
+| independently enumerated | 366 |
+| missing from the sanitiser | **0** |
+| token × username checks | 4,758 |
+| corrupted | **0** |
+
+`sigterm_blocked_sigpipe_ignored` is still T6's real `plan["parent"]` before sanitisation and
+byte-exact after it through the real `record()` path under all 13 adversarial usernames.
+`returned_before_descendant_lifetime` is still registered, still referenced by no plan, and still
+protected. **`CURRENT_VOCABULARY_CLOSED`.**
+
+### 31.6 Negative controls unchanged
+
+A4's 4096-byte argument is still `<OPAQUE:a2e659da>` and still absent from the vocabulary; the
+high-entropy probe, PAT, AWS key id and JWT are still redacted; SHA-1 and SHA-256 digests are still
+preserved. Protection was not broadened into a length exemption.
+
+P-14 re-confirmed: keys byte-exact, host identity redacted whole, environment values never
+reproduced, `child_pid`, `acquisition`, `raw_trace` and `capture_prefix_base64` withheld by key,
+`/opt/runtime` untouched by the username rule, serialization deterministic.
+
+### 31.7 Scope
+
+No case membership, case class, checker rule, M3 semantics, trace semantics, strace preflight, P-12
+rule or D-7 gate changed. **No C source byte changed** — the six `.c` digests still match the
+manifest and Build 5 remains applicable. Partition **72 / 54 / 11 / 7**, traced set **E1 E7 F4 F7 M1
+M2 M3 M4**, **72 handlers / 72 posable / 0 unposable**, `status = NOT_RUN`,
+`d7_execution_authorised = false`.
+
+390 tests pass (374 + 16 new). `validate_docs` PASS. `cargo check --workspace --all-targets` exit 0.
+Freeze verification `true` against the new descendant manifest. Runner default invocation exits 3.
+Zero experimental ELF executions, zero preregistered cases posed.
+
+### 31.8 Classification
+
+**`M1_FIX_READY_FOR_FINAL_CHECK`.**
+
+This fix was written by the same author who wrote the code it corrects, and the tests that exercise
+it are the author's own. One final independent M-1 check is required before D-7.
+
+**D-7 remains not authorised. LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of ZERO.**

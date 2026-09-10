@@ -24,6 +24,13 @@ Serialization is **deterministic**: sorted keys, fixed separators, no wall-clock
 timestamp and no hostname. The same record always serialises to the same bytes,
 so an evidence document can be diffed and re-verified.
 
+Vocabulary acquisition is **fail-closed** (M-1). The driver's fixed symbolic
+registries are read through an accessor it defines last, and if they cannot be
+read completely -- import failure, a partially initialised module, a missing,
+mistyped or empty registry -- sanitisation and serialization raise
+``VocabularyUnavailable`` and publish nothing. Nothing incomplete is ever cached,
+so a later call recovers once the driver is initialised.
+
 Nothing here executes anything. Importing this module poses no case.
 
 NOT_RUN: no trial has been executed and no case has been posed.
@@ -220,6 +227,7 @@ def _schema_vocabulary():
 
 _STATIC_VOCABULARY = None
 _DRIVER_VOCABULARY = None
+_VOCABULARY = None
 
 
 def _expand(words):
@@ -235,37 +243,131 @@ def _expand(words):
     return frozenset(out)
 
 
-def _driver_vocabulary():
-    """The driver's fixed symbolic registries, imported LAZILY.
+class VocabularyUnavailable(RuntimeError):
+    """The driver's fixed symbolic registries could not be read completely.
+
+    **M-1.** Raised instead of returning an empty set. An incomplete vocabulary
+    is not a degraded mode: every unrecognised token at least 28 characters long
+    is rewritten into an ``<OPAQUE:...>`` digest, so a missing registry does not
+    produce a visible failure, it produces published evidence that is quietly
+    wrong. Halting is the only honest answer, and because nothing is cached on
+    the way out, a later call made once the driver is fully initialised recovers
+    the complete set.
+    """
+
+
+# Every registry the driver's snapshot must supply. A snapshot missing one of
+# these, or carrying one that is empty or is not a sequence of names, is an
+# incomplete snapshot and is refused -- that is precisely the partially
+# initialised state this check exists to catch.
+_REQUIRED_DRIVER_REGISTRIES = ("SETUPS", "PARENT_STATES", "POSED_CHECKS",
+                               "ALL_CHANNELS")
+
+
+def _driver_registry_snapshot():
+    """Read the driver's registries through its finalised accessor, or refuse.
 
     ``driver`` imports this module, so a module-level import here would be
-    circular. Nothing in driver's module body sanitises anything, so by the time
-    a value is redacted the registries are fully populated. The result is cached
-    only on success, so a partially-initialised import cannot freeze an empty
-    set in place.
+    circular and the import has to stay lazy. What that creates is the risk of
+    importing a module whose body is still running, because Python publishes the
+    module object before executing it.
+
+    ``driver.registry_vocabulary`` is defined as the LAST statement of that
+    module's body, so asking for it is a positive readiness test rather than a
+    guess about whether some global has been filled in yet.
+    """
+    try:
+        import driver
+    except Exception as exc:                               # noqa: BLE001
+        raise VocabularyUnavailable(
+            "the driver module could not be imported: %r" % (exc,))
+    accessor = getattr(driver, "registry_vocabulary", None)
+    if accessor is None:
+        raise VocabularyUnavailable(
+            "driver is only partially initialised: registry_vocabulary() is "
+            "defined after every registry and is not present yet")
+    if not callable(accessor):
+        raise VocabularyUnavailable(
+            "driver.registry_vocabulary is not callable")
+    try:
+        snapshot = accessor()
+    except Exception as exc:                               # noqa: BLE001
+        raise VocabularyUnavailable(
+            "driver.registry_vocabulary() failed: %r" % (exc,))
+    if not isinstance(snapshot, dict):
+        raise VocabularyUnavailable(
+            "driver.registry_vocabulary() returned %s, not a mapping"
+            % type(snapshot).__name__)
+    return snapshot
+
+
+def _driver_vocabulary():
+    """The driver's fixed symbolic registries, validated before being cached.
+
+    The cache rule is the whole of M-1: a failed load is not cached, a partial
+    load is not cached, and only a complete validated snapshot is stored, as an
+    immutable frozenset. So a partially initialised import cannot poison the
+    cache, and the first call after the driver finishes initialising returns the
+    complete set.
     """
     global _DRIVER_VOCABULARY
     if _DRIVER_VOCABULARY is not None:
         return _DRIVER_VOCABULARY
-    try:
-        import driver
-        words = (set(driver.SETUPS) | set(driver.PARENT_STATES)
-                 | set(driver.POSED_CHECKS) | set(driver.ALL_CHANNELS))
-    except Exception:                                  # noqa: BLE001
-        return frozenset()
+    snapshot = _driver_registry_snapshot()
+    words = set()
+    for name in _REQUIRED_DRIVER_REGISTRIES:
+        if name not in snapshot:
+            raise VocabularyUnavailable(
+                "the driver registry snapshot is missing " + name)
+        entries = snapshot[name]
+        if not isinstance(entries, (tuple, list, set, frozenset)):
+            raise VocabularyUnavailable(
+                "driver registry %s is %s, not a sequence of names"
+                % (name, type(entries).__name__))
+        if not entries:
+            raise VocabularyUnavailable(
+                "driver registry %s is empty, which is either a partially "
+                "initialised import or a broken freeze" % name)
+        for entry in entries:
+            if not isinstance(entry, str) or not entry:
+                raise VocabularyUnavailable(
+                    "driver registry %s holds %r, which is not a name"
+                    % (name, entry))
+            words.add(entry)
     _DRIVER_VOCABULARY = _expand(words)
     return _DRIVER_VOCABULARY
 
 
 def vocabulary():
-    """Every fixed symbolic value that may reach published evidence."""
-    global _STATIC_VOCABULARY
+    """Every fixed symbolic value that may reach published evidence.
+
+    Raises ``VocabularyUnavailable`` when the driver's registries cannot be read
+    completely -- see ``_driver_vocabulary``. The union is cached only once it
+    is complete, so a cached value is always the whole vocabulary and never a
+    partial one.
+    """
+    global _STATIC_VOCABULARY, _VOCABULARY
+    if _VOCABULARY is not None:
+        return _VOCABULARY
     if _STATIC_VOCABULARY is None:
         _STATIC_VOCABULARY = _expand(
             _manifest_vocabulary() | _observation_vocabulary()
             | _checker_vocabulary() | _schema_vocabulary()
             | _SPIKE_RECEIPT_VOCABULARY | _NORMALISED_ROLES)
-    return _STATIC_VOCABULARY | _driver_vocabulary()
+    _VOCABULARY = _STATIC_VOCABULARY | _driver_vocabulary()
+    return _VOCABULARY
+
+
+def _reset_vocabulary_cache():
+    """Drop the cached vocabulary so the next call re-derives it.
+
+    Only tests use this, to register a symbol at runtime and show the CLASS of
+    omission F-1 named is covered rather than the two instances it named.
+    Nothing on the trial path calls it: the registries are frozen.
+    """
+    global _DRIVER_VOCABULARY, _VOCABULARY
+    _DRIVER_VOCABULARY = None
+    _VOCABULARY = None
 
 
 # Fields whose VALUE is an explicit host identity. The whole value is redacted,
@@ -327,6 +429,13 @@ class Sanitiser:
         """
         if not isinstance(value, str):
             return value
+        # M-1. Resolve the vocabulary BEFORE any redaction. Only _opaque_token
+        # consults it, and only for runs of at least 28 characters, so a value
+        # that happens to contain no long token would otherwise be published
+        # having never established that the vocabulary was available at all.
+        # Failing closed here makes the halt depend on the driver's state rather
+        # than on which data the case happened to produce.
+        vocabulary()
         out = value
         for pattern, label in self._roots:
             out = pattern.sub(label, out)
@@ -421,6 +530,7 @@ class Sanitiser:
         appear, at any depth, and a field that IS a host identity is redacted
         whole rather than by substring.
         """
+        vocabulary()      # M-1: halt before emitting anything, not part-way
         if isinstance(value, dict):
             out = {}
             for k, v in value.items():
@@ -454,7 +564,12 @@ def serialise(document):
     bytes. No timestamp and no hostname are added here or anywhere else: D-8
     keeps duration and time out of the receipt, and a published document that
     differs run to run cannot be diffed against its own re-verification.
+
+    M-1: this is the publication boundary, so it refuses to emit bytes while the
+    fixed vocabulary is unavailable, even if a caller assembled the document by
+    some route that did not go through ``Sanitiser.record``.
     """
+    vocabulary()
     return json.dumps(document, indent=2, sort_keys=True,
                       separators=(",", ": "), ensure_ascii=False,
                       default=str) + "\n"

@@ -7,8 +7,10 @@ generated ELF or any preregistered case, and no test constructs a
 ``driver.Authorisation`` -- which is the object every posing path requires.
 LAUNCH-EXEC-01 remains NOT_RUN.
 """
+import ast
 import json
 import pathlib
+import subprocess
 import sys
 import unittest
 
@@ -2599,7 +2601,7 @@ class CurrentVocabularyClosure(unittest.TestCase):
     def test_a_newly_registered_symbol_would_be_protected(self):
         """The fix must close the CLASS, not the two named instances."""
         driver.PARENT_STATES["a_freshly_registered_parent_state_name"] = None
-        evidence._DRIVER_VOCABULARY = None          # re-derive
+        evidence._reset_vocabulary_cache()          # re-derive
         try:
             token = "a_freshly_registered_parent_state_name"
             self.assertGreaterEqual(len(token), 28)
@@ -2608,7 +2610,7 @@ class CurrentVocabularyClosure(unittest.TestCase):
         finally:
             driver.PARENT_STATES.pop(
                 "a_freshly_registered_parent_state_name", None)
-            evidence._DRIVER_VOCABULARY = None
+            evidence._reset_vocabulary_cache()
 
 
 class F1RealPlanRegression(unittest.TestCase):
@@ -2681,6 +2683,233 @@ class F2LongDataStaysOpaque(unittest.TestCase):
         self.assertNotIn("x" * 4096, evidence.vocabulary())
         out = s.record({"environ": ["SECRET=" + "q" * 40]})
         self.assertNotIn("q" * 40, evidence.serialise(out))
+
+
+# ============================================ M-1: fail-closed lazy vocabulary
+# ``evidence`` reads the driver's registries through a lazy import, because
+# ``driver`` imports ``evidence``. The hazard the micro-review recorded as M-1
+# is that ``import driver`` succeeds against a module whose body is STILL
+# RUNNING -- Python publishes the module object first -- so the registries can
+# be read while empty, and the empty answer was then cached for the life of the
+# process. Published symbolic evidence would silently become <OPAQUE:...>.
+#
+# Import order is a property of a whole interpreter, so these scenarios run in
+# FRESH interpreters rather than by poking sys.modules inside this one, where
+# every module is already imported and the interesting states are unreachable.
+# Nothing here builds, executes or poses anything: each child imports Python
+# modules and asks for a vocabulary.
+
+_PROBE = "sigterm_blocked_sigpipe_ignored"
+
+
+def fresh(body):
+    """Run body in a fresh interpreter rooted at the experiment directory."""
+    code = "import sys\nsys.path.insert(0, %r)\n%s" % (str(EXP), body)
+    proc = subprocess.run([sys.executable, "-c", code],
+                          capture_output=True, text=True)
+    return proc.returncode, (proc.stdout or "").strip(), (proc.stderr or "").strip()
+
+
+# Each scenario prints one line the test parses. Keeping the reporting identical
+# across scenarios is what makes "the same complete vocabulary" checkable.
+_TAIL = ('v = evidence.vocabulary()\n'
+         'print(len(v), "%s" in v, isinstance(v, frozenset))\n' % _PROBE)
+
+# A halt is only correct if it publishes NOTHING, through every public entry
+# point, and caches NOTHING.
+_HALT_PROBE = '''
+halted, published = 0, []
+for call in (lambda: evidence.vocabulary(),
+             lambda: evidence.Sanitiser(user="ci").text("Zz" * 20),
+             lambda: evidence.Sanitiser(user="ci").record({"p": "Zz" * 20}),
+             lambda: evidence.serialise({"p": "Zz" * 20})):
+    try:
+        published.append(call())
+    except evidence.VocabularyUnavailable:
+        halted += 1
+clean = evidence._DRIVER_VOCABULARY is None and evidence._VOCABULARY is None
+print(halted, len(published), "not_cached" if clean else "CACHED")
+'''
+
+SCENARIOS = {
+    "A": "import evidence, driver\n" + _TAIL,
+    "B": "import driver, evidence\n" + _TAIL,
+    "C": "import checker, observations, evidence\n" + _TAIL,
+    "C2": "import evidence\n" + _TAIL,
+    # Deliberate import failure. A None entry in sys.modules is exactly how the
+    # interpreter reports "this import is not available".
+    "D": ("import evidence\n"
+          "sys.modules['driver'] = None\n" + _HALT_PROBE),
+    "E": ("import evidence\n"
+          "sys.modules['driver'] = None\n"
+          "try:\n"
+          "    evidence.vocabulary()\n"
+          "    print('NO_HALT')\n"
+          "except evidence.VocabularyUnavailable:\n"
+          "    pass\n"
+          "del sys.modules['driver']\n" + _TAIL),
+    # F: partial init with the registries ABSENT -- a bare module object, which
+    # is precisely what sys.modules holds while driver's body is executing.
+    "F": ("import types, evidence\n"
+          "sys.modules['driver'] = types.ModuleType('driver')\n"
+          + _HALT_PROBE +
+          "del sys.modules['driver']\n" + _TAIL),
+    # G: partial init with the registries PRESENT but empty, and a finalised
+    # accessor, so only the validation can catch it.
+    "G": ("import types, evidence\n"
+          "stub = types.ModuleType('driver')\n"
+          "stub.SETUPS, stub.PARENT_STATES, stub.POSED_CHECKS = {}, {}, {}\n"
+          "stub.ALL_CHANNELS = ()\n"
+          "stub.registry_vocabulary = lambda: {'SETUPS': (),"
+          " 'PARENT_STATES': (), 'POSED_CHECKS': (), 'ALL_CHANNELS': ()}\n"
+          "sys.modules['driver'] = stub\n"
+          + _HALT_PROBE +
+          "del sys.modules['driver']\n" + _TAIL),
+    # G2: a registry missing from the snapshot entirely.
+    "G2": ("import types, evidence\n"
+           "stub = types.ModuleType('driver')\n"
+           "stub.registry_vocabulary = lambda: {'SETUPS': ('a',),"
+           " 'PARENT_STATES': ('b',), 'POSED_CHECKS': ('c',)}\n"
+           "sys.modules['driver'] = stub\n"
+           + _HALT_PROBE +
+           "del sys.modules['driver']\n" + _TAIL),
+    # G3: a registry of the wrong type.
+    "G3": ("import types, evidence\n"
+           "stub = types.ModuleType('driver')\n"
+           "stub.registry_vocabulary = lambda: {'SETUPS': 'not-a-sequence',"
+           " 'PARENT_STATES': ('b',), 'POSED_CHECKS': ('c',),"
+           " 'ALL_CHANNELS': ('d',)}\n"
+           "sys.modules['driver'] = stub\n"
+           + _HALT_PROBE +
+           "del sys.modules['driver']\n" + _TAIL),
+    # G4: the accessor itself raises.
+    "G4": ("import types, evidence\n"
+           "def boom():\n"
+           "    raise RuntimeError('half-built')\n"
+           "stub = types.ModuleType('driver')\n"
+           "stub.registry_vocabulary = boom\n"
+           "sys.modules['driver'] = stub\n"
+           + _HALT_PROBE +
+           "del sys.modules['driver']\n" + _TAIL),
+    "I": ("import evidence, driver\n"
+          "sizes = {len(evidence.vocabulary()) for _ in range(50)}\n"
+          "ids = {id(evidence.vocabulary()) for _ in range(50)}\n"
+          "assert len(sizes) == 1 and len(ids) == 1, (sizes, ids)\n"
+          + _TAIL),
+}
+
+
+class M1FailClosedVocabulary(unittest.TestCase):
+    """M-1. A partial or failed driver load halts, publishes nothing, caches
+    nothing, and a later complete load recovers."""
+
+    results = {}
+
+    @classmethod
+    def setUpClass(cls):
+        for name, body in SCENARIOS.items():
+            cls.results[name] = fresh(body)
+
+    def lines(self, name):
+        rc, out, err = self.results[name]
+        self.assertEqual(rc, 0, "%s: %s" % (name, err[-500:]))
+        return out.splitlines()
+
+    def complete(self, name, index=-1):
+        """Parse a trailing '<size> True True' report as a complete load."""
+        size, probe, frozen = self.lines(name)[index].split()
+        self.assertEqual(probe, "True", name + ": F-1 token missing")
+        self.assertEqual(frozen, "True", name + ": vocabulary is not immutable")
+        return int(size)
+
+    def halted(self, name, index=0):
+        """Parse a '<halts> <published> <cache>' report as a clean refusal."""
+        halts, published, cache = self.lines(name)[index].split()
+        self.assertEqual(halts, "4", name + ": something did not halt")
+        self.assertEqual(published, "0", name + ": evidence was published")
+        self.assertEqual(cache, "not_cached", name + ": cache was poisoned")
+
+    # ------------------------------------------------ A/B/C: import order
+    def test_import_order_does_not_change_the_vocabulary(self):
+        sizes = {name: self.complete(name) for name in ("A", "B", "C", "C2")}
+        self.assertEqual(len(set(sizes.values())), 1, sizes)
+        self.assertGreater(min(sizes.values()), 200)
+
+    def test_the_in_process_vocabulary_agrees_with_a_fresh_interpreter(self):
+        self.assertEqual(len(evidence.vocabulary()), self.complete("A"))
+
+    # ------------------------------------------------ D/E: import failure
+    def test_import_failure_halts_and_publishes_nothing(self):
+        self.halted("D")
+
+    def test_import_failure_is_not_cached_and_recovers(self):
+        self.assertEqual(self.complete("E"), self.complete("A"))
+
+    # ------------------------------------- F/G: partial initialisation
+    def test_registries_absent_halts_without_caching(self):
+        self.halted("F")
+
+    def test_registries_present_but_empty_halts_without_caching(self):
+        self.halted("G")
+
+    def test_a_missing_registry_halts_without_caching(self):
+        self.halted("G2")
+
+    def test_a_mistyped_registry_halts_without_caching(self):
+        self.halted("G3")
+
+    def test_an_accessor_that_raises_halts_without_caching(self):
+        self.halted("G4")
+
+    # ------------------------------------- H: recovery after F/G
+    def test_every_partial_state_recovers_to_the_complete_vocabulary(self):
+        baseline = self.complete("A")
+        for name in ("F", "G", "G2", "G3", "G4"):
+            self.assertEqual(self.complete(name), baseline, name)
+
+    # ------------------------------------------------ I: determinism
+    def test_fifty_queries_return_one_identical_object(self):
+        self.assertEqual(self.complete("I"), self.complete("A"))
+
+    # -------------------------------- the readiness signal is structural
+    def test_the_accessor_is_the_last_statement_of_drivers_module_body(self):
+        """The whole design rests on this: a driver that has not finished
+        executing cannot have the attribute, so its presence is a fact rather
+        than a guess. Anything appended after it would silently break that."""
+        tree = ast.parse((EXP / "driver.py").read_text(encoding="utf-8"))
+        last = tree.body[-1]
+        self.assertIsInstance(last, ast.FunctionDef)
+        self.assertEqual(last.name, "registry_vocabulary")
+
+    def test_the_snapshot_is_the_registries_and_not_a_second_list(self):
+        snapshot = driver.registry_vocabulary()
+        self.assertEqual(set(snapshot["SETUPS"]), set(driver.SETUPS))
+        self.assertEqual(set(snapshot["PARENT_STATES"]),
+                         set(driver.PARENT_STATES))
+        self.assertEqual(set(snapshot["POSED_CHECKS"]),
+                         set(driver.POSED_CHECKS))
+        self.assertEqual(tuple(snapshot["ALL_CHANNELS"]),
+                         tuple(driver.ALL_CHANNELS))
+
+    def test_the_snapshot_cannot_mutate_the_registries(self):
+        snapshot = driver.registry_vocabulary()
+        for name, value in snapshot.items():
+            self.assertIsInstance(value, tuple, name)
+        snapshot["SETUPS"] = ()
+        self.assertTrue(driver.SETUPS, "the live registry was reachable")
+
+    def test_the_accessor_poses_nothing(self):
+        """It is called during sanitisation, so it must never act."""
+        source = ast.parse((EXP / "driver.py").read_text(encoding="utf-8"))
+        fn = [n for n in source.body
+              if isinstance(n, ast.FunctionDef)
+              and n.name == "registry_vocabulary"][0]
+        called = {n.func.id for n in ast.walk(fn)
+                  if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
+        self.assertEqual(called - {"tuple", "sorted"}, set())
+
+    def test_the_cached_vocabulary_is_immutable(self):
+        self.assertIsInstance(evidence.vocabulary(), frozenset)
 
 
 # The tokens this suite has demonstrated a derivation for. The universe test

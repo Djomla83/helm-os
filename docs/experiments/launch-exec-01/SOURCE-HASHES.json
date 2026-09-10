@@ -7,7 +7,7 @@
     "recorded": 7,
     "total": 72
   },
-  "classification": "VOCABULARY_FIX_READY_FOR_MICRO_REVIEW",
+  "classification": "M1_FIX_READY_FOR_FINAL_CHECK",
   "d7_execution_authorised": false,
   "definition_sha256": {
     "docs/adr/ADR-0024-launch-authority.md": "c1f3cce88438439aab6632a9c56450ae98d1c64adb31b13c742e2febb1476351",
@@ -70,6 +70,7 @@
     "F-1": "FIXED at this freeze - fixed vocabulary derived from every symbolic registry, including the driver's, rather than hand-listed",
     "F-2": "NOT A DEFECT - A4's long argument is data, not symbolic vocabulary, and may remain <OPAQUE:...>",
     "F-3": "RESOLVED at this freeze - protected because it is registered, without being made reachable",
+    "M-1": "FIXED at this freeze - driver vocabulary acquisition is fail-closed: a failed, partial or invalid registry load raises VocabularyUnavailable, publishes nothing and caches nothing, and a later complete load recovers",
     "M3": "RESOLVED by owner amendment M3-T at freeze 5d0b801; review section 14",
     "PRE-D7-B1": "CORRECTED at freeze a7ae6b9/002e1e4; review section 12",
     "R-1": "FIXED at freeze dc1149f - strace fragments rejoined per task",
@@ -96,14 +97,14 @@
     "D-9": "refuse_set_id_objects_at_admission"
   },
   "pre_execution_review_tip": "55f0f78c18e7bc9b980e1b99169018a7ea5566b4",
-  "requires": "ONE final micro-review of the F-1/F-3 delta before D-7; this freeze is NOT a readiness statement and grants nothing",
+  "requires": "ONE final independent M-1 check before D-7; this freeze is NOT a readiness statement and grants nothing",
   "reviewed_architecture_tip": "a5f09f8df8c3868b7ec2f3f6f9d973058c164a44",
   "scope": "Execution definition and disposable experiment sources frozen before the first preregistered LAUNCH-EXEC-01 trial. NOT_RUN: no trial has been executed and no case has been posed. D-7 (execution authorisation) is NOT granted.",
   "sha256": {
     "README.md": "2519b48dfe495ea67eb7fccd213dfd55d4de509d65f49b21c1c1d562eefb07a2",
     "checker.py": "6201a2dcaa1be1b48667b1d0ceedfbd2d6619668fb78a1043b408ebfd7a7f9b0",
-    "driver.py": "7725ac53b582869c6414d0da9ec18196956c0a2fc933b8994449e2d676e761a9",
-    "evidence.py": "80a80106a3c16311b9c13d78f651aa718273eb265977a020342724fd7de33798",
+    "driver.py": "549defa36d998ad3e2172730d9f5afb80d8fd090235a8b493afd1ba297a29ce2",
+    "evidence.py": "43fe5a7fad54e992c650cbc01e11b180912f556a92a2b53e7832a063f8977a78",
     "frozen_cases.py": "02e2d76fa434353c76e48f8b4129749b1e04a39b9d86e1428dae61e74131e2ef",
     "harness.py": "1a9d0e9040bdefbf6320b7d92f0cf342a8cb6a42c63aeb1b7877506f36e03550",
     "helper_alt.c": "7993aa631abdca6796171fe4ffafb2d296f2a00b61ea2322ee8e624731b99113",
@@ -118,8 +119,8 @@
     "run_launch_exec_01.py": "3eb71b2b5f4434912c91eb9b7613ce763d1791b7c3b135b08ace8b4224838a76"
   },
   "status": "NOT_RUN",
-  "supersedes": "3f735d554d41722fb509a004d820613861837ea1",
-  "supersession_reason": "closes F-1 and F-3, the current-vocabulary gap the final short independent verification recorded at abe747f. T6's published plan carries parent = sigterm_blocked_sigpipe_ignored, a 31-character driver PARENT_STATES key that the hand-written allowlist had missed, so the generic opaque rule rewrote it in published evidence. Rather than adding that string, the fixed-vocabulary set is now DERIVED FROM THE REGISTRIES: frozen_cases, observations (RULES, dispositions, refusals, signal and errno tables, report and return states, lifecycle and exec constants), checker statuses, the published observation schema, and the driver's SETUPS, PARENT_STATES, POSED_CHECKS and ALL_CHANNELS - the last imported lazily because driver imports evidence. F-3, returned_before_descendant_lifetime, is protected by the same derivation although no plan references it, and was NOT made reachable to test it. F-2 remains a non-defect: A4's 4096-byte argument is data, not symbolic vocabulary, and is still published as an opaque token. The opaque rule still redacts genuine secrets and still preserves digests. No C source byte changed. Earlier freezes and every review record are preserved unchanged.",
+  "supersedes": "f1f49cabc160c955472b1fe6b47748b56efe4769",
+  "supersession_reason": "fixes M-1, the lazy-vocabulary robustness defect the final micro-review recorded at dfbb3e8. evidence._driver_vocabulary() read driver.SETUPS, PARENT_STATES, POSED_CHECKS and ALL_CHANNELS directly after a lazy import. Python publishes a module object in sys.modules before executing its body, so that import can succeed against a HALF-BUILT driver whose decorators have not run; reading the globals cannot tell 'empty because nothing is registered' from 'empty because the body is still running', and the empty answer was then cached permanently - 334 tokens instead of 379, with T6's sigterm_blocked_sigpipe_ignored lost and no recovery. A failed import separately fell back to an empty set and carried on sanitising, which publishes symbolic evidence silently rewritten into <OPAQUE:...> digests. Acquisition is now FAIL-CLOSED through an explicit interface: driver.registry_vocabulary() is defined as the last statement of driver's module body, so its presence is a readiness fact rather than a guess; evidence.py requires it, validates the snapshot registry by registry, raises VocabularyUnavailable on any incomplete state, and caches only a complete validated result as an immutable frozenset. Sanitiser.text, Sanitiser.record and serialise resolve the vocabulary before emitting anything, so the halt depends on the driver's state and not on whether the data happened to contain a long token. Sixteen fresh interpreters cover import order, import failure, both partial-init shapes, four malformed snapshots, recovery from each, and fifty repeated queries. No case membership, case class, checker rule, M3 semantics, trace semantics, strace preflight, P-12 rule or D-7 gate changed. No C source byte changed. Earlier freezes and every review record are preserved unchanged.",
   "traced_cases": {
     "amended_by": "M3-T",
     "cases": [
@@ -155,6 +156,24 @@
     ]
   },
   "vocabulary": {
+    "acquisition": {
+      "cache_rule": "only a complete validated snapshot is cached, as an immutable frozenset; failed and partial loads cache nothing, so no partially initialised import can poison the cache for the life of the process",
+      "contract": "fail-closed",
+      "on_refusal": "evidence.VocabularyUnavailable propagates out of Sanitiser.text, Sanitiser.record and serialise; no partially sanitised evidence is emitted and no empty vocabulary is substituted",
+      "readiness_signal": "driver.registry_vocabulary(), defined as the LAST statement of driver's module body, so its presence proves every registry is populated; a partially initialised driver simply does not have it",
+      "recovery": "the first call after the driver finishes initialising returns the complete vocabulary; verified from a fresh interpreter for every refused state above",
+      "refused_states": [
+        "driver import failure",
+        "partially initialised driver with the registries absent",
+        "registries present but empty",
+        "a required registry missing from the snapshot",
+        "a registry of the wrong type",
+        "a registry holding a value that is not a name",
+        "an accessor that is not callable or that raises",
+        "a snapshot that is not a mapping"
+      ],
+      "second_source_of_truth": "none; the accessor returns the registries themselves"
+    },
     "closure": "CURRENT_VOCABULARY_CLOSED",
     "derivation_sources": [
       "frozen_cases (cases, predictions, safe sets, gates, stages, block reasons, syscall lists, injection and control modes, decisions, M3 evidence facts)",

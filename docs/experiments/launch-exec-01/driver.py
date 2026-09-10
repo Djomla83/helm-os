@@ -1457,3 +1457,36 @@ def _descendant_alive(built, plan, timeout_ms=3000):
         return None
     finally:
         os.close(fd)
+
+
+# ============================================ the fixed symbolic registry (M-1)
+# ``evidence.py`` needs the names this module registers, and cannot import it at
+# module scope because this module imports ``evidence``. The lazy import it used
+# instead could observe a HALF-BUILT driver: Python publishes a module object in
+# ``sys.modules`` before executing its body, so ``import driver`` succeeds long
+# before the decorators below have populated SETUPS, PARENT_STATES and
+# POSED_CHECKS. Reading those globals directly cannot tell "empty because this
+# freeze registers nothing" apart from "empty because the body has not run yet",
+# and the empty answer was then cached permanently.
+#
+# This accessor is therefore defined LAST, after every registry is complete, so
+# its mere EXISTENCE is a positive readiness signal. A partially initialised
+# driver does not have the attribute, and evidence.py fails closed rather than
+# guessing from globals that may or may not be filled in.
+#
+# It is not a second source of truth. It returns the registries themselves.
+
+def registry_vocabulary():
+    """A snapshot of every fixed symbolic name this module registers.
+
+    Pure: it reads the registries and nothing else. It builds nothing, poses
+    nothing and executes nothing, so a sanitiser may call it at any time. The
+    values are tuples rather than the live dicts, so a consumer cannot mutate
+    the driver's registries through what it is handed.
+    """
+    return {
+        "SETUPS": tuple(sorted(SETUPS)),
+        "PARENT_STATES": tuple(sorted(PARENT_STATES)),
+        "POSED_CHECKS": tuple(sorted(POSED_CHECKS)),
+        "ALL_CHANNELS": tuple(ALL_CHANNELS),
+    }
