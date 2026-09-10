@@ -1547,3 +1547,74 @@ full adverse-verdict path, which reports no deviations.
 same hand, and **one final micro-review of the F-1/F-3 delta is required before D-7.**
 
 **D-7 remains not authorised. LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of ZERO.**
+
+---
+
+## 29. Final micro-review of `abe747f..f1f49ca`
+
+**Bounded to the F-1/F-3 vocabulary delta.** Sections 1–28 preserved; nothing corrected here.
+Frozen candidate `f1f49ca` is byte-identical and still verifies. No case posed, no helper or spike
+executed, no HELM ELF traced. **LAUNCH-EXEC-01 remains NOT_RUN, valid trial count ZERO.**
+
+**Delta scope confirmed:** `evidence.py`, its tests, the freeze and this document — **no** change to
+`frozen_cases.py`, `driver.py`, `observations.py`, `checker.py`, `run_launch_exec_01.py`, the
+definition, or any C source.
+
+### 29.1 Verified
+
+| | Result |
+|---|---|
+| Freeze | 16/16 source + 3/3 definition hashes exact |
+| Partition / traced set | **72 / 54 / 11 / 7** and the eight traced cases, by **AST parse** |
+| Handlers / posable / unposable | **72 / 72 / 0**; `NOT_RUN`, D-7 `false` |
+| **F-1** | T6's real `plan["parent"]` is `sigterm_blocked_sigpipe_ignored` before *and* byte-exact after sanitisation, through the real `record()` path, under all 13 usernames |
+| **F-3** | registered in `POSED_CHECKS`, referenced by no plan, still protected — and **not** a literal exception: the token appears in `evidence.py` only inside a comment, and removing the driver registries from the derivation loses protection (`<OPAQUE:dad063b7>`), proving the cover is registry-class |
+| **Vocabulary** | **366** tokens enumerated independently of `evidence.vocabulary()`; **zero missing**; **zero corrupted across 4 758 checks** (366 × 13 usernames) |
+| **F-2** | A4's 4096-byte argument still `<OPAQUE:a2e659da>` and **not** in the vocabulary; opaque probes, PATs, AWS ids and JWTs still redacted; digests preserved |
+| **P-14** | no username substring rule; keys byte-exact; host paths and username **path components** redacted while `/opt/runtime` is untouched; env values never raw; `INTERNAL_ONLY` and `child_pid` withheld; deterministic. Vocabulary preservation and privacy hold **simultaneously** |
+| **Prior fixes** | V-1…V-5, R-1…R-5 and M3 all re-verified; the adverse-verdict path reports **no deviations** |
+| Suite | **374 tests, all pass** |
+
+### 29.2 Finding
+
+#### M-1 — IMPORTANT — the lazy driver import caches a partial registry permanently and fails open
+
+Seven import scenarios were run in **fresh interpreters**. Import order is irrelevant — evidence
+first, driver first, checker/observations first, and evidence-alone all yield an identical **379**
+tokens with the F-1 token protected. Repeated queries are stable across 50 calls. A failed import
+(`sys.modules['driver'] = None`) is **not** cached and recovers fully on the next call. Importing
+creates no build directory and poses nothing.
+
+**One scenario fails.** With a driver module whose registries exist but are **empty** — the state
+`driver.py` is genuinely in between creating `SETUPS`/`PARENT_STATES`/`POSED_CHECKS` and the
+decorators filling them — `_driver_vocabulary()` treats the read as a success and caches it:
+
+```
+F  PARTIAL driver module (registries present but EMPTY)  334 False PARTIAL_CACHED_PERMANENTLY
+```
+
+45 tokens are lost, including `sigterm_blocked_sigpipe_ignored`, and the guard
+`if _DRIVER_VOCABULARY is not None` means it **never recovers**. Separately, a failed import returns
+an empty set and sanitisation **continues** with a knowingly-incomplete vocabulary rather than
+refusing — the fail-open behaviour the instruction says to prefer against.
+
+*Reachability:* **not reachable in this frozen candidate.** `vocabulary()` is called only from
+`_opaque_token`, i.e. during sanitisation, and nothing in `driver.py`'s module body sanitises
+anything — verified by inspection of its import-time work. So no evidence a real trial produces
+could be affected today. It is recorded because the instruction makes "no silently cached incomplete
+vocabulary" an explicit criterion, and because the guard is one edit away from becoming reachable.
+
+*Disposition:* refuse to cache an empty registry read, and fail closed — raise, or fall back to a
+conservative "protect everything symbolic" posture — rather than silently publishing corrupted
+symbolic evidence.
+
+## 30. Micro-review classification
+
+**`MICRO_REVIEW_NEEDS_FIXES`.**
+
+`CURRENT_VOCABULARY_CLOSED` and every other criterion holds: F-1 and F-3 are genuinely fixed at the
+class level, F-2 remains a valid negative control, P-14 is sound, all prior bounded fixes remain
+closed, freeze integrity is exact and the trial count is ZERO. The single obstacle is **M-1**, which
+makes the lazy-import mechanism `LAZY_IMPORT_NEEDS_FIX`.
+
+**D-7 remains not authorised. LAUNCH-EXEC-01 remains NOT_RUN with a valid trial count of ZERO.**
