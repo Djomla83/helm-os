@@ -534,3 +534,27 @@ Build 8 is required. No compiler ran for this record. A trial records its own bu
 before its first case.
 
 **LAUNCH-EXEC-01 Trial #2 remains NOT_RUN. D-7 is not authorised. The valid trial count is ZERO.**
+
+## Build 7 still binds the AB7 correction freeze — 2026-09-11, no compiler run
+
+The AB7 correction freeze, cut over the committed blobs of `1db4347`, supersedes `ab74356`. It
+changes only `driver.py`, `observations.py`, the definition and the manifest. The harness now arms
+O6's and O7's fixture signal before the launcher is spawned, and S2/S7's explicit CHDIR status is
+authoritative. No `--setsid` was added and the launcher's group sweep is untouched. Every C source
+it hashes is byte-identical to the one Build 7 compiled at `f417984`:
+
+| Source | SHA-256 at `f417984`, at `ab74356` and at the new freeze |
+|---|---|
+| `launcher_spike.c` | `0a45447b627f16dce2fd7193e26993dcc126ae96dce6e6c5b511b41361e0d622` |
+| `helper_report.c` | `99770ed8cfdd4049f9bef3624e21850496b6c14a169c3895b54ab7a858d54711` |
+| `helper_alt.c` | `7993aa631abdca6796171fe4ffafb2d296f2a00b61ea2322ee8e624731b99113` |
+| `helper_fork.c` | `a62a6a1e2bbb9cc6ef8a346ae9322c7b7435b1c7f0b6c3710b3aadb9cc2ba0b0` |
+| `helper_setid.c` | `c609755d105122eea304f5fe12685d8dcc24064d77659295a11a76d42b86329f` |
+| `helper_dynamic.c` | `b3c398d840c16dfa4e0dbc56593b905b4019bfe2316fc339049b8a69930350a0` |
+
+The build commands in `harness.py` and the fixtures in `make_fixtures.py` are byte-identical as
+well. Build 7 (run `34575558065`) is therefore still the compile-only evidence for this freeze,
+and no Build 8 is required. No compiler ran for this record. A trial records its own build
+identity before its first case.
+
+**LAUNCH-EXEC-01 Trial #2 remains NOT_RUN. D-7 is not authorised. The valid trial count is ZERO.**

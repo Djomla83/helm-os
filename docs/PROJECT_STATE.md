@@ -1,5 +1,33 @@
 # Stanje projekta
 
+<a id="launch-exec-01-trial-002-ab7-correction-freeze"></a>
+
+## Trial #2 AB7 correction frozen, 2026-09-11 — LAUNCH-EXEC-01 still NOT_RUN
+
+The [final bounded independent review of freeze `ab74356`](implementation/HELM-LAUNCH-EXEC-01-TRIAL-002-AB74356-FINAL-REVIEW.md)
+(`898a31c`) returned **`TRIAL_2_NEEDS_OWNER_DECISION`**. It found:
+* AB7-B1: O7's fixture could never be established, because the launcher's group sweep killed the
+  descendant before the harness's post-launch liveness read;
+* AB7-I1: S2/S7 scored a correct `ExecFailed:CHDIR:EACCES` INVALID whenever stdout was not
+  drained to its end;
+* AB7-M1: a report sentinel beside a report that did not parse scored INVALID instead of FAIL;
+* AB7-M2: O6's frozen `CompleteAtEof` FAIL could only ever score INVALID.
+
+That review is preserved unamended. The owner accepted all four and decided the correction
+without changing C. The harness now arms O6's and O7's fixture signal before the launcher is
+spawned, with no `--setsid` and the group sweep untouched. S2/S7's explicit CHDIR status is
+authoritative, and a report sentinel is decisive. The correction (`1db4347`) and
+[definition section 9.7](experiments/LAUNCH-EXEC-01-DEFINITION.md#97-ab7-correction--the-pre-armed-fixture-signal-and-the-authoritative-chdir-status)
+record it, and a new freeze in `SOURCE-HASHES.json` supersedes `ab74356`. No case membership,
+class, prediction or safe set moved. No C or helper source changed, so Build 7 still binds them.
+
+**Trial #2 is NOT_RUN, D-7 is NOT granted, and the valid trial count is ZERO.** Before any new D-7
+decision the freeze needs one bounded independent review, limited to:
+* AB7-B1, AB7-I1, AB7-M1 and AB7-M2;
+* the fixture signal's descriptor hygiene;
+* the freeze's integrity;
+* Build 7's binding.
+
 <a id="launch-exec-01-trial-002-final-classification-freeze"></a>
 
 ## Trial #2 final classification freeze, 2026-09-11 — LAUNCH-EXEC-01 still NOT_RUN

@@ -37,11 +37,11 @@
     "recorded": 7,
     "total": 72
   },
-  "classification": "TRIAL_2_FINAL_FREEZE_READY_FOR_BOUNDED_REVIEW",
+  "classification": "TRIAL_2_AB7_FIX_READY_FOR_REVIEW",
   "d7_execution_authorised": false,
   "definition_sha256": {
     "docs/adr/ADR-0024-launch-authority.md": "c1f3cce88438439aab6632a9c56450ae98d1c64adb31b13c742e2febb1476351",
-    "docs/experiments/LAUNCH-EXEC-01-DEFINITION.md": "59a0880014510ffa7630966a3afdc598a97f2f09ab6245bc411da2a38a9ec0f3",
+    "docs/experiments/LAUNCH-EXEC-01-DEFINITION.md": "b403bbeacddf48b3714e98c2567505341efc91c74ef1b493bdae4877f47c0d56",
     "docs/research/HELM-LAUNCH-ARCHITECTURE.md": "97fbf0d8a602c68b0cf20529c4c1bb238ae2790a6089fa8ff6818c054b443151"
   },
   "driver": {
@@ -151,7 +151,10 @@
     "7f97100b20a58dd2965eaf20ca4d01b527650ad6 - bounded independent review, TRIAL_2_NEEDS_PRETRIAL_FIXES",
     "f9bbf395f9e76602a8a04410d76e3c18bd2eb046 - classification correction (F417-B1 to B4, I1 to I3, M1)",
     "82b87465abf6ade55c349a90c756742c542f444a - O7 owner correction",
-    "this freeze - cut over the committed blobs of 82b8746"
+    "ab743567d84bfcb25311688b00496db866799174 - superseded final Trial #2 freeze",
+    "898a31c277846f600f83e4c813ef53139c761ee2 - final bounded independent review, TRIAL_2_NEEDS_OWNER_DECISION",
+    "1db43479131444becfbffd4f3ce29a2deb4d6abb - AB7 correction (AB7-B1, AB7-I1, AB7-M1, AB7-M2) by owner decision",
+    "this freeze - cut over the committed blobs of 1db4347"
   ],
   "host_information": {
     "collected": [
@@ -219,10 +222,10 @@
     "SOURCE-HASHES.json": "a manifest cannot hash itself; OBS-FS-01 convention"
   },
   "open_findings": {
-    "AB7-B1": "CORRECTED by the AB7 correction; frozen only at the next freeze - O6 and O7 are posed by fixture_descendant_signalled: the harness opens the case-private FIFO's read end before the launcher is spawned, so helper_fork's descendant signals before the launcher's unchanged group sweep ends it; no --setsid and no C change",
-    "AB7-I1": "CORRECTED by the AB7 correction; frozen only at the next freeze - S2/S7's explicit ExecFailed:CHDIR:EACCES exec-status record is authoritative that no image ran, and no clean end-of-file is required",
-    "AB7-M1": "CORRECTED by the AB7 correction; frozen only at the next freeze - report_sentinel_seen is positive evidence that an image started even when the report does not parse; no_executed_image decides FAIL without a rule token, and a status record beside a sentinel is a contradiction FAIL",
-    "AB7-M2": "CORRECTED by the AB7 correction; frozen only at the next freeze - O6 is posed by the fixture signal and its retained completeness is a result, so the frozen CompleteAtEof is a FAIL",
+    "AB7-B1": "FIXED at this freeze (1db4347) - O6 and O7 are posed by fixture_descendant_signalled: the harness opens the case-private FIFO's read end before the launcher is spawned, so helper_fork's descendant signals before the launcher's unchanged group sweep ends it; no --setsid and no C change",
+    "AB7-I1": "FIXED at this freeze (1db4347) - S2/S7's explicit ExecFailed:CHDIR:EACCES exec-status record is authoritative that no image ran, and no clean end-of-file is required",
+    "AB7-M1": "FIXED at this freeze (1db4347) - report_sentinel_seen is positive evidence that an image started even when the report does not parse; no_executed_image decides FAIL without a rule token, and a status record beside a sentinel is a contradiction FAIL",
+    "AB7-M2": "FIXED at this freeze (1db4347) - O6 is posed by the fixture signal and its retained completeness is a result, so the frozen CompleteAtEof is a FAIL",
     "AB7-N1": "BACKLOG - BLOCKED S2/S7 and M2 records carry null or placeholder measured counts; no landing fact is invented; recorded in the ab74356 final review",
     "AB7-N2": "BACKLOG - the P-series liveness FIFO is not unlinked at release; hygiene only. The O6/O7 fixture-signal FIFO is removed after every invocation",
     "AB7-N3": "BACKLOG - an M2 control-arm non-return is a FAIL only while the threaded arm's trace is structurally valid; the unchanged checker's traced-evidence gate comes first",
@@ -614,7 +617,7 @@
     "m1_inherited": "record() and serialise() each establish the fixed vocabulary first, so an unavailable driver vocabulary halts publication here too",
     "rule": "no document reaches stdout without passing Sanitiser.record and serialise; sanitisation happens exactly once, at the boundary, never at a return site"
   },
-  "requires": "ONE final bounded independent review limited to the f9bbf39 classification delta, the O7 construction and result semantics, this freeze's integrity, and Build 7 still binding the exact unchanged C and helper sources; then a NEW explicit owner D-7 authorisation and a NEW manual dispatch; this freeze grants nothing",
+  "requires": "ONE bounded independent review limited to AB7-B1, AB7-I1, AB7-M1 and AB7-M2, the fixture-signal descriptor hygiene, this freeze's integrity, and Build 7 still binding the exact unchanged C and helper sources; then a NEW explicit owner D-7 authorisation and a NEW manual dispatch; this freeze grants nothing",
   "reviewed_architecture_tip": "a5f09f8df8c3868b7ec2f3f6f9d973058c164a44",
   "scope": "Execution definition and disposable experiment sources frozen before the first preregistered LAUNCH-EXEC-01 trial. NOT_RUN: no trial has been executed and no case has been posed. D-7 (execution authorisation) is NOT granted.",
   "setup_result_schema": {
@@ -634,7 +637,7 @@
   "sha256": {
     "README.md": "9f795a85a1bf137b962e2ecdf5090d1196da249e3c0850183ede17fa26bc2e4d",
     "checker.py": "6201a2dcaa1be1b48667b1d0ceedfbd2d6619668fb78a1043b408ebfd7a7f9b0",
-    "driver.py": "fd53e39b51c6130be6b88eb3d01f1eaa0d77e8ae03df749fd5dd2605712e57d0",
+    "driver.py": "844db6e3278c4488d1af50b54cfb8ca035853cf5addadd5e363f1d4251c1701f",
     "evidence.py": "a91e02a945a31ae9a26d925da7053f9feec7efc6ecf99778e79d609afcc1893a",
     "frozen_cases.py": "ee4b95994196aaf3bb0353ea2198ba79348cef890474ab1f71d37051ad54cbd7",
     "harness.py": "38eabf42c4ab82fdc74eafe0580b7587dbeb46b08e9b8c6c8fe9d36d260ef856",
@@ -646,13 +649,13 @@
     "journal.py": "6393164046051d97d84b722169cb3a0c63508dba49bc35f866ad75bb6b8e64d6",
     "launcher_spike.c": "0a45447b627f16dce2fd7193e26993dcc126ae96dce6e6c5b511b41361e0d622",
     "make_fixtures.py": "14b3c2764f3d07d18b4e387c0ed025f5c512ca4d1e905b6ffc7ae081cb3a3571",
-    "observations.py": "42c490ebbceb496e3576a5748e9bd5e42f4e365b6c0bae22ee2d0d384d90c099",
+    "observations.py": "4626814ea8899777fbdb7e5c1fd1c3b1d6f22660c82f6d822aee1a54ab51399c",
     "oracles.py": "b056c374d39990ef8860062315ebb1af80bd572b737a81321b45687339fd2eeb",
     "run_launch_exec_01.py": "2b55aa6bbb17a7fb2131e2ed21d1429a586e1cad30f26a0dcbc49bf2f3ce1add"
   },
   "status": "NOT_RUN",
-  "supersedes": "f41798455662579c3895f7a4af50bac17d47bb43",
-  "supersession_reason": "fixes the reachable findings of the bounded independent review of f417984, recorded at 7f97100 as TRIAL_2_NEEDS_PRETRIAL_FIXES and accepted by the owner, who decided that the section 3 expectations win. f9bbf39 fixes one classification rule for every launcher invocation (definition section 9.6): INVALID only when the result cannot honestly be evaluated, FAIL for a decisive contradiction or a launch that does not return in bound, each repetition scored alone and the case reduced FAIL > INVALID > PASS (B1); O8's byte floor, S2/S7's report and F7's close_range outcome are results, and F7's adjacency comes from the launcher's pre-clone records (B2-B4); report-based rules take the lifecycle token on decisive evidence (I1); M2's control-arm non-return is a FAIL (I2); BLOCKED records carry posing_evidence (M1). 82b8746 implements the owner's O7 decision: the unchanged helper_fork retained-writer fixture, the stderr capture failure as the receipt's WriterRetainedAfterChildExit beside Exited:42, proven by the fixture's liveness and scored as a result. No case membership, class, prediction, safe set, gate, traced flag or block cause moved, and no C or helper source changed. Trial #1, its freeze and result review, and the reviews at 43371c6 and 7f97100 are preserved unchanged.",
+  "supersedes": "ab743567d84bfcb25311688b00496db866799174",
+  "supersession_reason": "fixes the findings of the final bounded independent review of ab74356, recorded at 898a31c as TRIAL_2_NEEDS_OWNER_DECISION and accepted by the owner with AB7-N1 to N3 left as backlog. 1db4347 implements the owner's decision without changing C. AB7-B1: O6 and O7 are posed by fixture_descendant_signalled, a signal whose case-private FIFO read end the harness opens before the launcher is spawned, so helper_fork's descendant signals before the launcher's unchanged group sweep ends it; no --setsid is added. AB7-I1: S2/S7's explicit ExecFailed:CHDIR:EACCES exec-status record is authoritative and no clean end-of-file is required. AB7-M1: report_sentinel_seen is positive evidence that an image started even when the report does not parse, no_executed_image decides FAIL without a rule token, and a status record beside a sentinel is a contradiction FAIL. AB7-M2: O6's retained completeness is a result, so the frozen CompleteAtEof is a FAIL. Definition section 9.7 freezes all of it. No case membership, class, prediction, safe set, gate, traced flag or block cause moved, and no C or helper source changed. Trial #1, every earlier freeze and correction, and the reviews at 43371c6, 7f97100 and 898a31c are preserved unchanged.",
   "traced_cases": {
     "amended_by": "M3-T",
     "cases": [
@@ -716,6 +719,6 @@
       "driver (SETUPS, PARENT_STATES, POSED_CHECKS, ALL_CHANNELS), imported lazily to avoid the driver -> evidence cycle"
     ],
     "not_vocabulary": "argv contents, environment values, host paths, captured bytes, tracer text and any high-entropy value remain redactable; A4's 4096-byte argument is still published as <OPAQUE:...>",
-    "tokens_protected": 404
+    "tokens_protected": 405
   }
 }
