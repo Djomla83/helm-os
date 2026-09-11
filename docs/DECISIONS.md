@@ -164,3 +164,72 @@ must not be reused; the dispatcher bound to it is retired from the default branc
 
 Trial #2 is a **new preregistered trial** under a new descendant freeze — not a retry — and requires
 its own D-7 authorisation, which is **not granted**.
+
+
+<a id="d-7-authorised-trial-002"></a>
+
+### Owner decision 2026-09-11 — **Trial #2 D-7 AUTHORISED** for exactly one valid LAUNCH-EXEC-01 Trial #2 execution
+
+**D-7 — execution authorisation — is GRANTED for LAUNCH-EXEC-01 Trial #2**, bound to one exact
+frozen object and to **exactly one valid Trial #2 execution**. It is a new authorisation. Trial #1's
+consumed D-7 is not reused, and the Trial #1 section above is unchanged.
+
+| Binding | Value |
+|---|---|
+| Trial | **trial-002** |
+| Freeze commit | `ba41a3f12be411058ed50e78bcd1c7e22afb7ae4` |
+| `SOURCE-HASHES.json` Git blob | `6f000fac9a48625d3c9def18e16ae7ce1b61efa8` |
+| `SOURCE-HASHES.json` SHA-256 | `616dc6b340c5453a013259554b10fd997a90c990da3395449ba3497f186c9a94` |
+| Final independent review | `5da397c6a79aea7c9a626789480903d50df0b7b4` — [record](implementation/HELM-LAUNCH-EXEC-01-TRIAL-002-BA41A3F-FINAL-REVIEW.md) |
+| Review classification | `TRIAL_2_READY_FOR_NEW_D7_DECISION` |
+| Compile-only evidence | Build 7, run `34575558065` at `f417984`; every C source of this freeze is byte-identical to what it compiled. It is pretrial evidence only: the trial builds and hashes its own binaries |
+| Scope | **exactly one** valid Trial #2 execution |
+
+**The frozen source, definition and manifest remain immutable.** This authorisation is recorded
+here, outside the freeze, so that granting it changes no frozen byte. `status: NOT_RUN` and
+`d7_execution_authorised: false` inside `SOURCE-HASHES.json` are left untouched. They record the
+state at which the immutable freeze was cut, and this external decision supersedes them for
+execution authority without mutating the artefact it authorises.
+
+**When D-7 is consumed.**
+
+* D-7 is consumed when the **first durable `case_pose_started` record is successfully fsynced** —
+  the Trial #2 immutability boundary of definition section 9.3 and of the manifest's
+  `durable_evidence.journal.boundary`. That record is written before the launcher process exists,
+  so a death between the record and the process still counts as the execution.
+* If the trial aborts after that boundary, **D-7 remains consumed**. The trial is then read from
+  its preserved journal as section 9.3 fixes: `TRIAL_ABORTED_AFTER_BOUNDARY`, with no aggregate
+  derived after the fact.
+* **No rerun, no resume and no retry.** No case, no failed or invalid case, and no aborted trial is
+  run again under this authorisation. Any later execution is a new trial that needs a new owner
+  decision.
+* **A pre-boundary rejection does not manufacture a trial result.** A refused dispatch, a failed
+  identity, freeze or completeness gate, `HALT_PREFLIGHT` or `HALT_BUILD_IDENTITY` poses zero
+  cases. It produces no case status, no aggregate and no change to the valid trial count, and it
+  does not consume D-7. The one-shot dispatcher, however, accepts only its own run number 1, so
+  after such a rejection it cannot be dispatched again. Any further step is an owner decision.
+
+**Authorised only for:**
+
+* the exact freeze, manifest and final review above;
+* the exact preregistered definition;
+* the exact 72-case membership (54 mandatory / 11 conditional / 7 recorded);
+* the eight traced cases E1 E7 F4 F7 M1 M2 M3 M4;
+* the preregistered `ubuntu-24.04` trial environment and preflight contract;
+* one run of the frozen runner through one reviewed one-shot dispatcher.
+
+**Not authorised:**
+
+* another freeze, or a different freeze SHA;
+* arbitrary HELM execution;
+* Trial #1, or any rerun, resume or retry to obtain a better result;
+* rerunning failed, invalid or blocked cases;
+* Wine, Proton, A0, 7-Zip or another experiment;
+* privileged host operations;
+* modifying frozen experiment bytes before or during the trial;
+* changing checker or verdict semantics after observing results;
+* creating `crates/helm-launch`, or accepting ADR-0024.
+
+After the trial, its result needs an independent result review before ADR-0024 or
+`crates/helm-launch` may advance. A red or green workflow is not a verdict: the result comes only
+from the frozen durable evidence.

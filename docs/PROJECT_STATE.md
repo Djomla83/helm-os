@@ -1,6 +1,27 @@
 # Stanje projekta
 
-<a id="launch-exec-01-trial-002-ab7-correction-freeze"></a>
+<a id="launch-exec-01-trial-002-d7-authorised"></a>
+
+## Trial #2 D-7 authorised, 2026-09-11 — LAUNCH-EXEC-01 Trial #2 still NOT_RUN
+
+The [final bounded independent review of freeze `ba41a3f`](implementation/HELM-LAUNCH-EXEC-01-TRIAL-002-BA41A3F-FINAL-REVIEW.md)
+(`5da397c`) returned **`TRIAL_2_READY_FOR_NEW_D7_DECISION`**. The owner then granted
+[D-7 for Trial #2](DECISIONS.md#d-7-authorised-trial-002): exactly one valid Trial #2 execution,
+bound to:
+
+* freeze `ba41a3f12be411058ed50e78bcd1c7e22afb7ae4`;
+* `SOURCE-HASHES.json` blob `6f000fac9a48625d3c9def18e16ae7ce1b61efa8`, SHA-256
+  `616dc6b340c5453a013259554b10fd997a90c990da3395449ba3497f186c9a94`;
+* the final review `5da397c6a79aea7c9a626789480903d50df0b7b4`.
+
+D-7 is consumed when the first durable `case_pose_started` record is fsynced. An abort after that
+boundary leaves it consumed, and there is no rerun or resume. A rejection before the boundary poses
+no case and manufactures no trial result. No frozen byte changed.
+
+**Authorised is not executed.** Trial #2 is NOT_RUN and the valid trial count is ZERO. It runs
+only through a new one-shot `workflow_dispatch` dispatcher, and that dispatcher is published only
+after one bounded independent infrastructure review.
+
 
 ## Trial #2 AB7 correction frozen, 2026-09-11 — LAUNCH-EXEC-01 still NOT_RUN
 
