@@ -22,6 +22,7 @@ no case and manufactures no trial result. No frozen byte changed.
 only through a new one-shot `workflow_dispatch` dispatcher, and that dispatcher is published only
 after one bounded independent infrastructure review.
 
+<a id="launch-exec-01-trial-002-ab7-correction-freeze"></a>
 
 ## Trial #2 AB7 correction frozen, 2026-09-11 — LAUNCH-EXEC-01 still NOT_RUN
 
