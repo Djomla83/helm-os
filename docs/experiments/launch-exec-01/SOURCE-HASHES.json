@@ -219,6 +219,13 @@
     "SOURCE-HASHES.json": "a manifest cannot hash itself; OBS-FS-01 convention"
   },
   "open_findings": {
+    "AB7-B1": "CORRECTED by the AB7 correction; frozen only at the next freeze - O6 and O7 are posed by fixture_descendant_signalled: the harness opens the case-private FIFO's read end before the launcher is spawned, so helper_fork's descendant signals before the launcher's unchanged group sweep ends it; no --setsid and no C change",
+    "AB7-I1": "CORRECTED by the AB7 correction; frozen only at the next freeze - S2/S7's explicit ExecFailed:CHDIR:EACCES exec-status record is authoritative that no image ran, and no clean end-of-file is required",
+    "AB7-M1": "CORRECTED by the AB7 correction; frozen only at the next freeze - report_sentinel_seen is positive evidence that an image started even when the report does not parse; no_executed_image decides FAIL without a rule token, and a status record beside a sentinel is a contradiction FAIL",
+    "AB7-M2": "CORRECTED by the AB7 correction; frozen only at the next freeze - O6 is posed by the fixture signal and its retained completeness is a result, so the frozen CompleteAtEof is a FAIL",
+    "AB7-N1": "BACKLOG - BLOCKED S2/S7 and M2 records carry null or placeholder measured counts; no landing fact is invented; recorded in the ab74356 final review",
+    "AB7-N2": "BACKLOG - the P-series liveness FIFO is not unlinked at release; hygiene only. The O6/O7 fixture-signal FIFO is removed after every invocation",
+    "AB7-N3": "BACKLOG - an M2 control-arm non-return is a FAIL only while the threaded arm's trace is structurally valid; the unchanged checker's traced-evidence gate comes first",
     "F-1": "FIXED at this freeze - fixed vocabulary derived from every symbolic registry, including the driver's, rather than hand-listed",
     "F-2": "NOT A DEFECT - A4's long argument is data, not symbolic vocabulary, and may remain <OPAQUE:...>",
     "F-3": "RESOLVED at this freeze - protected because it is registered, without being made reachable",
@@ -234,7 +241,7 @@
     "F417-SECTION-2-AUDIT": "FIXED at this freeze (f9bbf39) - the same rule applied to every posed check and rule: O3's bound and O6's completeness became assertions, O6/P4 posing is retention_observed, rule_admission decides an admitted run, rule_stream_exact a refused one, and a full payload that is not the recipe renders stream_mismatch",
     "M-1": "FIXED at this freeze - driver vocabulary acquisition is fail-closed: a failed, partial or invalid registry load raises VocabularyUnavailable, publishes nothing and caches nothing, and a later complete load recovers",
     "M3": "RESOLVED by owner amendment M3-T at freeze 5d0b801; review section 14",
-    "O7-CONSTRUCTION": "RESOLVED at this freeze by owner decision (82b8746) - O7 runs on the unchanged helper_fork retained-writer fixture; the stderr capture failure is the receipt's WriterRetainedAfterChildExit beside Exited:42, a RESULT assertion; the fixture's liveness is the posing proof; no C or helper source changed",
+    "O7-CONSTRUCTION": "RESOLVED by owner decision (82b8746) and corrected by the owner's AB7 decision - O7 runs on the unchanged helper_fork retained-writer fixture; the stderr capture failure is the receipt's WriterRetainedAfterChildExit beside Exited:42, a RESULT assertion; the posing proof is the pre-armed fixture signal (fixture_descendant_signalled), because the post-launch liveness first used was unreachable behind the launcher's group sweep (AB7-B1); no C or helper source changed",
     "P-16": "FIXED at this freeze - the host nodename is no longer collected (uname -s replaces uname -a; release and architecture were already separate) and every document leaves through one publication boundary, evidence.publish, so HALT_PREFLIGHT is sanitised like any other document",
     "PRE-D7-B1": "CORRECTED at freeze a7ae6b9/002e1e4; review section 12",
     "R-1": "FIXED at freeze dc1149f - strace fragments rejoined per task",
@@ -378,6 +385,8 @@
           "S7"
         ],
         "reads": [
+          "report_sentinel_seen",
+          "spike",
           "report_state"
         ],
         "violation_token": "executed_image_observed"
@@ -408,8 +417,15 @@
       "PASS": "otherwise",
       "decisive_without_report": "a report-based rule (argv_exact, environ_empty, fds_exactly_012, signals_reset, no_new_privs, interpreter_ran_with_devfd, privilege_transition_suppressed) with no usable report takes the lifecycle token when the record is decisive: an admission refusal, an explicit pre-exec status record, or a complete stdout holding no report. A truncated, malformed or undecidable stream, or no receipt, stays INVALID",
       "other_decisive_forms": "an admitted run in a refusal case takes its lifecycle token; a refused run in a stream_exact case takes its refusal; a declared payload drained in full that is not the recipe renders stream_mismatch",
-      "posing_checks": "only preconditions the mechanism does not control: barrier landing, same_inode_as_writer (E5), exec_status_pair_adjacent (F7), threaded_parent_observed (M2), retention_observed (O6, P4), no_helper_report (S5), fixture_descendant_alive (O7)",
-      "source": "definition section 9.6"
+      "posing_checks": "only preconditions the mechanism does not control: barrier landing, same_inode_as_writer (E5), exec_status_pair_adjacent (F7), threaded_parent_observed (M2), retention_observed (P4), no_helper_report (S5), fixture_descendant_signalled (O6, O7)",
+      "source": "definition sections 9.6 and 9.7"
+    },
+    "decisive_without_token": {
+      "assertions": [
+        "no_executed_image"
+      ],
+      "rule": "an assertion whose violation proves a forbidden event on its own decides a repetition even when the rule renders no token: S2/S7's report sentinel beside a report that does not parse is a FAIL, never INVALID; every other assertion still needs the rule's token",
+      "source": "definition section 9.7 (AB7-M1)"
     },
     "expected_markers": {
       "E1": "helper_report",
@@ -418,18 +434,47 @@
       "E4": "helper_report",
       "E6": "MUTATED"
     },
+    "fixture_signal": {
+      "cases": [
+        "O6",
+        "O7"
+      ],
+      "cleanup": "the read end is closed and the FIFO removed after every launcher invocation (_run_once) and again by release_setup_resources",
+      "fd_safety": "opened O_RDONLY | O_NONBLOCK | O_CLOEXEC before the spawn; checked to be a FIFO, non-inheritable, absent from pass_fds and holding no byte; held only by the harness, so it enters neither launcher_spike nor helper_fork",
+      "freshness": "the FIFO node is case-private and created afresh for every launcher invocation, so no writer of an earlier node, another case or an earlier repetition can reach it",
+      "meaning": "exactly the frozen byte L arrived: helper_fork executed, its fork path ran and its descendant reached the signalling path. It does not mean the descendant outlived launch()",
+      "not_used_by": "P1-P4 and T5, which keep the post-launch rendezvous because their question is survival",
+      "read": "after launch() returned, from the already-open read end, bounded by FIXTURE_SIGNAL_READ_TIMEOUT_MS = 2000 ms in total; nothing, or any other bytes, is false",
+      "setup": "fork_helper_prearmed",
+      "sweep": "the launcher's kill(-child, SIGKILL) before the reap is unchanged; the descendant signals in its first actions after fork, and the sweep cannot come before the direct child's exit plus the whole bounded post-exit drain",
+      "writer": "only helper_fork's descendant; the harness never writes the FIFO"
+    },
     "o5": {
       "cpu_bound_ms": 200,
       "cpu_source": "measured by the harness outside the launcher, from RUSAGE_CHILDREN across the one launch; includes the helper the launcher reaped, so it can only overstate",
       "poll_return_bound": 10000,
       "poll_source": "the launcher's instrumentation counter poll_returns_not_in_receipt, outside the receipt"
     },
+    "o6": {
+      "class_and_prediction": "mandatory, Exited:0 -- unchanged",
+      "construction": "helper_fork --prewrite 512 --retain-stdio --parent-exit 0 --lifetime-ms P_DESCENDANT_LIFETIME_MS on the pre-armed fixture-signal setup fork_helper_prearmed; no --setsid; helper_fork.c unchanged",
+      "posing_evidence": "the pre-armed fixture signal alone (posed check fixture_descendant_signalled). The retention_observed receipt route, which made the frozen CompleteAtEof FAIL unreachable, no longer poses O6 (AB7-M2); the receipt's completeness is never posing evidence",
+      "result": "rule process_disposition, with the prewrite payload as exec evidence, and assertion stream_completeness_as_declared: stdout WriterRetainedAfterChildExit",
+      "scoring": {
+        "fixture signal missing": "INVALID",
+        "signalled, CompleteAtEof": "FAIL",
+        "signalled, Exited:0, WriterRetainedAfterChildExit and every other O6 gate": "eligible PASS",
+        "signalled, a launch that did not return, or TimedOut": "FAIL",
+        "signalled, a wrong decisive disposition": "FAIL"
+      },
+      "source": "definition section 9.7, owner decision after 898a31c"
+    },
     "o7": {
       "capture_failure_fact": "the receipt's stderr.completeness == WriterRetainedAfterChildExit, reported beside the direct child's Exited:42",
       "class_and_prediction": "mandatory, Exited:42 -- unchanged",
-      "construction": "helper_fork --retain-stdio --parent-exit 42 --lifetime-ms P_DESCENDANT_LIFETIME_MS with the fork_helper liveness setup; helper_fork.c unchanged; no payload declared, because O7 freezes none",
-      "exec_evidence": "the same liveness answer; the fixture emits no report and O7 declares no payload",
-      "posing_evidence": "the fixture: helper_fork's build-identity binding, the declared helper arguments, and the descendant answering on the case-private liveness FIFO after launch() returned (posed check fixture_descendant_alive). The receipt's completeness is never posing evidence",
+      "construction": "helper_fork --retain-stdio --parent-exit 42 --lifetime-ms P_DESCENDANT_LIFETIME_MS on the pre-armed fixture-signal setup fork_helper_prearmed; no --setsid; helper_fork.c unchanged; no payload declared, because O7 freezes none",
+      "exec_evidence": "the same pre-armed fixture signal: helper_fork executed, forked, and its descendant reached the signalling path; it does not show that the descendant outlived launch()",
+      "posing_evidence": "the fixture: helper_fork's build-identity binding, the declared helper arguments, and the pre-armed fixture signal (posed check fixture_descendant_signalled). The receipt's completeness, the exit status and the receipt's outcome are never posing evidence. The retired fixture_descendant_alive read a post-launch rendezvous that the launcher's group sweep made unreachable (AB7-B1)",
       "result": "rule process_disposition must give Exited:42, and assertion stderr_capture_failure_reported must hold; the two receipt facts are recorded separately",
       "scoring": {
         "established, Exited:42, stderr WriterRetainedAfterChildExit": "eligible PASS",
@@ -446,8 +491,8 @@
       "exec_status_pair_adjacent": [
         "exec_status_pair_adjacent"
       ],
-      "fixture_descendant_alive": [
-        "descendant_alive_after_launch"
+      "fixture_descendant_signalled": [
+        "fixture_descendant_signalled"
       ],
       "no_helper_report": [
         "report_state"
@@ -469,6 +514,22 @@
       ]
     },
     "repeated_trials": "every repetition of a repeated case (O8, S7) is evaluated on its own into PASS, FAIL or INVALID; the case is FAIL if any repetition is FAIL, else INVALID if any is INVALID, else PASS. A known FAIL takes precedence over INVALID and no repetition stands for another (definition section 9.6)",
+    "s2_s7": {
+      "authoritative_status": "the child's explicit ExecFailed:CHDIR:EACCES exec-status record proves the CHDIR pre-exec stage failed and the image was not executed; no clean end-of-file on stdout is required (AB7-I1)",
+      "contradiction": "an explicit ExecFailed:CHDIR:EACCES beside a report sentinel is a FAIL with an evidence-contradiction reason; a record that contradicts itself cannot pass",
+      "posing": "the barrier's proven work-directory landing alone; the stream is never posing evidence",
+      "repetitions": "S7 scores each of its 200 repetitions on its own and reduces them FAIL > INVALID > PASS",
+      "scoring": {
+        "a report sentinel on descriptor 1, whether or not the report parses": "FAIL",
+        "any other decisive disposition": "FAIL",
+        "explicit ExecFailed:CHDIR:EACCES and a report sentinel": "FAIL",
+        "explicit ExecFailed:CHDIR:EACCES, no report sentinel": "the expected result, with or without a clean end-of-file",
+        "forced state did not land": "INVALID",
+        "no explicit status, no sentinel and no complete stream": "INVALID"
+      },
+      "sentinel": "report_sentinel_seen, a normalised boolean derived from the retained stdout prefix: positive evidence that an image started even when the report does not parse (AB7-M1); P-14 keeps withholding the captured bytes",
+      "source": "definition section 9.7, owner decision after 898a31c; supersedes the S2 clause 'its absence is the independent proof that the image never ran'"
+    },
     "showed": "the rule's token and the executed-identity assertions decide PASS or FAIL; a violated assertion replaces the token with its violation token, which is no case's expectation",
     "unobservable": "an assertion whose evidence is missing, in a case that would otherwise PASS, leaves the case not posed; missing evidence is never success"
   },

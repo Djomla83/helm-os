@@ -3782,6 +3782,7 @@ class Trial2SetupContract(unittest.TestCase):
             "mutated_marker": 'built.get("mutated_marker")',
             "cleanup": 'built.get("cleanup")',
             "liveness_fifo": 'built.get("liveness_fifo")',
+            "fixture_signal_fifo": 'built.get("fixture_signal_fifo")',
             "extra_helper_args": 'built.get("extra_helper_args"',
             "work_dir": 'built.get("work_dir")',
         }
@@ -3823,7 +3824,7 @@ class Trial2SetupContract(unittest.TestCase):
         affected = sorted(
             p.case for p in driver._PLAN_LIST
             if produced.get(p.setup, set()) & driver.SEMANTIC_SETUP_KEYS
-            - {"extra_helper_args", "liveness_fifo"})
+            - {"extra_helper_args", "liveness_fifo", "fixture_signal_fifo"})
         # T2-R1's ten -- X1 shares E6d's setup and X8 owns `cleanup` -- plus
         # S2 and S7 from the delta correction.
         self.assertEqual(affected, ["E2", "E3", "E4", "E5", "E6", "E6b",

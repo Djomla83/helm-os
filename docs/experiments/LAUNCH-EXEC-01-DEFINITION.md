@@ -293,9 +293,13 @@ payload **plus** sentinel **plus** report, which can never equal the frozen-reci
 and `drained_sha256` equals the oracle digest. **Exec evidence for those cases is the payload
 itself**: only the pinned helper can produce the recipe, so its presence establishes that the
 image ran, without needing the report S1 relies on. O7 is the one O case with neither: its
-`helper_fork` fixture (section 9.6) emits no report and O7 freezes no payload. Its exec evidence is
-the fixture's descendant answering on the case-private liveness FIFO after `launch()` returned —
-the FIFO's path reaches only the executed image's own argv, and the harness opens its read end.
+`helper_fork` fixture (sections 9.6 and 9.7) emits no report and O7 freezes no payload. Its exec
+evidence is the fixture's pre-armed signal: the frozen byte `L` that `helper_fork`'s descendant
+writes into a case-private FIFO whose read end the harness opened before the launcher was
+spawned. The FIFO's path reaches only the executed image's own argv. The byte shows that
+`helper_fork` ran and forked, and that its descendant reached the signalling path. It does not
+show that the descendant outlived `launch()`: the launcher's normal group sweep kills it, and the
+byte stays buffered in the FIFO until the harness reads it after `launch()` returned.
 
 **Retained prefix.** `capture_prefix` retains the first `MAX_CAPTURE_BYTES` of each stream **in
 memory only**, and draining continues past the bound so a child that writes more is never blocked
@@ -464,7 +468,7 @@ a limitation.
 | # | Class | Expected | Case |
 |---|---|---|---|
 | **S1** | mandatory | `Exited:0` | clean EOF with no record AND the helper report received on fd 1 AND the direct child exited normally. The report is the exec evidence; clean EOF alone is not a PASS |
-| **S2** | conditional (BLOCKED if euid_zero) | `ExecFailed:CHDIR:EACCES` | the directory capability's own descriptor is fchmod'ed to 0000 after admission, so the child's fchdir fails. No helper report may be received: its absence is the independent proof that the image never ran |
+| **S2** | conditional (BLOCKED if euid_zero) | `ExecFailed:CHDIR:EACCES` | the directory capability's own descriptor is fchmod'ed to 0000 after admission, so the child's fchdir fails. No helper report may be received: ~~its absence is the independent proof that the image never ran~~ *evidence amended by owner decision AB7 (section 9.7): the child's explicit `ExecFailed:CHDIR:EACCES` exec-status record is the proof that the image never ran, and no clean end-of-file is required; a helper-report sentinel observed on descriptor 1 is a FAIL even when the report does not parse* |
 | **S3** | mandatory | `Exited:127` | the helper itself exits 127 after a SUCCESSFUL exec and must not be confused with exec failure |
 | **S4** | mandatory | `Exited:7` | rapid exec-and-exit: the parent sleeps 200 ms after clone3 returns and before it polls, so the child has certainly execed and exited first. A forced schedule, not a timing hope |
 | **S5** | mandatory | `ExecStatusIndeterminate` | child killed between the last setup stage and execveat. The parent observes clean EOF with no record, BYTE-IDENTICAL to S1, and no helper report. Reporting exec success is a FAIL and a FAIL of falsifier 8. The discriminating case for the whole confirmation design |
@@ -826,7 +830,7 @@ report says nothing about which body ran. Four assertions, each naming the two f
 | `measured_starting_identity` | E1, E2, E3, E4, E6 | the launcher's pre-exec measurement with the case's starting identity, hashed independently before the run | `measurement_mismatch` |
 | `mode_measured_pre_change` | E6d, X1 | the receipt's mode bits with the landed change's mode-before, and not its mode-after | `mode_measurement_mismatch` |
 | `bounded_drain` | O5 | the launcher's CPU and `poll()` return count with the frozen bounds | `drain_unbounded` |
-| `no_executed_image` | S2, S7 (section 9.6) | the decisive absence of a report on a complete stdout with the frozen "no helper report may be received" | `executed_image_observed` |
+| `no_executed_image` | S2, S7 (sections 9.6, 9.7) | a helper-report sentinel observed on descriptor 1 — an image started, even when the report does not parse — against the child's explicit pre-exec status record, or else a complete stdout that holds no report | `executed_image_observed` |
 | `completed_under_ten_seconds` | O3 (section 9.6) | the harness-measured duration with the frozen 10000 ms | `completion_over_bound` |
 | `stream_completeness_as_declared` | O6 (section 9.6) | each declared stream's reported completeness with the declared one | `completeness_mismatch` |
 | `stderr_capture_failure_reported` | O7 (section 9.6) | the receipt's stderr completeness with the frozen capture-failure fact `WriterRetainedAfterChildExit`, beside the separately derived `Exited:42` | `capture_failure_not_reported` |
@@ -853,7 +857,8 @@ directory as its capability. At the barrier the harness proves the launcher alre
 descriptor on that directory and only then sets its mode to `0000`, so the child's `fchdir` is what
 fails; a change made before the launcher opened it would not pose the case. S7's mode is restored
 between its 200 trials. **Every repetition is evaluated on its own and the case is reduced as
-section 9.6 fixes.** The report's decisive absence is S2's and S7's result, not their posing.
+section 9.6 fixes.** Whether an image ran is S2's and S7's result, not their posing; section 9.7
+fixes its evidence.
 
 **R4's gate reads the real token.** `never_reports_exited_zero` holds only for a derived token other
 than `Exited:0`; an absent token does not hold it.
@@ -908,17 +913,19 @@ control:
 | `same_inode_as_writer` | E5 | the writer against the launcher's pinned descriptor (N-3) |
 | `exec_status_pair_adjacent` | F7 | the launcher's own pre-clone `pipe2` and `fcntl(F_DUPFD_CLOEXEC)` records, followed from the exec descriptor the barrier proved at fd 0 |
 | `threaded_parent_observed` | M2 | the receipt's `parent_shape` against the control arm's zero |
-| `retention_observed` | O6, P4 | the harness's liveness rendezvous after `launch()` returned, or a receipt reporting `WriterRetainedAfterChildExit` |
+| `retention_observed` | P4 | the harness's liveness rendezvous after `launch()` returned — P4's descendant is setsid, so the group sweep does not reach it — or a receipt reporting `WriterRetainedAfterChildExit` |
 | `no_helper_report` | S5 | the decisive absence that shows the injected pre-exec death landed |
-| `fixture_descendant_alive` | O7 | the harness's liveness rendezvous alone — never the receipt, whose stderr completeness is O7's result |
+| `fixture_descendant_signalled` | O6, O7 | the pre-armed fixture signal alone (section 9.7) — never the receipt, whose completeness is O6's and O7's result |
 
 **What stopped being a posing check.** O3's 10000 ms bound is the assertion
 `completed_under_ten_seconds`. O8's 512-byte floor is its own `stream_exact` rule on every
-repetition. S2's and S7's report absence is the assertion `no_executed_image`. O6's completeness is
-the assertion `stream_completeness_as_declared`. P4's completeness is its frozen gate. F7's
-`close_range` outcome is its rule. O7's stderr capture failure is the assertion
-`stderr_capture_failure_reported`; its former posed check `stderr_capture_failed` is retired.
-Each assertion's violation token is no case's expectation.
+repetition. Whether S2's and S7's image ran is the assertion `no_executed_image` (section 9.7).
+O6's completeness is the assertion `stream_completeness_as_declared`, and O6's retention is no
+longer posing evidence: O6 is posed by `fixture_descendant_signalled` (section 9.7). P4's
+completeness is its frozen gate. F7's `close_range` outcome is its rule. O7's stderr capture
+failure is the assertion `stderr_capture_failure_reported`; its former posed checks
+`stderr_capture_failed` and `fixture_descendant_alive` are retired. Each assertion's violation
+token is no case's expectation.
 
 **Decisive evidence without a report (I1).** Every rule written against the helper's report —
 `argv_exact`, `environ_empty`, `fds_exactly_012`, `signals_reset`, `no_new_privs`,
@@ -960,8 +967,10 @@ byte count.
 **S2 and S7 (B3).** The directory's forced state is proven at the barrier; a repetition where it
 did not land is INVALID. Once it landed, anything but `ExecFailed:CHDIR:EACCES` is a FAIL: an
 image that ran, exec success, `Exited:127` or `ExecStatusIndeterminate`. A report sentinel on
-descriptor 1 is decisive evidence that an image ran. One such S7 repetition fails the case.
-S2's and S7's `euid_zero` block is unchanged.
+descriptor 1 is decisive evidence that an image ran, whether or not the report after it parses.
+The child's explicit `ExecFailed:CHDIR:EACCES` record is the proof that no image ran, and needs no
+clean end-of-file (section 9.7). One failing S7 repetition fails the case. S2's and S7's
+`euid_zero` block is unchanged.
 
 **F7 (B4).** Adjacency is established before the behaviour under test and independently of it.
 The source is the launcher's four `pipe2` calls and the `ST_RELOCATE` duplication of the exec
@@ -987,30 +996,163 @@ completeness. The owner decided the following. O7's class (mandatory) and predic
 (`Exited:42`) are unchanged, and no C source changed.
 
 * **Construction.** `helper_fork --retain-stdio --parent-exit 42 --lifetime-ms 20000`
-  (`P_DESCENDANT_LIFETIME_MS`), with the P-series liveness setup. The direct child exits 42 at once
-  while its descendant keeps descriptors 1 and 2. `helper_fork.c` is unchanged. No payload is
-  declared, because O7 freezes none: the former 4096-byte stderr stream was an implementation
-  artefact.
+  (`P_DESCENDANT_LIFETIME_MS`), on the pre-armed fixture-signal setup `fork_helper_prearmed`
+  (section 9.7). The direct child exits 42 at once while its descendant keeps descriptors 1 and 2.
+  `helper_fork.c` is unchanged and no `--setsid` is added. No payload is declared, because O7
+  freezes none: the former 4096-byte stderr stream was an implementation artefact.
 * **The capture-failure fact.** For Trial #2, "a stderr capture failure" is the receipt's stderr
   completeness `WriterRetainedAfterChildExit`, reported beside the direct child's `Exited:42`.
   Stdout is retained as well. That is a fixture side-effect, not an O7 requirement.
 * **Posing.** Three things prove the fixture:
   * `helper_fork`'s build-identity binding;
   * its declared arguments, carried in `posing_evidence`;
-  * the descendant answering on the case-private liveness FIFO after `launch()` returned — the
-    posed check `fixture_descendant_alive`.
+  * the descendant's pre-armed fixture signal — the posed check `fixture_descendant_signalled`
+    (section 9.7). The earlier posed check `fixture_descendant_alive` read the P-series rendezvous
+    after `launch()` returned, which the launcher's group sweep made unreachable; it is retired.
 
-  The same answer is O7's exec evidence (section 2). The receipt's completeness is never posing
-  evidence.
+  The same signal is O7's exec evidence (section 2). Neither stream's completeness, the exit status
+  nor the receipt's outcome is ever posing evidence.
 * **Result.** Rule `process_disposition` must give `Exited:42`, and the assertion
   `stderr_capture_failure_reported` must hold. The two receipt facts are recorded separately.
 
-Scoring:
+Scoring, with the fixture established by the signal of section 9.7:
 
-* the fixture not established, or the receipt uninterpretable → INVALID;
+* the fixture not established — no signal, or the wrong bytes — or the receipt uninterpretable →
+  INVALID;
 * the fixture established with any disposition other than `Exited:42` → FAIL;
 * `Exited:42` with stderr decisively `CompleteAtEof` → FAIL;
-* stderr completeness absent → INVALID;
+* stderr completeness absent → INVALID, unless a decisive contradiction already makes it a FAIL;
 * both facts → eligible PASS.
 
 A receipt that carries only one of the two facts is a FAIL, as section 3 already says.
+
+### 9.7 AB7 correction — the pre-armed fixture signal and the authoritative CHDIR status
+
+The final bounded independent review of freeze `ab74356`
+([record](../implementation/HELM-LAUNCH-EXEC-01-TRIAL-002-AB74356-FINAL-REVIEW.md)) found four
+things:
+
+* **AB7-B1.** O7's fixture could never be established. `helper_fork`'s descendant stays in the
+  direct child's process group. The launcher's normal group sweep, issued before its reap, killed
+  it while it was still blocked opening the liveness FIFO, whose read end the harness opened only
+  after `launch()` returned.
+* **AB7-I1.** S2/S7 scored a correct `ExecFailed:CHDIR:EACCES` INVALID whenever the launcher
+  stopped draining before stdout's end-of-file.
+* **AB7-M1.** A report sentinel beside a report that did not parse scored INVALID instead of FAIL.
+* **AB7-M2.** O6's frozen `CompleteAtEof` FAIL could only ever score INVALID.
+
+The owner accepted all four and decided what follows; AB7-N1 to N3 stay backlog. It is fixed
+before any Trial #2 case. No case membership, class, prediction, safe set, gate, traced flag or
+block cause changed, and no C or helper source changed. Where this section and an earlier sentence
+of sections 2, 3, 9.5 or 9.6 differ about O6, O7, S2 or S7, this section governs.
+
+**The launcher's group sweep is unchanged.** `kill(-child, SIGKILL)` before the reap is the
+mechanism's own behaviour, and nothing here declares it defective. The correction changes how the
+harness observes the fixture, not the fixture and not the launcher.
+
+**The pre-armed fixture signal (O6, O7).** The setup `fork_helper_prearmed` names a case-private
+FIFO and removes any node an earlier run left there. For every launcher invocation the harness
+then:
+
+1. creates the FIFO afresh with mode `0600`, so no writer of an earlier node can reach it;
+2. opens its read end with `O_RDONLY | O_NONBLOCK | O_CLOEXEC` **before** the launcher is
+   spawned, and checks that the descriptor is a FIFO, is not inheritable, is not among the
+   descriptors handed to the launcher and holds no byte; a reader failing any check does not pose
+   the case;
+3. spawns the launcher; the reader is never in `pass_fds`, Popen closes every descriptor that is
+   not passed, and `O_CLOEXEC` would close it at exec anyway, so it enters neither
+   `launcher_spike` nor `helper_fork`;
+4. after `launch()` returned, reads the already-open read end, bounded by
+   `FIXTURE_SIGNAL_READ_TIMEOUT_MS` (2000 ms) in total;
+5. closes the read end and removes the FIFO, after every invocation and again when the case's
+   resources are released.
+
+`helper_fork`'s descendant opens the FIFO for writing, which completes at once because the read
+end is already open. It writes the frozen byte `L`, closes the FIFO and sleeps while it keeps
+descriptors 1 and 2. The launcher then:
+
+1. sees the direct child exit;
+2. drains for its bounded `POST_EXIT_DRAIN_MS`, which cannot end early while the descendant holds
+   both pipes;
+3. reports `WriterRetainedAfterChildExit`;
+4. sweeps the group and reaps.
+
+The descendant is not required to be alive after `launch()` returned: its byte stays buffered in
+the FIFO until the harness reads it. The descendant writes the byte in its first actions after
+`fork`, and the sweep cannot come before the direct child's exit plus the whole drain window, so
+the window is structural rather than a timing hope. A descendant that never signalled inside it
+leaves the fixture not established.
+
+The durable fact is `fixture_descendant_signalled`: exactly the frozen byte arrived. It means
+`helper_fork` executed, its fork path ran and its descendant reached the signalling path. It does
+not mean the descendant outlived `launch()`. No byte, or any other bytes, is false: the fixture is
+not established, and the repetition is INVALID. The harness never writes the FIFO, and a signal
+cannot come from anywhere else:
+
+* not from setup before exec, because setup opens nothing for writing;
+* not from a stale FIFO, because the node is new;
+* not from another case, because the path is case-private;
+* not through an inherited descriptor, because the reader is never inherited.
+
+Fixture establishment is never derived from stdout's or stderr's completeness. The same signal is
+admissible exec evidence (section 2). P1–P4 and T5 keep the post-launch rendezvous, because their
+question is survival.
+
+**O7.** The posed check `fixture_descendant_signalled` reads only the signal. The result facts are
+independent of it: rule `process_disposition` must give `Exited:42`, and the assertion
+`stderr_capture_failure_reported` must find stderr `WriterRetainedAfterChildExit`. Stdout's
+retention is a permitted side effect.
+
+| Fixture signal | Disposition | stderr completeness | Status |
+|---|---|---|---|
+| true | `Exited:42` | `WriterRetainedAfterChildExit` | eligible PASS |
+| true | `Exited:42` | `CompleteAtEof` | FAIL |
+| true | a wrong decisive exit | `WriterRetainedAfterChildExit` | FAIL |
+| true | a wrong decisive exit | `CompleteAtEof` | FAIL |
+| true | a required receipt fact missing or uninterpretable | — | INVALID, unless a decisive contradiction already makes it a FAIL |
+| false | an otherwise perfect receipt | — | INVALID |
+
+**O6.** The construction is unchanged: `helper_fork --prewrite 512 --retain-stdio --parent-exit 0
+--lifetime-ms 20000`, with no `--setsid`, on the same pre-armed setup. The posed check is
+`fixture_descendant_signalled`. The former `retention_observed` receipt route, which made O6's
+frozen `CompleteAtEof` FAIL unreachable, no longer poses O6. `WriterRetainedAfterChildExit` is a
+result, asserted by `stream_completeness_as_declared`, and the prewrite payload stays exec
+evidence.
+
+| O6 observation | Status |
+|---|---|
+| no signal | INVALID |
+| signal, `Exited:0`, `WriterRetainedAfterChildExit`, every other O6 gate | eligible PASS |
+| signal, `CompleteAtEof` | FAIL |
+| signal, a wrong decisive disposition | FAIL |
+| a launch that did not return, or a `TimedOut` | FAIL |
+
+P4 keeps `retention_observed`.
+
+**S2 and S7.** The directory's forced state is established by the already-reviewed barrier proof,
+never by the stream. Each repetition is scored:
+
+| Observation after the barrier | Status |
+|---|---|
+| forced state did not land | INVALID |
+| explicit `ExecFailed:CHDIR:EACCES`, no report sentinel | the expected result, whether or not stdout reached a clean end-of-file |
+| a helper-report sentinel on descriptor 1, whether or not the report parses | FAIL: an image started |
+| explicit `ExecFailed:CHDIR:EACCES` and a report sentinel | FAIL: contradictory evidence cannot pass |
+| any other decisive disposition | FAIL |
+| no explicit status, no sentinel and no complete stream | INVALID |
+
+The child's explicit exec-status record is authoritative: the CHDIR pre-exec stage failed and the
+target image was not executed. `no_executed_image` does not ask stdout to prove this again. The
+sentinel is the normalised fact `report_sentinel_seen`, derived from the retained stdout prefix,
+and P-14 keeps withholding the captured bytes. The absence of a sentinel from an incomplete
+observation proves nothing by itself.
+
+The sentinel proves the forbidden event whichever body ran. `no_executed_image` therefore decides
+a repetition even when the rule renders no token, and it is the only assertion that does
+(`DECISIVE_WITHOUT_TOKEN_ASSERTIONS`). S7 applies all of this to each of its 200 repetitions and
+reduces them as section 9.6 fixes. This supersedes the S2 clause "its absence is the independent
+proof that the image never ran", in section 3 and in `frozen_cases.py`'s S2 note; that note is not
+edited.
+
+**Build.** No C or helper source changed. Build 7 (run `34575558065`) still binds every C byte and
+no Build 8 is needed. Trial #2 is NOT_RUN, D-7 is NOT granted, and the valid trial count is ZERO.

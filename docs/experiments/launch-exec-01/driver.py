@@ -44,6 +44,7 @@ import select
 import shutil
 import socket
 import signal
+import stat
 import subprocess
 import time
 
@@ -327,6 +328,10 @@ SETUP_RESULT_SCHEMA = {
     "not_posed": IMMEDIATE_SETUP_FACT,
     "extra_helper_args": POSED_ASSERTION_INPUT,
     "liveness_fifo": HELD_RESOURCE,
+    # O6 and O7 (AB7-B1): the case-private FIFO whose read end the harness
+    # opens BEFORE the launcher is spawned, so helper_fork's descendant can
+    # signal before the launcher's group sweep ends it.
+    "fixture_signal_fifo": HELD_RESOURCE,
     "post_pin": POST_PIN_ACTION,
     "hold_writer": POST_PIN_ACTION,
     # The exact bytes a post-pin marker action writes. The action reads them
@@ -886,6 +891,9 @@ def release_setup_resources(built):
             pass
         except OSError as exc:                              # noqa: BLE001
             problems.append(_problem("cleanup unlink failed", exc))
+    # AB7-B1: the pre-armed fixture signal's reader and FIFO, in case an
+    # exception skipped _run_once's disarm. Idempotent.
+    problems += disarm_fixture_signal(built)
     return problems
 
 
@@ -1365,6 +1373,159 @@ def _setup_fork_helper(ctx, plan):
             "extra_helper_args": ("--liveness-fifo", str(fifo))}
 
 
+# The one byte helper_fork.c's descendant writes, once, on its fixture path.
+FIXTURE_SIGNAL_BYTE = b"L"
+# How long, after launch() returned, the harness waits for a signal that is not
+# already buffered. The byte is normally in the pipe before launch() returns;
+# the bound only keeps an absent signal from holding the trial.
+FIXTURE_SIGNAL_READ_TIMEOUT_MS = 2000
+# Where the armed read end is held between the spawn and the read. Harness
+# state, never a setup-result key, never passed to any process.
+_FIXTURE_FD = "_fixture_signal_fd"
+
+
+@_setup("fork_helper_prearmed")
+def _setup_fork_helper_prearmed(ctx, plan):
+    """O6 and O7: helper_fork with a fixture signal armed BEFORE the launch.
+
+    AB7-B1. The P-series rendezvous above opens its read end only after
+    launch() returned, which proves survival. A descendant that stays in the
+    direct child's process group never survives that long: the launcher's
+    group sweep, issued before its reap, kills it while it is still blocked in
+    open(). O6 and O7 do not ask whether the descendant survived. They ask
+    whether the fixture exists -- whether helper_fork executed, forked, and its
+    descendant reached the signalling path. So the harness opens this FIFO's
+    read end before the launcher is spawned (_arm_fixture_signal), the
+    descendant's open() completes at once, its one byte waits in the pipe, and
+    the harness reads it after launch() returned (_read_fixture_signal). The
+    launcher's sweep is untouched, no --setsid is added and helper_fork.c is
+    unchanged.
+
+    Before the boundary this only names the case-private path and removes any
+    node an earlier run left there. The FIFO itself is created fresh for each
+    launcher invocation.
+    """
+    fifo = ctx.build / (plan.case + ".fixture-signal")
+    try:
+        _remove_fifo(fifo)
+    except OSError as exc:                                  # noqa: BLE001
+        return {"not_posed": _problem("a stale fixture signal FIFO could not "
+                                      "be removed", exc)}
+    return {"exec_path": str(ctx.build / "helper_fork"),
+            "fixture_signal_fifo": str(fifo),
+            "extra_helper_args": ("--liveness-fifo", str(fifo))}
+
+
+def _remove_fifo(path):
+    try:
+        os.unlink(str(path))
+    except FileNotFoundError:
+        pass
+
+
+def _arm_fixture_signal(built, pass_fds=()):
+    """Create the case-private FIFO afresh and open its read end, before the spawn.
+
+    ``(facts, None)`` once armed, ``(None, reason)`` when it cannot be armed,
+    and ``(None, None)`` when the setup declares no fixture signal. The read
+    end is harness infrastructure and nothing else: opened O_RDONLY |
+    O_NONBLOCK | O_CLOEXEC, checked non-inheritable, checked absent from the
+    descriptors handed to the launcher, and held only in this process, so it
+    can enter neither launcher_spike nor helper_fork. The node is new for every
+    launcher invocation, so a writer of any earlier node cannot reach it, and a
+    fresh pipe holds no byte -- which is checked rather than assumed. A reader
+    that fails any check stays in ``built`` only until disarm_fixture_signal
+    closes it.
+    """
+    stale_fd = built.pop(_FIXTURE_FD, None)
+    if stale_fd is not None:
+        with contextlib.suppress(OSError):
+            os.close(stale_fd)
+    path = built.get("fixture_signal_fifo")
+    if not path:
+        return None, None
+    try:
+        _remove_fifo(path)
+        os.mkfifo(path, 0o600)
+        fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_CLOEXEC)
+    except OSError as exc:                                  # noqa: BLE001
+        return None, _problem("the fixture signal could not be armed", exc)
+    built[_FIXTURE_FD] = fd
+    try:
+        is_fifo = stat.S_ISFIFO(os.fstat(fd).st_mode)
+        inheritable = os.get_inheritable(fd)
+        poller = select.poll()
+        poller.register(fd, select.POLLIN)
+        stale = bool(poller.poll(0))
+    except OSError as exc:                                  # noqa: BLE001
+        return None, _problem("the fixture signal could not be verified", exc)
+    passed = fd in tuple(pass_fds)
+    if not is_fifo or inheritable or passed or stale:
+        return None, ("the fixture signal reader is not a fresh, "
+                      "non-inheritable FIFO held only by the harness")
+    return {"armed_before_launch": True, "reader_inheritable": inheritable,
+            "reader_passed_to_launcher": passed, "fresh_fifo": not stale}, None
+
+
+def _read_fixture_signal(built, timeout_ms=FIXTURE_SIGNAL_READ_TIMEOUT_MS):
+    """Whether exactly the frozen signal byte arrived; None if nothing was armed.
+
+    Read after launch() returned, from the read end opened before the spawn, so
+    a byte the descendant wrote before the launcher's sweep is still buffered.
+    True only for exactly FIXTURE_SIGNAL_BYTE; nothing, or anything else, is
+    False. Bounded: it never waits past ``timeout_ms`` in total and reads at
+    most one byte more than the signal. It only reads; the harness never writes
+    the FIFO.
+    """
+    fd = built.get(_FIXTURE_FD)
+    if fd is None:
+        return None
+    data = b""
+    deadline = time.monotonic() + timeout_ms / 1000.0
+    try:
+        poller = select.poll()
+        poller.register(fd, select.POLLIN)
+        while len(data) <= len(FIXTURE_SIGNAL_BYTE):
+            remaining = max(0, int((deadline - time.monotonic()) * 1000))
+            if not poller.poll(remaining):
+                break
+            try:
+                chunk = os.read(fd, len(FIXTURE_SIGNAL_BYTE) + 1)
+            except BlockingIOError:
+                if remaining == 0:
+                    break
+                continue
+            if not chunk:
+                break
+            data += chunk
+    except OSError:                                         # noqa: BLE001
+        return False
+    return data == FIXTURE_SIGNAL_BYTE
+
+
+def disarm_fixture_signal(built):
+    """Close the harness's read end and remove the FIFO. Idempotent.
+
+    Called after every launcher invocation (_run_once) and again by
+    release_setup_resources, so neither the descriptor nor the node outlives
+    the case, and no later case or repetition can read this one's signal.
+    """
+    problems = []
+    fd = built.pop(_FIXTURE_FD, None)
+    if fd is not None:
+        try:
+            os.close(fd)
+        except OSError as exc:                              # noqa: BLE001
+            problems.append(_problem("fixture signal reader close failed", exc))
+    path = built.get("fixture_signal_fifo")
+    if path:
+        try:
+            _remove_fifo(path)
+        except OSError as exc:                              # noqa: BLE001
+            problems.append(_problem("fixture signal FIFO removal failed", exc))
+    return problems
+
+
 @_setup("privileged_setid")
 def _setup_privileged_setid(ctx, plan):
     """N3: expected BLOCKED. No privileged fixture is created, ever.
@@ -1755,38 +1916,47 @@ def _launcher_pid(proc, plan):
 # completeness -- the very fact O7 tests -- so it made the result a posing
 # condition; and the helper_report construction it guarded never forked, so it
 # could never hold and O7 was INVALID on every run. The owner decision after
-# f9bbf39 rebuilt O7 on the helper_fork retained-writer fixture. Its posing
-# proof is the fixture's own liveness (fixture_descendant_alive); the capture
+# f9bbf39 rebuilt O7 on the helper_fork retained-writer fixture, whose capture
 # failure is the result assertion observations.assert_stderr_capture_failure_
 # reported, beside the separately derived Exited:42.
+#
+# AB7-B1. Its posing proof then was fixture_descendant_alive, the P-series
+# rendezvous read after launch() returned. O7's descendant stays in the direct
+# child's process group, so the launcher's own pre-reap group sweep killed it
+# before that read and the check could never hold. The proof is now the
+# fixture signal the harness arms before the spawn.
 
 
-@_check("fixture_descendant_alive", reads=("descendant_alive_after_launch",))
-def _check_fixture_descendant_alive(obs):
-    """O7: the helper_fork fixture really ran and its descendant was alive.
+@_check("fixture_descendant_signalled", reads=("fixture_descendant_signalled",))
+def _check_fixture_descendant_signalled(obs):
+    """O6 and O7: helper_fork executed, forked, and its descendant signalled.
 
-    Proven ONLY by the harness's liveness rendezvous: the case-private FIFO's
-    read end is opened by the harness after launch() returned, and a byte
-    arrives only from the executed helper's descendant, which --retain-stdio
-    has holding descriptors 1 and 2. Nothing the launcher reported is read
-    here -- in particular not the stderr completeness O7 exists to test, which
-    would make the construction proof circular. No answer is not posed.
+    Established ONLY by the pre-armed fixture signal: exactly the frozen byte,
+    read after launch() returned from the case-private FIFO whose read end the
+    harness opened before the launcher was spawned (_arm_fixture_signal,
+    _read_fixture_signal). Nothing the launcher reported is read here -- not
+    stdout's or stderr's completeness, not the exit status, not the receipt's
+    outcome -- because those are the results O6 and O7 exist to test. The
+    signal does not claim the descendant outlived launch(); the launcher's
+    normal group sweep ends it. No signal, or the wrong bytes, is not posed.
     """
-    return obs.get("descendant_alive_after_launch") is True
+    return obs.get("fixture_descendant_signalled") is True
 
 
 @_check("retention_observed", reads=("descendant_alive_after_launch", "spike"))
 def _check_retention_observed(obs):
-    """O6 / P4: a descendant really did retain the inherited write ends.
+    """P4: a setsid descendant really did retain the inherited write ends.
 
     That state is created by the executed helper, so its proof must not be only
     what the launcher CONCLUDED about it. The harness's own liveness
-    rendezvous, opened only after launch() returned, proves the retaining
-    descendant was alive -- and still held the pipes -- at that moment. A
-    receipt reporting WriterRetainedAfterChildExit establishes it too, as it did
-    before the F417 correction. What the launcher reported about completeness
-    is then the RESULT: CompleteAtEof beside a live retaining descendant fails
-    O6's completeness assertion and P4's gate -- a FAIL, never INVALID.
+    rendezvous, opened only after launch() returned, proves P4's setsid
+    descendant -- which the group sweep does not reach -- was alive and still
+    held the pipes at that moment. A receipt reporting
+    WriterRetainedAfterChildExit establishes it too, as it did before the F417
+    correction. What the launcher reported about completeness is then P4's
+    gate: CompleteAtEof beside a live retaining descendant fails it. O6 no
+    longer uses this check (AB7-M2): its fixture is established by
+    fixture_descendant_signalled and its completeness is a result.
     """
     if obs.get("descendant_alive_after_launch") is True:
         return True
@@ -1805,8 +1975,10 @@ def _check_no_helper_report(obs):
     S5's forced state is created inside the launcher's own child by the frozen
     --die-before-exec mode, and nothing but a decisive absence of the report can
     show that it landed. S2 and S7 no longer use this check (F417-B3): their
-    forced state is proven at the barrier, so an image running there is their
-    RESULT -- the no_executed_image assertion -- and not a posing failure.
+    forced state is proven at the barrier, so whether an image ran is their
+    RESULT -- the no_executed_image assertion, which reads the child's explicit
+    CHDIR status record and the report sentinel (AB7-I1, AB7-M1) -- and not a
+    posing failure.
     """
     # Only a DECISIVE absence counts. A truncated prefix or a retained writer
     # means the stream could not say whether a report was written, and treating
@@ -2033,14 +2205,22 @@ def _build_plans():
                               "--stderr", "4096", "--close-stdout-early"),
                  streams=_both_streams(4096),
                  assertions=("bounded_drain",)))
+    # O6 and O7 (AB7-B1, AB7-M2): the unchanged helper_fork retained-writer
+    # fixture, established by the fixture signal the harness arms BEFORE the
+    # spawn. Their descendants stay in the direct child's process group and
+    # the launcher's normal group sweep ends them; neither case adds --setsid.
+    # What the launcher reports about completeness is each case's RESULT.
     add(CasePlan("O6", "helper_fork", "process_disposition",
-                 (CH_RECEIPT, CH_PAYLOAD, CH_LIVENESS), setup="fork_helper",
+                 (CH_RECEIPT, CH_PAYLOAD, CH_LIVENESS),
+                 setup="fork_helper_prearmed",
                  helper_args=("--prewrite", "512", "--retain-stdio",
                               "--parent-exit", "0", "--lifetime-ms",
                               str(P_DESCENDANT_LIFETIME_MS)),
                  streams=_stream("stdout", 512, "WriterRetainedAfterChildExit"),
-                 posed_when="retention_observed",
-                 assertions=("stream_completeness_as_declared",)))
+                 posed_when="fixture_descendant_signalled",
+                 assertions=("stream_completeness_as_declared",),
+                 note="posed by the pre-armed fixture signal; CompleteAtEof is "
+                      "the frozen FAIL, never a posing failure"))
     # O7, by owner decision after f9bbf39. The former helper_report
     # construction could never produce a capture failure: it never forked, so
     # stderr always reached EOF. The unchanged helper_fork retained-writer
@@ -2050,12 +2230,12 @@ def _build_plans():
     # retained too, a fixture side-effect O7 does not score, and no payload is
     # declared because O7 freezes none.
     add(CasePlan("O7", "helper_fork", "process_disposition",
-                 (CH_RECEIPT, CH_LIVENESS), setup="fork_helper",
+                 (CH_RECEIPT, CH_LIVENESS), setup="fork_helper_prearmed",
                  helper_args=("--retain-stdio", "--parent-exit", "42",
                               "--lifetime-ms", str(P_DESCENDANT_LIFETIME_MS)),
-                 posed_when="fixture_descendant_alive",
+                 posed_when="fixture_descendant_signalled",
                  assertions=("stderr_capture_failure_reported",),
-                 note="posed by the fixture's own liveness; Exited:42 and "
+                 note="posed by the pre-armed fixture signal; Exited:42 and "
                       "stderr WriterRetainedAfterChildExit are two separate "
                       "receipt facts, and a receipt carrying only one of them "
                       "is a FAIL"))
@@ -2366,7 +2546,12 @@ def _public_fact(fact, trial=None):
 # case's posed check or assertions read them. Booleans and integers only.
 MEASURED_PUBLIC_KEYS = ("launcher_cpu_ms", "poll_returns",
                         "exec_status_pair_adjacent", "declared_launcher_threads",
-                        "descendant_alive_after_launch", "elapsed_ms")
+                        "descendant_alive_after_launch", "elapsed_ms",
+                        "fixture_descendant_signalled")
+
+# The fork_helper fixtures: the P-series rendezvous read after launch()
+# returned, and O6's and O7's signal armed before the spawn (AB7-B1).
+FORK_HELPER_SETUPS = ("fork_helper", "fork_helper_prearmed")
 
 
 def posing_evidence(plan, obs, evaluated=(), decided_by=None):
@@ -2394,14 +2579,22 @@ def posing_evidence(plan, obs, evaluated=(), decided_by=None):
         out["build_identity_binding"] = {key: binding[key]
                                          for key in BINDING_PUBLIC_KEYS
                                          if key in binding}
-    if plan.setup == "fork_helper":
+    if plan.setup in FORK_HELPER_SETUPS:
         # O7's owner decision: the fixture's construction is part of the posing
         # proof, so the declared helper and its declared arguments travel with
         # the record, beside the binding that names the helper_fork bytes and
-        # the liveness fact the posed check read. The FIFO's private path is a
-        # setup-time extra argument and never enters it.
+        # the fixture fact the posed check read. The FIFO's private path is a
+        # setup-time extra argument and never enters it. AB7-B1: for the
+        # pre-armed signal, the normalised arming facts travel too.
         out["fixture"] = {"binary": plan.binary,
                           "helper_args": list(plan.helper_args)}
+        arming = obs.get("fixture_signal_arming")
+        if isinstance(arming, dict):
+            out["fixture"]["signal_arming"] = {
+                key: arming[key] for key in (
+                    "armed_before_launch", "reader_inheritable",
+                    "reader_passed_to_launcher", "fresh_fifo")
+                if key in arming}
     forced =[_public_fact(fact, index if len(trials) > 1 else None)
               for index, trial in enumerate(trials) if isinstance(trial, dict)
               for fact in trial.get("post_pin_evidence") or ()
@@ -2421,6 +2614,15 @@ def posing_evidence(plan, obs, evaluated=(), decided_by=None):
             state = str(trial.get("report_state"))
             states[state] = states.get(state, 0) + 1
         measured["report_states"] = states
+    if "report_sentinel_seen" in reads and "repeat_observations" in obs:
+        # AB7-M1: the normalised sentinel fact, counted over the repetitions
+        # the case actually ran. Never the captured bytes, and never on a
+        # BLOCKED or pre-setup record, which ran none.
+        sentinel = {}
+        for trial in trials:
+            value = str(trial.get("report_sentinel_seen"))
+            sentinel[value] = sentinel.get(value, 0) + 1
+        measured["report_sentinel_seen"] = sentinel
     if "baseline_observation" in reads:
         def threads(o):
             spike = o.get("spike") if isinstance(o, dict) else None
@@ -2496,6 +2698,10 @@ TRIAL_OBSERVATION_KEYS = frozenset({
     "launch_returned", "elapsed_ms", "spike_exit", "spike_stderr",
     "post_pin_evidence", "launcher_cpu_ms", "poll_returns",
     "exec_status_pair_adjacent", "not_posed", "cleanup_problems",
+    # AB7: the pre-armed fixture signal, its arming facts and the report
+    # sentinel are facts of ONE launcher invocation too.
+    "fixture_descendant_signalled", "fixture_signal_arming",
+    "report_sentinel_seen",
 })
 
 
@@ -2606,9 +2812,23 @@ def _evaluate_repetition(plan, spec, view, where=""):
 
     token, reason = observations.derive(plan.rule, view)
     if token is None:
-        record["not_posed"] = "observation not interpretable: " + reason + where
-        return record, held
-    if plan.assertions:
+        # AB7-M1. No token is INVALID -- unless an assertion that proves a
+        # FORBIDDEN event on its own is violated. S2/S7's report sentinel
+        # beside a report that does not parse proves an image started, whichever
+        # body it was: a decisive FAIL, never "not interpretable".
+        decisive = [name for name in plan.assertions
+                    if name in observations.DECISIVE_WITHOUT_TOKEN_ASSERTIONS]
+        results = observations.apply_assertions(decisive, view)
+        violated = [name for name in decisive
+                    if results[name]["result"] == observations.ASSERTION_VIOLATED]
+        if not violated:
+            record["not_posed"] = ("observation not interpretable: " + reason
+                                   + where)
+            return record, held
+        record["assertions"] = results
+        token = observations.ASSERTION_VIOLATION_TOKENS[violated[0]]
+        reason = results[violated[0]]["detail"]
+    elif plan.assertions:
         results = observations.apply_assertions(plan.assertions, view)
         record["assertions"] = results
         violated = [name for name in plan.assertions
@@ -3002,7 +3222,10 @@ def _run_once(plan, ctx, built, parent_state, flags=None):
     try:
         result = _launch_and_observe(plan, ctx, built, applied, flags)
     finally:
-        problems = applied.release() + restore_after_trial(built)
+        # AB7-B1: the pre-armed fixture signal's read end and FIFO never
+        # outlive the invocation that armed them, whatever it returned.
+        problems = (applied.release() + restore_after_trial(built)
+                    + disarm_fixture_signal(built))
     result["cleanup_problems"] = problems
     return result
 
@@ -3020,6 +3243,14 @@ def _launch_and_observe(plan, ctx, built, applied, flags):
             return {"not_posed": "no tracer is available for a traced case",
                     "launch_returned": None}
         argv = tracer + argv
+
+    # AB7-B1. O6's and O7's fixture signal is armed BEFORE the launcher exists.
+    # The read end is open in this process only -- never in pass_fds, never
+    # inheritable -- so helper_fork's descendant can signal before the
+    # launcher's normal group sweep ends it. _run_once disarms it afterwards.
+    arming, unarmed = _arm_fixture_signal(built, applied.pass_fds)
+    if unarmed is not None:
+        return {"not_posed": unarmed, "launch_returned": None}
 
     bound_s = (plan.total_bound_ms() + 5000) / 1000.0
 
@@ -3106,10 +3337,19 @@ def _launch_and_observe(plan, ctx, built, applied, flags):
         acquisition = observations.parse_pidfd_acquisition(raw_trace)
         trace_digest = oracles.digest_of(raw_trace)
 
-    # Read ONCE, after launch() returned: the rendezvous consumes the byte. It
-    # is both the P-series/O6/P4 liveness fact and, for a helper_fork fixture
-    # that emits no report and declares no payload (O7), the exec evidence.
+    # Read ONCE, after launch() returned: the P-series rendezvous consumes its
+    # byte. It is the P1/P2/P4 survival fact and nothing more (AB7-B1): a
+    # descendant in the direct child's process group never survives the sweep.
     alive = _descendant_alive(built, plan)
+    # O6's and O7's pre-armed signal, written by helper_fork's descendant before
+    # the sweep and buffered in the FIFO this process kept open since before
+    # the spawn. It is their fixture fact and their exec evidence.
+    signalled = _read_fixture_signal(built)
+    # AB7-M1: whether the report sentinel is positively in descriptor 1's
+    # retained prefix. Only the boolean travels; the captured bytes never do.
+    sentinel_seen = (observations.report_sentinel_seen(spike.get("stdout"))
+                     if isinstance(spike, dict)
+                     and spike.get("admission") == "accepted" else None)
 
     return {
         "spike": spike,
@@ -3119,13 +3359,16 @@ def _launch_and_observe(plan, ctx, built, applied, flags):
         "payload_is_recipe": payload_is_recipe,
         "exec_confirmation": observations.exec_confirmation(
             spike, report, payload_is_recipe, report_state,
-            descendant_alive=alive),
+            fixture_signalled=signalled),
         "trace": trace,
         "acquisition": acquisition,
         "acquisition_normalised": observations.normalise_acquisition(acquisition),
         "trace_sha256": trace_digest,
         "observed_stage_sequence": (trace or {}).get("stage_sequence"),
         "descendant_alive_after_launch": alive,
+        "fixture_descendant_signalled": signalled,
+        "fixture_signal_arming": arming,
+        "report_sentinel_seen": sentinel_seen,
         "launch_returned": returned,
         "elapsed_ms": elapsed_ms,
         "spike_exit": rc,

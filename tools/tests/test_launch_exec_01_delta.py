@@ -471,6 +471,9 @@ def path_produces(plan, key):
         return plan.traced and bool(state.get(driver.PS_CLOSE_LOW))
     if key == "descendant_alive_after_launch":
         return plan.setup == "fork_helper"
+    if key == "fixture_descendant_signalled":
+        # AB7-B1: only the pre-armed fixture setup arms and reads the signal.
+        return plan.setup == "fork_helper_prearmed"
     if key == "baseline_observation":
         return plan.baseline_flags is not None
     if key == "declared_launcher_threads":

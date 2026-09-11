@@ -330,6 +330,24 @@ def helper_report_state(stream_block):
     return REPORT_STREAM_INCOMPLETE, None, payload
 
 
+def report_sentinel_seen(stream_block):
+    """Whether the frozen report sentinel is POSITIVELY present in descriptor 1.
+
+    AB7-M1. The sentinel is the start of a helper report, and only an executed
+    image writes one: the launcher's child setup writes nothing to descriptor
+    1. Its presence is therefore positive evidence that an image started,
+    whether or not the report after it parses. ``True`` when the retained
+    prefix holds it. ``False`` when the prefix was retained and holds none --
+    which proves nothing about bytes that were not retained or not yet drained.
+    ``None`` when no prefix can be decoded. Only this boolean leaves the
+    module; the captured bytes never do (P-14).
+    """
+    raw = decode_capture(stream_block)
+    if raw is None:
+        return None
+    return REPORT_SENTINEL in raw
+
+
 # ----------------------------------------------------------- exec confirmation
 # The four states section 11 of the trial contract requires be distinguishable.
 EXEC_PRE_EXEC_ERROR = "pre_exec_error"        # the child wrote a status record
@@ -339,7 +357,7 @@ EXEC_UNINTERPRETABLE = "uninterpretable"      # a report arrived and made no sen
 
 
 def exec_confirmation(spike, report, payload_is_recipe=None,
-                      report_state=None, descendant_alive=None):
+                      report_state=None, fixture_signalled=None):
     """Which of the four exec states the observation actually supports.
 
     **Clean EOF is deliberately not enough.** launcher_spike.c sets
@@ -352,18 +370,20 @@ def exec_confirmation(spike, report, payload_is_recipe=None,
       * a parseable helper report behind the frozen sentinel;
       * for the ``--no-report`` O-series, payload bytes that match the frozen
         recipe -- only the pinned helper can produce them;
-      * for a ``helper_fork`` fixture, its descendant answering on the
-        case-private liveness FIFO after launch() returned. The FIFO's path
-        reaches nothing but the executed image's own argv, and the harness
-        opens its read end itself, so the answer is independent of the
-        launcher. O7's owner decision needs it: that fixture emits no report
-        and O7 freezes no payload.
+      * for the pre-armed ``helper_fork`` fixture of O6 and O7, the frozen
+        signal byte its descendant wrote into the case-private FIFO whose read
+        end the harness opened before the launcher existed. Only helper_fork's
+        fork path writes it, so it shows that helper_fork executed, forked and
+        that its descendant reached the signalling path. It says nothing about
+        whether the descendant outlived launch(): the launcher's normal group
+        sweep kills that descendant, and the byte stays buffered in the FIFO
+        until the harness reads it (AB7-B1).
 
-    ``payload_is_recipe`` and ``descendant_alive`` are computed by the caller.
+    ``payload_is_recipe`` and ``fixture_signalled`` are computed by the caller.
     They are passed in rather than computed here so this module never needs the
     recipe or a FIFO, and so a case that declares no such evidence cannot
     accidentally acquire some. A payload that contradicts the recipe is decided
-    before liveness is consulted.
+    before the fixture signal is consulted.
     """
     if spike is None:
         return None
@@ -380,10 +400,10 @@ def exec_confirmation(spike, report, payload_is_recipe=None,
         # The case declared payload evidence and the payload did not match. The
         # image that ran, if any, is not the pinned helper.
         return EXEC_UNINTERPRETABLE
-    if descendant_alive is True:
-        # The executed helper_fork's own descendant answered on the
-        # case-private liveness FIFO after launch() returned: the image ran,
-        # whatever a retained stream could or could not settle.
+    if fixture_signalled is True:
+        # The executed helper_fork's descendant wrote the frozen signal into
+        # the pre-armed, case-private FIFO: the image ran, whatever a retained
+        # stream could or could not settle.
         return EXEC_REACHED
     if report_state in (REPORT_TRUNCATED, REPORT_MALFORMED,
                         REPORT_STREAM_INCOMPLETE):
@@ -2028,28 +2048,59 @@ def assert_bounded_drain(obs):
 O3_COMPLETION_BOUND_MS = 10000
 
 # A report sentinel on descriptor 1 can only have been written by an executed
-# image: the launcher's child setup writes nothing there.
+# image: the launcher's child setup writes nothing there. These three report
+# states exist only when the sentinel is in the decoded prefix, so they are the
+# same positive fact as report_sentinel_seen.
 _IMAGE_RAN_REPORT_STATES = frozenset({REPORT_COMPLETE, REPORT_MALFORMED,
                                       REPORT_TRUNCATED})
 
 
-def assert_no_executed_image(obs):
-    """S2 / S7: no image ran, shown by a complete stream that holds no report.
+def _explicit_pre_exec_status(spike):
+    """The token of the child's explicit pre-exec status record, or None.
 
-    The frozen rows: "No helper report may be received: its absence is the
-    independent proof that the image never ran", and "any trial reporting exec
-    success ... is a FAIL". With the directory's forced state already proven at
-    the barrier, a report here is the mechanism running an image it should not
-    have -- a FAIL (F417-B3), not a forced state that failed to land.
+    child_fail() writes that record and _exits; it never reaches execveat. A
+    record the frozen table can render is therefore positive evidence that no
+    image was executed.
     """
-    state = obs.get("report_state")
-    if state == REPORT_ABSENT:
+    if not isinstance(spike, dict) or spike.get("process_disposition") != "ExecFailed":
+        return None
+    return _exec_failed(spike.get("exec_failed_stage"),
+                        spike.get("exec_failed_errno"))
+
+
+def assert_no_executed_image(obs):
+    """S2 / S7: no image ran (owner decision AB7, definition section 9.7).
+
+    * A helper-report sentinel observed on descriptor 1 is positive evidence
+      that an image started, whether or not the report after it parses: the
+      assertion is VIOLATED (AB7-M1). Beside the child's own pre-exec status
+      record it is a contradiction, and a contradictory record cannot pass.
+    * The child's explicit pre-exec status record -- ExecFailed:CHDIR:EACCES is
+      the one S2 and S7 predict -- is authoritative that the image was never
+      executed. No clean end-of-file is required to prove it again (AB7-I1).
+    * Without such a record, a complete stdout that holds no report shows that
+      no image ran.
+    * Otherwise whether an image ran is undetermined: UNOBSERVABLE.
+    """
+    status = _explicit_pre_exec_status(obs.get("spike"))
+    seen = (obs.get("report_sentinel_seen") is True
+            or obs.get("report_state") in _IMAGE_RAN_REPORT_STATES)
+    if seen and status is not None:
+        return (ASSERTION_VIOLATED, "contradictory evidence: the child wrote the "
+                "explicit pre-exec status record " + status + " and a "
+                "helper-report sentinel was observed on descriptor 1; a record "
+                "that contradicts itself cannot pass")
+    if seen:
+        return (ASSERTION_VIOLATED, "a helper-report sentinel was observed on "
+                "descriptor 1, so an image started")
+    if status is not None:
+        return (ASSERTION_HOLDS, "the child's explicit pre-exec status record ("
+                + status + ") shows the image was never executed")
+    if obs.get("report_state") == REPORT_ABSENT:
         return (ASSERTION_HOLDS, "the stream that would carry a report is "
                 "complete and holds none, so no image ran")
-    if state in _IMAGE_RAN_REPORT_STATES:
-        return (ASSERTION_VIOLATED, "an executed image wrote the report "
-                "sentinel, so an image ran")
-    return ASSERTION_UNOBSERVABLE, "the stream cannot settle whether an image ran"
+    return (ASSERTION_UNOBSERVABLE, "no explicit pre-exec status record and no "
+            "complete stream: whether an image ran is undetermined")
 
 
 def assert_completed_under_ten_seconds(obs):
@@ -2068,8 +2119,9 @@ def assert_stream_completeness_as_declared(obs):
     """O6: every declared stream reports exactly its declared completeness.
 
     O6's frozen row: "with completeness WriterRetainedAfterChildExit ... or
-    CompleteAtEof is a FAIL". The retaining descendant is proven by the posed
-    check retention_observed; what the launcher then REPORTED is this result.
+    CompleteAtEof is a FAIL". O6's fixture is established by the posed check
+    fixture_descendant_signalled (AB7-M2), never by this completeness value;
+    what the launcher then REPORTED is this result, so CompleteAtEof is a FAIL.
     """
     expected, spike = obs.get("expected_streams"), obs.get("spike")
     if not isinstance(expected, dict) or not expected:
@@ -2104,8 +2156,9 @@ def assert_stderr_capture_failure_reported(obs):
     only one of the two facts is a FAIL". The exit status is the rule's own
     token, derived separately from the receipt's process fields; this reads only
     the receipt's stderr block, so the two facts are never collapsed into one.
-    The fixture's retaining descendant is proven by the posed check
-    fixture_descendant_alive, never by this completeness value.
+    The fixture is established by the posed check fixture_descendant_signalled
+    -- the signal the harness arms before the spawn -- never by this
+    completeness value.
     """
     spike = obs.get("spike")
     if not isinstance(spike, dict):
@@ -2141,7 +2194,7 @@ ASSERTION_READS = {
     "measured_starting_identity": ("spike", "build_identity_binding"),
     "mode_measured_pre_change": ("spike", "post_pin_evidence"),
     "bounded_drain": ("launcher_cpu_ms", "poll_returns"),
-    "no_executed_image": ("report_state",),
+    "no_executed_image": ("report_sentinel_seen", "spike", "report_state"),
     "completed_under_ten_seconds": ("elapsed_ms",),
     "stream_completeness_as_declared": ("expected_streams", "spike"),
     "stderr_capture_failure_reported": ("spike",),
@@ -2159,6 +2212,13 @@ ASSERTION_VIOLATION_TOKENS = {
     "stream_completeness_as_declared": "completeness_mismatch",
     "stderr_capture_failure_reported": "capture_failure_not_reported",
 }
+
+# AB7-M1. Assertions whose violation proves a FORBIDDEN event on its own,
+# whichever body ran. Such an assertion decides a repetition even when the
+# rule renders no token -- S2/S7's report sentinel beside a report that does
+# not parse, where exec confirmation is uninterpretable. Every other assertion
+# still needs the rule's token.
+DECISIVE_WITHOUT_TOKEN_ASSERTIONS = frozenset({"no_executed_image"})
 
 
 def apply_assertions(names, obs):

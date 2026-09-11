@@ -251,9 +251,16 @@ class S2S7LandingVersusResult(unittest.TestCase):
             self.assertEqual(record["outcome"], "executed_image_observed")
             self.assertEqual(record["mechanism_outcome"], "ExecFailed:CHDIR:EACCES")
 
-    def test_an_undecidable_stream_beside_the_expected_token_is_invalid(self):
+    def test_an_explicit_chdir_status_needs_no_decidable_stream(self):
+        # AB7-I1, owner decision: the child's explicit ExecFailed:CHDIR:EACCES
+        # record is authoritative, so stdout need not reach a clean
+        # end-of-file. ab74356 scored this repetition INVALID.
         self.assertEqual(self.s2(s_trial(report_state=ob.REPORT_STREAM_INCOMPLETE))[0],
-                         INVALID)
+                         PASS)
+        # Without an explicit status, an undecidable stream stays INVALID.
+        undecided = s_trial(spike=receipt(), exec_confirmation=ob.EXEC_UNINTERPRETABLE,
+                            report_state=ob.REPORT_STREAM_INCOMPLETE)
+        self.assertEqual(self.s2(undecided)[0], INVALID)
 
     def test_s7_later_and_first_unexpected_results_fail(self):
         for where in (0, 42, 199):
@@ -526,18 +533,23 @@ class O3O6P4(unittest.TestCase):
         want = oracles.stream_digest("stdout", 512)
         spike = receipt(stdout={"bytes_drained": 512, "drained_sha256": want,
                                 "completeness": completeness})
+        # P4 is posed by its post-launch rendezvous, O6 by the pre-armed fixture
+        # signal (AB7-M2); each case reads only its own fact.
         return score(plan, obs_for(plan, spike=spike, payload_is_recipe=True,
                                    expected_streams=plan.streams or None,
-                                   descendant_alive_after_launch=alive))
+                                   descendant_alive_after_launch=alive,
+                                   fixture_descendant_signalled=alive))
 
-    def test_o6_completeness_is_a_result_once_retention_is_proven(self):
+    def test_o6_completeness_is_a_result_once_the_fixture_signalled(self):
         retained, eof = "WriterRetainedAfterChildExit", "CompleteAtEof"
         self.assertEqual(self.retained("O6", True, retained)[0], PASS)
         status, record = self.retained("O6", True, eof)
         self.assertEqual(status, FAIL)
         self.assertEqual(record["outcome"], "completeness_mismatch")
         self.assertEqual(self.retained("O6", False, eof)[0], INVALID)
-        self.assertEqual(self.retained("O6", False, retained)[0], PASS)
+        # ab74356 posed O6 from the receipt's own retained completeness; with no
+        # fixture signal the fixture is not established (AB7-M2).
+        self.assertEqual(self.retained("O6", False, retained)[0], INVALID)
 
     def test_p4_completeness_is_its_gate_once_retention_is_proven(self):
         retained, eof = "WriterRetainedAfterChildExit", "CompleteAtEof"
@@ -678,16 +690,17 @@ def o7_obs(alive=True, exit_code=42, stderr=RETAINED, stdout=RETAINED,
     obs = obs_for(plan, spike=receipt(exit_code=exit_code, stdout=block(stdout),
                                       stderr=block(stderr)),
                   rep=None, report_state=ob.REPORT_STREAM_INCOMPLETE,
-                  descendant_alive_after_launch=alive,
+                  fixture_descendant_signalled=alive,
                   build_identity_binding={"classification": "DIRECT_BASE",
                                           "base_artefact": "helper_fork",
                                           "object": "helper_fork", "bound": True,
                                           "object_sha256": "c" * 64})
     if not parseable:
         obs["spike"] = None
-    # The live path hands liveness to exec_confirmation; obs_for does not.
+    # The live path hands the pre-armed fixture signal (AB7-B1) to
+    # exec_confirmation; obs_for does not.
     obs["exec_confirmation"] = ob.exec_confirmation(
-        obs["spike"], None, None, obs["report_state"], descendant_alive=alive)
+        obs["spike"], None, None, obs["report_state"], fixture_signalled=alive)
     return plan, obs
 
 
@@ -722,26 +735,28 @@ class O7RetainedWriterFixture(unittest.TestCase):
         for alive in (False, None):
             status, record = score(*o7_obs(alive=alive))
             self.assertEqual(status, INVALID, alive)
-            self.assertIn("fixture_descendant_alive", record["not_posed"])
+            self.assertIn("fixture_descendant_signalled", record["not_posed"])
 
     def test_f_capture_completeness_is_not_a_posing_check(self):
         plan = driver.CASE_PLANS["O7"]
-        self.assertEqual(plan.posed_when, "fixture_descendant_alive")
+        # AB7-B1: the pre-armed fixture signal replaced fixture_descendant_alive.
+        self.assertEqual(plan.posed_when, "fixture_descendant_signalled")
         self.assertEqual(driver.POSED_CHECK_READS[plan.posed_when],
-                         ("descendant_alive_after_launch",))
+                         ("fixture_descendant_signalled",))
         self.assertNotIn("stderr_capture_failed", driver.POSED_CHECKS)
-        node = function(DRIVER_TREE, "_check_fixture_descendant_alive")
+        self.assertNotIn("fixture_descendant_alive", driver.POSED_CHECKS)
+        node = function(DRIVER_TREE, "_check_fixture_descendant_signalled")
         # The executable statements only; the docstring may say what is NOT read.
         body = ast.unparse(ast.Module(body=node.body[1:], type_ignores=[]))
         self.assertNotIn("spike", body)
         self.assertNotIn("completeness", body)
-        self.assertIn("descendant_alive_after_launch", body)
+        self.assertIn("fixture_descendant_signalled", body)
         self.assertEqual(plan.assertions, ("stderr_capture_failure_reported",))
 
     def test_g_the_plan_is_exactly_the_owner_fixture(self):
         plan = driver.CASE_PLANS["O7"]
         self.assertEqual(plan.binary, "helper_fork")
-        self.assertEqual(plan.setup, "fork_helper")
+        self.assertEqual(plan.setup, "fork_helper_prearmed")
         self.assertEqual(plan.rule, "process_disposition")
         self.assertEqual(plan.helper_args,
                          ("--retain-stdio", "--parent-exit", "42",
@@ -766,19 +781,19 @@ class O7RetainedWriterFixture(unittest.TestCase):
     def test_stdout_retention_is_a_side_effect_not_a_verdict(self):
         self.assertEqual(score(*o7_obs(stdout=EOF))[0], PASS)
 
-    def test_liveness_is_exec_evidence_and_a_bad_payload_still_wins(self):
+    def test_the_fixture_signal_is_exec_evidence_and_a_bad_payload_still_wins(self):
         spike = receipt(exit_code=42)
         incomplete = ob.REPORT_STREAM_INCOMPLETE
         self.assertEqual(ob.exec_confirmation(spike, None, None, incomplete,
-                                              descendant_alive=True),
+                                              fixture_signalled=True),
                          ob.EXEC_REACHED)
         self.assertEqual(ob.exec_confirmation(spike, None, None, incomplete),
                          ob.EXEC_UNINTERPRETABLE)
         self.assertEqual(ob.exec_confirmation(spike, None, False, incomplete,
-                                              descendant_alive=True),
+                                              fixture_signalled=True),
                          ob.EXEC_UNINTERPRETABLE)
         launch = ast.unparse(function(DRIVER_TREE, "_launch_and_observe"))
-        self.assertIn("descendant_alive=alive", launch)
+        self.assertIn("fixture_signalled=signalled", launch)
 
     def test_the_durable_record_shows_the_fixture_was_posed(self):
         plan, obs = o7_obs()
@@ -789,10 +804,10 @@ class O7RetainedWriterFixture(unittest.TestCase):
                           "helper_args": list(plan.helper_args)})
         self.assertEqual(evidence_block["build_identity_binding"]["base_artefact"],
                          "helper_fork")
-        self.assertIs(evidence_block["measured"]["descendant_alive_after_launch"],
+        self.assertIs(evidence_block["measured"]["fixture_descendant_signalled"],
                       True)
         self.assertEqual(evidence_block["posed_check"],
-                         {"name": "fixture_descendant_alive", "held": True})
+                         {"name": "fixture_descendant_signalled", "held": True})
         kept = roundtrip("O7", PASS, "r", record, pose_started=True)
         self.assertEqual(kept["posing_evidence"],
                          json.loads(json.dumps(evidence_block)))
@@ -802,7 +817,7 @@ class O7RetainedWriterFixture(unittest.TestCase):
 class PreregistrationAgrees(unittest.TestCase):
     POSING = {"same_inode_as_writer", "exec_status_pair_adjacent",
               "threaded_parent_observed", "retention_observed",
-              "no_helper_report", "fixture_descendant_alive"}
+              "no_helper_report", "fixture_descendant_signalled"}
 
     def setUp(self):
         self.definition = (ROOT / "docs" / "experiments"
@@ -856,7 +871,7 @@ class PreregistrationAgrees(unittest.TestCase):
                                        "Exited:42"], "FAIL")
         self.assertEqual(fc.BY_NAME["O7"]["predict"], "Exited:42")
         for phrase in ("helper_fork --retain-stdio --parent-exit 42",
-                       "fixture_descendant_alive",
+                       "fixture_descendant_signalled",
                        "stderr_capture_failure_reported",
                        "fixture side-effect, not an O7 requirement"):
             self.assertIn(phrase, self.definition, phrase)
