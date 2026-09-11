@@ -846,8 +846,9 @@ class PreregistrationAgrees(unittest.TestCase):
                 self.assertNotIn(token, spec["safe"] or ())
 
     def test_the_o7_owner_decision_is_frozen(self):
-        self.assertTrue(self.manifest["open_findings"]["O7-CONSTRUCTION"]
-                        .startswith("RESOLVED by owner decision"))
+        finding = self.manifest["open_findings"]["O7-CONSTRUCTION"]
+        self.assertTrue(finding.startswith("RESOLVED"), finding)
+        self.assertIn("owner decision", finding)
         o7 = self.manifest["posing_versus_showing"]["o7"]
         self.assertIn("WriterRetainedAfterChildExit", o7["capture_failure_fact"])
         self.assertIn("never posing evidence", o7["posing_evidence"])

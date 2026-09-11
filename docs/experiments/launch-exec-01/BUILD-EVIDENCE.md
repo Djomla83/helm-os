@@ -511,3 +511,26 @@ suite ran **562 tests, OK, none skipped**, and the runner, invoked without D-7, 
 `NOT_RUN`. The Rust workspace run on the same commit, `34575558173`, also succeeded.
 
 **LAUNCH-EXEC-01 Trial #2 remains NOT_RUN. D-7 is not authorised. The valid trial count is ZERO.**
+
+## Build 7 still binds the final classification freeze — 2026-09-11, no compiler run
+
+The final classification freeze that follows `82b8746` supersedes `f417984`. It changes only
+Python sources, the definition and the manifest. That covers the classification correction
+`f9bbf39` and the owner's O7 decision, which runs O7 on the existing `helper_fork` fixture. Every
+C source it hashes is byte-identical to the one Build 7 compiled at `f417984`:
+
+| Source | SHA-256 at `f417984` and at the new freeze |
+|---|---|
+| `launcher_spike.c` | `0a45447b627f16dce2fd7193e26993dcc126ae96dce6e6c5b511b41361e0d622` |
+| `helper_report.c` | `99770ed8cfdd4049f9bef3624e21850496b6c14a169c3895b54ab7a858d54711` |
+| `helper_alt.c` | `7993aa631abdca6796171fe4ffafb2d296f2a00b61ea2322ee8e624731b99113` |
+| `helper_fork.c` | `a62a6a1e2bbb9cc6ef8a346ae9322c7b7435b1c7f0b6c3710b3aadb9cc2ba0b0` |
+| `helper_setid.c` | `c609755d105122eea304f5fe12685d8dcc24064d77659295a11a76d42b86329f` |
+| `helper_dynamic.c` | `b3c398d840c16dfa4e0dbc56593b905b4019bfe2316fc339049b8a69930350a0` |
+
+The build commands in `harness.py` and the fixtures in `make_fixtures.py` are byte-identical as
+well. Build 7 (run `34575558065`) is therefore the compile-only evidence for this freeze, and no
+Build 8 is required. No compiler ran for this record. A trial records its own build identity
+before its first case.
+
+**LAUNCH-EXEC-01 Trial #2 remains NOT_RUN. D-7 is not authorised. The valid trial count is ZERO.**

@@ -1,5 +1,34 @@
 # Stanje projekta
 
+<a id="launch-exec-01-trial-002-final-classification-freeze"></a>
+
+## Trial #2 final classification freeze, 2026-09-11 — LAUNCH-EXEC-01 still NOT_RUN
+
+The [bounded independent review of freeze `f417984`](implementation/HELM-LAUNCH-EXEC-01-TRIAL-002-F417-BOUNDED-REVIEW.md)
+(`7f97100`) returned **`TRIAL_2_NEEDS_PRETRIAL_FIXES`**. It found four classification defects:
+* a first-trial mismatch in O8 or S7 could PASS;
+* a posed short O8 repetition scored INVALID where its row says FAIL;
+* an S2/S7 image that ran scored INVALID where its rows say FAIL;
+* F7's own EINVAL scored INVALID.
+
+That review is preserved unamended. The owner accepted its findings and decided that the section 3
+expectations win.
+
+The classification correction (`f9bbf39`) scores every launcher invocation by one rule and reduces
+repeated cases FAIL > INVALID > PASS. The owner's O7 decision (`82b8746`) runs O7 on the unchanged
+`helper_fork` retained-writer fixture: its stderr capture failure is the receipt's
+`WriterRetainedAfterChildExit` beside `Exited:42`. [Definition section 9.6](experiments/LAUNCH-EXEC-01-DEFINITION.md#96-final-classification-semantics--posed-versus-result)
+preregisters both, and a new freeze follows in `SOURCE-HASHES.json`, superseding `f417984`. No case
+membership, class, prediction or safe set moved. No C or helper source changed, so Build 7 still
+binds them.
+
+**Trial #2 is NOT_RUN, D-7 is NOT granted, and the valid trial count is ZERO.** Before any new D-7
+decision the freeze needs one final bounded independent review, limited to:
+* the classification delta;
+* O7;
+* the freeze's integrity;
+* Build 7's binding.
+
 <a id="launch-exec-01-trial-002-delta-correction"></a>
 
 ## Trial #2 delta correction frozen, 2026-09-11 — LAUNCH-EXEC-01 still NOT_RUN

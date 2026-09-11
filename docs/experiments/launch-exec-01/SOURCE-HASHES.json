@@ -1,6 +1,6 @@
 {
   "authoritative_main": "5cc56384257a2ec1f2a2a9c64f7f4328da6cef2e",
-  "build_evidence": "BUILD-EVIDENCE.md in this directory, append-only and deliberately not hashed by this manifest. Build 6 no longer covers launcher_spike.c: the Trial #2 delta correction added two TEST/CONTROL-ONLY caller-state flags and the O5 poll-return counter, so fresh Linux compile-only evidence (Build 7) is required before D-7.",
+  "build_evidence": "BUILD-EVIDENCE.md in this directory, append-only and deliberately not hashed by this manifest. Build 7 (run 34575558065) compiled launcher_spike.c and every helper source at f417984; every C source is byte-identical at this freeze, so Build 7 binds them and no Build 8 is required.",
   "build_identity": {
     "covers": "every generated executable and fixture in the build directory at that moment",
     "fields": [
@@ -37,11 +37,11 @@
     "recorded": 7,
     "total": 72
   },
-  "classification": "TRIAL_2_DELTA_CORRECTION_READY_FOR_BOUNDED_REVIEW",
+  "classification": "TRIAL_2_FINAL_FREEZE_READY_FOR_BOUNDED_REVIEW",
   "d7_execution_authorised": false,
   "definition_sha256": {
     "docs/adr/ADR-0024-launch-authority.md": "c1f3cce88438439aab6632a9c56450ae98d1c64adb31b13c742e2febb1476351",
-    "docs/experiments/LAUNCH-EXEC-01-DEFINITION.md": "a608591305efea7bc620b573758704dedc438ca52ad984907ffeb37c11b17b8b",
+    "docs/experiments/LAUNCH-EXEC-01-DEFINITION.md": "59a0880014510ffa7630966a3afdc598a97f2f09ab6245bc411da2a38a9ec0f3",
     "docs/research/HELM-LAUNCH-ARCHITECTURE.md": "97fbf0d8a602c68b0cf20529c4c1bb238ae2790a6089fa8ff6818c054b443151"
   },
   "driver": {
@@ -146,6 +146,13 @@
     "trial_001_defect": "os.pwrite(fd, os.pread(fd, 1, 0), 0) on a descriptor opened O_WRONLY; a write-only file description carries no FMODE_READ, so read(2)/pread(2) return EBADF"
   },
   "experiment": "LAUNCH-EXEC-01",
+  "freeze_lineage": [
+    "f41798455662579c3895f7a4af50bac17d47bb43 - superseded Trial #2 freeze",
+    "7f97100b20a58dd2965eaf20ca4d01b527650ad6 - bounded independent review, TRIAL_2_NEEDS_PRETRIAL_FIXES",
+    "f9bbf395f9e76602a8a04410d76e3c18bd2eb046 - classification correction (F417-B1 to B4, I1 to I3, M1)",
+    "82b87465abf6ade55c349a90c756742c542f444a - O7 owner correction",
+    "this freeze - cut over the committed blobs of 82b8746"
+  ],
   "host_information": {
     "collected": [
       "uname -s (kernel name)",
@@ -215,19 +222,19 @@
     "F-1": "FIXED at this freeze - fixed vocabulary derived from every symbolic registry, including the driver's, rather than hand-listed",
     "F-2": "NOT A DEFECT - A4's long argument is data, not symbolic vocabulary, and may remain <OPAQUE:...>",
     "F-3": "RESOLVED at this freeze - protected because it is registered, without being made reachable",
-    "F417-B1": "CORRECTED by the final classification correction; frozen only at the next freeze - every repetition is evaluated on its own and the case reduced FAIL > INVALID > PASS",
-    "F417-B2": "CORRECTED by the final classification correction; frozen only at the next freeze - O8's trial_floor_512 posed check removed; a posed short repetition fails its own stream_exact rule",
-    "F417-B3": "CORRECTED by the final classification correction; frozen only at the next freeze - S2/S7 are posed by the barrier's proven landing; an image that ran fails the no_executed_image assertion",
-    "F417-B4": "CORRECTED by the final classification correction; frozen only at the next freeze - F7's adjacency comes from the launcher's pre-clone pipe2/fcntl records, never the child's close_range; an EINVAL after it is a FAIL",
-    "F417-I1": "CORRECTED by the final classification correction; frozen only at the next freeze - report-based rules take the lifecycle token on decisive evidence; missing evidence stays INVALID",
-    "F417-I2": "CORRECTED by the final classification correction; frozen only at the next freeze - M2's control-arm non-return or late return is a FAIL; not posed is INVALID",
-    "F417-I3": "CORRECTED by the final classification correction; frozen only at the next freeze - definition section 9.6 fixes the classification before any case",
-    "F417-M1": "CORRECTED by the final classification correction; frozen only at the next freeze - every case_completed record carries posing_evidence, BLOCKED included",
+    "F417-B1": "FIXED at this freeze (f9bbf39) - every repetition is evaluated on its own and the case reduced FAIL > INVALID > PASS",
+    "F417-B2": "FIXED at this freeze (f9bbf39) - O8's trial_floor_512 posed check removed; a posed short repetition fails its own stream_exact rule",
+    "F417-B3": "FIXED at this freeze (f9bbf39) - S2/S7 are posed by the barrier's proven landing; an image that ran fails the no_executed_image assertion",
+    "F417-B4": "FIXED at this freeze (f9bbf39) - F7's adjacency comes from the launcher's pre-clone pipe2/fcntl records, never the child's close_range; an EINVAL after it is a FAIL",
+    "F417-I1": "FIXED at this freeze (f9bbf39) - report-based rules take the lifecycle token on decisive evidence; missing evidence stays INVALID",
+    "F417-I2": "FIXED at this freeze (f9bbf39) - M2's control-arm non-return or late return is a FAIL; not posed is INVALID",
+    "F417-I3": "FIXED at this freeze (f9bbf39) - definition section 9.6 fixes the classification before any case",
+    "F417-M1": "FIXED at this freeze (f9bbf39) - every case_completed record carries posing_evidence, BLOCKED included",
     "F417-N1-N6": "BACKLOG - recorded in the F417 bounded review; not changed",
-    "F417-SECTION-2-AUDIT": "CORRECTED by the final classification correction; frozen only at the next freeze - the same rule applied to every posed check and rule: O3's bound and O6's completeness became assertions, O6/P4 posing is retention_observed, rule_admission decides an admitted run, rule_stream_exact a refused one, and a full payload that is not the recipe renders stream_mismatch",
+    "F417-SECTION-2-AUDIT": "FIXED at this freeze (f9bbf39) - the same rule applied to every posed check and rule: O3's bound and O6's completeness became assertions, O6/P4 posing is retention_observed, rule_admission decides an admitted run, rule_stream_exact a refused one, and a full payload that is not the recipe renders stream_mismatch",
     "M-1": "FIXED at this freeze - driver vocabulary acquisition is fail-closed: a failed, partial or invalid registry load raises VocabularyUnavailable, publishes nothing and caches nothing, and a later complete load recovers",
     "M3": "RESOLVED by owner amendment M3-T at freeze 5d0b801; review section 14",
-    "O7-CONSTRUCTION": "RESOLVED by owner decision after f9bbf39 - O7 runs on the unchanged helper_fork retained-writer fixture; the stderr capture failure is the receipt's WriterRetainedAfterChildExit beside Exited:42, a RESULT assertion; the fixture's liveness is the posing proof; no C or helper source changed",
+    "O7-CONSTRUCTION": "RESOLVED at this freeze by owner decision (82b8746) - O7 runs on the unchanged helper_fork retained-writer fixture; the stderr capture failure is the receipt's WriterRetainedAfterChildExit beside Exited:42, a RESULT assertion; the fixture's liveness is the posing proof; no C or helper source changed",
     "P-16": "FIXED at this freeze - the host nodename is no longer collected (uname -s replaces uname -a; release and architecture were already separate) and every document leaves through one publication boundary, evidence.publish, so HALT_PREFLIGHT is sanitised like any other document",
     "PRE-D7-B1": "CORRECTED at freeze a7ae6b9/002e1e4; review section 12",
     "R-1": "FIXED at freeze dc1149f - strace fragments rejoined per task",
@@ -546,7 +553,7 @@
     "m1_inherited": "record() and serialise() each establish the fixed vocabulary first, so an unavailable driver vocabulary halts publication here too",
     "rule": "no document reaches stdout without passing Sanitiser.record and serialise; sanitisation happens exactly once, at the boundary, never at a return site"
   },
-  "requires": "ONE bounded independent review of the Trial #2 delta correction (N-1 to N-5 and the directly related items), fresh Linux compile-only evidence of launcher_spike.c (Build 7) with nothing executed, then a NEW explicit owner D-7 authorisation and a NEW manual dispatch; this freeze grants nothing",
+  "requires": "ONE final bounded independent review limited to the f9bbf39 classification delta, the O7 construction and result semantics, this freeze's integrity, and Build 7 still binding the exact unchanged C and helper sources; then a NEW explicit owner D-7 authorisation and a NEW manual dispatch; this freeze grants nothing",
   "reviewed_architecture_tip": "a5f09f8df8c3868b7ec2f3f6f9d973058c164a44",
   "scope": "Execution definition and disposable experiment sources frozen before the first preregistered LAUNCH-EXEC-01 trial. NOT_RUN: no trial has been executed and no case has been posed. D-7 (execution authorisation) is NOT granted.",
   "setup_result_schema": {
@@ -566,7 +573,7 @@
   "sha256": {
     "README.md": "9f795a85a1bf137b962e2ecdf5090d1196da249e3c0850183ede17fa26bc2e4d",
     "checker.py": "6201a2dcaa1be1b48667b1d0ceedfbd2d6619668fb78a1043b408ebfd7a7f9b0",
-    "driver.py": "ea542df8c502e62cf6c4c658ca93b4ad461a07d9814b4bb0785ec966ec6ae5c8",
+    "driver.py": "fd53e39b51c6130be6b88eb3d01f1eaa0d77e8ae03df749fd5dd2605712e57d0",
     "evidence.py": "a91e02a945a31ae9a26d925da7053f9feec7efc6ecf99778e79d609afcc1893a",
     "frozen_cases.py": "ee4b95994196aaf3bb0353ea2198ba79348cef890474ab1f71d37051ad54cbd7",
     "harness.py": "38eabf42c4ab82fdc74eafe0580b7587dbeb46b08e9b8c6c8fe9d36d260ef856",
@@ -578,13 +585,13 @@
     "journal.py": "6393164046051d97d84b722169cb3a0c63508dba49bc35f866ad75bb6b8e64d6",
     "launcher_spike.c": "0a45447b627f16dce2fd7193e26993dcc126ae96dce6e6c5b511b41361e0d622",
     "make_fixtures.py": "14b3c2764f3d07d18b4e387c0ed025f5c512ca4d1e905b6ffc7ae081cb3a3571",
-    "observations.py": "fd36f3225c3ad5f2f7595b5a221154126b6af04308371ed07b794d2ce18d5c75",
+    "observations.py": "42c490ebbceb496e3576a5748e9bd5e42f4e365b6c0bae22ee2d0d384d90c099",
     "oracles.py": "b056c374d39990ef8860062315ebb1af80bd572b737a81321b45687339fd2eeb",
     "run_launch_exec_01.py": "2b55aa6bbb17a7fb2131e2ed21d1429a586e1cad30f26a0dcbc49bf2f3ce1add"
   },
   "status": "NOT_RUN",
-  "supersedes": "e4f49f2bdb77c78cb57354584bc78f08a50531ea",
-  "supersession_reason": "fixes the reachable findings of the bounded independent delta review of e4f49f2, recorded at 43371c6 as TRIAL_2_NEEDS_BOUNDED_CORRECTION and corrected at 5e04642. Every finding was older than Trial #2. N-1: parent states were declared and never applied; they are now a closed contract created in the launcher and proven at the barrier from /proc, with two TEST/CONTROL-ONLY caller-state flags for F3, F6 and F7. N-2: executed identity is asserted -- marker, pre-exec measurement against the starting identity, and mode bits -- so a substituted body is a FAIL, never INVALID or PASS. N-3: E5's writer is proven against the launcher's pinned descriptor. N-4a: O5's CPU and poll() count are measured, missing is INVALID and exceeded is FAIL. N-4b: S2/S7's inert field became a setup whose capability changes mode after the launcher holds it. N-5: every durable case record carries normalised posing evidence. Also E6c's descriptor-free mapping, R4's gate, the barrier set versus the T2-R1 set, and stale wording. No case membership, class, prediction, safe set, gate, traced flag or block cause moved. launcher_spike.c changed, so Build 6 no longer covers it. Trial #1, its freeze and its result review, and the delta review record, are preserved unchanged.",
+  "supersedes": "f41798455662579c3895f7a4af50bac17d47bb43",
+  "supersession_reason": "fixes the reachable findings of the bounded independent review of f417984, recorded at 7f97100 as TRIAL_2_NEEDS_PRETRIAL_FIXES and accepted by the owner, who decided that the section 3 expectations win. f9bbf39 fixes one classification rule for every launcher invocation (definition section 9.6): INVALID only when the result cannot honestly be evaluated, FAIL for a decisive contradiction or a launch that does not return in bound, each repetition scored alone and the case reduced FAIL > INVALID > PASS (B1); O8's byte floor, S2/S7's report and F7's close_range outcome are results, and F7's adjacency comes from the launcher's pre-clone records (B2-B4); report-based rules take the lifecycle token on decisive evidence (I1); M2's control-arm non-return is a FAIL (I2); BLOCKED records carry posing_evidence (M1). 82b8746 implements the owner's O7 decision: the unchanged helper_fork retained-writer fixture, the stderr capture failure as the receipt's WriterRetainedAfterChildExit beside Exited:42, proven by the fixture's liveness and scored as a result. No case membership, class, prediction, safe set, gate, traced flag or block cause moved, and no C or helper source changed. Trial #1, its freeze and result review, and the reviews at 43371c6 and 7f97100 are preserved unchanged.",
   "traced_cases": {
     "amended_by": "M3-T",
     "cases": [
@@ -648,6 +655,6 @@
       "driver (SETUPS, PARENT_STATES, POSED_CHECKS, ALL_CHANNELS), imported lazily to avoid the driver -> evidence cycle"
     ],
     "not_vocabulary": "argv contents, environment values, host paths, captured bytes, tracer text and any high-entropy value remain redactable; A4's 4096-byte argument is still published as <OPAQUE:...>",
-    "tokens_protected": 398
+    "tokens_protected": 404
   }
 }
