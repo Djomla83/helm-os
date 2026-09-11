@@ -661,11 +661,148 @@ class DurablePosingEvidenceEverywhere(unittest.TestCase):
                          json.loads(json.dumps(record["posing_evidence"])))
 
 
+# ============================= O7: the owner's retained-writer fixture decision
+RETAINED, EOF = "WriterRetainedAfterChildExit", "CompleteAtEof"
+
+
+def o7_obs(alive=True, exit_code=42, stderr=RETAINED, stdout=RETAINED,
+           parseable=True):
+    """A pose()-shaped O7 observation: helper_fork, no report, no payload."""
+    plan = driver.CASE_PLANS["O7"]
+
+    def block(completeness):
+        out = {"bytes_drained": 0, "drained_sha256": oracles.digest_of(b"")}
+        if completeness is not None:
+            out["completeness"] = completeness
+        return out
+    obs = obs_for(plan, spike=receipt(exit_code=exit_code, stdout=block(stdout),
+                                      stderr=block(stderr)),
+                  rep=None, report_state=ob.REPORT_STREAM_INCOMPLETE,
+                  descendant_alive_after_launch=alive,
+                  build_identity_binding={"classification": "DIRECT_BASE",
+                                          "base_artefact": "helper_fork",
+                                          "object": "helper_fork", "bound": True,
+                                          "object_sha256": "c" * 64})
+    if not parseable:
+        obs["spike"] = None
+    # The live path hands liveness to exec_confirmation; obs_for does not.
+    obs["exec_confirmation"] = ob.exec_confirmation(
+        obs["spike"], None, None, obs["report_state"], descendant_alive=alive)
+    return plan, obs
+
+
+class O7RetainedWriterFixture(unittest.TestCase):
+    def test_a_both_facts_on_an_established_fixture_pass(self):
+        plan, obs = o7_obs()
+        status, record = score(plan, obs)
+        self.assertEqual(status, PASS)
+        self.assertEqual(record["outcome"], "Exited:42")
+        self.assertEqual(record["assertions"]["stderr_capture_failure_reported"]
+                         ["result"], ob.ASSERTION_HOLDS)
+
+    def test_b_exit_42_without_the_capture_failure_fails(self):
+        status, record = score(*o7_obs(stderr=EOF))
+        self.assertEqual(status, FAIL)
+        self.assertEqual(record["outcome"], "capture_failure_not_reported")
+        # The two receipt facts stay separate in the durable record.
+        self.assertEqual(record["mechanism_outcome"], "Exited:42")
+
+    def test_c_the_capture_failure_with_the_wrong_exit_fails(self):
+        for code in (0, 7, 43):
+            status, record = score(*o7_obs(exit_code=code))
+            self.assertEqual(status, FAIL, code)
+            self.assertEqual(record["outcome"], "Exited:%d" % code)
+        self.assertEqual(score(*o7_obs(exit_code=0, stderr=EOF))[0], FAIL)
+
+    def test_d_missing_or_uninterpretable_evidence_is_invalid(self):
+        self.assertEqual(score(*o7_obs(stderr=None))[0], INVALID)
+        self.assertEqual(score(*o7_obs(parseable=False))[0], INVALID)
+
+    def test_e_an_unestablished_fixture_is_invalid_whatever_the_receipt_says(self):
+        for alive in (False, None):
+            status, record = score(*o7_obs(alive=alive))
+            self.assertEqual(status, INVALID, alive)
+            self.assertIn("fixture_descendant_alive", record["not_posed"])
+
+    def test_f_capture_completeness_is_not_a_posing_check(self):
+        plan = driver.CASE_PLANS["O7"]
+        self.assertEqual(plan.posed_when, "fixture_descendant_alive")
+        self.assertEqual(driver.POSED_CHECK_READS[plan.posed_when],
+                         ("descendant_alive_after_launch",))
+        self.assertNotIn("stderr_capture_failed", driver.POSED_CHECKS)
+        node = function(DRIVER_TREE, "_check_fixture_descendant_alive")
+        # The executable statements only; the docstring may say what is NOT read.
+        body = ast.unparse(ast.Module(body=node.body[1:], type_ignores=[]))
+        self.assertNotIn("spike", body)
+        self.assertNotIn("completeness", body)
+        self.assertIn("descendant_alive_after_launch", body)
+        self.assertEqual(plan.assertions, ("stderr_capture_failure_reported",))
+
+    def test_g_the_plan_is_exactly_the_owner_fixture(self):
+        plan = driver.CASE_PLANS["O7"]
+        self.assertEqual(plan.binary, "helper_fork")
+        self.assertEqual(plan.setup, "fork_helper")
+        self.assertEqual(plan.rule, "process_disposition")
+        self.assertEqual(plan.helper_args,
+                         ("--retain-stdio", "--parent-exit", "42",
+                          "--lifetime-ms", str(fc.P_DESCENDANT_LIFETIME_MS)))
+        self.assertEqual(plan.channels, (driver.CH_RECEIPT, driver.CH_LIVENESS))
+        spec = fc.BY_NAME["O7"]
+        self.assertEqual((spec["cls"], spec["predict"]), (fc.MANDATORY, "Exited:42"))
+
+    def test_h_no_requirement_rests_on_a_4096_byte_stderr_payload(self):
+        plan = driver.CASE_PLANS["O7"]
+        self.assertEqual(plan.streams, {})
+        self.assertNotIn(driver.CH_PAYLOAD, plan.channels)
+        self.assertNotIn("4096", plan.helper_args)
+        self.assertNotIn("--stderr", plan.helper_args)
+        self.assertEqual(ob.ASSERTION_READS["stderr_capture_failure_reported"],
+                         ("spike",))
+        # Any drained byte count passes: O7 claims no recipe.
+        plan, obs = o7_obs()
+        obs["spike"]["stderr"]["bytes_drained"] = 12345
+        self.assertEqual(score(plan, obs)[0], PASS)
+
+    def test_stdout_retention_is_a_side_effect_not_a_verdict(self):
+        self.assertEqual(score(*o7_obs(stdout=EOF))[0], PASS)
+
+    def test_liveness_is_exec_evidence_and_a_bad_payload_still_wins(self):
+        spike = receipt(exit_code=42)
+        incomplete = ob.REPORT_STREAM_INCOMPLETE
+        self.assertEqual(ob.exec_confirmation(spike, None, None, incomplete,
+                                              descendant_alive=True),
+                         ob.EXEC_REACHED)
+        self.assertEqual(ob.exec_confirmation(spike, None, None, incomplete),
+                         ob.EXEC_UNINTERPRETABLE)
+        self.assertEqual(ob.exec_confirmation(spike, None, False, incomplete,
+                                              descendant_alive=True),
+                         ob.EXEC_UNINTERPRETABLE)
+        launch = ast.unparse(function(DRIVER_TREE, "_launch_and_observe"))
+        self.assertIn("descendant_alive=alive", launch)
+
+    def test_the_durable_record_shows_the_fixture_was_posed(self):
+        plan, obs = o7_obs()
+        record = driver.evaluate(plan, obs)
+        evidence_block = record["posing_evidence"]
+        self.assertEqual(evidence_block["fixture"],
+                         {"binary": "helper_fork",
+                          "helper_args": list(plan.helper_args)})
+        self.assertEqual(evidence_block["build_identity_binding"]["base_artefact"],
+                         "helper_fork")
+        self.assertIs(evidence_block["measured"]["descendant_alive_after_launch"],
+                      True)
+        self.assertEqual(evidence_block["posed_check"],
+                         {"name": "fixture_descendant_alive", "held": True})
+        kept = roundtrip("O7", PASS, "r", record, pose_started=True)
+        self.assertEqual(kept["posing_evidence"],
+                         json.loads(json.dumps(evidence_block)))
+
+
 # ================================================= I3: preregistration
 class PreregistrationAgrees(unittest.TestCase):
     POSING = {"same_inode_as_writer", "exec_status_pair_adjacent",
               "threaded_parent_observed", "retention_observed",
-              "no_helper_report", "stderr_capture_failed"}
+              "no_helper_report", "fixture_descendant_alive"}
 
     def setUp(self):
         self.definition = (ROOT / "docs" / "experiments"
@@ -678,7 +815,7 @@ class PreregistrationAgrees(unittest.TestCase):
         for phrase in ("any FAIL makes the case FAIL", "exec_status_pair_adjacent",
                        "no_executed_image", "completed_under_ten_seconds",
                        "stream_completeness_as_declared", "retention_observed",
-                       "O7 — open, owner decision"):
+                       "O7 — frozen construction and interpretation"):
             self.assertIn(phrase, self.definition, phrase)
 
     def test_the_posing_checks_in_use_are_exactly_the_preregistered_ones(self):
@@ -708,14 +845,20 @@ class PreregistrationAgrees(unittest.TestCase):
                 self.assertNotEqual(token, spec["predict"])
                 self.assertNotIn(token, spec["safe"] or ())
 
-    def test_the_o7_decision_is_recorded_open_and_nothing_was_redefined(self):
-        plan = driver.CASE_PLANS["O7"]
-        self.assertEqual(plan.posed_when, "stderr_capture_failed")
-        self.assertEqual(plan.helper_args,
-                         ("--no-report", "--stderr", "4096", "--exit", "42"))
-        self.assertEqual(fc.BY_NAME["O7"]["predict"], "Exited:42")
+    def test_the_o7_owner_decision_is_frozen(self):
         self.assertTrue(self.manifest["open_findings"]["O7-CONSTRUCTION"]
-                        .startswith("OPEN, OWNER DECISION REQUIRED"))
+                        .startswith("RESOLVED by owner decision"))
+        o7 = self.manifest["posing_versus_showing"]["o7"]
+        self.assertIn("WriterRetainedAfterChildExit", o7["capture_failure_fact"])
+        self.assertIn("never posing evidence", o7["posing_evidence"])
+        self.assertEqual(o7["scoring"]["established, disposition other than "
+                                       "Exited:42"], "FAIL")
+        self.assertEqual(fc.BY_NAME["O7"]["predict"], "Exited:42")
+        for phrase in ("helper_fork --retain-stdio --parent-exit 42",
+                       "fixture_descendant_alive",
+                       "stderr_capture_failure_reported",
+                       "fixture side-effect, not an O7 requirement"):
+            self.assertIn(phrase, self.definition, phrase)
 
 
 if __name__ == "__main__":

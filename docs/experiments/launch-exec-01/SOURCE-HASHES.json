@@ -227,7 +227,7 @@
     "F417-SECTION-2-AUDIT": "CORRECTED by the final classification correction; frozen only at the next freeze - the same rule applied to every posed check and rule: O3's bound and O6's completeness became assertions, O6/P4 posing is retention_observed, rule_admission decides an admitted run, rule_stream_exact a refused one, and a full payload that is not the recipe renders stream_mismatch",
     "M-1": "FIXED at this freeze - driver vocabulary acquisition is fail-closed: a failed, partial or invalid registry load raises VocabularyUnavailable, publishes nothing and caches nothing, and a later complete load recovers",
     "M3": "RESOLVED by owner amendment M3-T at freeze 5d0b801; review section 14",
-    "O7-CONSTRUCTION": "OPEN, OWNER DECISION REQUIRED - O7's frozen construction (helper_report --no-report --stderr 4096 --exit 42) never forks, so stderr always reaches EOF and stderr_capture_failed can never hold; launcher_spike.c has no CaptureFailed completeness. O7 is INVALID on every run and no trial can reach MECHANISM_ACCEPTED. Not redefined by this correction",
+    "O7-CONSTRUCTION": "RESOLVED by owner decision after f9bbf39 - O7 runs on the unchanged helper_fork retained-writer fixture; the stderr capture failure is the receipt's WriterRetainedAfterChildExit beside Exited:42, a RESULT assertion; the fixture's liveness is the posing proof; no C or helper source changed",
     "P-16": "FIXED at this freeze - the host nodename is no longer collected (uname -s replaces uname -a; release and architecture were already separate) and every document leaves through one publication boundary, evidence.publish, so HALT_PREFLIGHT is sanitised like any other document",
     "PRE-D7-B1": "CORRECTED at freeze a7ae6b9/002e1e4; review section 12",
     "R-1": "FIXED at freeze dc1149f - strace fragments rejoined per task",
@@ -375,6 +375,15 @@
         ],
         "violation_token": "executed_image_observed"
       },
+      "stderr_capture_failure_reported": {
+        "cases": [
+          "O7"
+        ],
+        "reads": [
+          "spike"
+        ],
+        "violation_token": "capture_failure_not_reported"
+      },
       "stream_completeness_as_declared": {
         "cases": [
           "O6"
@@ -392,7 +401,7 @@
       "PASS": "otherwise",
       "decisive_without_report": "a report-based rule (argv_exact, environ_empty, fds_exactly_012, signals_reset, no_new_privs, interpreter_ran_with_devfd, privilege_transition_suppressed) with no usable report takes the lifecycle token when the record is decisive: an admission refusal, an explicit pre-exec status record, or a complete stdout holding no report. A truncated, malformed or undecidable stream, or no receipt, stays INVALID",
       "other_decisive_forms": "an admitted run in a refusal case takes its lifecycle token; a refused run in a stream_exact case takes its refusal; a declared payload drained in full that is not the recipe renders stream_mismatch",
-      "posing_checks": "only preconditions the mechanism does not control: barrier landing, same_inode_as_writer (E5), exec_status_pair_adjacent (F7), threaded_parent_observed (M2), retention_observed (O6, P4), no_helper_report (S5), stderr_capture_failed (O7, OPEN)",
+      "posing_checks": "only preconditions the mechanism does not control: barrier landing, same_inode_as_writer (E5), exec_status_pair_adjacent (F7), threaded_parent_observed (M2), retention_observed (O6, P4), no_helper_report (S5), fixture_descendant_alive (O7)",
       "source": "definition section 9.6"
     },
     "expected_markers": {
@@ -408,10 +417,30 @@
       "poll_return_bound": 10000,
       "poll_source": "the launcher's instrumentation counter poll_returns_not_in_receipt, outside the receipt"
     },
+    "o7": {
+      "capture_failure_fact": "the receipt's stderr.completeness == WriterRetainedAfterChildExit, reported beside the direct child's Exited:42",
+      "class_and_prediction": "mandatory, Exited:42 -- unchanged",
+      "construction": "helper_fork --retain-stdio --parent-exit 42 --lifetime-ms P_DESCENDANT_LIFETIME_MS with the fork_helper liveness setup; helper_fork.c unchanged; no payload declared, because O7 freezes none",
+      "exec_evidence": "the same liveness answer; the fixture emits no report and O7 declares no payload",
+      "posing_evidence": "the fixture: helper_fork's build-identity binding, the declared helper arguments, and the descendant answering on the case-private liveness FIFO after launch() returned (posed check fixture_descendant_alive). The receipt's completeness is never posing evidence",
+      "result": "rule process_disposition must give Exited:42, and assertion stderr_capture_failure_reported must hold; the two receipt facts are recorded separately",
+      "scoring": {
+        "established, Exited:42, stderr WriterRetainedAfterChildExit": "eligible PASS",
+        "established, Exited:42, stderr completeness absent": "INVALID",
+        "established, Exited:42, stderr completeness decisively not WriterRetainedAfterChildExit": "FAIL",
+        "established, disposition other than Exited:42": "FAIL",
+        "fixture not established or receipt uninterpretable": "INVALID"
+      },
+      "source": "definition section 9.6, owner decision after f9bbf39",
+      "stdout_retention": "stdout is retained too; a fixture side-effect that is not an O7 verdict requirement"
+    },
     "posed": "a forced state that cannot be proven, or a posed check that does not hold, leaves the case not posed, which the frozen checker scores INVALID",
     "posed_check_inputs": {
       "exec_status_pair_adjacent": [
         "exec_status_pair_adjacent"
+      ],
+      "fixture_descendant_alive": [
+        "descendant_alive_after_launch"
       ],
       "no_helper_report": [
         "report_state"
@@ -425,9 +454,6 @@
       ],
       "same_inode_as_writer": [
         "post_pin_evidence"
-      ],
-      "stderr_capture_failed": [
-        "spike"
       ],
       "threaded_parent_observed": [
         "spike",

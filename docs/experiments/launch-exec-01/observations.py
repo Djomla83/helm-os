@@ -339,7 +339,7 @@ EXEC_UNINTERPRETABLE = "uninterpretable"      # a report arrived and made no sen
 
 
 def exec_confirmation(spike, report, payload_is_recipe=None,
-                      report_state=None):
+                      report_state=None, descendant_alive=None):
     """Which of the four exec states the observation actually supports.
 
     **Clean EOF is deliberately not enough.** launcher_spike.c sets
@@ -347,16 +347,23 @@ def exec_confirmation(spike, report, payload_is_recipe=None,
     a child die by SIGKILL immediately before ``execveat`` so that exactly this
     happens with nothing executed. The parent's view there is byte-identical to
     S1's. Positive evidence that the image ran is therefore required, and there
-    are exactly two admissible kinds:
+    are exactly three admissible kinds:
 
-      * a parseable helper report behind the frozen sentinel, or
+      * a parseable helper report behind the frozen sentinel;
       * for the ``--no-report`` O-series, payload bytes that match the frozen
-        recipe -- only the pinned helper can produce them.
+        recipe -- only the pinned helper can produce them;
+      * for a ``helper_fork`` fixture, its descendant answering on the
+        case-private liveness FIFO after launch() returned. The FIFO's path
+        reaches nothing but the executed image's own argv, and the harness
+        opens its read end itself, so the answer is independent of the
+        launcher. O7's owner decision needs it: that fixture emits no report
+        and O7 freezes no payload.
 
-    ``payload_is_recipe`` is that second kind, computed by the caller against
-    ``oracles.py``. It is passed in rather than computed here so this module
-    never needs the recipe, and so a case that declares no payload evidence
-    cannot accidentally acquire some.
+    ``payload_is_recipe`` and ``descendant_alive`` are computed by the caller.
+    They are passed in rather than computed here so this module never needs the
+    recipe or a FIFO, and so a case that declares no such evidence cannot
+    accidentally acquire some. A payload that contradicts the recipe is decided
+    before liveness is consulted.
     """
     if spike is None:
         return None
@@ -373,6 +380,11 @@ def exec_confirmation(spike, report, payload_is_recipe=None,
         # The case declared payload evidence and the payload did not match. The
         # image that ran, if any, is not the pinned helper.
         return EXEC_UNINTERPRETABLE
+    if descendant_alive is True:
+        # The executed helper_fork's own descendant answered on the
+        # case-private liveness FIFO after launch() returned: the image ran,
+        # whatever a retained stream could or could not settle.
+        return EXEC_REACHED
     if report_state in (REPORT_TRUNCATED, REPORT_MALFORMED,
                         REPORT_STREAM_INCOMPLETE):
         # A report may or may not have arrived; the stream cannot say. Calling
@@ -2079,6 +2091,38 @@ def assert_stream_completeness_as_declared(obs):
     return ASSERTION_HOLDS, "every declared stream reported its declared completeness"
 
 
+# O7, by owner decision: for Trial #2 the frozen "stderr capture failure" is the
+# receipt's stderr completeness WriterRetainedAfterChildExit.
+CAPTURE_FAILURE_COMPLETENESS = "WriterRetainedAfterChildExit"
+
+
+def assert_stderr_capture_failure_reported(obs):
+    """O7: the receipt reports the stderr capture failure beside its exit status.
+
+    O7's frozen row: "exit status AND a stderr capture failure are
+    simultaneously true; the receipt must carry both. A receipt that can report
+    only one of the two facts is a FAIL". The exit status is the rule's own
+    token, derived separately from the receipt's process fields; this reads only
+    the receipt's stderr block, so the two facts are never collapsed into one.
+    The fixture's retaining descendant is proven by the posed check
+    fixture_descendant_alive, never by this completeness value.
+    """
+    spike = obs.get("spike")
+    if not isinstance(spike, dict):
+        return ASSERTION_UNOBSERVABLE, "no parseable spike receipt"
+    block = spike.get("stderr")
+    completeness = block.get("completeness") if isinstance(block, dict) else None
+    if not isinstance(completeness, str):
+        return (ASSERTION_UNOBSERVABLE, "the receipt reports no stderr "
+                "completeness")
+    if completeness == CAPTURE_FAILURE_COMPLETENESS:
+        return (ASSERTION_HOLDS, "the receipt reports the stderr capture failure "
+                "(" + completeness + ")")
+    return (ASSERTION_VIOLATED, "the receipt reports stderr " + completeness
+            + " beside a retaining descendant, so it cannot carry the capture "
+              "failure")
+
+
 ASSERTIONS = {
     "executed_marker": assert_executed_marker,
     "measured_starting_identity": assert_measured_starting_identity,
@@ -2087,6 +2131,7 @@ ASSERTIONS = {
     "no_executed_image": assert_no_executed_image,
     "completed_under_ten_seconds": assert_completed_under_ten_seconds,
     "stream_completeness_as_declared": assert_stream_completeness_as_declared,
+    "stderr_capture_failure_reported": assert_stderr_capture_failure_reported,
 }
 
 # The observation keys each assertion reads, declared so a test can prove each
@@ -2099,6 +2144,7 @@ ASSERTION_READS = {
     "no_executed_image": ("report_state",),
     "completed_under_ten_seconds": ("elapsed_ms",),
     "stream_completeness_as_declared": ("expected_streams", "spike"),
+    "stderr_capture_failure_reported": ("spike",),
 }
 
 # The frozen token a violation renders as. None of these is any case's
@@ -2111,6 +2157,7 @@ ASSERTION_VIOLATION_TOKENS = {
     "no_executed_image": "executed_image_observed",
     "completed_under_ten_seconds": "completion_over_bound",
     "stream_completeness_as_declared": "completeness_mismatch",
+    "stderr_capture_failure_reported": "capture_failure_not_reported",
 }
 
 

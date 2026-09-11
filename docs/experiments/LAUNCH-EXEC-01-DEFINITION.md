@@ -292,7 +292,10 @@ payload **plus** sentinel **plus** report, which can never equal the frozen-reci
 `--no-report` the stream is exactly the recipe bytes, `bytes_drained` equals the declared volume
 and `drained_sha256` equals the oracle digest. **Exec evidence for those cases is the payload
 itself**: only the pinned helper can produce the recipe, so its presence establishes that the
-image ran, without needing the report S1 relies on.
+image ran, without needing the report S1 relies on. O7 is the one O case with neither: its
+`helper_fork` fixture (section 9.6) emits no report and O7 freezes no payload. Its exec evidence is
+the fixture's descendant answering on the case-private liveness FIFO after `launch()` returned —
+the FIFO's path reaches only the executed image's own argv, and the harness opens its read end.
 
 **Retained prefix.** `capture_prefix` retains the first `MAX_CAPTURE_BYTES` of each stream **in
 memory only**, and draining continues past the bound so a child that writes more is never blocked
@@ -826,6 +829,7 @@ report says nothing about which body ran. Four assertions, each naming the two f
 | `no_executed_image` | S2, S7 (section 9.6) | the decisive absence of a report on a complete stdout with the frozen "no helper report may be received" | `executed_image_observed` |
 | `completed_under_ten_seconds` | O3 (section 9.6) | the harness-measured duration with the frozen 10000 ms | `completion_over_bound` |
 | `stream_completeness_as_declared` | O6 (section 9.6) | each declared stream's reported completeness with the declared one | `completeness_mismatch` |
+| `stderr_capture_failure_reported` | O7 (section 9.6) | the receipt's stderr completeness with the frozen capture-failure fact `WriterRetainedAfterChildExit`, beside the separately derived `Exited:42` | `capture_failure_not_reported` |
 
 E2 or E4 running the substituted body is therefore a FAIL, never INVALID and never PASS. E6's harness
 writes **exactly** the declared marker bytes into the guarded region and reads them back through a
@@ -906,13 +910,15 @@ control:
 | `threaded_parent_observed` | M2 | the receipt's `parent_shape` against the control arm's zero |
 | `retention_observed` | O6, P4 | the harness's liveness rendezvous after `launch()` returned, or a receipt reporting `WriterRetainedAfterChildExit` |
 | `no_helper_report` | S5 | the decisive absence that shows the injected pre-exec death landed |
-| `stderr_capture_failed` | O7 | **open, see below** |
+| `fixture_descendant_alive` | O7 | the harness's liveness rendezvous alone — never the receipt, whose stderr completeness is O7's result |
 
 **What stopped being a posing check.** O3's 10000 ms bound is the assertion
 `completed_under_ten_seconds`. O8's 512-byte floor is its own `stream_exact` rule on every
 repetition. S2's and S7's report absence is the assertion `no_executed_image`. O6's completeness is
 the assertion `stream_completeness_as_declared`. P4's completeness is its frozen gate. F7's
-`close_range` outcome is its rule. Each assertion's violation token is no case's expectation.
+`close_range` outcome is its rule. O7's stderr capture failure is the assertion
+`stderr_capture_failure_reported`; its former posed check `stderr_capture_failed` is retired.
+Each assertion's violation token is no case's expectation.
 
 **Decisive evidence without a report (I1).** Every rule written against the helper's report —
 `argv_exact`, `environ_empty`, `fds_exactly_012`, `signals_reset`, `no_new_privs`,
@@ -974,10 +980,37 @@ BLOCKED and pre-setup records included. Its `invocation` field says whether `cas
 was written and whether the mechanism was invoked, and names the frozen block cause of a BLOCKED
 case. No forcing evidence is invented for a case that was never posed.
 
-**O7 — open, owner decision.** O7's row requires the receipt to carry an exit status AND a stderr
-capture failure at the same time. The frozen construction cannot create that state:
-`helper_report --no-report --stderr 4096 --exit 42` never forks, so stderr always reaches
-end-of-file. And `launcher_spike.c` has no `CaptureFailed` completeness: a read error is drained
-as end-of-file. O7 is therefore not posed on any run, it scores INVALID, and no trial can reach
-`MECHANISM_ACCEPTED`. This correction does not redefine it. The owner must choose a construction
-or an amendment before the next freeze.
+**O7 — frozen construction and interpretation (owner decision).** The construction frozen at
+`f417984`, `helper_report --no-report --stderr 4096 --exit 42`, never forked, so stderr always
+reached end-of-file and O7 could not be posed on any run; `launcher_spike.c` has no `CaptureFailed`
+completeness. The owner decided the following. O7's class (mandatory) and prediction
+(`Exited:42`) are unchanged, and no C source changed.
+
+* **Construction.** `helper_fork --retain-stdio --parent-exit 42 --lifetime-ms 20000`
+  (`P_DESCENDANT_LIFETIME_MS`), with the P-series liveness setup. The direct child exits 42 at once
+  while its descendant keeps descriptors 1 and 2. `helper_fork.c` is unchanged. No payload is
+  declared, because O7 freezes none: the former 4096-byte stderr stream was an implementation
+  artefact.
+* **The capture-failure fact.** For Trial #2, "a stderr capture failure" is the receipt's stderr
+  completeness `WriterRetainedAfterChildExit`, reported beside the direct child's `Exited:42`.
+  Stdout is retained as well. That is a fixture side-effect, not an O7 requirement.
+* **Posing.** Three things prove the fixture:
+  * `helper_fork`'s build-identity binding;
+  * its declared arguments, carried in `posing_evidence`;
+  * the descendant answering on the case-private liveness FIFO after `launch()` returned — the
+    posed check `fixture_descendant_alive`.
+
+  The same answer is O7's exec evidence (section 2). The receipt's completeness is never posing
+  evidence.
+* **Result.** Rule `process_disposition` must give `Exited:42`, and the assertion
+  `stderr_capture_failure_reported` must hold. The two receipt facts are recorded separately.
+
+Scoring:
+
+* the fixture not established, or the receipt uninterpretable → INVALID;
+* the fixture established with any disposition other than `Exited:42` → FAIL;
+* `Exited:42` with stderr decisively `CompleteAtEof` → FAIL;
+* stderr completeness absent → INVALID;
+* both facts → eligible PASS.
+
+A receipt that carries only one of the two facts is a FAIL, as section 3 already says.

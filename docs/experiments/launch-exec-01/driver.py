@@ -1751,18 +1751,28 @@ def _launcher_pid(proc, plan):
 # A posed check answers "did the forced state actually materialise?". False means
 # the case was never a test of the mechanism, which is INVALID -- not FAIL.
 
-@_check("stderr_capture_failed", reads=("spike",))
-def _check_stderr_capture_failed(obs):
-    """O7: an exit status AND a stderr capture failure simultaneously true."""
-    spike = obs.get("spike")
-    if not isinstance(spike, dict):
-        return False
-    block = spike.get("stderr")
-    if not isinstance(block, dict):
-        return False
-    return (block.get("completeness") == "WriterRetainedAfterChildExit"
-            and isinstance(spike.get("exit_code"), int)
-            and spike.get("exit_code") >= 0)
+# O7's former posed check, stderr_capture_failed, read the receipt's stderr
+# completeness -- the very fact O7 tests -- so it made the result a posing
+# condition; and the helper_report construction it guarded never forked, so it
+# could never hold and O7 was INVALID on every run. The owner decision after
+# f9bbf39 rebuilt O7 on the helper_fork retained-writer fixture. Its posing
+# proof is the fixture's own liveness (fixture_descendant_alive); the capture
+# failure is the result assertion observations.assert_stderr_capture_failure_
+# reported, beside the separately derived Exited:42.
+
+
+@_check("fixture_descendant_alive", reads=("descendant_alive_after_launch",))
+def _check_fixture_descendant_alive(obs):
+    """O7: the helper_fork fixture really ran and its descendant was alive.
+
+    Proven ONLY by the harness's liveness rendezvous: the case-private FIFO's
+    read end is opened by the harness after launch() returned, and a byte
+    arrives only from the executed helper's descendant, which --retain-stdio
+    has holding descriptors 1 and 2. Nothing the launcher reported is read
+    here -- in particular not the stderr completeness O7 exists to test, which
+    would make the construction proof circular. No answer is not posed.
+    """
+    return obs.get("descendant_alive_after_launch") is True
 
 
 @_check("retention_observed", reads=("descendant_alive_after_launch", "spike"))
@@ -2031,16 +2041,24 @@ def _build_plans():
                  streams=_stream("stdout", 512, "WriterRetainedAfterChildExit"),
                  posed_when="retention_observed",
                  assertions=("stream_completeness_as_declared",)))
-    add(CasePlan("O7", "helper_report", "process_disposition",
-                 (CH_RECEIPT, CH_PAYLOAD),
-                 helper_args=("--no-report", "--stderr", "4096", "--exit", "42"),
-                 streams=_stream("stderr", 4096),
-                 posed_when="stderr_capture_failed",
-                 note="OPEN, owner decision: this construction cannot create "
-                      "the stderr capture failure the frozen row requires -- "
-                      "helper_report never forks, so stderr always reaches "
-                      "EOF -- and launcher_spike.c has no CaptureFailed "
-                      "completeness. It is left not posed, never redefined"))
+    # O7, by owner decision after f9bbf39. The former helper_report
+    # construction could never produce a capture failure: it never forked, so
+    # stderr always reached EOF. The unchanged helper_fork retained-writer
+    # fixture does: its direct child exits 42 at once while a descendant keeps
+    # descriptors 1 and 2. For Trial #2 the frozen "stderr capture failure" is
+    # the receipt's stderr completeness WriterRetainedAfterChildExit. Stdout is
+    # retained too, a fixture side-effect O7 does not score, and no payload is
+    # declared because O7 freezes none.
+    add(CasePlan("O7", "helper_fork", "process_disposition",
+                 (CH_RECEIPT, CH_LIVENESS), setup="fork_helper",
+                 helper_args=("--retain-stdio", "--parent-exit", "42",
+                              "--lifetime-ms", str(P_DESCENDANT_LIFETIME_MS)),
+                 posed_when="fixture_descendant_alive",
+                 assertions=("stderr_capture_failure_reported",),
+                 note="posed by the fixture's own liveness; Exited:42 and "
+                      "stderr WriterRetainedAfterChildExit are two separate "
+                      "receipt facts, and a receipt carrying only one of them "
+                      "is a FAIL"))
     add(CasePlan("O8", "helper_report", "stream_exact", (CH_RECEIPT, CH_PAYLOAD),
                  helper_args=("--no-report", "--stdout", "512"),
                  streams=_stream("stdout", 512), repeat=REPEAT_TRIALS,
@@ -2376,7 +2394,15 @@ def posing_evidence(plan, obs, evaluated=(), decided_by=None):
         out["build_identity_binding"] = {key: binding[key]
                                          for key in BINDING_PUBLIC_KEYS
                                          if key in binding}
-    forced = [_public_fact(fact, index if len(trials) > 1 else None)
+    if plan.setup == "fork_helper":
+        # O7's owner decision: the fixture's construction is part of the posing
+        # proof, so the declared helper and its declared arguments travel with
+        # the record, beside the binding that names the helper_fork bytes and
+        # the liveness fact the posed check read. The FIFO's private path is a
+        # setup-time extra argument and never enters it.
+        out["fixture"] = {"binary": plan.binary,
+                          "helper_args": list(plan.helper_args)}
+    forced =[_public_fact(fact, index if len(trials) > 1 else None)
               for index, trial in enumerate(trials) if isinstance(trial, dict)
               for fact in trial.get("post_pin_evidence") or ()
               if isinstance(fact, dict)]
@@ -3080,6 +3106,11 @@ def _launch_and_observe(plan, ctx, built, applied, flags):
         acquisition = observations.parse_pidfd_acquisition(raw_trace)
         trace_digest = oracles.digest_of(raw_trace)
 
+    # Read ONCE, after launch() returned: the rendezvous consumes the byte. It
+    # is both the P-series/O6/P4 liveness fact and, for a helper_fork fixture
+    # that emits no report and declares no payload (O7), the exec evidence.
+    alive = _descendant_alive(built, plan)
+
     return {
         "spike": spike,
         "report": report,
@@ -3087,13 +3118,14 @@ def _launch_and_observe(plan, ctx, built, applied, flags):
         "payload_len": len(payload),
         "payload_is_recipe": payload_is_recipe,
         "exec_confirmation": observations.exec_confirmation(
-            spike, report, payload_is_recipe, report_state),
+            spike, report, payload_is_recipe, report_state,
+            descendant_alive=alive),
         "trace": trace,
         "acquisition": acquisition,
         "acquisition_normalised": observations.normalise_acquisition(acquisition),
         "trace_sha256": trace_digest,
         "observed_stage_sequence": (trace or {}).get("stage_sequence"),
-        "descendant_alive_after_launch": _descendant_alive(built, plan),
+        "descendant_alive_after_launch": alive,
         "launch_returned": returned,
         "elapsed_ms": elapsed_ms,
         "spike_exit": rc,
