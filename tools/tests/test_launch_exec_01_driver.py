@@ -344,10 +344,19 @@ class MalformedAndUnknownObservations(unittest.TestCase):
 
     def test_missing_information_never_becomes_a_pass_token(self):
         """The property that matters most: absence cannot manufacture success."""
+        # Definition section 9.6 (F417-I1): a DECISIVE absence may now yield the
+        # launcher's lifecycle token, which is contradictory evidence and never
+        # a pass token; an absence the stream cannot settle still yields none.
+        passing = {"argv_exact", "environ_empty", "fds_exactly_012",
+                   "signals_reset", "no_new_privs_1", "no_new_privs_0",
+                   "interpreter_ran_with_devfd"}
         for rule in ("argv_exact", "environ_empty", "fds_exactly_012",
                      "signals_reset", "no_new_privs",
                      "interpreter_ran_with_devfd"):
             token, _ = ob.derive(rule, observation(rep=None))
+            self.assertNotIn(token, passing, rule + " invented a pass token")
+            token, _ = ob.derive(rule, observation(
+                rep=None, report_state=ob.REPORT_STREAM_INCOMPLETE))
             self.assertIsNone(token, rule + " invented a token from no report")
 
     def test_a_no_token_observation_becomes_not_posed_then_invalid(self):
@@ -406,11 +415,22 @@ class ExecConfirmation(unittest.TestCase):
         self.assertEqual(plain, "ExecStatusIndeterminate")
         self.assertEqual(stalled, "ExecStatusIndeterminate:PreExecTimeout")
 
-    def test_uninterpretable_payload_yields_no_token(self):
+    def test_a_full_payload_that_is_not_the_recipe_is_a_decisive_mismatch(self):
+        # Definition section 9.6 (the F417 correction) replaced this test's
+        # former expectation of no token: every declared stream was drained
+        # and digested, so a payload that is not the recipe is contradictory
+        # evidence, not missing evidence, and renders stream_mismatch.
         obs = observation(rep=None, payload_is_recipe=False)
         self.assertEqual(obs["exec_confirmation"], ob.EXEC_UNINTERPRETABLE)
         token, _ = ob.derive("process_disposition", obs)
-        self.assertIsNone(token)
+        self.assertEqual(token, "stream_mismatch")
+
+    def test_an_uninterpretable_report_still_yields_no_token(self):
+        for state in (ob.REPORT_TRUNCATED, ob.REPORT_MALFORMED,
+                      ob.REPORT_STREAM_INCOMPLETE):
+            obs = observation(rep=None, report_state=state)
+            self.assertEqual(obs["exec_confirmation"], ob.EXEC_UNINTERPRETABLE)
+            self.assertIsNone(ob.derive("process_disposition", obs)[0], state)
 
     def test_payload_recipe_is_exec_evidence_for_the_no_report_series(self):
         obs = observation(rep=None, payload_is_recipe=True)
@@ -487,7 +507,15 @@ class LifecycleTokens(unittest.TestCase):
         self.assertEqual(derived, fc.BY_NAME["E8"]["predict"])
 
     def test_an_admitted_run_cannot_score_a_refusal_case(self):
-        token, _ = ob.derive("admission", observation())
+        # Definition section 9.6: an ADMITTED run is a decisive observation, so
+        # the rule now takes its lifecycle token instead of None. It still can
+        # never score a refusal case as passing: no lifecycle token is a
+        # refusal, and an uninterpretable lifecycle still yields no token.
+        token, _ = ob.derive("admission", observation(rep=report()))
+        self.assertEqual(token, "Exited:0")
+        self.assertFalse(token.startswith("refused:"))
+        token, _ = ob.derive("admission", observation(
+            rep=None, report_state=ob.REPORT_MALFORMED))
         self.assertIsNone(token)
 
 
@@ -1276,7 +1304,7 @@ class HelperReportStates(unittest.TestCase):
     def test_only_a_complete_report_produces_a_token(self):
         """Section 3: incomplete report evidence stays non-success."""
         for state in (ob.REPORT_TRUNCATED, ob.REPORT_MALFORMED,
-                      ob.REPORT_ABSENT, ob.REPORT_STREAM_INCOMPLETE):
+                      ob.REPORT_STREAM_INCOMPLETE):
             obs = observation(rep=None, report_state=state,
                               expected_argv=["helper_report"])
             for rule in ("argv_exact", "environ_empty", "fds_exactly_012",
@@ -1284,6 +1312,22 @@ class HelperReportStates(unittest.TestCase):
                 token, reason = ob.derive(rule, obs)
                 self.assertIsNone(token, rule + " from " + state)
                 self.assertTrue(reason)
+
+    def test_a_decisive_absence_yields_a_lifecycle_token_never_success(self):
+        # Definition section 9.6 (F417-I1) split REPORT_ABSENT out of the test
+        # above: a complete stdout holding no report is contradictory evidence
+        # for a report-based case, so the rule takes the launcher's lifecycle
+        # token -- which is never any report-based expectation -- not None.
+        obs = observation(rep=None, report_state=ob.REPORT_ABSENT,
+                          expected_argv=["helper_report"])
+        success = {"argv_exact", "environ_empty", "fds_exactly_012",
+                   "signals_reset", "no_new_privs_1", "no_new_privs_0"}
+        for rule in ("argv_exact", "environ_empty", "fds_exactly_012",
+                     "signals_reset", "no_new_privs"):
+            token, reason = ob.derive(rule, obs)
+            self.assertEqual(token, "ExecStatusIndeterminate", rule)
+            self.assertNotIn(token, success)
+            self.assertTrue(reason)
 
     def test_an_indecisive_stream_is_not_exec_evidence_either_way(self):
         for state in (ob.REPORT_TRUNCATED, ob.REPORT_MALFORMED,
@@ -1833,11 +1877,14 @@ class M3TracedSetAmendment(unittest.TestCase):
                 expected_marker=plan.expected_marker,
                 build_identity_binding={"bound": True,
                                         "object_sha256": "a" * 64},
-                descriptor_layout_adjacent=True,
+                exec_status_pair_adjacent=True,
                 declared_launcher_threads=3,
-                baseline_observation={"spike": receipt(parent_shape={
-                    "extra_threads": 0, "atfork_handler_registered": False,
-                    "atfork_prepare_calls": 0})})
+                # F417-I2: a control arm that ran records whether it returned,
+                # as _run_once always does; one that did not is FAIL or INVALID.
+                baseline_observation={"launch_returned": True, "spike": receipt(
+                    parent_shape={"extra_threads": 0,
+                                  "atfork_handler_registered": False,
+                                  "atfork_prepare_calls": 0})})
             record = driver.evaluate(plan, obs)
             self.assertNotIn("not_posed", record,
                              name + ": " + str(record.get("not_posed")))

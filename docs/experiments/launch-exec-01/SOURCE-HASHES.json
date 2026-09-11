@@ -66,7 +66,7 @@
   },
   "durable_evidence": {
     "artifact_contract": {
-      "case_record_posing_evidence": "every case_completed record carries posing_evidence: the build-identity binding and classification, every forced-state and parent-state landing fact, the posed check and its result, the measurements an assertion or posed check relied on, and the cleanup problems. Normalised: no raw pid, descriptor number, inode, device, private path or report text. Written even when the case is not posed",
+      "case_record_posing_evidence": "every case_completed record carries posing_evidence: the build-identity binding and classification, every forced-state and parent-state landing fact, the posed check and its result, the measurements an assertion or posed check relied on, and the cleanup problems. Normalised: no raw pid, descriptor number, inode, device, private path or report text. Written even when the case is not posed. BLOCKED and pre-setup records included: `invocation` records whether case_pose_started was written, whether the mechanism was invoked and the frozen block cause; a repeated case lists every repetition's status and outcome and the reduction that decided it",
       "files": [
         "preflight.json",
         "build-identity.json",
@@ -215,8 +215,19 @@
     "F-1": "FIXED at this freeze - fixed vocabulary derived from every symbolic registry, including the driver's, rather than hand-listed",
     "F-2": "NOT A DEFECT - A4's long argument is data, not symbolic vocabulary, and may remain <OPAQUE:...>",
     "F-3": "RESOLVED at this freeze - protected because it is registered, without being made reachable",
+    "F417-B1": "CORRECTED by the final classification correction; frozen only at the next freeze - every repetition is evaluated on its own and the case reduced FAIL > INVALID > PASS",
+    "F417-B2": "CORRECTED by the final classification correction; frozen only at the next freeze - O8's trial_floor_512 posed check removed; a posed short repetition fails its own stream_exact rule",
+    "F417-B3": "CORRECTED by the final classification correction; frozen only at the next freeze - S2/S7 are posed by the barrier's proven landing; an image that ran fails the no_executed_image assertion",
+    "F417-B4": "CORRECTED by the final classification correction; frozen only at the next freeze - F7's adjacency comes from the launcher's pre-clone pipe2/fcntl records, never the child's close_range; an EINVAL after it is a FAIL",
+    "F417-I1": "CORRECTED by the final classification correction; frozen only at the next freeze - report-based rules take the lifecycle token on decisive evidence; missing evidence stays INVALID",
+    "F417-I2": "CORRECTED by the final classification correction; frozen only at the next freeze - M2's control-arm non-return or late return is a FAIL; not posed is INVALID",
+    "F417-I3": "CORRECTED by the final classification correction; frozen only at the next freeze - definition section 9.6 fixes the classification before any case",
+    "F417-M1": "CORRECTED by the final classification correction; frozen only at the next freeze - every case_completed record carries posing_evidence, BLOCKED included",
+    "F417-N1-N6": "BACKLOG - recorded in the F417 bounded review; not changed",
+    "F417-SECTION-2-AUDIT": "CORRECTED by the final classification correction; frozen only at the next freeze - the same rule applied to every posed check and rule: O3's bound and O6's completeness became assertions, O6/P4 posing is retention_observed, rule_admission decides an admitted run, rule_stream_exact a refused one, and a full payload that is not the recipe renders stream_mismatch",
     "M-1": "FIXED at this freeze - driver vocabulary acquisition is fail-closed: a failed, partial or invalid registry load raises VocabularyUnavailable, publishes nothing and caches nothing, and a later complete load recovers",
     "M3": "RESOLVED by owner amendment M3-T at freeze 5d0b801; review section 14",
+    "O7-CONSTRUCTION": "OPEN, OWNER DECISION REQUIRED - O7's frozen construction (helper_report --no-report --stderr 4096 --exit 42) never forks, so stderr always reaches EOF and stderr_capture_failed can never hold; launcher_spike.c has no CaptureFailed completeness. O7 is INVALID on every run and no trial can reach MECHANISM_ACCEPTED. Not redefined by this correction",
     "P-16": "FIXED at this freeze - the host nodename is no longer collected (uname -s replaces uname -a; release and architecture were already separate) and every document leaves through one publication boundary, evidence.publish, so HALT_PREFLIGHT is sanitised like any other document",
     "PRE-D7-B1": "CORRECTED at freeze a7ae6b9/002e1e4; review section 12",
     "R-1": "FIXED at freeze dc1149f - strace fragments rejoined per task",
@@ -278,7 +289,7 @@
       "inherit_fd",
       "launcher_threads"
     ],
-    "proof": "at the post-pin barrier, from /proc/<launcher>: environ names, fd table and fdinfo flags, SigBlk and SigIgn, and what descriptors 0-2 refer to; M2's threads from the receipt's parent_shape against the control arm; F7's adjacency from the child's close_range spans in the syscall record",
+    "proof": "at the post-pin barrier, from /proc/<launcher>: environ names, fd table and fdinfo flags, SigBlk and SigIgn, and what descriptors 0-2 refer to; M2's threads from the receipt's parent_shape against the control arm; F7's adjacency from the launcher's own pre-clone pipe2 and fcntl(F_DUPFD_CLOEXEC) records, followed from the exec descriptor the barrier proved at fd 0 -- never from the child's close_range calls",
     "requirement_source": "the declared state, never the consumer's derived fields, so a bypassed consumer cannot also empty the requirement",
     "users": [
       "F2",
@@ -304,6 +315,15 @@
           "poll_returns"
         ],
         "violation_token": "drain_unbounded"
+      },
+      "completed_under_ten_seconds": {
+        "cases": [
+          "O3"
+        ],
+        "reads": [
+          "elapsed_ms"
+        ],
+        "violation_token": "completion_over_bound"
       },
       "executed_marker": {
         "cases": [
@@ -344,7 +364,36 @@
           "post_pin_evidence"
         ],
         "violation_token": "mode_measurement_mismatch"
+      },
+      "no_executed_image": {
+        "cases": [
+          "S2",
+          "S7"
+        ],
+        "reads": [
+          "report_state"
+        ],
+        "violation_token": "executed_image_observed"
+      },
+      "stream_completeness_as_declared": {
+        "cases": [
+          "O6"
+        ],
+        "reads": [
+          "expected_streams",
+          "spike"
+        ],
+        "violation_token": "completeness_mismatch"
       }
+    },
+    "classification": {
+      "FAIL": "the mechanism was invoked under the frozen state and a decisive observation contradicts the frozen prediction, safe set, gate or executed-identity assertion; or a launch, including M2's control arm, did not return in bound",
+      "INVALID": "only when the result cannot honestly be evaluated: a forced state or posing precondition was not established, an evidence channel or a required measurement is missing, or the observation is not interpretable",
+      "PASS": "otherwise",
+      "decisive_without_report": "a report-based rule (argv_exact, environ_empty, fds_exactly_012, signals_reset, no_new_privs, interpreter_ran_with_devfd, privilege_transition_suppressed) with no usable report takes the lifecycle token when the record is decisive: an admission refusal, an explicit pre-exec status record, or a complete stdout holding no report. A truncated, malformed or undecidable stream, or no receipt, stays INVALID",
+      "other_decisive_forms": "an admitted run in a refusal case takes its lifecycle token; a refused run in a stream_exact case takes its refusal; a declared payload drained in full that is not the recipe renders stream_mismatch",
+      "posing_checks": "only preconditions the mechanism does not control: barrier landing, same_inode_as_writer (E5), exec_status_pair_adjacent (F7), threaded_parent_observed (M2), retention_observed (O6, P4), no_helper_report (S5), stderr_capture_failed (O7, OPEN)",
+      "source": "definition section 9.6"
     },
     "expected_markers": {
       "E1": "helper_report",
@@ -361,14 +410,15 @@
     },
     "posed": "a forced state that cannot be proven, or a posed check that does not hold, leaves the case not posed, which the frozen checker scores INVALID",
     "posed_check_inputs": {
-      "adjacent_descriptors_observed": [
-        "descriptor_layout_adjacent"
-      ],
-      "completed_under_ten_seconds": [
-        "elapsed_ms"
+      "exec_status_pair_adjacent": [
+        "exec_status_pair_adjacent"
       ],
       "no_helper_report": [
         "report_state"
+      ],
+      "retention_observed": [
+        "descendant_alive_after_launch",
+        "spike"
       ],
       "returned_before_descendant_lifetime": [
         "elapsed_ms"
@@ -383,15 +433,9 @@
         "spike",
         "baseline_observation",
         "declared_launcher_threads"
-      ],
-      "trial_floor_512": [
-        "repeat_observations"
-      ],
-      "writer_retained": [
-        "spike"
       ]
     },
-    "repeated_trials": "every repeated trial must be posed and every trial is evaluated; a trial whose token differs is a FAIL",
+    "repeated_trials": "every repetition of a repeated case (O8, S7) is evaluated on its own into PASS, FAIL or INVALID; the case is FAIL if any repetition is FAIL, else INVALID if any is INVALID, else PASS. A known FAIL takes precedence over INVALID and no repetition stands for another (definition section 9.6)",
     "showed": "the rule's token and the executed-identity assertions decide PASS or FAIL; a violated assertion replaces the token with its violation token, which is no case's expectation",
     "unobservable": "an assertion whose evidence is missing, in a case that would otherwise PASS, leaves the case not posed; missing evidence is never success"
   },

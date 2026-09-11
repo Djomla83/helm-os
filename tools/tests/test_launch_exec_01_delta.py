@@ -465,8 +465,12 @@ def path_produces(plan, key):
         directive = any(token in setup for token in (
             "post_pin=", "hold_writer=", "'post_pin':", "'hold_writer':"))
         return directive or bool(set(state) & driver.BARRIER_PROVEN_STATE_KEYS)
-    if key == "descriptor_layout_adjacent":
-        return plan.traced
+    if key == "exec_status_pair_adjacent":
+        # F417-B4: produced only from a traced launcher that opened its exec
+        # descriptor at 0, which --parent-close-low-fds guarantees.
+        return plan.traced and bool(state.get(driver.PS_CLOSE_LOW))
+    if key == "descendant_alive_after_launch":
+        return plan.setup == "fork_helper"
     if key == "baseline_observation":
         return plan.baseline_flags is not None
     if key == "declared_launcher_threads":
@@ -669,38 +673,40 @@ def window(*child_lines):
 
 
 class DescriptorLayout(unittest.TestCase):
-    def adjacent(self, *lines):
-        return ob.layout_is_adjacent(ob.parse_child_descriptor_layout(window(*lines)))
+    """F7's pair, from the PARENT's pre-clone records (F417-B4 replaced the
+    child close_range reading these tests first covered)."""
+
+    PIPES = ["pipe2([4, 5], O_CLOEXEC) = 0", "pipe2([6, 7], O_CLOEXEC) = 0",
+             "pipe2([8, 9], O_CLOEXEC) = 0"]
+
+    def adjacent(self, *parent_lines):
+        text = "\n".join(["111 " + line for line in parent_lines] + [
+            "111 clone3({flags=CLONE_PIDFD, pidfd=0x7ffd0000, "
+            "exit_signal=SIGCHLD}, 88) = 222"]) + "\n"
+        return ob.parent_pair_is_adjacent(ob.parse_parent_descriptor_pair(text, 0))
 
     def test_adjacent_pairs_are_recognised_in_both_orders(self):
-        self.assertIs(self.adjacent("close_range(3, 10, 0) = 0",
-                                    "close_range(13, 4294967295, 0) = 0",
-                                    'execveat(12, "", [], [], AT_EMPTY_PATH) = 0'),
-                      True)
-        self.assertIs(self.adjacent("close_range(3, 10, 0) = 0",
-                                    "close_range(13, ~0U, 0) = 0",
-                                    'execveat(11, "", [], [], AT_EMPTY_PATH) = 0'),
-                      True)
+        self.assertIs(self.adjacent(*self.PIPES, "pipe2([10, 11], O_CLOEXEC) = 0",
+                                    "fcntl(0, F_DUPFD_CLOEXEC, 3) = 12"), True)
+        self.assertIs(self.adjacent(*self.PIPES, "pipe2([10, 13], O_CLOEXEC) = 0",
+                                    "fcntl(0, F_DUPFD_CLOEXEC, 3) = 12"), True)
 
     def test_a_gap_between_them_is_not_adjacent(self):
-        self.assertIs(self.adjacent("close_range(4, 11, 0) = 0",
-                                    "close_range(13, ~0U, 0) = 0",
-                                    'execveat(3, "", [], [], AT_EMPTY_PATH) = 0'),
-                      False)
+        self.assertIs(self.adjacent(*self.PIPES, "pipe2([10, 11], O_CLOEXEC) = 0",
+                                    "fcntl(0, F_DUPFD_CLOEXEC, 3) = 14"), False)
 
     def test_missing_evidence_is_never_a_layout(self):
-        self.assertIsNone(self.adjacent("close_range(3, 10, 0) = ?",
-                                        "close_range(13, ~0U, 0) = 0",
-                                        'execveat(12, "", [], [], 0) = 0'))
-        self.assertIsNone(self.adjacent("close_range(3, 10, 0) = 0",
-                                        'execveat(12, "", [], [], 0) = 0'))
-        self.assertIsNone(self.adjacent("close_range(3, 10, 0) = 0"))
-        self.assertIsNone(ob.layout_is_adjacent(None))
+        self.assertIsNone(self.adjacent(*self.PIPES, "pipe2([10, 11], O_CLOEXEC) = ?",
+                                        "fcntl(0, F_DUPFD_CLOEXEC, 3) = 12"))
+        self.assertIsNone(self.adjacent(*self.PIPES,
+                                        "fcntl(0, F_DUPFD_CLOEXEC, 3) = 12"))
+        self.assertIsNone(ob.parent_pair_is_adjacent(None))
+        self.assertIsNone(ob.parse_parent_descriptor_pair("", 0))
 
     def test_f7_is_posed_only_when_adjacency_was_observed(self):
         plan = driver.CASE_PLANS["F7"]
         for value, posed in ((True, True), (False, False), (None, False)):
-            obs = obs_for(plan, rep=report(), descriptor_layout_adjacent=value,
+            obs = obs_for(plan, rep=report(), exec_status_pair_adjacent=value,
                           trace={"child_syscalls": ["execveat"]})
             record = driver.evaluate(plan, obs)
             self.assertEqual("not_posed" not in record, posed, value)
@@ -766,11 +772,15 @@ class RepeatedTrials(unittest.TestCase):
         self.assertEqual(status, checker.INVALID)
         self.assertIn("repeated trial 1", why)
 
-    def test_a_reported_image_in_any_trial_is_not_posed(self):
+    def test_a_reported_image_in_any_trial_is_a_fail(self):
+        # F417-B3 corrected this test's former expectation of INVALID: the
+        # directory's landing is proven at the barrier, so an image that ran
+        # is the repetition's RESULT and fails S7 (definition section 9.6).
         trials = [self.trial(), self.trial(report=report(),
                                            report_state=ob.REPORT_COMPLETE)]
-        (status, _), _ = score(self.plan, self.obs(trials))
-        self.assertEqual(status, checker.INVALID)
+        (status, _), record = score(self.plan, self.obs(trials))
+        self.assertEqual(status, checker.FAIL)
+        self.assertEqual(record["outcome"], "executed_image_observed")
 
     def test_a_disagreeing_trial_is_a_fail(self):
         other = receipt(process_disposition="ExecFailed", exec_failed_stage="EXEC",

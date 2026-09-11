@@ -47,6 +47,7 @@ import signal
 import subprocess
 import time
 
+import checker
 import evidence
 import harness
 import observations
@@ -279,21 +280,21 @@ def _parent(name):
 
 # N-3 / N-4a. A posed check that reads an observation key nothing produces can
 # never hold, and Trial #2's E5 and O5 were exactly that. Every check therefore
-# DECLARES the observation keys it reads and whether it applies to the whole
-# case or to each repeated trial. Tests prove the declaration matches the
-# function body and that every declared key has a producer on the path of every
-# case that uses the check.
+# DECLARES the observation keys it reads. Tests prove the declaration matches
+# the function body and that every declared key has a producer on the path of
+# every case that uses the check.
+#
+# F417. A posed check answers ONLY whether a precondition the mechanism does
+# not control was established. It never reads what the mechanism produced for
+# the property under test -- that is the case's result -- and it is applied to
+# every repetition separately (evaluate()).
 POSED_CHECK_READS = {}
-POSED_CHECK_SCOPE = {}
-CHECK_SCOPE_CASE = "case"
-CHECK_SCOPE_TRIAL = "trial"
 
 
-def _check(name, reads, scope=CHECK_SCOPE_CASE):
+def _check(name, reads):
     def register(fn):
         POSED_CHECKS[name] = fn
         POSED_CHECK_READS[name] = tuple(reads)
-        POSED_CHECK_SCOPE[name] = scope
         return fn
     return register
 
@@ -1496,8 +1497,11 @@ def _parent_adjacent_fds(ctx, plan):
     Descriptor 0 is closed in the launcher before the pin, so the exec
     descriptor opens as 0 and is relocated above 2 AFTER every pipe exists --
     to the number right after the status write end. The barrier proves the exec
-    descriptor opened as 0; the child's own close_range spans in the syscall
-    record prove the pair is adjacent (posed check adjacent_descriptors_observed).
+    descriptor opened as 0; the launcher's own pre-clone pipe2 and F_DUPFD
+    records then establish the pair (posed check exec_status_pair_adjacent).
+    The child's close_range calls are F7's result and never its proof: the
+    first proof read them, and so recorded the EINVAL F7 exists to catch as a
+    state that did not materialise (F417-B4).
     The former "pad_descriptors" directive was never applied and could not have
     produced adjacency: lowest-free allocation puts the status end far above the
     exec descriptor however the table is padded.
@@ -1761,9 +1765,21 @@ def _check_stderr_capture_failed(obs):
             and spike.get("exit_code") >= 0)
 
 
-@_check("writer_retained", reads=("spike",))
-def _check_writer_retained(obs):
-    """O6 / P4: a descendant really did retain the inherited write ends."""
+@_check("retention_observed", reads=("descendant_alive_after_launch", "spike"))
+def _check_retention_observed(obs):
+    """O6 / P4: a descendant really did retain the inherited write ends.
+
+    That state is created by the executed helper, so its proof must not be only
+    what the launcher CONCLUDED about it. The harness's own liveness
+    rendezvous, opened only after launch() returned, proves the retaining
+    descendant was alive -- and still held the pipes -- at that moment. A
+    receipt reporting WriterRetainedAfterChildExit establishes it too, as it did
+    before the F417 correction. What the launcher reported about completeness
+    is then the RESULT: CompleteAtEof beside a live retaining descendant fails
+    O6's completeness assertion and P4's gate -- a FAIL, never INVALID.
+    """
+    if obs.get("descendant_alive_after_launch") is True:
+        return True
     spike = obs.get("spike")
     if not isinstance(spike, dict):
         return False
@@ -1772,16 +1788,15 @@ def _check_writer_retained(obs):
                for s in ("stdout", "stderr"))
 
 
-@_check("no_helper_report", reads=("report_state",), scope=CHECK_SCOPE_TRIAL)
+@_check("no_helper_report", reads=("report_state",))
 def _check_no_helper_report(obs):
-    """S2 / S5 / S7: the ABSENCE of the report is the independent evidence that
-    the image never ran.
+    """S5: the ABSENCE of the report is the evidence the injected death landed.
 
-    This check is only meaningful where the report channel EXISTS: if no channel
-    can carry a report, absence is uninformative and proves nothing. The driver
-    therefore refuses to evaluate it unless the observation says the channel was
-    available, so a missing channel can never masquerade as evidence of a
-    missing report.
+    S5's forced state is created inside the launcher's own child by the frozen
+    --die-before-exec mode, and nothing but a decisive absence of the report can
+    show that it landed. S2 and S7 no longer use this check (F417-B3): their
+    forced state is proven at the barrier, so an image running there is their
+    RESULT -- the no_executed_image assertion -- and not a posing failure.
     """
     # Only a DECISIVE absence counts. A truncated prefix or a retained writer
     # means the stream could not say whether a report was written, and treating
@@ -1796,11 +1811,12 @@ def _check_returned_early(obs):
     return isinstance(elapsed, int) and elapsed < P_DESCENDANT_LIFETIME_MS
 
 
-@_check("completed_under_ten_seconds", reads=("elapsed_ms",))
-def _check_under_ten_seconds(obs):
-    """O3: 16 MiB across two streams must complete well inside the 60 s timeout."""
-    elapsed = obs.get("elapsed_ms")
-    return isinstance(elapsed, int) and elapsed < 10000
+# O3's completed_under_ten_seconds and O8's trial_floor_512 were posed checks
+# over what the mechanism PRODUCED -- elapsed time and drained bytes -- so a
+# slow drain or a short trial scored INVALID where the frozen rows make it a
+# FAIL (F417-B2). O3's bound is now the post-rule assertion
+# observations.assert_completed_under_ten_seconds; O8's floor is its own
+# stream_exact rule, applied to every repetition.
 
 
 # O5's former posed check, bounded_poll_and_cpu, read a key nothing produced,
@@ -1824,14 +1840,17 @@ def _check_same_inode(obs):
                 and fact.get("launcher_holds_same_inode") is True)
 
 
-@_check("adjacent_descriptors_observed", reads=("descriptor_layout_adjacent",))
-def _check_adjacent_descriptors(obs):
-    """F7: the child's own close_range spans show the adjacent pair.
+@_check("exec_status_pair_adjacent", reads=("exec_status_pair_adjacent",))
+def _check_exec_status_pair_adjacent(obs):
+    """F7: the exec descriptor and the exec-status write end were adjacent.
 
-    Produced from the external syscall record of the child window, so the state
-    F7 is defined by is observed rather than inferred from the launcher source.
+    Established before the behaviour under test and without it: from the
+    LAUNCHER's own pre-clone syscalls in the external record, starting from the
+    exec descriptor the barrier proved at fd 0. The child's close_range calls
+    are never read, so their success or their EINVAL is F7's RESULT, never its
+    posing (F417-B4). No established pair is not posed.
     """
-    return obs.get("descriptor_layout_adjacent") is True
+    return obs.get("exec_status_pair_adjacent") is True
 
 
 @_check("threaded_parent_observed",
@@ -1850,23 +1869,6 @@ def _check_threaded_parent(obs):
     return (shape.get("extra_threads") == want
             and shape.get("atfork_handler_registered") is True
             and base_shape.get("extra_threads") == 0)
-
-
-@_check("trial_floor_512", reads=("repeat_observations",))
-def _check_trial_floor(obs):
-    """O8: any repeat trial short of 512 bytes is a failure of the drain, so the
-    floor is checked per trial rather than on an average."""
-    trials = obs.get("repeat_observations")
-    if not trials:
-        return False
-    for trial in trials:
-        spike = trial.get("spike")
-        if not isinstance(spike, dict):
-            return False
-        block = spike.get("stdout")
-        if not isinstance(block, dict) or block.get("bytes_drained", 0) < 512:
-            return False
-    return True
 
 
 # ============================================================== the 72 plans
@@ -1962,7 +1964,7 @@ def _build_plans():
                  (CH_RECEIPT, CH_REPORT), parent="close_stdio"))
     add(CasePlan("F7", "helper_report", "fds_exactly_012",
                  (CH_RECEIPT, CH_REPORT, CH_TRACE), parent="adjacent_fds",
-                 posed_when="adjacent_descriptors_observed"))
+                 posed_when="exec_status_pair_adjacent"))
 
     # ---- X: exec failure and admission ------------------------------------
     add(CasePlan("X1", "helper_report", "process_disposition", (CH_RECEIPT,),
@@ -2008,7 +2010,7 @@ def _build_plans():
                  helper_args=("--no-report", "--stdout", str(8 * 1024 * 1024),
                               "--stderr", str(8 * 1024 * 1024)),
                  streams=_both_streams(8 * 1024 * 1024), timeout_ms=60000,
-                 posed_when="completed_under_ten_seconds"))
+                 assertions=("completed_under_ten_seconds",)))
     add(CasePlan("O4", "helper_report", "stream_exact", (CH_RECEIPT, CH_PAYLOAD),
                  helper_args=("--no-report", "--stdout",
                               str(MAX_CAPTURE_BYTES * 2)),
@@ -2027,16 +2029,24 @@ def _build_plans():
                               "--parent-exit", "0", "--lifetime-ms",
                               str(P_DESCENDANT_LIFETIME_MS)),
                  streams=_stream("stdout", 512, "WriterRetainedAfterChildExit"),
-                 posed_when="writer_retained"))
+                 posed_when="retention_observed",
+                 assertions=("stream_completeness_as_declared",)))
     add(CasePlan("O7", "helper_report", "process_disposition",
                  (CH_RECEIPT, CH_PAYLOAD),
                  helper_args=("--no-report", "--stderr", "4096", "--exit", "42"),
                  streams=_stream("stderr", 4096),
-                 posed_when="stderr_capture_failed"))
+                 posed_when="stderr_capture_failed",
+                 note="OPEN, owner decision: this construction cannot create "
+                      "the stderr capture failure the frozen row requires -- "
+                      "helper_report never forks, so stderr always reaches "
+                      "EOF -- and launcher_spike.c has no CaptureFailed "
+                      "completeness. It is left not posed, never redefined"))
     add(CasePlan("O8", "helper_report", "stream_exact", (CH_RECEIPT, CH_PAYLOAD),
                  helper_args=("--no-report", "--stdout", "512"),
                  streams=_stream("stdout", 512), repeat=REPEAT_TRIALS,
-                 posed_when="trial_floor_512"))
+                 note="each of the 200 repetitions is scored by its own "
+                      "stream_exact rule; a posed short or wrong drain in any "
+                      "one of them is the case's FAIL"))
 
     # ---- R: exit and signal -----------------------------------------------
     add(CasePlan("R1", "helper_report", "process_disposition",
@@ -2109,7 +2119,7 @@ def _build_plans():
                  (CH_RECEIPT, CH_LIVENESS), setup="fork_helper",
                  helper_args=("--retain-stdio", "--setsid", "--parent-exit", "0",
                               "--lifetime-ms", str(P_DESCENDANT_LIFETIME_MS)),
-                 posed_when="writer_retained"))
+                 posed_when="retention_observed"))
 
     # ---- S: spawn/exec confirmation ---------------------------------------
     add(CasePlan("S1", "helper_report", "process_disposition",
@@ -2118,9 +2128,10 @@ def _build_plans():
                       "evidence, which is why this case declares the channel"))
     add(CasePlan("S2", "helper_report", "process_disposition",
                  (CH_RECEIPT, CH_REPORT), setup="work_dir_fchmod_zero",
-                 posed_when="no_helper_report",
-                 note="the report's ABSENCE is the evidence, which is only "
-                      "informative where the channel exists"))
+                 assertions=("no_executed_image",),
+                 note="posed by the barrier's proven mode change; the report's "
+                      "decisive ABSENCE is then part of the result, so an image "
+                      "that ran is a FAIL"))
     add(CasePlan("S3", "helper_report", "process_disposition",
                  (CH_RECEIPT, CH_REPORT), helper_args=("--exit", "127")))
     add(CasePlan("S4", "helper_report", "process_disposition", (CH_RECEIPT,),
@@ -2140,7 +2151,9 @@ def _build_plans():
                  pre_exec_stall=True))
     add(CasePlan("S7", "helper_report", "process_disposition",
                  (CH_RECEIPT, CH_REPORT), setup="work_dir_fchmod_zero",
-                 repeat=REPEAT_TRIALS, posed_when="no_helper_report"))
+                 repeat=REPEAT_TRIALS, assertions=("no_executed_image",),
+                 note="S2's construction 200 times; each repetition's landing is "
+                      "proven at the barrier and each is scored on its own"))
 
     # ---- M: mechanism minimality and parent shape -------------------------
     add(CasePlan("M1", "helper_report", "child_syscalls_within_frozen_set",
@@ -2186,14 +2199,14 @@ CASE_PLANS = {plan.case: plan for plan in _PLAN_LIST}
 CASEPLAN_FIELD_CONSUMERS = {
     "case": "evaluate", "binary": "_setup_none", "setup": "prepare",
     "parent": "pose", "spike_flags": "spike_argv", "helper_args": "spike_argv",
-    "argv0": "spike_argv", "rule": "evaluate",
+    "argv0": "spike_argv", "rule": "_evaluate_repetition",
     "streams": "_launch_and_observe", "channels": "missing_channels",
-    "posed_when": "evaluate", "excused_fds": "pose", "repeat": "pose",
+    "posed_when": "_evaluate_repetition", "excused_fds": "pose", "repeat": "pose",
     "timeout_ms": "spike_argv", "grace_ms": "spike_argv",
     "spawn_confirm_ms": "spike_argv", "body_length_changed": "pose",
     "pre_exec_stall": "pose", "traced": "_launch_and_observe",
     "baseline_flags": "pose", "expected_marker": "pose",
-    "assertions": "evaluate", "note": None,
+    "assertions": "_evaluate_repetition", "note": None,
 }
 
 
@@ -2331,17 +2344,40 @@ def _public_fact(fact, trial=None):
     return out
 
 
-def posing_evidence(plan, obs):
-    """The normalised facts posing validity rests on, for the durable record."""
-    out = {}
+# Plain observation values posing_evidence may carry under ``measured`` when a
+# case's posed check or assertions read them. Booleans and integers only.
+MEASURED_PUBLIC_KEYS = ("launcher_cpu_ms", "poll_returns",
+                        "exec_status_pair_adjacent", "declared_launcher_threads",
+                        "descendant_alive_after_launch", "elapsed_ms")
+
+
+def posing_evidence(plan, obs, evaluated=(), decided_by=None):
+    """The normalised facts posing validity rests on, for the durable record.
+
+    M1: written for EVERY case_completed record, BLOCKED and pre-setup records
+    included. ``invocation`` says whether case_pose_started was written -- only
+    pose()'s observation carries ``repeat_observations``, and the runner
+    journals the boundary immediately before calling pose() -- and whether the
+    mechanism was invoked. Nothing is invented for a case never posed.
+    """
+    trials = obs.get("repeat_observations") or [obs]
+    invocation = {
+        "pose_started": "repeat_observations" in obs,
+        "mechanism_invoked": any(isinstance(t, dict)
+                                 and t.get("launch_returned") is not None
+                                 for t in trials),
+    }
+    if obs.get("blocked"):
+        invocation.update(pose_started=False, mechanism_invoked=False,
+                          blocked_cause=obs["blocked"])
+    out = {"invocation": invocation}
     binding = obs.get("build_identity_binding")
     if isinstance(binding, dict):
         out["build_identity_binding"] = {key: binding[key]
                                          for key in BINDING_PUBLIC_KEYS
                                          if key in binding}
-    trials = obs.get("repeat_observations") or [obs]
     forced = [_public_fact(fact, index if len(trials) > 1 else None)
-              for index, trial in enumerate(trials)
+              for index, trial in enumerate(trials) if isinstance(trial, dict)
               for fact in trial.get("post_pin_evidence") or ()
               if isinstance(fact, dict)]
     if forced:
@@ -2350,8 +2386,7 @@ def posing_evidence(plan, obs):
     for name in plan.assertions:
         reads |= set(observations.ASSERTION_READS.get(name, ()))
     measured = {}
-    for key in ("launcher_cpu_ms", "poll_returns", "descriptor_layout_adjacent",
-                "declared_launcher_threads"):
+    for key in MEASURED_PUBLIC_KEYS:
         if key in reads and obs.get(key) is not None:
             measured[key] = obs[key]
     if "report_state" in reads:
@@ -2370,8 +2405,31 @@ def posing_evidence(plan, obs):
             "control_arm": threads(obs.get("baseline_observation"))}
     if measured:
         out["measured"] = measured
-    if "cleanup_problems" in obs:
-        out["cleanup_problems"] = list(obs.get("cleanup_problems") or ())
+    if plan.posed_when is not None and evaluated:
+        held = [entry["held"] for entry in evaluated]
+        out["posed_check"] = {
+            "name": plan.posed_when,
+            "held": (False if False in held
+                     else True if all(h is True for h in held) else None)}
+    if plan.baseline_flags is not None:
+        control = obs.get("baseline_observation")
+        out["control_arm"] = {
+            "run": isinstance(control, dict),
+            "posed": isinstance(control, dict) and not control.get("not_posed"),
+            "launch_returned": (control.get("launch_returned")
+                                if isinstance(control, dict) else None)}
+    if len(evaluated) > 1:
+        # B1: no repetition may disappear. Each one's own status and outcome
+        # token is durable, and so is the reduction that decided the case.
+        out["repetitions"] = [{"trial": entry["trial"], "status": entry["status"],
+                               "posed": "not_posed" not in entry["record"],
+                               "outcome": entry["record"].get("outcome")}
+                              for entry in evaluated]
+        counts = {status: 0 for status in STATUS_PRECEDENCE}
+        for entry in evaluated:
+            counts[entry["status"]] += 1
+        out["reduction"] = dict(counts, decided_by_trial=decided_by)
+    out["cleanup_problems"] = list(obs.get("cleanup_problems") or ())
     return out
 
 
@@ -2379,92 +2437,153 @@ def _is_frozen_expectation(spec, token):
     return token == spec["predict"] or token in (spec["safe"] or ())
 
 
-def evaluate(plan, obs):
-    """Turn one case's observation into the record ``checker.py`` scores.
+# ============================================ F417: posed versus result, centrally
+# The F417 review found one defect four ways. A check that read what the
+# mechanism PRODUCED -- a short drain, an image that ran, a close_range EINVAL,
+# a control arm that hung -- was treated as a check on whether the case was
+# POSED, so the preregistered FAIL became INVALID. And the repeated-trial
+# reduction replaced trial 0's token with the first LATER token that differed,
+# so a mismatch in trial 0 PASSed behind a correct trial 1.
+#
+# Definition section 9.6 fixes one rule for every launcher invocation and one
+# reduction for every case:
+#
+#   INVALID  the result cannot honestly be evaluated: a forced state or posing
+#            precondition was not established, an evidence channel or a required
+#            measurement is missing, or the observation is not interpretable;
+#   FAIL     the mechanism was invoked under the frozen state and a decisive
+#            observation contradicts the frozen prediction, safe set, gate or
+#            executed-identity assertion -- or a launch did not return in bound;
+#   PASS     otherwise.
+#
+#   case     any repetition FAIL -> FAIL; else any INVALID -> INVALID; else PASS.
+STATUS_PRECEDENCE = (checker.FAIL, checker.INVALID, checker.PASS)
 
-    The record is data. It never names its own status, and every field the
-    checker needs is present or explicitly absent -- ``launch_returned`` in
-    particular, whose omission is the P-8 hole and is INVALID by contract.
+# Everything one launcher invocation produces: _launch_and_observe's return,
+# its early not-posed returns, and what _run_once adds. A repetition is judged
+# on the case-level observation with exactly these replaced by its OWN values,
+# so no repetition can borrow another's evidence.
+TRIAL_OBSERVATION_KEYS = frozenset({
+    "spike", "report", "report_state", "payload_len", "payload_is_recipe",
+    "exec_confirmation", "trace", "acquisition", "acquisition_normalised",
+    "trace_sha256", "observed_stage_sequence", "descendant_alive_after_launch",
+    "launch_returned", "elapsed_ms", "spike_exit", "spike_stderr",
+    "post_pin_evidence", "launcher_cpu_ms", "poll_returns",
+    "exec_status_pair_adjacent", "not_posed", "cleanup_problems",
+})
 
-    Two questions are kept apart. Whether the case was POSED -- its forced
-    state landed and its posed check held -- decides INVALID. What the posed
-    case SHOWED -- its rule's token and its executed-identity assertions --
-    decides PASS or FAIL. Every repeated trial must be posed and must agree.
+
+def reduce_repetitions(statuses):
+    """The case status from its repetitions: any FAIL, else any INVALID, else PASS."""
+    statuses = list(statuses)
+    if not statuses:
+        return checker.INVALID
+    for status in STATUS_PRECEDENCE:
+        if status in statuses:
+            return status
+    raise ValueError("a repetition was scored outside PASS, FAIL and INVALID: "
+                     + repr(sorted(set(statuses))))
+
+
+def _repetition_view(obs, trial):
+    view = {key: value for key, value in obs.items()
+            if key not in TRIAL_OBSERVATION_KEYS and key != "repeat_observations"}
+    view.update(trial)
+    return view
+
+
+def _control_arm_verdict(plan, view):
+    """I2: ``None`` when M2's control arm returned in bound, else the verdict.
+
+    ``("not_posed", why)`` when it was never run, not posed, or its return was
+    not recorded; ``("non_return", why)`` or ``("late", why, elapsed)`` when the
+    production launch it runs did not return in bound -- a FAIL like any other.
     """
-    spec = BY_NAME[plan.case]
+    control = view.get("baseline_observation")
+    if not isinstance(control, dict):
+        return ("not_posed", "the control arm was never run")
+    if control.get("not_posed"):
+        return ("not_posed", "the control arm was not posed: "
+                + str(control["not_posed"]))
+    returned = control.get("launch_returned")
+    if returned is False:
+        return ("non_return", "the control arm's launch() did not return "
+                              "within its declared bound")
+    if returned is not True:
+        return ("not_posed", "the control arm's return was not recorded")
+    elapsed, bound = control.get("elapsed_ms"), plan.total_bound_ms()
+    if isinstance(elapsed, int) and elapsed > bound:
+        return ("late", "the control arm's launch() returned after %d ms, bound "
+                        "%d ms" % (elapsed, bound), elapsed)
+    return None
+
+
+def _evaluate_repetition(plan, spec, view, where=""):
+    """One launcher invocation's record, for the checker to score on its own.
+
+    Returns ``(record, held)``, where ``held`` is the posed check's result, or
+    None when the repetition never reached it.
+    """
     record = {
         "case": plan.case,
         "class": spec["cls"],
-        "traced": bool(obs.get("traced")),
-        "launch_returned": obs.get("launch_returned"),
-        "elapsed_ms": obs.get("elapsed_ms"),
+        "traced": bool(view.get("traced")),
+        "launch_returned": view.get("launch_returned"),
+        "elapsed_ms": view.get("elapsed_ms"),
         "total_bound_ms": plan.total_bound_ms(),
     }
-    evidence_block = posing_evidence(plan, obs)
-    if evidence_block:
-        record["posing_evidence"] = evidence_block
-
-    # A conditional case blocked on its own frozen cause is expected, and the
-    # checker enforces that only a conditional case may absorb one.
-    if obs.get("blocked"):
-        record["blocked"] = obs["blocked"]
-        return record
-    if obs.get("not_posed"):
-        record["not_posed"] = obs["not_posed"]
-        return record
-
-    trials = obs.get("repeat_observations") or [obs]
-    for index, trial in enumerate(trials[1:], 1):
-        if trial.get("not_posed"):
-            record["not_posed"] = ("repeated trial %d was not posed: %s"
-                                   % (index, trial["not_posed"]))
-            return record
-
-    if any(trial.get("launch_returned") is False for trial in trials):
+    if view.get("not_posed"):
+        record["not_posed"] = str(view["not_posed"]) + where
+        return record, None
+    if spec["traced"]:
+        # checker.score_case scores a traced case INVALID when its record shows
+        # no syscall record, so the trace has to reach the record rather than
+        # stopping at the observation -- on EVERY posed path, including a
+        # non-return and M2's control arm, or a decisive FAIL would read as
+        # INVALID. Only the PARSED window travels: the raw tracer text stays
+        # local and is represented by its digest, which keeps a host-specific
+        # record out of published evidence while still re-verifiable.
+        record["trace"] = view.get("trace")
+        record["trace_sha256"] = view.get("trace_sha256")
+        if view.get("acquisition_normalised") is not None:
+            # M3-T. Normalised only: DIRECT_CHILD and DIRECT_CHILD_PIDFD in
+            # place of the raw pid and descriptor number, which are
+            # experiment-local identifiers and never part of a receipt.
+            record["acquisition_normalised"] = view["acquisition_normalised"]
+    if view.get("launch_returned") is False:
         # A launcher-side non-return is never a recordable outcome. Recorded
-        # from this driver's own watchdog, so a hang can never be an absent
-        # record understating a known result as an open question.
-        record["launch_returned"] = False
+        # from this driver's own watchdog, so a hang is a FAIL and never an
+        # absent record understating a known result as an open question.
         record["outcome"] = None
-        record["reason"] = "launch() did not return within the declared bound"
-        return record
-
+        record["reason"] = "launch() did not return within the declared bound" + where
+        return record, None
+    if plan.baseline_flags is not None:
+        verdict = _control_arm_verdict(plan, view)
+        if verdict is not None:
+            if verdict[0] == "not_posed":
+                record["not_posed"] = verdict[1] + where
+                return record, None
+            record["outcome"] = None
+            record["reason"] = verdict[1] + where
+            if verdict[0] == "non_return":
+                record["launch_returned"] = False
+            else:
+                record["elapsed_ms"] = verdict[2]
+            return record, None
+    held = None
     if plan.posed_when is not None:
-        per_trial = POSED_CHECK_SCOPE[plan.posed_when] == CHECK_SCOPE_TRIAL
-        targets = ([dict(obs, **trial) for trial in trials] if per_trial
-                   else [obs])
-        held = True
-        for index, target in enumerate(targets):
-            if not POSED_CHECKS[plan.posed_when](target):
-                held = False
-                record["not_posed"] = (
-                    "the forced state did not materialise: " + plan.posed_when
-                    + ("" if len(targets) == 1
-                       else " (repeated trial %d)" % index))
-                break
-        record.setdefault("posing_evidence", {})["posed_check"] = {
-            "name": plan.posed_when, "held": held}
+        held = bool(POSED_CHECKS[plan.posed_when](view))
         if not held:
-            return record
+            record["not_posed"] = ("the forced state did not materialise: "
+                                   + plan.posed_when + where)
+            return record, held
 
-    tokens = []
-    for index, trial in enumerate(trials):
-        view = obs if index == 0 else dict(obs, **trial)
-        token, reason = observations.derive(plan.rule, view)
-        if token is None:
-            record["not_posed"] = ("observation not interpretable: " + reason
-                                   + ("" if index == 0
-                                      else " (repeated trial %d)" % index))
-            return record
-        tokens.append((token, reason))
-    token, reason = tokens[0]
-    for other, why in tokens[1:]:
-        if other != token:
-            token, reason = other, "a repeated trial disagreed: " + why
-            break
-
+    token, reason = observations.derive(plan.rule, view)
+    if token is None:
+        record["not_posed"] = "observation not interpretable: " + reason + where
+        return record, held
     if plan.assertions:
-        results = observations.apply_assertions(plan.assertions, obs)
+        results = observations.apply_assertions(plan.assertions, view)
         record["assertions"] = results
         violated = [name for name in plan.assertions
                     if results[name]["result"] == observations.ASSERTION_VIOLATED]
@@ -2482,10 +2601,10 @@ def evaluate(plan, obs):
             record["not_posed"] = (
                 "an executed-identity assertion could not be observed: " +
                 "; ".join(name + ": " + results[name]["detail"]
-                          for name in unobservable))
-            return record
+                          for name in unobservable) + where)
+            return record, held
     record["outcome"] = token
-    record["reason"] = reason
+    record["reason"] = reason + where
 
     if spec["traced"]:
         # checker.score_case scores a traced case INVALID when its record shows
@@ -2494,21 +2613,68 @@ def evaluate(plan, obs):
         # tracer text stays local and is represented by its digest, which is
         # what keeps a host-specific record out of published evidence while
         # still making it re-verifiable.
-        record["trace"] = obs.get("trace")
-        record["trace_sha256"] = obs.get("trace_sha256")
-        if obs.get("acquisition_normalised") is not None:
+        record["trace"] = view.get("trace")
+        record["trace_sha256"] = view.get("trace_sha256")
+        if view.get("acquisition_normalised") is not None:
             # M3-T. Normalised only: DIRECT_CHILD and DIRECT_CHILD_PIDFD in
             # place of the raw pid and descriptor number, which are
             # experiment-local identifiers and never part of a receipt.
-            record["acquisition_normalised"] = obs["acquisition_normalised"]
+            record["acquisition_normalised"] = view["acquisition_normalised"]
 
     if spec["gates"]:
-        record["gates"] = gates_for(plan, obs, token)
+        record["gates"] = gates_for(plan, view, token)
     if plan.case in DOCUMENTATION_GATES:
-        record["documentation_gate"] = _documentation_gate(obs.get("spike"))
-    offending = _asserted_unobserved_fact(obs.get("spike"))
+        record["documentation_gate"] = _documentation_gate(view.get("spike"))
+    offending = _asserted_unobserved_fact(view.get("spike"))
     if offending:
         record["asserted_unobserved_fact"] = offending
+    return record, held
+
+
+def evaluate(plan, obs):
+    """Turn one case's observation into the record ``checker.py`` scores.
+
+    The record is data. It never names its own status, and every field the
+    checker needs is present or explicitly absent -- ``launch_returned`` in
+    particular, whose omission is the P-8 hole and is INVALID by contract.
+
+    Every launcher invocation of the case -- each of O8's and S7's 200
+    repetitions, the single run of every other case -- is judged on its own by
+    ``_evaluate_repetition`` and scored by the frozen checker. The case record
+    is the record of the repetition that decides the reduction: the first FAIL,
+    else the first INVALID, else the first PASS (definition section 9.6).
+    """
+    spec = BY_NAME[plan.case]
+    if obs.get("blocked"):
+        # A conditional case blocked on its own frozen cause is decided before
+        # any repetition, and the checker enforces that only a conditional case
+        # may absorb one.
+        record = {
+            "case": plan.case,
+            "class": spec["cls"],
+            "traced": bool(obs.get("traced")),
+            "launch_returned": obs.get("launch_returned"),
+            "elapsed_ms": obs.get("elapsed_ms"),
+            "total_bound_ms": plan.total_bound_ms(),
+            "blocked": obs["blocked"],
+        }
+        record["posing_evidence"] = posing_evidence(plan, obs)
+        return record
+
+    trials = obs.get("repeat_observations") or [obs]
+    evaluated = []
+    for index, trial in enumerate(trials):
+        where = "" if len(trials) == 1 else " (repeated trial %d)" % index
+        record, held = _evaluate_repetition(
+            plan, spec, _repetition_view(obs, trial), where)
+        evaluated.append({"trial": index,
+                          "status": checker.score_case(plan.case, record)[0],
+                          "record": record, "held": held})
+    decided = reduce_repetitions(entry["status"] for entry in evaluated)
+    chosen = next(entry for entry in evaluated if entry["status"] == decided)
+    record = dict(chosen["record"])
+    record["posing_evidence"] = posing_evidence(plan, obs, evaluated,
+                                                chosen["trial"])
     return record
 
 
@@ -2895,13 +3061,18 @@ def _launch_and_observe(plan, ctx, built, applied, flags):
             and spike[name].get("drained_sha256") == want["sha256"]
             for name, want in plan.streams.items())
 
-    trace, acquisition, trace_digest, layout_adjacent = None, None, None, None
+    trace, acquisition, trace_digest, pair_adjacent = None, None, None, None
     if trace_path is not None and trace_path.exists():
         raw_trace = trace_path.read_bytes()
         trace = observations.parse_strace_child_window(raw_trace)
-        # F7. The descriptor numbers stay here; only the boolean travels.
-        layout_adjacent = observations.layout_is_adjacent(
-            observations.parse_child_descriptor_layout(raw_trace))
+        if applied.close_low >= 1:
+            # F7 (F417-B4). The exec descriptor opened as 0 -- the barrier
+            # proved it from /proc -- and the pair is followed through the
+            # LAUNCHER's own pre-clone syscalls. The child's close_range calls
+            # are never read. Descriptor numbers stay here; only the boolean
+            # travels.
+            pair_adjacent = observations.parent_pair_is_adjacent(
+                observations.parse_parent_descriptor_pair(raw_trace, 0))
         # M3-T. Parsed from the same record the other traced cases use; there is
         # no second tracing framework. The raw text stays local and only its
         # digest is publishable, so a host-specific record cannot become
@@ -2931,7 +3102,7 @@ def _launch_and_observe(plan, ctx, built, applied, flags):
         "launcher_cpu_ms": launcher_cpu_ms,
         "poll_returns": (poll_returns if observations._plain_int(poll_returns)
                          else None),
-        "descriptor_layout_adjacent": layout_adjacent,
+        "exec_status_pair_adjacent": pair_adjacent,
     }
 
 

@@ -807,7 +807,7 @@ the next case.
 | T6 | SIGTERM blocked; SIGPIPE ignored | as F5 | as F5 |
 | R4, M5 | SIGCHLD ignored | as F5 | the launcher's `SigIgn` |
 | F6 | descriptors 0, 1, 2 closed before the pin | `--parent-close-low-fds 3`, receipt channel saved above 2 | the launcher's fd 0 is its exec object, fd 1 its capability, fd 2 free |
-| F7 | exec fd and status write end adjacent | `--parent-close-low-fds 1`: the exec fd opens as 0 and is relocated after every pipe exists | fd 0 is the exec object at the barrier; posed check `adjacent_descriptors_observed` on the child's own `close_range` spans in the syscall record |
+| F7 | exec fd and status write end adjacent | `--parent-close-low-fds 1`: the exec fd opens as 0 and is relocated after every pipe exists | fd 0 is the exec object at the barrier; posed check `exec_status_pair_adjacent` on the launcher's own pre-clone `pipe2` and `fcntl(F_DUPFD_CLOEXEC)` records — never the child's `close_range` calls (section 9.6) |
 | M2 | three extra live launcher threads | the plan's `--extra-threads 3` | posed check `threaded_parent_observed`: the receipt's `parent_shape` against the control arm's zero |
 
 The two new flags are **TEST/CONTROL ONLY**, act once before the M5 arm and the pin, and are never a
@@ -823,6 +823,9 @@ report says nothing about which body ran. Four assertions, each naming the two f
 | `measured_starting_identity` | E1, E2, E3, E4, E6 | the launcher's pre-exec measurement with the case's starting identity, hashed independently before the run | `measurement_mismatch` |
 | `mode_measured_pre_change` | E6d, X1 | the receipt's mode bits with the landed change's mode-before, and not its mode-after | `mode_measurement_mismatch` |
 | `bounded_drain` | O5 | the launcher's CPU and `poll()` return count with the frozen bounds | `drain_unbounded` |
+| `no_executed_image` | S2, S7 (section 9.6) | the decisive absence of a report on a complete stdout with the frozen "no helper report may be received" | `executed_image_observed` |
+| `completed_under_ten_seconds` | O3 (section 9.6) | the harness-measured duration with the frozen 10000 ms | `completion_over_bound` |
+| `stream_completeness_as_declared` | O6 (section 9.6) | each declared stream's reported completeness with the declared one | `completeness_mismatch` |
 
 E2 or E4 running the substituted body is therefore a FAIL, never INVALID and never PASS. E6's harness
 writes **exactly** the declared marker bytes into the guarded region and reads them back through a
@@ -845,8 +848,8 @@ leaves O5 not posed; CPU of 200 ms or more, or more than 10000 returns, is a FAI
 directory as its capability. At the barrier the harness proves the launcher already holds a
 descriptor on that directory and only then sets its mode to `0000`, so the child's `fchdir` is what
 fails; a change made before the launcher opened it would not pose the case. S7's mode is restored
-between its 200 trials. **Every repeated trial must be posed and every trial is evaluated**; a trial
-whose token differs is a FAIL.
+between its 200 trials. **Every repetition is evaluated on its own and the case is reduced as
+section 9.6 fixes.** The report's decisive absence is S2's and S7's result, not their posing.
 
 **R4's gate reads the real token.** `never_reports_exited_zero` holds only for a derived token other
 than `Exited:0`; an absent token does not hold it.
@@ -866,3 +869,115 @@ durable record can lose the proof of a forced state it relies on.
 
 `launcher_spike.c` changed, so Build 6 does not cover it and fresh Linux compile-only evidence is
 required before D-7. Trial #2 is NOT_RUN, D-7 is NOT granted, and the valid trial count is ZERO.
+
+### 9.6 Final classification semantics — posed versus result
+
+The bounded independent review of freeze `f417984`
+([record](../implementation/HELM-LAUNCH-EXEC-01-TRIAL-002-F417-BOUNDED-REVIEW.md)) found that
+checks reading what the mechanism *produced* had been treated as checks on whether a case was
+*posed*. It also found a repeated-trial reduction that let a first-trial mismatch PASS. The owner
+accepted F417-B1 to B4, I1 to I3 and M1, and decided that the section 3 expectations win. What
+follows is fixed before any Trial #2 case, so no owner chooses FAIL or INVALID after seeing
+behaviour. No case membership, class, prediction, safe set, gate, traced flag or block cause
+changed. Where this section and an earlier sentence of section 9.5 differ, this section governs.
+
+**One rule for every launcher invocation.**
+
+* **INVALID** — only when the result cannot honestly be evaluated: a required forced state or
+  posing precondition was not established, an evidence channel is unavailable or incomplete, a
+  required measurement is absent, or the observation cannot be interpreted.
+* **FAIL** — once the mechanism was invoked under the required frozen state and a decisive
+  mechanism observation exists, any contradiction with the frozen prediction, safe set, gate or
+  executed-identity assertion. A launcher that does not return within its declared bound is a FAIL,
+  in M2's control arm as in every primary arm.
+* **PASS** — otherwise.
+
+Missing evidence and contradictory evidence are different states. The absence of a helper report,
+or of any other preferred observation, never downgrades a known mismatch to INVALID.
+
+**Posing preconditions are only these,** each about a state the mechanism under test does not
+control:
+
+| Posed check | Cases | Established by |
+|---|---|---|
+| forced-state landing | the 20 barrier cases of section 9.5 | the harness's barrier proofs and action facts |
+| `same_inode_as_writer` | E5 | the writer against the launcher's pinned descriptor (N-3) |
+| `exec_status_pair_adjacent` | F7 | the launcher's own pre-clone `pipe2` and `fcntl(F_DUPFD_CLOEXEC)` records, followed from the exec descriptor the barrier proved at fd 0 |
+| `threaded_parent_observed` | M2 | the receipt's `parent_shape` against the control arm's zero |
+| `retention_observed` | O6, P4 | the harness's liveness rendezvous after `launch()` returned, or a receipt reporting `WriterRetainedAfterChildExit` |
+| `no_helper_report` | S5 | the decisive absence that shows the injected pre-exec death landed |
+| `stderr_capture_failed` | O7 | **open, see below** |
+
+**What stopped being a posing check.** O3's 10000 ms bound is the assertion
+`completed_under_ten_seconds`. O8's 512-byte floor is its own `stream_exact` rule on every
+repetition. S2's and S7's report absence is the assertion `no_executed_image`. O6's completeness is
+the assertion `stream_completeness_as_declared`. P4's completeness is its frozen gate. F7's
+`close_range` outcome is its rule. Each assertion's violation token is no case's expectation.
+
+**Decisive evidence without a report (I1).** Every rule written against the helper's report —
+`argv_exact`, `environ_empty`, `fds_exactly_012`, `signals_reset`, `no_new_privs`,
+`interpreter_ran_with_devfd` and `privilege_transition_suppressed` — applies to A1–A4, A6, V1,
+F1–F7, N1–N3 and X2c. When no usable report exists, it takes the launcher's lifecycle token if and
+only if the record is decisive:
+
+* an admission refusal;
+* an explicit pre-exec status record;
+* a complete stdout that holds no report.
+
+None of those tokens is any of these cases' expectation, so the case FAILs. F6's frozen failure —
+a child stdout lost through `FD_CLOEXEC` — leaves exactly such a complete, empty stdout. A
+truncated, malformed or undecidable stream, or no parseable receipt, stays INVALID. The same holds
+for the other evidence forms:
+
+* an ADMITTED run in a case that froze a refusal (E8, X2, X5, X6, X7) takes its lifecycle token;
+* a refused run in a `stream_exact` case takes its refusal token;
+* a declared payload drained in full that is not the frozen recipe renders `stream_mismatch`.
+
+**Repeated cases (B1).** Every repetition of a case with more than one (O8 and S7, 200 each) is
+evaluated on its own into PASS, FAIL or INVALID, and the case is reduced:
+
+* any FAIL makes the case FAIL;
+* otherwise any INVALID makes it INVALID;
+* otherwise it PASSes.
+
+A known FAIL takes precedence over INVALID, and no repetition stands for another. A conditional
+case's BLOCKED is decided before any repetition. The durable record lists every repetition's
+status and outcome.
+
+**O8 (B2).** A genuinely posed repetition that drains fewer than 512 bytes, or the wrong bytes,
+is a FAIL. A repetition whose receipt or stream fact is unavailable is INVALID. POLLIN and POLLHUP
+arriving in one `poll()` return is O8's *construction*: a 512-byte write followed at once by exit,
+repeated 200 times. It has been so since this definition was frozen, and it was never proven per
+repetition, before this correction or after it. The removed `trial_floor_512` check read only the
+byte count.
+
+**S2 and S7 (B3).** The directory's forced state is proven at the barrier; a repetition where it
+did not land is INVALID. Once it landed, anything but `ExecFailed:CHDIR:EACCES` is a FAIL: an
+image that ran, exec success, `Exited:127` or `ExecStatusIndeterminate`. A report sentinel on
+descriptor 1 is decisive evidence that an image ran. One such S7 repetition fails the case.
+S2's and S7's `euid_zero` block is unchanged.
+
+**F7 (B4).** Adjacency is established before the behaviour under test and independently of it.
+The source is the launcher's four `pipe2` calls and the `ST_RELOCATE` duplication of the exec
+descriptor, all before `clone3`, starting from the exec descriptor the barrier proved at fd 0. If
+the child reaches `execveat`, its descriptor must be the one followed. Without an established pair,
+F7 is not posed. Once the pair is established, a `close_range` `EINVAL` from an inverted gap is
+`ExecFailed:CLOSE_RANGE:EINVAL`, a FAIL, never "the state did not materialise".
+`launcher_spike.c` did not change, so Build 7 still covers its bytes.
+
+**M2's control arm (I2).** A control arm that was invoked and did not return within its bound, or
+returned after it, is a FAIL. A control arm that could not be posed, or whose observation is
+unavailable, is INVALID. When both arms return, the frozen comparison decides.
+
+**Durable posing evidence (M1).** Every `case_completed` record carries `posing_evidence`,
+BLOCKED and pre-setup records included. Its `invocation` field says whether `case_pose_started`
+was written and whether the mechanism was invoked, and names the frozen block cause of a BLOCKED
+case. No forcing evidence is invented for a case that was never posed.
+
+**O7 — open, owner decision.** O7's row requires the receipt to carry an exit status AND a stderr
+capture failure at the same time. The frozen construction cannot create that state:
+`helper_report --no-report --stderr 4096 --exit 42` never forks, so stderr always reaches
+end-of-file. And `launcher_spike.c` has no `CaptureFailed` completeness: a read error is drained
+as end-of-file. O7 is therefore not posed on any run, it scores INVALID, and no trial can reach
+`MECHANISM_ACCEPTED`. This correction does not redefine it. The owner must choose a construction
+or an amendment before the next freeze.

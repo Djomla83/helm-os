@@ -726,81 +726,114 @@ def parse_strace_child_window(text):
             "child_pid": child_pid, "integrity_ok": integrity_ok}
 
 
-# ------------------------------------------------- F7: the descriptor layout
+# ------------------------------------------ F7: the pre-clone descriptor pair
 # F7 is defined by the exec descriptor and the exec-status write end sitting at
-# ADJACENT numbers, so the close_range gap between them is empty and an
-# implementation that computed it with inverted bounds would hit EINVAL. That
-# state is produced in the launcher, and it is PROVEN here from the child's own
-# close_range spans in the external syscall record, not inferred from the
-# launcher's source. Raw descriptor numbers are internal: only the boolean
-# derived from them is published.
-UINT_MAX = 4294967295
-_CLOSE_RANGE_ARGS = re.compile(
-    r"\Aclose_range\(\s*(?P<lo>\d+)\s*,\s*(?P<hi>~0U?|0x[0-9a-fA-F]+|\d+)\s*,")
+# ADJACENT numbers when the child is cloned, so the close_range gap between them
+# is empty and an implementation that computed it with inverted bounds would
+# hit EINVAL.
+#
+# The F417 review (F417-B4) found the first proof circular: it read adjacency
+# from the CHILD's own close_range spans and returned "no layout" whenever a
+# span failed, so the very EINVAL F7 exists to catch was recorded as "the state
+# did not materialise". The pair is now established WITHOUT the child: from the
+# launcher's own pre-clone syscalls in the external record -- its four pipe2
+# calls and the ST_RELOCATE fcntl(F_DUPFD_CLOEXEC) that moves the exec
+# descriptor above 2 -- all of which precede clone3. The exec descriptor's
+# starting number is the one the harness already proved from /proc at the
+# post-pin barrier. No close_range call, successful or not, is consulted. Raw
+# descriptor numbers are internal: only the boolean is published.
+_PIPE2_FDS = re.compile(r"\Apipe2\(\s*\[\s*(?P<r>\d+)\s*,\s*(?P<w>\d+)\s*\]")
+_DUPFD = re.compile(r"\Afcntl\(\s*(?P<old>\d+)\s*,\s*F_DUPFD(?:_CLOEXEC)?\s*,")
 _EXECVEAT_FD = re.compile(r"\Aexecveat\(\s*(?P<fd>\d+)\s*,")
 
+# launcher_spike.c creates exactly these pipes, in this order, after the
+# barrier and before clone3: stdin, stdout, stderr, exec status.
+LAUNCHER_PIPES = ("stdin", "stdout", "stderr", "exec_status")
 
-def parse_child_descriptor_layout(text):
-    """``{"exec_fd": N, "close_ranges": [...]}`` for the child window, or None.
 
-    INTERNAL observation input: descriptor numbers are experiment-local and are
-    never published. A span whose return was not observed is kept and marked,
-    because a missing return is not the same fact as a successful close.
+def parse_parent_descriptor_pair(text, exec_fd_at_barrier):
+    """``{"exec_fd": E, "status_w": W}`` as they stood at clone3, or None.
+
+    Read ONLY from the parent task's records before its clone3: the write end of
+    the fourth pipe2 is the exec-status write end, and every pre-clone
+    ``fcntl(n, F_DUPFD[_CLOEXEC], ...)`` of either descriptor is followed to its
+    result. ``exec_fd_at_barrier`` is the exec descriptor's number as the
+    harness proved it at the barrier. None -- never a layout -- when the record
+    cannot establish the pair: an integrity problem, no clone3, a pipe count
+    other than four, an unbounded record or an unobserved return. If the child
+    reaches execveat, its descriptor argument must be the followed exec
+    descriptor, or the record is inconsistent and says nothing.
     """
-    window = parse_strace_child_window(text)
-    if window is None:
+    if not isinstance(exec_fd_at_barrier, int) or isinstance(
+            exec_fd_at_barrier, bool):
         return None
     joined = join_trace_fragments(text)
-    child, seen_clone = window["child_pid"], False
-    ranges, exec_fd = [], None
-    for record in joined["records"]:
-        if not seen_clone:
-            seen_clone = record["call"] == "clone3"
-            continue
-        if record["task"] != child:
+    if joined is None or any(joined[k] for k in (
+            "unmatched_unfinished", "orphan_resumed", "ambiguous", "malformed")):
+        return None
+    records = joined["records"]
+    clone = next((i for i, r in enumerate(records) if r["call"] == "clone3"),
+                 None)
+    if clone is None:
+        return None
+    parent = records[clone]["task"]
+    clone_parts = split_syscall_record(records[clone]["text"])
+    if clone_parts is None:
+        return None
+    clone_state, child, _ = parse_return_state(clone_parts[2])
+    if clone_state != RETURN_OBSERVED_SUCCESS:
+        return None
+
+    pipes, tracked = [], {"exec_fd": exec_fd_at_barrier, "status_w": None}
+    for record in records[:clone]:
+        if record["task"] != parent:
             continue
         body = record["text"].strip()
-        match = _CLOSE_RANGE_ARGS.match(body)
-        if match:
-            parts = split_syscall_record(body)
-            state = (parse_return_state(parts[2])[0] if parts is not None
-                     else RETURN_NOT_OBSERVED)
-            raw_hi = match.group("hi")
-            hi = UINT_MAX if raw_hi.startswith("~") else int(raw_hi, 0)
-            ranges.append({"lo": int(match.group("lo")), "hi": hi,
-                           "return_state": state})
+        pipe = _PIPE2_FDS.match(body)
+        dup = _DUPFD.match(body)
+        if not pipe and not dup:
             continue
-        match = _EXECVEAT_FD.match(body)
-        if match:
-            exec_fd = int(match.group("fd"))
+        parts = split_syscall_record(body)
+        if parts is None:
+            return None
+        state, value, _ = parse_return_state(parts[2])
+        if state != RETURN_OBSERVED_SUCCESS:
+            return None
+        if pipe:
+            pipes.append((int(pipe.group("r")), int(pipe.group("w"))))
+            if len(pipes) == len(LAUNCHER_PIPES):
+                tracked["status_w"] = pipes[-1][1]
+            continue
+        if len(pipes) != len(LAUNCHER_PIPES):
+            # A duplication before the pipes exist -- F6's saved receipt
+            # channel -- is not ST_RELOCATE and moves neither descriptor.
+            continue
+        old = int(dup.group("old"))
+        for name in ("exec_fd", "status_w"):
+            if tracked[name] == old:
+                tracked[name] = value
+    if len(pipes) != len(LAUNCHER_PIPES):
+        return None
+
+    for record in records[clone + 1:]:
+        if record["task"] != child:
+            continue
+        executed = _EXECVEAT_FD.match(record["text"].strip())
+        if executed:
+            if int(executed.group("fd")) != tracked["exec_fd"]:
+                return None
             break
-    return {"exec_fd": exec_fd, "close_ranges": ranges}
+    return dict(tracked)
 
 
-def layout_is_adjacent(layout):
-    """Whether the observed spans leave exactly the exec fd and ONE neighbour open.
-
-    True: above descriptor 2, the only descriptors no close_range span covers
-    are the exec descriptor and a descriptor next to it, and a final span runs
-    to UINT_MAX. False: the layout was observed and is not adjacent. None: the
-    record cannot say -- no exec descriptor, no span, an unobserved return, or
-    no final span -- which is missing evidence and never a layout.
-    """
-    if not isinstance(layout, dict):
+def parent_pair_is_adjacent(pair):
+    """True / False for an established pair, None when there is no pair."""
+    if not isinstance(pair, dict):
         return None
-    exec_fd, ranges = layout.get("exec_fd"), layout.get("close_ranges")
-    if not isinstance(exec_fd, int) or not ranges:
+    exec_fd, status_w = pair.get("exec_fd"), pair.get("status_w")
+    if not isinstance(exec_fd, int) or not isinstance(status_w, int):
         return None
-    if any(r.get("return_state") != RETURN_OBSERVED_SUCCESS for r in ranges):
-        return None
-    if not any(r["hi"] == UINT_MAX for r in ranges):
-        return None
-    if any(r["lo"] > r["hi"] for r in ranges):
-        return False
-    ceiling = max(max(r["lo"] for r in ranges), exec_fd + 2)
-    uncovered = [fd for fd in range(3, ceiling + 1)
-                 if not any(r["lo"] <= fd <= r["hi"] for r in ranges)]
-    return uncovered in ([exec_fd - 1, exec_fd], [exec_fd, exec_fd + 1])
+    return abs(exec_fd - status_w) == 1
 
 
 # ------------------------------------------------- M3-T: pidfd acquisition
@@ -1118,14 +1151,73 @@ def _usable_report(obs):
     return None, "no helper report reached the harness"
 
 
+# ------------------------------ F417-I1 / section 2: decisive evidence, no report
+# A rule written against the helper's report used to return None whenever no
+# usable report existed, so a POSED case whose child demonstrably never ran the
+# image -- an explicit pre-exec status record, a refusal, or a complete stdout
+# that holds no report -- scored INVALID. That is contradictory evidence, not
+# missing evidence. Every report-based rule now asks this one function first:
+# it yields a lifecycle token only when the launcher's own record DECISIVELY
+# shows what happened instead. No such token is any report-based case's
+# expectation, so the case FAILs. A stream that cannot settle whether a report
+# was written, a truncated or malformed report, or no receipt at all still
+# yields None: that is missing evidence, and it stays INVALID.
+def decisive_without_report(obs):
+    """``(token, reason)`` when the record decisively shows what ran instead.
+
+    ``(None, why)`` when it does not.
+    """
+    spike = obs.get("spike")
+    if not isinstance(spike, dict):
+        return None, "no parseable spike receipt"
+    if spike.get("admission") == "refused":
+        return ("refused:" + spike["refusal"],
+                "the object was refused at admission, so no image ran to report")
+    if spike.get("process_disposition") == "ExecFailed":
+        token = _exec_failed(spike.get("exec_failed_stage"),
+                             spike.get("exec_failed_errno"))
+        if token is None:
+            return None, ("the child reported a pre-exec failure with an errno "
+                          "outside the frozen table")
+        return token, ("the child wrote an explicit pre-exec status record, so "
+                       "no image ran to report")
+    if obs.get("report_state") == REPORT_ABSENT:
+        token, reason = rule_process_disposition(obs)
+        if token is not None:
+            return token, ("the stream that carries the report is complete and "
+                           "holds none: " + reason)
+    return None, "the record does not decisively show what ran instead"
+
+
+def _report_or_decisive(obs):
+    """``(report, None, None)``, ``(None, token, reason)`` or ``(None, None, why)``.
+
+    The only door through which a report-based rule reads the helper report.
+    """
+    report, why = _usable_report(obs)
+    if report is not None:
+        return report, None, None
+    token, reason = decisive_without_report(obs)
+    if token is not None:
+        return None, token, reason
+    return None, None, why
+
+
 def rule_admission(obs):
     """``refused:<Refusal>`` for the admission cases: E8, X2, X5, X6, X7."""
     spike = obs.get("spike")
     if spike is None:
         return None, "no parseable spike receipt"
     if spike.get("admission") != "refused":
-        return None, ("the object was ADMITTED; a case that exists to observe a "
-                      "refusal cannot be scored from an admitted run")
+        # Section 2: an ADMITTED run is a decisive mechanism observation, not a
+        # missing one. The lifecycle that followed is the result, and it is
+        # never a refusal token, so a case that froze a refusal FAILs.
+        token, reason = rule_process_disposition(obs)
+        if token is None:
+            return None, ("the object was ADMITTED where a refusal is frozen, "
+                          "and what followed is not interpretable: " + reason)
+        return token, ("the object was ADMITTED where the frozen rule requires "
+                       "a refusal: " + reason)
     return "refused:" + spike["refusal"], "admission refused at the frozen rule"
 
 
@@ -1174,7 +1266,15 @@ def rule_process_disposition(obs):
     # honest token is the indeterminate one. This is the S5-vs-S1 rule and the
     # single most load-bearing line in this module.
     if confirmation == EXEC_UNINTERPRETABLE:
-        return None, ("a helper report or payload was present and could not be "
+        if obs.get("payload_is_recipe") is False:
+            # Section 2: every declared stream was drained, counted and
+            # digested, and the bytes are not the frozen recipe. That is a
+            # decisive contradiction, not missing evidence: the body that ran is
+            # not the pinned helper, or its stream was not delivered intact.
+            return ("stream_mismatch",
+                    "the declared payload was drained in full and is not the "
+                    "frozen recipe")
+        return None, ("a helper report was present and could not be "
                       "interpreted; the executed body is unidentified")
     if confirmation != EXEC_REACHED:
         return ("ExecStatusIndeterminate",
@@ -1213,9 +1313,9 @@ def rule_process_disposition(obs):
 
 def rule_argv_exact(obs):
     """``argv_exact`` for A1-A4 and A6, from the report's element-wise argv."""
-    report, why = _usable_report(obs)
+    report, token, why = _report_or_decisive(obs)
     if report is None:
-        return None, why
+        return token, why
     expected = obs.get("expected_argv")
     if expected is None:
         return None, "the case declared no expected argv"
@@ -1239,9 +1339,9 @@ def rule_argv_exact(obs):
 
 def rule_environ_empty(obs):
     """``environ_empty`` for V1. Under D-10 an empty array is the only pass."""
-    report, why = _usable_report(obs)
+    report, token, why = _report_or_decisive(obs)
     if report is None:
-        return None, why
+        return token, why
     environ = report.get("environ")
     if not isinstance(environ, list):
         return None, "the report carries no environ array"
@@ -1259,9 +1359,9 @@ def rule_fds_exactly_012(obs):
     consumes is the only one excused -- by number, declared by the case, never
     by pattern.
     """
-    report, why = _usable_report(obs)
+    report, token, why = _report_or_decisive(obs)
     if report is None:
-        return None, why
+        return token, why
     descriptors = report.get("descriptors")
     if not isinstance(descriptors, list):
         return None, "the report carries no descriptor array"
@@ -1305,9 +1405,9 @@ def rule_signals_reset(obs):
     reports the masks separately so blocked, ignored and caught are never
     conflated.
     """
-    report, why = _usable_report(obs)
+    report, token, why = _report_or_decisive(obs)
     if report is None:
-        return None, why
+        return token, why
     signals = report.get("signals")
     if not isinstance(signals, dict):
         return None, "the report carries no signals object"
@@ -1334,9 +1434,9 @@ def rule_no_new_privs(obs):
     inside the executed image, never inferred from the fact that the spike
     called ``prctl``.
     """
-    report, why = _usable_report(obs)
+    report, token, why = _report_or_decisive(obs)
     if report is None:
-        return None, why
+        return token, why
     raw = report.get("no_new_privs")
     if not isinstance(raw, str):
         return None, "the report carries no NoNewPrivs field"
@@ -1361,7 +1461,11 @@ def rule_stream_exact(obs):
     if spike is None:
         return None, "no parseable spike receipt"
     if spike.get("admission") == "refused":
-        return None, "refused at admission; no stream was ever produced"
+        # Section 2: a refusal of the pinned helper is a decisive mechanism
+        # observation, and it is never stream_exact.
+        return ("refused:" + spike["refusal"],
+                "the pinned helper was refused at admission, so none of its "
+                "declared streams was produced")
     expected = obs.get("expected_streams")
     if not expected:
         return None, "the case declared no expected streams"
@@ -1394,9 +1498,9 @@ def rule_interpreter_ran_with_devfd(obs):
     interpreter's own argv, which only exists if the exec fd was NOT CLOEXEC --
     X2b is the same fixture with the flag, and it must produce ENOENT instead.
     """
-    report, why = _usable_report(obs)
+    report, token, why = _report_or_decisive(obs)
     if report is None:
-        return None, why
+        return token, why
     elements = report.get("argv")
     if not isinstance(elements, list) or not elements:
         return None, "the interpreter report carries no argv"
@@ -1421,9 +1525,9 @@ def rule_privilege_transition_suppressed(obs):
     fixture existed; the token then requires the executed image to have observed
     an unchanged effective uid alongside NoNewPrivs 1.
     """
-    report, why = _usable_report(obs)
+    report, token, why = _report_or_decisive(obs)
     if report is None:
-        return None, why
+        return token, why
     euid, uid = report.get("euid"), report.get("uid")
     if not isinstance(euid, int) or not isinstance(uid, int):
         return None, "the report carries no uid/euid pair"
@@ -1903,11 +2007,86 @@ def assert_bounded_drain(obs):
             "within the frozen bounds" % (cpu, polls))
 
 
+# ------------------------------------ F417: results that used to be posed checks
+# Each of these was a posed check, so the preregistered FAIL it describes was
+# scored INVALID. Each is a property of what the mechanism PRODUCED, and is now
+# asserted after the rule like every other showing.
+
+# O3's frozen row: "completes under 10000 ms with timeout_ms=60000".
+O3_COMPLETION_BOUND_MS = 10000
+
+# A report sentinel on descriptor 1 can only have been written by an executed
+# image: the launcher's child setup writes nothing there.
+_IMAGE_RAN_REPORT_STATES = frozenset({REPORT_COMPLETE, REPORT_MALFORMED,
+                                      REPORT_TRUNCATED})
+
+
+def assert_no_executed_image(obs):
+    """S2 / S7: no image ran, shown by a complete stream that holds no report.
+
+    The frozen rows: "No helper report may be received: its absence is the
+    independent proof that the image never ran", and "any trial reporting exec
+    success ... is a FAIL". With the directory's forced state already proven at
+    the barrier, a report here is the mechanism running an image it should not
+    have -- a FAIL (F417-B3), not a forced state that failed to land.
+    """
+    state = obs.get("report_state")
+    if state == REPORT_ABSENT:
+        return (ASSERTION_HOLDS, "the stream that would carry a report is "
+                "complete and holds none, so no image ran")
+    if state in _IMAGE_RAN_REPORT_STATES:
+        return (ASSERTION_VIOLATED, "an executed image wrote the report "
+                "sentinel, so an image ran")
+    return ASSERTION_UNOBSERVABLE, "the stream cannot settle whether an image ran"
+
+
+def assert_completed_under_ten_seconds(obs):
+    """O3: 16 MiB across two streams completes in under 10000 ms."""
+    elapsed = obs.get("elapsed_ms")
+    if not _plain_int(elapsed) or elapsed < 0:
+        return ASSERTION_UNOBSERVABLE, "no measurement of the launch's duration"
+    if elapsed < O3_COMPLETION_BOUND_MS:
+        return (ASSERTION_HOLDS, "completed in %d ms, under %d ms"
+                % (elapsed, O3_COMPLETION_BOUND_MS))
+    return (ASSERTION_VIOLATED, "completed in %d ms, not under %d ms"
+            % (elapsed, O3_COMPLETION_BOUND_MS))
+
+
+def assert_stream_completeness_as_declared(obs):
+    """O6: every declared stream reports exactly its declared completeness.
+
+    O6's frozen row: "with completeness WriterRetainedAfterChildExit ... or
+    CompleteAtEof is a FAIL". The retaining descendant is proven by the posed
+    check retention_observed; what the launcher then REPORTED is this result.
+    """
+    expected, spike = obs.get("expected_streams"), obs.get("spike")
+    if not isinstance(expected, dict) or not expected:
+        return ASSERTION_UNOBSERVABLE, "the case declared no streams"
+    if not isinstance(spike, dict):
+        return ASSERTION_UNOBSERVABLE, "no parseable spike receipt"
+    wrong = []
+    for name, want in sorted(expected.items()):
+        block = spike.get(name)
+        if not isinstance(block, dict) or not isinstance(
+                block.get("completeness"), str):
+            return (ASSERTION_UNOBSERVABLE, "the receipt reports no completeness "
+                    "for " + name)
+        if block["completeness"] != want["completeness"]:
+            wrong.append("%s reported %s, declared %s"
+                         % (name, block["completeness"], want["completeness"]))
+    if wrong:
+        return ASSERTION_VIOLATED, "; ".join(wrong)
+    return ASSERTION_HOLDS, "every declared stream reported its declared completeness"
+
+
 ASSERTIONS = {
     "executed_marker": assert_executed_marker,
     "measured_starting_identity": assert_measured_starting_identity,
     "mode_measured_pre_change": assert_mode_measured_pre_change,
     "bounded_drain": assert_bounded_drain,
+    "no_executed_image": assert_no_executed_image,
+    "completed_under_ten_seconds": assert_completed_under_ten_seconds,
+    "stream_completeness_as_declared": assert_stream_completeness_as_declared,
 }
 
 # The observation keys each assertion reads, declared so a test can prove each
@@ -1917,6 +2096,9 @@ ASSERTION_READS = {
     "measured_starting_identity": ("spike", "build_identity_binding"),
     "mode_measured_pre_change": ("spike", "post_pin_evidence"),
     "bounded_drain": ("launcher_cpu_ms", "poll_returns"),
+    "no_executed_image": ("report_state",),
+    "completed_under_ten_seconds": ("elapsed_ms",),
+    "stream_completeness_as_declared": ("expected_streams", "spike"),
 }
 
 # The frozen token a violation renders as. None of these is any case's
@@ -1926,6 +2108,9 @@ ASSERTION_VIOLATION_TOKENS = {
     "measured_starting_identity": "measurement_mismatch",
     "mode_measured_pre_change": "mode_measurement_mismatch",
     "bounded_drain": "drain_unbounded",
+    "no_executed_image": "executed_image_observed",
+    "completed_under_ten_seconds": "completion_over_bound",
+    "stream_completeness_as_declared": "completeness_mismatch",
 }
 
 
