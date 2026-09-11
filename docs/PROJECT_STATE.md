@@ -1,5 +1,25 @@
 # Stanje projekta
 
+<a id="launch-exec-01-trial-002-delta-correction"></a>
+
+## Trial #2 delta correction frozen, 2026-09-11 — LAUNCH-EXEC-01 still NOT_RUN
+
+The [bounded independent delta review](implementation/HELM-LAUNCH-EXEC-01-TRIAL-002-DELTA-REVIEW.md)
+of the corrected Trial #2 candidate `e4f49f2` returned **`TRIAL_2_NEEDS_BOUNDED_CORRECTION`**: parent
+states were declared and never applied, executed-body identity was never asserted, E5 and O5 posed
+checks read keys nothing produced, S2/S7's working-directory state was inert, and the proof that a
+forced state landed never reached the durable record. That review is preserved unamended.
+
+The correction (`5e04642`) creates every forced state in the launcher and proves it at the post-pin
+barrier, asserts what executed, measures O5's two bounds, and writes normalised posing evidence into
+every durable case record; [definition section 9.5](experiments/LAUNCH-EXEC-01-DEFINITION.md#95-trial-2-delta-correction--what-posed-means-and-what-a-posed-case-showed)
+preregisters it. A new freeze follows it in `SOURCE-HASHES.json`. No case membership, class,
+prediction or safe set moved.
+
+**Trial #2 is NOT_RUN, D-7 is NOT granted, and the valid trial count is ZERO.** Before any new D-7
+decision the candidate needs one bounded independent review of this correction and fresh Linux
+compile-only evidence of `launcher_spike.c`, which changed.
+
 <a id="launch-exec-01-trial-001-closed"></a>
 
 ## Trial #1 closed, 2026-09-10 — LAUNCH-EXEC-01 **TRIAL_ABORTED_AFTER_BOUNDARY**

@@ -37,11 +37,11 @@
     "recorded": 7,
     "total": 72
   },
-  "classification": "TRIAL_2_FIXES_READY_FOR_BOUNDED_REVIEW",
+  "classification": "TRIAL_2_DELTA_CORRECTION_READY_FOR_BOUNDED_REVIEW",
   "d7_execution_authorised": false,
   "definition_sha256": {
     "docs/adr/ADR-0024-launch-authority.md": "c1f3cce88438439aab6632a9c56450ae98d1c64adb31b13c742e2febb1476351",
-    "docs/experiments/LAUNCH-EXEC-01-DEFINITION.md": "b13ce31a53985e66b553ad2fc784654a32509537a7d4f1e2d4a2e6d69f154fe0",
+    "docs/experiments/LAUNCH-EXEC-01-DEFINITION.md": "a608591305efea7bc620b573758704dedc438ca52ad984907ffeb37c11b17b8b",
     "docs/research/HELM-LAUNCH-ARCHITECTURE.md": "97fbf0d8a602c68b0cf20529c4c1bb238ae2790a6089fa8ff6818c054b443151"
   },
   "driver": {
@@ -476,7 +476,7 @@
     "m1_inherited": "record() and serialise() each establish the fixed vocabulary first, so an unavailable driver vocabulary halts publication here too",
     "rule": "no document reaches stdout without passing Sanitiser.record and serialise; sanitisation happens exactly once, at the boundary, never at a return site"
   },
-  "requires": "ONE bounded independent delta review of the T2-R1/R2/R3/R4 corrections, then a NEW explicit owner D-7 authorisation and a NEW manual dispatch; this freeze grants nothing",
+  "requires": "ONE bounded independent review of the Trial #2 delta correction (N-1 to N-5 and the directly related items), fresh Linux compile-only evidence of launcher_spike.c (Build 7) with nothing executed, then a NEW explicit owner D-7 authorisation and a NEW manual dispatch; this freeze grants nothing",
   "reviewed_architecture_tip": "a5f09f8df8c3868b7ec2f3f6f9d973058c164a44",
   "scope": "Execution definition and disposable experiment sources frozen before the first preregistered LAUNCH-EXEC-01 trial. NOT_RUN: no trial has been executed and no case has been posed. D-7 (execution authorisation) is NOT granted.",
   "setup_result_schema": {
@@ -494,11 +494,11 @@
     ]
   },
   "sha256": {
-    "README.md": "2519b48dfe495ea67eb7fccd213dfd55d4de509d65f49b21c1c1d562eefb07a2",
+    "README.md": "9f795a85a1bf137b962e2ecdf5090d1196da249e3c0850183ede17fa26bc2e4d",
     "checker.py": "6201a2dcaa1be1b48667b1d0ceedfbd2d6619668fb78a1043b408ebfd7a7f9b0",
-    "driver.py": "24fe7b674837dc760761cdd6a17af6bee8692b9aafe0f64fe5e5c293a5942d43",
-    "evidence.py": "9be9eead68c08def18726028b9b5e4469f379a8329a1878a3cdedee0e86dfa00",
-    "frozen_cases.py": "e0afd4152f6435d989da14012f1c6e0c3d1d0e9db795632dce2e1f48e6746a4b",
+    "driver.py": "ea542df8c502e62cf6c4c658ca93b4ad461a07d9814b4bb0785ec966ec6ae5c8",
+    "evidence.py": "a91e02a945a31ae9a26d925da7053f9feec7efc6ecf99778e79d609afcc1893a",
+    "frozen_cases.py": "ee4b95994196aaf3bb0353ea2198ba79348cef890474ab1f71d37051ad54cbd7",
     "harness.py": "38eabf42c4ab82fdc74eafe0580b7587dbeb46b08e9b8c6c8fe9d36d260ef856",
     "helper_alt.c": "7993aa631abdca6796171fe4ffafb2d296f2a00b61ea2322ee8e624731b99113",
     "helper_dynamic.c": "b3c398d840c16dfa4e0dbc56593b905b4019bfe2316fc339049b8a69930350a0",
@@ -506,15 +506,15 @@
     "helper_report.c": "99770ed8cfdd4049f9bef3624e21850496b6c14a169c3895b54ab7a858d54711",
     "helper_setid.c": "c609755d105122eea304f5fe12685d8dcc24064d77659295a11a76d42b86329f",
     "journal.py": "6393164046051d97d84b722169cb3a0c63508dba49bc35f866ad75bb6b8e64d6",
-    "launcher_spike.c": "a91f4b42cd720b396792360aaf4b4049aa0dd40f35b60a57909c17e8679f5a6d",
+    "launcher_spike.c": "0a45447b627f16dce2fd7193e26993dcc126ae96dce6e6c5b511b41361e0d622",
     "make_fixtures.py": "14b3c2764f3d07d18b4e387c0ed025f5c512ca4d1e905b6ffc7ae081cb3a3571",
-    "observations.py": "e43ee458924cf929b2446ca8c456c51d716f4e639c798b40791592c6b2882283",
+    "observations.py": "fd36f3225c3ad5f2f7595b5a221154126b6af04308371ed07b794d2ce18d5c75",
     "oracles.py": "b056c374d39990ef8860062315ebb1af80bd572b737a81321b45687339fd2eeb",
     "run_launch_exec_01.py": "2b55aa6bbb17a7fb2131e2ed21d1429a586e1cad30f26a0dcbc49bf2f3ce1add"
   },
   "status": "NOT_RUN",
-  "supersedes": "542a18ed12b320d15d156cd7071cb04694f7f35d",
-  "supersession_reason": "fixes T2-R1, T2-R2, T2-R3 and T2-R4 from the independent Trial #2 review at 4454e02. T2-R1 was a blocker older than Trial #2: setups produced post_pin, hold_writer, mutated_marker and cleanup and nothing consumed any of them, so TEN cases -- E2 E3 E4 E5 E6 E6b E6c E6d X1 X8, derived mechanically from all 72 plans rather than from the review's summary of eight -- ran without the adversarial condition that defines them, and E5's mandatory expectation could never be met. A TEST/CONTROL-ONLY post-pin barrier at a frozen hook location now lets the harness land each forced state and prove it: the launcher only synchronises, the mutation is always the harness's act, and the control descriptor is closed before clone3 so it cannot reach the child. An action that cannot be proven to have landed does not pose its case. A closed setup-result schema makes a producer-only semantic key a test failure. T2-R3: one central binding classifies and verifies every case's starting object against the pre-boundary build identity, with intentional mutation targets bound by their starting bytes only. T2-R2: case_pose_started is the frozen immutability boundary and D-7 consumption point, and the reading of a partial journal is preregistered in definition section 9 rather than chosen after a crash. T2-R4: replay refuses impossible histories. E5b is unchanged. launcher_spike.c changed, so Build 5 no longer covers it and fresh Linux compile-only evidence is required. No case membership, class, prediction or safe set moved. Trial #1, its freeze and its result review are preserved unchanged.",
+  "supersedes": "e4f49f2bdb77c78cb57354584bc78f08a50531ea",
+  "supersession_reason": "fixes the reachable findings of the bounded independent delta review of e4f49f2, recorded at 43371c6 as TRIAL_2_NEEDS_BOUNDED_CORRECTION and corrected at 5e04642. Every finding was older than Trial #2. N-1: parent states were declared and never applied; they are now a closed contract created in the launcher and proven at the barrier from /proc, with two TEST/CONTROL-ONLY caller-state flags for F3, F6 and F7. N-2: executed identity is asserted -- marker, pre-exec measurement against the starting identity, and mode bits -- so a substituted body is a FAIL, never INVALID or PASS. N-3: E5's writer is proven against the launcher's pinned descriptor. N-4a: O5's CPU and poll() count are measured, missing is INVALID and exceeded is FAIL. N-4b: S2/S7's inert field became a setup whose capability changes mode after the launcher holds it. N-5: every durable case record carries normalised posing evidence. Also E6c's descriptor-free mapping, R4's gate, the barrier set versus the T2-R1 set, and stale wording. No case membership, class, prediction, safe set, gate, traced flag or block cause moved. launcher_spike.c changed, so Build 6 no longer covers it. Trial #1, its freeze and its result review, and the delta review record, are preserved unchanged.",
   "traced_cases": {
     "amended_by": "M3-T",
     "cases": [
