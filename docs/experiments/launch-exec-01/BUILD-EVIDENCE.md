@@ -450,3 +450,64 @@ authorised. Fresh Linux compile-only evidence — Build 7, from the existing com
 with nothing executed — is required before any new D-7 decision.
 
 **LAUNCH-EXEC-01 Trial #2 remains NOT_RUN. D-7 is not authorised. The valid trial count is ZERO.**
+
+## Build 7 — 2026-09-11, the Trial #2 delta-corrected candidate, clean
+
+The first Linux compile of `launcher_spike.c` as changed by the delta correction, from the one
+owner-authorised fast-forward push `53c0039..f417984`. This is **not** D-7. Nothing was executed.
+
+| | |
+|---|---|
+| Commit built | `f41798455662579c3895f7a4af50bac17d47bb43` |
+| Source binding | the checkout step ran `git log -1 --format=%H` on the runner and printed `f41798455662579c3895f7a4af50bac17d47bb43`; `--verify-freeze` then reported `freeze_verified: true` against that commit's own manifest, which hashes `launcher_spike.c` as `0a45447b627f16dce2fd7193e26993dcc126ae96dce6e6c5b511b41361e0d622` |
+| Frozen candidate | `f417984`, manifest blob `4a7dfbae013afd5876ffe309bd8aed2dcd761efd` |
+| Workflow run | `34575558065`, attempt 1, job step list all **success** |
+| Runner | GitHub-hosted `ubuntu-24.04`, image version `20260907.300.1`, Ubuntu 24.04.5 LTS |
+| Kernel / arch | `6.17.0-1022-azure`, `x86_64` |
+| Compiler | `cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0` |
+| C library | `ldd (Ubuntu GLIBC 2.39-0ubuntu8.8) 2.39` |
+| Static command | `cc -O2 -Wall -Wextra -static -o build/<t> <t>.c` for helper_report, helper_alt, helper_fork, helper_setid |
+| Spike command | `cc -O2 -Wall -Wextra -static -pthread -o build/launcher_spike launcher_spike.c` |
+| Dynamic command | `cc -O2 -Wall -Wextra -o build/helper_dynamic helper_dynamic.c` |
+| Compiler diagnostics | **none** — no warning and no error under `-Wall -Wextra` |
+
+The only two `error` strings in the whole log are `ldd` broken-pipe messages from the environment
+inventory's `ldd --version | head -1`, not compiler output.
+
+### Produced artefacts
+
+| SHA-256 | Size (bytes) | Artefact | Classification |
+|---|---|---|---|
+| `d13082b12b26cb35d6707f6575feaab3b17368a13b6fd0ccf6ed7ae10c98e26d` | not emitted | `helper_alt` | ELF, static, no PT_INTERP — unchanged since Build 6 |
+| `c854162ddf4074cdfe132492ddc595ae6345f820c22a1cd082e32dd1646850cc` | not emitted | `helper_dynamic` | ELF PIE, dynamic, PT_INTERP `/lib64/ld-linux-x86-64.so.2` — unchanged |
+| `415f14b8538c8e59832a107b12c54f2fae9cd2ab5637df2f8a6facb82a9cfd52` | 64 | `helper_foreign.elf` | generated fixture — unchanged |
+| `3232d09ffb089907e2586ac0bffdd1ba5b635c99e80cab1333e4ddb575a13dcb` | not emitted | `helper_fork` | ELF, static, no PT_INTERP — unchanged |
+| `423ac81e0cbf553a3d8f821d72209ed6f505f4a45494c38d800bfdfc126ca236` | not emitted | `helper_report` | ELF, static, no PT_INTERP; E6 marker guard present — unchanged |
+| `500c4af1934be000acefc6daa49ebe8ac984686b23a4358bd134464e02f66c10` | not emitted | `helper_setid` | ELF, static, no PT_INTERP — unchanged |
+| `4d42212f3b4d45ca46e415961e36e8ee4d45090a15fb3b77a6f8971e661a6546` | not emitted | `launcher_spike` | ELF, static, no PT_INTERP — **new**; Build 6 was `9e9e5803…` |
+| `3bdbb4fe8397cd2b842430b39ccff01a8663c751945ef5e9a09e267fb8b1d359` | 4 | `magic_only.bin` | generated fixture — unchanged |
+| `37f800b1a77f026dbf2ee2724829458ddf78dd8329527deee3d086025959208a` | 490 | `script_fixture.sh` | generated fixture — unchanged |
+| `51224867e5fb13d0c6052397c9f4959c7c87bb8bc7d750c91429728a18b507d9` | 64 | `unloadable_in_cohort.elf` | generated fixture — unchanged |
+
+**Sizes.** The compile-only workflow prints SHA-256 values and never sizes, so no compiled binary's
+size exists in this run's record, and none is invented here. The four fixture sizes were recomputed
+from `make_fixtures.FIXTURES` at `f417984` without building or executing anything, and those same
+bytes hash to exactly the digests above. A trial records every artefact's size in its own
+build identity, before its first case.
+
+Only `launcher_spike` changed, which is what the correction predicts: it is the only C source the
+correction touched. These are compile-only artefacts from a disposable runner and are **not** Trial #2
+build identity.
+
+### Nothing ran
+
+The complete set of `set -x` command verbs in the log is `cat`, `cc`, `command`, `echo`, `file`,
+`for`, `getconf`, `grep`, `head`, `id`, `ldd`, `mkdir`, `printf`, `readelf`, `sha256sum`, `sort`,
+`true` and `uname`; `ldd` ran on the static-link probe `/tmp/probe`, not on an experiment binary. Every
+`build/` path appears only as data, in `for` lists, `file`, `readelf` and `sha256sum`.
+`--post-pin-control-fd`, `--parent-fd-set-cloexec`, `--parent-close-low-fds` and the D-7 flag appear
+**zero** times. The five static targets have no PT_INTERP and `helper_dynamic` has one. The non-trial
+suite ran **562 tests, OK, none skipped**, and the runner, invoked without D-7, exited **3** with
+`NOT_RUN`. The Rust workspace run on the same commit, `34575558173`, also succeeded.
+
+**LAUNCH-EXEC-01 Trial #2 remains NOT_RUN. D-7 is not authorised. The valid trial count is ZERO.**
