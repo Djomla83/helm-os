@@ -202,6 +202,13 @@ def _observation_vocabulary():
               ob.LIFECYCLE_WAITID, ob.LIFECYCLE_SEND_SIGNAL, ob.LIFECYCLE_POLL,
               ob.EXEC_PRE_EXEC_ERROR, ob.EXEC_DIED_BEFORE_EXEC,
               ob.EXEC_REACHED, ob.EXEC_UNINTERPRETABLE}
+    # Trial #2 delta correction: executed-identity and O5 assertions, their
+    # results and violation tokens, and the closed set of publishable markers.
+    words |= set(ob.ASSERTIONS)
+    words |= set(ob.ASSERTION_VIOLATION_TOKENS.values())
+    words |= {ob.ASSERTION_HOLDS, ob.ASSERTION_VIOLATED,
+              ob.ASSERTION_UNOBSERVABLE}
+    words |= set(ob.PUBLISHABLE_MARKERS)
     return words
 
 

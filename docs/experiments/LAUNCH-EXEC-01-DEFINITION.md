@@ -689,8 +689,9 @@ invent both of them with a result already in hand.
 
 Several cases are defined by a change to the executable object that must land **after** the launcher
 has pinned it and **before** anything is executed. Trial #1's driver declared those changes and
-performed none of them, so E2, E3, E4, E5, E6, E6b, E6c, E6d, X1 and X8 ran without the condition
-that defines them.
+performed none of them, so E2, E3, E4, E5, E6, E6b, E6c, E6d and X1 ran without the condition
+that defines them, and X8 without the cleanup of its noexec copy. Those ten are the T2-R1
+producer-only set; the barrier set is nine of them plus the cases in section 9.5.
 
 The launcher gains one **TEST/CONTROL-ONLY** hook, inactive unless `--post-pin-control-fd` is given.
 Its location is frozen: **after** the object is opened and pinned, `fstat`ed and classified, measured
@@ -774,3 +775,94 @@ All four are P-14 sanitised **before** the disk write, so a later upload is neve
 boundary. The final document is a summary of durable facts, never their only copy: a missing
 `evidence.json` after an abort is expected, and the other three remain authoritative. Cleanup
 failures are recorded beside a case and never rewrite its mechanism result.
+
+### 9.5 Trial #2 delta correction — what posed means, and what a posed case showed
+
+The bounded independent delta review of `e4f49f2`
+([record](../implementation/HELM-LAUNCH-EXEC-01-TRIAL-002-DELTA-REVIEW.md)) found conditions the
+frozen driver declared and never created, and proofs it asked for and never produced. What
+follows is preregistered **before** any Trial #2 case, so no reader chooses it afterwards. No case
+membership, class, prediction, safe set, gate, traced flag or block cause changed.
+
+**Two questions, never collapsed.** Whether a case was **posed** — its forced state landed and was
+proven, and its posed check held — decides INVALID. What the posed case **showed** — its frozen
+rule's token and its executed-identity assertions — decides PASS or FAIL. A forced state that
+cannot be proven does not pose its case. An assertion that is **violated** is a FAIL. An assertion
+whose evidence is **missing**, in a case that would otherwise PASS, leaves the case not posed:
+missing evidence is never success.
+
+**Parent state is created in the launcher and proven there (N-1).** The launcher process is the
+caller each of these cases describes. Every parent state is a closed contract: every key has one
+consumer that creates the state and one prover that observes it. The harness proves the state from
+the launcher's own `/proc` entries at the post-pin barrier, before `clone3`; the harness's own
+signal state is changed only across the spawn and restored before the barrier, so nothing reaches
+the next case.
+
+| Case | State | Created by | Proven by |
+|---|---|---|---|
+| V1 | the four declared names in the environment | the spawn environment | the names in `/proc/<launcher>/environ` (values never kept) |
+| F2 | an unrelated descriptor, NOT close-on-exec | passed into the launcher | the launcher's fd table and `fdinfo` flags |
+| F3 | an unrelated descriptor, close-on-exec | passed in, then `--parent-fd-set-cloexec` | the launcher's fd table and `fdinfo` flags |
+| F5 | SIGTERM, SIGUSR1 blocked; SIGPIPE, SIGUSR2 ignored | inherited from the spawn, `restore_signals` off | the launcher's `SigBlk` and `SigIgn` |
+| T6 | SIGTERM blocked; SIGPIPE ignored | as F5 | as F5 |
+| R4, M5 | SIGCHLD ignored | as F5 | the launcher's `SigIgn` |
+| F6 | descriptors 0, 1, 2 closed before the pin | `--parent-close-low-fds 3`, receipt channel saved above 2 | the launcher's fd 0 is its exec object, fd 1 its capability, fd 2 free |
+| F7 | exec fd and status write end adjacent | `--parent-close-low-fds 1`: the exec fd opens as 0 and is relocated after every pipe exists | fd 0 is the exec object at the barrier; posed check `adjacent_descriptors_observed` on the child's own `close_range` spans in the syscall record |
+| M2 | three extra live launcher threads | the plan's `--extra-threads 3` | posed check `threaded_parent_observed`: the receipt's `parent_shape` against the control arm's zero |
+
+The two new flags are **TEST/CONTROL ONLY**, act once before the M5 arm and the pin, and are never a
+plan's own spike flag. The barrier set is derived from the plans: E2, E3, E4, E5, E6, E6b, E6c,
+E6d, F2, F3, F5, F6, F7, M5, R4, S2, S7, T6, V1 and X1.
+
+**Executed identity is asserted (N-2).** `helper_alt` also reports and exits 0, so presence of a
+report says nothing about which body ran. Four assertions, each naming the two facts it compares:
+
+| Assertion | Cases | Compares | Violation token |
+|---|---|---|---|
+| `executed_marker` | E1–E4 `helper_report`; E6 `MUTATED` | the executed image's own marker with the declared one | `executed_body_mismatch` |
+| `measured_starting_identity` | E1, E2, E3, E4, E6 | the launcher's pre-exec measurement with the case's starting identity, hashed independently before the run | `measurement_mismatch` |
+| `mode_measured_pre_change` | E6d, X1 | the receipt's mode bits with the landed change's mode-before, and not its mode-after | `mode_measurement_mismatch` |
+| `bounded_drain` | O5 | the launcher's CPU and `poll()` return count with the frozen bounds | `drain_unbounded` |
+
+E2 or E4 running the substituted body is therefore a FAIL, never INVALID and never PASS. E6's harness
+writes **exactly** the declared marker bytes into the guarded region and reads them back through a
+separate read-only descriptor before the case is posed. E6c's mapping is made through libc so no
+descriptor survives, which is proven from `/proc/self/fd` and `/proc/self/maps`, and it mutates the
+marker region rather than the ELF header.
+
+**E5's relation is proven, not asserted (N-3).** At the barrier the harness opens its `O_WRONLY`
+writer and proves, from the writer's own `(st_dev, st_ino)` and the launcher's descriptor table,
+that it is on the inode of a read-only descriptor the launcher holds. The durable fact is the
+relation; raw device and inode numbers are not published.
+
+**O5 measures what it claims (N-4a).** The launcher CPU is measured outside the launcher, by the
+harness, from `RUSAGE_CHILDREN` across the one launch; it includes the helper the launcher reaped
+and can only overstate. The `poll()` return count is the launcher's instrumentation counter,
+emitted as `poll_returns_not_in_receipt` outside the receipt beside its elapsed time. Either missing
+leaves O5 not posed; CPU of 200 ms or more, or more than 10000 returns, is a FAIL.
+
+**S2 and S7 change the capability after it is open (N-4b).** Each gets a case-private working
+directory as its capability. At the barrier the harness proves the launcher already holds a
+descriptor on that directory and only then sets its mode to `0000`, so the child's `fchdir` is what
+fails; a change made before the launcher opened it would not pose the case. S7's mode is restored
+between its 200 trials. **Every repeated trial must be posed and every trial is evaluated**; a trial
+whose token differs is a FAIL.
+
+**R4's gate reads the real token.** `never_reports_exited_zero` holds only for a derived token other
+than `Exited:0`; an absent token does not hold it.
+
+**The proof of posing is durable (N-5).** Every `case_completed` record carries `posing_evidence`:
+the build-identity binding and classification, every forced-state and parent-state landing fact,
+the posed check and its result, the measurements an assertion or posed check relied on, and the
+cleanup problems. It is normalised — booleans, digests, sizes, mode integers, basenames, closed-set
+markers and errno names — and carries no raw pid, descriptor number, inode, device, private path or
+report text. It is written even when the case is not posed, so a preserved journal shows why.
+
+**Completeness gates.** The test suite now fails if a setup-result key or a parent-state field has
+no consumer, if a posed check or assertion reads an observation key that no launch path of a case
+using it produces, if a CasePlan field is read by nothing, if a wrong marker or measurement in a
+substitution case scores anything but FAIL, if O5 can pass without both measurements, or if a
+durable record can lose the proof of a forced state it relies on.
+
+`launcher_spike.c` changed, so Build 6 does not cover it and fresh Linux compile-only evidence is
+required before D-7. Trial #2 is NOT_RUN, D-7 is NOT granted, and the valid trial count is ZERO.

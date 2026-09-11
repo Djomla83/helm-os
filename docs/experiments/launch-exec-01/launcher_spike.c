@@ -508,10 +508,12 @@ static void run_rejected_acquisition_arm(struct rejected_arm *arm)
  * external object AFTER this process has pinned, measured and admitted it, and
  * BEFORE anything is cloned or executed.
  *
- * It exists because several frozen cases -- E2, E3, E4, E6, E6b, E6c, E6d, X1 --
- * are defined by a change that must happen in exactly that window. Trial #1's
- * driver declared those changes and never performed them, so those cases ran
- * against an unmodified object and tested nothing.
+ * It exists because several frozen cases -- E2, E3, E4, E5, E6, E6b, E6c, E6d,
+ * X1, S2 and S7 -- are defined by a change that must happen in exactly that
+ * window, and because the caller-state cases (V1, F2, F3, F5, F6, F7, R4, T6,
+ * M5) need their state proven present in this process before clone3. Trial
+ * #1's driver declared those conditions and never created them, so those cases
+ * ran against an unmodified object or an ordinary parent and tested nothing.
  *
  * This is NOT part of the candidate mechanism. It is inactive unless
  * --post-pin-control-fd is passed, it lives only in the parent, it never
@@ -547,6 +549,38 @@ static int post_pin_barrier(int fd)
     return 0;
 }
 
+/* ============================== TEST/CONTROL ONLY: preregistered caller state
+ * The launcher process IS the caller whose state F3, F6 and F7 describe, so
+ * those states have to exist in this process when it pins, clones and execs.
+ * The harness cannot create them from outside: it can pass a descriptor, but
+ * it cannot mark that descriptor CLOEXEC here, and it cannot close this
+ * process's stdio without also destroying the receipt channel.
+ *
+ *   --parent-fd-set-cloexec N   F3: an inherited, unrelated descriptor N is made
+ *                               FD_CLOEXEC in the caller before anything else.
+ *   --parent-close-low-fds K    F6 (K=3) and F7 (K=1): descriptors 0..K-1 are
+ *                               closed in the caller before the pin, so the
+ *                               launcher's own exec fd and working-directory
+ *                               capability land on them. With K >= 2 the
+ *                               receipt channel is first saved above 2,
+ *                               CLOEXEC, and restored only when the receipt is
+ *                               written.
+ *
+ * Both act ONCE, before the M5 arm and before the pin, and never again. Neither
+ * touches the executable object, child setup or the {0,1,2} contract, and the
+ * harness proves at the post-pin barrier that each state is really present in
+ * this process -- the flag is the construction, never the evidence. */
+static int g_receipt_fd = -1;
+
+static void receipt_channel(void)
+{
+    if (g_receipt_fd < 0) { return; }
+    fflush(stdout);
+    if (dup2(g_receipt_fd, 1) < 0) { _exit(2); }
+    close(g_receipt_fd);
+    g_receipt_fd = -1;
+}
+
 /* ==================================================================== main */
 static void die(const char *msg)
 {
@@ -563,6 +597,7 @@ int main(int argc, char **argv)
     int die_before_exec = 0, exec_fd_o_path = 0;
     int extra_threads = 0, rejected_arm_requested = 0;
     int post_pin_control_fd = -1;
+    int parent_cloexec_fd = -1, parent_close_low_fds = 0;
     long max_capture_bytes = 64 * 1024;   /* MAX_CAPTURE_BYTES */
     char *child_argv[64];
     int child_argc = 0;
@@ -593,6 +628,14 @@ int main(int argc, char **argv)
         else if (!strcmp(a, "--post-pin-control-fd") && v) {
             post_pin_control_fd = atoi(v); i++;
         }
+        /* TEST/CONTROL ONLY, and inactive without them: preregistered caller
+         * state for F3, F6 and F7. See receipt_channel() above. */
+        else if (!strcmp(a, "--parent-fd-set-cloexec") && v) {
+            parent_cloexec_fd = atoi(v); i++;
+        }
+        else if (!strcmp(a, "--parent-close-low-fds") && v) {
+            parent_close_low_fds = atoi(v); i++;
+        }
         else if (!strcmp(a, "--arg") && v) {
             if (child_argc < 63) { child_argv[child_argc++] = (char *)v; }
             i++;
@@ -602,6 +645,24 @@ int main(int argc, char **argv)
     if (!exec_path) {
         fprintf(stderr, "launcher_spike: --exec-path is required\n");
         return 2;
+    }
+
+    /* TEST/CONTROL ONLY: the preregistered caller state, established once and
+     * before anything else, so the M5 arm, the pin, the clone and the exec all
+     * happen from inside it. */
+    if (parent_cloexec_fd >= 0) {
+        if (parent_cloexec_fd < 3) { errno = EINVAL; die("parent-fd-set-cloexec"); }
+        if (fcntl(parent_cloexec_fd, F_SETFD, FD_CLOEXEC) < 0) {
+            die("parent-fd-set-cloexec");
+        }
+    }
+    if (parent_close_low_fds > 0) {
+        if (parent_close_low_fds > 3) { errno = EINVAL; die("parent-close-low-fds"); }
+        if (parent_close_low_fds >= 2) {
+            g_receipt_fd = fcntl(1, F_DUPFD_CLOEXEC, 3);
+            if (g_receipt_fd < 0) { die("save receipt channel"); }
+        }
+        for (int fd = 0; fd < parent_close_low_fds; fd++) { close(fd); }
     }
 
     /* M5, TEST/CONTROL ONLY. Runs BEFORE the mechanism and shares nothing with
@@ -674,6 +735,7 @@ int main(int argc, char **argv)
     if (refusal[0]) {
         /* An authorization refusal produces NO receipt: nothing was executed,
          * so manufacturing an execution artifact would be a lie. */
+        receipt_channel();
         printf("{\"admission\":\"refused\",\"refusal\":\"%s\","
                "\"exec_reached\":false}\n", refusal);
         return 0;
@@ -684,7 +746,11 @@ int main(int argc, char **argv)
      * has been opened and pinned, fstat'ed and classified, measured where
      * applicable, and admitted. Below it nothing has yet been cloned, no child
      * descriptor has been set up and no image has been executed. That is the
-     * only window in which E2/E3/E4/E6/E6b/E6c/E6d/X1 mean what they claim.
+     * only window in which the post-pin E and X cases mean what they claim, in
+     * which S2/S7's directory change lands after the capability is open, and in
+     * which the harness can observe this process's own descriptor table,
+     * signal state and environment to prove a preregistered caller state is
+     * really present. The driver's barrier set is derived from its plans.
      *
      * The control descriptor is closed immediately, well before clone3, so it
      * cannot be inherited by the child or survive into the executed image. */
@@ -777,6 +843,12 @@ int main(int argc, char **argv)
 
     long start = now_ms();
     long deadline = start + spawn_confirm_ms;   /* phase 1 */
+    /* O5 instrumentation: every return of the drain poll() below, counted
+     * without judgement. A spinning launcher also satisfies "no hang", so the
+     * frozen bound of 10000 returns is checked by the harness from this count.
+     * It is an instrumentation fact, not a receipt field, and it stays outside
+     * the receipt exactly as the elapsed time does. */
+    long poll_returns = 0;
     int exec_confirmed = 0, exec_failed = 0, status_short = 0, timed_out = 0;
     struct exec_status rec; memset(&rec, 0, sizeof(rec));
     size_t rec_have = 0;
@@ -811,6 +883,7 @@ int main(int argc, char **argv)
         long remaining = deadline - now_ms();
         if (remaining < 0) { remaining = 0; }
         int pr = poll(fds, (nfds_t)n, (int)remaining);
+        poll_returns++;
         if (pr < 0) { if (errno == EINTR) { continue; } die("poll"); }
 
         if (pr == 0) {
@@ -935,6 +1008,7 @@ int main(int argc, char **argv)
     else if (info.si_code == CLD_EXITED) { disposition = "Exited"; }
     else { disposition = "Signaled"; }
 
+    receipt_channel();
     printf("{\"admission\":\"accepted\","
            "\"pre_exec_body_sha256\":\"%s\","
            "\"pre_exec_body_size\":%lld,"
@@ -1000,10 +1074,11 @@ int main(int argc, char **argv)
            "\"retained_prefix_not_in_receipt\":{"
            "\"stdout_kept\":%ld,\"stdout_truncated\":%s,"
            "\"stderr_kept\":%ld,\"stderr_truncated\":%s,\"bound\":%ld},"
+           "\"poll_returns_not_in_receipt\":%ld,"
            "\"elapsed_ms_not_in_receipt\":%ld}\n",
            out_kept, out_truncated ? "true" : "false",
            err_kept, err_truncated ? "true" : "false", max_capture_bytes,
-           now_ms() - start);
+           poll_returns, now_ms() - start);
 
     g_threads_stop = 1;
     for (int t = 0; t < extra_started; t++) { pthread_join(extra[t], NULL); }

@@ -1,6 +1,6 @@
 {
   "authoritative_main": "5cc56384257a2ec1f2a2a9c64f7f4328da6cef2e",
-  "build_evidence": "BUILD-EVIDENCE.md in this directory, append-only and deliberately not hashed by this manifest. Build 5 no longer covers launcher_spike.c: the TEST/CONTROL-ONLY post-pin hook changed it, so fresh Linux compile-only evidence is required before D-7.",
+  "build_evidence": "BUILD-EVIDENCE.md in this directory, append-only and deliberately not hashed by this manifest. Build 6 no longer covers launcher_spike.c: the Trial #2 delta correction added two TEST/CONTROL-ONLY caller-state flags and the O5 poll-return counter, so fresh Linux compile-only evidence (Build 7) is required before D-7.",
   "build_identity": {
     "covers": "every generated executable and fixture in the build directory at that moment",
     "fields": [
@@ -66,6 +66,7 @@
   },
   "durable_evidence": {
     "artifact_contract": {
+      "case_record_posing_evidence": "every case_completed record carries posing_evidence: the build-identity binding and classification, every forced-state and parent-state landing fact, the posed check and its result, the measurements an assertion or posed check relied on, and the cleanup problems. Normalised: no raw pid, descriptor number, inode, device, private path or report text. Written even when the case is not posed",
       "files": [
         "preflight.json",
         "build-identity.json",
@@ -98,7 +99,7 @@
         "kind"
       ],
       "kind_source": "the ELF program headers, read directly rather than taken from file(1) or ldd(1) output text",
-      "reuse_proof": "the driver builds nothing, and the two setups that open a pristine build product verify the digest against this identity at the point of use",
+      "reuse_proof": "the driver builds nothing, and every case's starting object is bound and classified at the point of use by the one central binding",
       "when": "hashed from the files on disk after the build and made durable BEFORE the first case"
     },
     "journal": {
@@ -235,6 +236,15 @@
     "T2-R6": "BACKLOG - build-identity keys are basenames of frozen artefacts and P-14 never rewrites keys; unreachable",
     "T2-R7": "BACKLOG - a bare account name in free text survives by V-5 design; spike_stderr is the only channel and die() emits no name or path",
     "T2-R8": "BACKLOG - the consumed Trial #1 dispatcher file remains on the milestone branch; GitHub reports that workflow deleted and main no longer carries it",
+    "TRIAL-2-DELTA-N-1": "FIXED at this freeze - parent states are a closed contract, created in the launcher and proven at the barrier; F2, F3, F5, F6, F7, R4, T6, M5 and V1 are proven there, M2 by its receipt against the control arm",
+    "TRIAL-2-DELTA-N-2": "FIXED at this freeze - executed identity is asserted: marker for E1-E4 and E6, pre-exec measurement against the starting identity for E1-E4 and E6, mode bits for E6d and X1; a substituted body is a FAIL; E6 writes and reads back exactly its declared marker",
+    "TRIAL-2-DELTA-N-3": "FIXED at this freeze - E5's writer is proven against the launcher's read-only pinned descriptor at the barrier; the relation is durable, raw inode numbers are not",
+    "TRIAL-2-DELTA-N-4a": "FIXED at this freeze - O5's CPU is measured by the harness and its poll() count by a launcher counter; either missing is INVALID, an exceeded bound is a FAIL",
+    "TRIAL-2-DELTA-N-4b": "FIXED at this freeze - S2 and S7 get a case-private capability whose mode goes to 0000 at the barrier after the launcher is proven to hold it; the inert work_dir_kind is removed",
+    "TRIAL-2-DELTA-N-5": "FIXED at this freeze - every case_completed record carries normalised posing_evidence, including when the case is not posed",
+    "TRIAL-2-DELTA-N-6": "FIXED at this freeze - E6c's mapping holds no descriptor, proven from /proc; it mutates the marker region, not the ELF header",
+    "TRIAL-2-DELTA-R4-GATE": "FIXED at this freeze - never_reports_exited_zero is computed from the derived token",
+    "TRIAL-2-DELTA-WORDING": "FIXED at this freeze - X8 and the barrier set are separated from the T2-R1 set, the T2-R3 reuse wording is corrected, and the new control flags are declared",
     "V-1": "FIXED at freeze 2621381 - three-state return, bounded logical record",
     "V-2": "FIXED at freeze 2621381 - contradictory waitid identity is INVALID",
     "V-3": "FIXED at freeze 2621381 - shared structural traced-evidence gate",
@@ -253,19 +263,189 @@
     "D-8": "no_timestamp_no_duration_in_receipt",
     "D-9": "refuse_set_id_objects_at_admission"
   },
+  "parent_state_schema": {
+    "caller_state_flags": {
+      "--parent-close-low-fds": "F6 (3) and F7 (1) only; TEST/CONTROL ONLY; once, before the M5 arm and the pin; with 3 the receipt channel is saved above 2 first and restored only when the receipt is written",
+      "--parent-fd-set-cloexec": "F3 only; TEST/CONTROL ONLY; once, before the M5 arm and the pin"
+    },
+    "closed": "a parent-state key the schema does not name is refused; every key has one consumer that creates it and one prover that observes it, and a test fails if either is missing",
+    "created_in": "the launcher process, the caller each case describes; the harness's own signal state is changed only across the spawn and restored before the barrier",
+    "keys": [
+      "block_signals",
+      "close_low_fds",
+      "env",
+      "ignore_signals",
+      "inherit_fd",
+      "launcher_threads"
+    ],
+    "proof": "at the post-pin barrier, from /proc/<launcher>: environ names, fd table and fdinfo flags, SigBlk and SigIgn, and what descriptors 0-2 refer to; M2's threads from the receipt's parent_shape against the control arm; F7's adjacency from the child's close_range spans in the syscall record",
+    "requirement_source": "the declared state, never the consumer's derived fields, so a bypassed consumer cannot also empty the requirement",
+    "users": [
+      "F2",
+      "F3",
+      "F5",
+      "F6",
+      "F7",
+      "M2",
+      "M5",
+      "R4",
+      "T6",
+      "V1"
+    ]
+  },
+  "posing_versus_showing": {
+    "assertions": {
+      "bounded_drain": {
+        "cases": [
+          "O5"
+        ],
+        "reads": [
+          "launcher_cpu_ms",
+          "poll_returns"
+        ],
+        "violation_token": "drain_unbounded"
+      },
+      "executed_marker": {
+        "cases": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E6"
+        ],
+        "reads": [
+          "expected_marker",
+          "report",
+          "report_state"
+        ],
+        "violation_token": "executed_body_mismatch"
+      },
+      "measured_starting_identity": {
+        "cases": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E6"
+        ],
+        "reads": [
+          "spike",
+          "build_identity_binding"
+        ],
+        "violation_token": "measurement_mismatch"
+      },
+      "mode_measured_pre_change": {
+        "cases": [
+          "E6d",
+          "X1"
+        ],
+        "reads": [
+          "spike",
+          "post_pin_evidence"
+        ],
+        "violation_token": "mode_measurement_mismatch"
+      }
+    },
+    "expected_markers": {
+      "E1": "helper_report",
+      "E2": "helper_report",
+      "E3": "helper_report",
+      "E4": "helper_report",
+      "E6": "MUTATED"
+    },
+    "o5": {
+      "cpu_bound_ms": 200,
+      "cpu_source": "measured by the harness outside the launcher, from RUSAGE_CHILDREN across the one launch; includes the helper the launcher reaped, so it can only overstate",
+      "poll_return_bound": 10000,
+      "poll_source": "the launcher's instrumentation counter poll_returns_not_in_receipt, outside the receipt"
+    },
+    "posed": "a forced state that cannot be proven, or a posed check that does not hold, leaves the case not posed, which the frozen checker scores INVALID",
+    "posed_check_inputs": {
+      "adjacent_descriptors_observed": [
+        "descriptor_layout_adjacent"
+      ],
+      "completed_under_ten_seconds": [
+        "elapsed_ms"
+      ],
+      "no_helper_report": [
+        "report_state"
+      ],
+      "returned_before_descendant_lifetime": [
+        "elapsed_ms"
+      ],
+      "same_inode_as_writer": [
+        "post_pin_evidence"
+      ],
+      "stderr_capture_failed": [
+        "spike"
+      ],
+      "threaded_parent_observed": [
+        "spike",
+        "baseline_observation",
+        "declared_launcher_threads"
+      ],
+      "trial_floor_512": [
+        "repeat_observations"
+      ],
+      "writer_retained": [
+        "spike"
+      ]
+    },
+    "repeated_trials": "every repeated trial must be posed and every trial is evaluated; a trial whose token differs is a FAIL",
+    "showed": "the rule's token and the executed-identity assertions decide PASS or FAIL; a violated assertion replaces the token with its violation token, which is no case's expectation",
+    "unobservable": "an assertion whose evidence is missing, in a case that would otherwise PASS, leaves the case not posed; missing evidence is never success"
+  },
   "post_pin_barrier": {
     "actions": [
-      "rename_over",
-      "rename_away_and_unlink",
-      "retarget_symlink",
-      "pwrite_marker",
-      "truncate_rewrite",
-      "mmap_write",
+      "chmod_work_dir",
       "fchmod",
-      "hold_writer"
+      "hold_writer",
+      "mmap_write",
+      "pwrite_marker",
+      "rename_away_and_unlink",
+      "rename_over",
+      "retarget_symlink",
+      "truncate_rewrite"
     ],
     "adds_helper_fd": false,
-    "affected_cases": [
+    "barrier_cases": [
+      "E2",
+      "E3",
+      "E4",
+      "E5",
+      "E6",
+      "E6b",
+      "E6c",
+      "E6d",
+      "F2",
+      "F3",
+      "F5",
+      "F6",
+      "F7",
+      "M5",
+      "R4",
+      "S2",
+      "S7",
+      "T6",
+      "V1",
+      "X1"
+    ],
+    "control_fd_lifetime": "closed before clone3, so it can never reach the child or the executed image",
+    "e5b_excluded": "E5b's claim is that its writer is CLOSED before launch, so it does not use the barrier",
+    "failure_semantics": "no READY, a malformed channel, an action that fails, verification that fails, or CONTINUE undeliverable all close the socket without CONTINUE; the launcher ends at its own barrier and the case is not posed, which the frozen checker scores INVALID. Never a mechanism PASS or FAIL",
+    "flag": "--post-pin-control-fd (TEST/CONTROL ONLY, inactive without it)",
+    "hook_location": "after open/pin, fstat/classify, pre-exec measurement and the admission decision; before clone3, child setup and execveat",
+    "mutation_owner": "the Python harness; C only synchronises",
+    "parent_state_proofs": [
+      "parent_env",
+      "parent_inherited_fd",
+      "parent_signal_state",
+      "parent_low_fds_closed"
+    ],
+    "protocol": "the launcher writes READY and waits under a bounded poll; the harness performs the action and proves it landed; the harness answers CONTINUE; the launcher closes the control descriptor",
+    "purpose": "the HARNESS lands a preregistered adversarial change on the external object after the launcher has pinned, measured and admitted it, and before anything is cloned or executed; and, for a case with a declared caller state, the harness proves that state present in the launcher from its own /proc entries before clone3",
+    "t2_r1_note": "the ten cases whose setup keys nothing read in Trial #1's driver; X8's key was cleanup, so X8 never used the barrier. The barrier set is derived from the plans and tested against barrier_cases",
+    "t2_r1_producer_only_set": [
       "E2",
       "E3",
       "E4",
@@ -276,15 +456,7 @@
       "E6d",
       "X1",
       "X8"
-    ],
-    "control_fd_lifetime": "closed before clone3, so it can never reach the child or the executed image",
-    "e5b_excluded": "E5b's claim is that its writer is CLOSED before launch, so it does not use the barrier",
-    "failure_semantics": "no READY, a malformed channel, an action that fails, verification that fails, or CONTINUE undeliverable all close the socket without CONTINUE; the launcher ends at its own barrier and the case is not posed, which the frozen checker scores INVALID. Never a mechanism PASS or FAIL",
-    "flag": "--post-pin-control-fd (TEST/CONTROL ONLY, inactive without it)",
-    "hook_location": "after open/pin, fstat/classify, pre-exec measurement and the admission decision; before clone3, child setup and execveat",
-    "mutation_owner": "the Python harness; C only synchronises",
-    "protocol": "the launcher writes READY and waits under a bounded poll; the harness performs the action and proves it landed; the harness answers CONTINUE; the launcher closes the control descriptor",
-    "purpose": "the HARNESS lands a preregistered adversarial change on the external object after the launcher has pinned, measured and admitted it, and before anything is cloned or executed"
+    ]
   },
   "pre_execution_review_tip": "55f0f78c18e7bc9b980e1b99169018a7ea5566b4",
   "publication_boundary": {
@@ -314,8 +486,10 @@
       "EXEC_PATH",
       "IMMEDIATE_SETUP_FACT",
       "POST_PIN_ACTION",
+      "POST_PIN_INPUT",
       "HELD_RESOURCE",
       "POSED_ASSERTION_INPUT",
+      "LAUNCH_ARGUMENT",
       "CLEANUP_RESOURCE"
     ]
   },
@@ -398,12 +572,12 @@
     "closure": "CURRENT_VOCABULARY_CLOSED",
     "derivation_sources": [
       "frozen_cases (cases, predictions, safe sets, gates, stages, block reasons, syscall lists, injection and control modes, decisions, M3 evidence facts)",
-      "observations (RULES, spike dispositions and refusals, signal and errno tables, report states, return states, lifecycle and exec constants)",
+      "observations (RULES, spike dispositions and refusals, signal and errno tables, report states, return states, lifecycle and exec constants, executed-identity assertions, their results and violation tokens, publishable markers)",
       "checker (per-case statuses and aggregate verdicts)",
       "published observation schema and normalised role names",
       "driver (SETUPS, PARENT_STATES, POSED_CHECKS, ALL_CHANNELS), imported lazily to avoid the driver -> evidence cycle"
     ],
     "not_vocabulary": "argv contents, environment values, host paths, captured bytes, tracer text and any high-entropy value remain redactable; A4's 4096-byte argument is still published as <OPAQUE:...>",
-    "tokens_protected": 379
+    "tokens_protected": 398
   }
 }

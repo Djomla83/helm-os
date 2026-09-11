@@ -1465,8 +1465,13 @@ class ControlArms(unittest.TestCase):
     def test_parent_control_modes_are_declared_and_disjoint(self):
         self.assertEqual(
             set(fc.PARENT_CONTROL_MODES) & set(fc.CHILD_INJECTION_MODES), set())
+        # The delta correction declares the barrier flag (A-9 drift) and the
+        # two caller-state flags F3, F6 and F7 need. None of them is ever a
+        # plan's own spike flag; the driver adds each at spawn time.
         self.assertEqual(set(fc.PARENT_CONTROL_MODES),
-                         {"--extra-threads", "--rejected-acquisition-arm"})
+                         {"--extra-threads", "--rejected-acquisition-arm",
+                          "--post-pin-control-fd", "--parent-fd-set-cloexec",
+                          "--parent-close-low-fds"})
 
     def test_every_control_mode_a_plan_uses_is_declared(self):
         declared = set(fc.PARENT_CONTROL_MODES) | set(fc.CHILD_INJECTION_MODES)
@@ -1812,12 +1817,27 @@ class M3TracedSetAmendment(unittest.TestCase):
         for name in fc.TRACED_CASES:
             plan = driver.CASE_PLANS[name]
             obs = observation(
+                spike=receipt(parent_shape={"extra_threads": 3,
+                                            "atfork_handler_registered": True,
+                                            "atfork_prepare_calls": 0}),
                 rep=report(), trace={"child_syscalls": permitted},
                 trace_sha256="a" * 64,
                 single_threaded_child_syscalls=permitted,
                 observed_stage_sequence=list(fc.STAGES),
                 acquisition=ob.parse_pidfd_acquisition(acq_trace()),
-                expected_argv=["helper_report"])
+                expected_argv=["helper_report"],
+                # Trial #2 delta correction: each traced case also carries the
+                # posing proof its plan now requires -- E1's starting identity
+                # and marker, F7's observed adjacency, M2's threaded and
+                # control arms. Without it the case is, correctly, not posed.
+                expected_marker=plan.expected_marker,
+                build_identity_binding={"bound": True,
+                                        "object_sha256": "a" * 64},
+                descriptor_layout_adjacent=True,
+                declared_launcher_threads=3,
+                baseline_observation={"spike": receipt(parent_shape={
+                    "extra_threads": 0, "atfork_handler_registered": False,
+                    "atfork_prepare_calls": 0})})
             record = driver.evaluate(plan, obs)
             self.assertNotIn("not_posed", record,
                              name + ": " + str(record.get("not_posed")))
@@ -3716,6 +3736,7 @@ class Trial2SetupContract(unittest.TestCase):
             "cleanup": 'built.get("cleanup")',
             "liveness_fifo": 'built.get("liveness_fifo")',
             "extra_helper_args": 'built.get("extra_helper_args"',
+            "work_dir": 'built.get("work_dir")',
         }
         for key in sorted(driver.SEMANTIC_SETUP_KEYS):
             self.assertIn(key, consumers, key + " has no declared consumer")
@@ -3746,16 +3767,20 @@ class Trial2SetupContract(unittest.TestCase):
             self.assertIn(action, driver.POST_PIN_ACTIONS, action)
 
     def test_the_affected_case_set_is_derived_and_includes_x1_and_x8(self):
-        """The independent review named eight cases; the real set is ten."""
+        """The independent review named eight cases; T2-R1's real set was ten.
+
+        The delta correction adds S2 and S7, whose inert work_dir_kind became
+        the work_dir_fchmod_zero setup. Still derived from the plans.
+        """
         produced = self.produced_keys()
         affected = sorted(
             p.case for p in driver._PLAN_LIST
             if produced.get(p.setup, set()) & driver.SEMANTIC_SETUP_KEYS
             - {"extra_helper_args", "liveness_fifo"})
-        # The independent review named eight; deriving it from the plans
-        # finds ten, because X1 shares E6d's setup and X8 owns `cleanup`.
+        # T2-R1's ten -- X1 shares E6d's setup and X8 owns `cleanup` -- plus
+        # S2 and S7 from the delta correction.
         self.assertEqual(affected, ["E2", "E3", "E4", "E5", "E6", "E6b",
-                                    "E6c", "E6d", "X1", "X8"])
+                                    "E6c", "E6d", "S2", "S7", "X1", "X8"])
 
     def test_every_post_pin_action_reports_whether_it_landed(self):
         for name, action in driver.POST_PIN_ACTIONS.items():
@@ -3840,10 +3865,13 @@ class Trial2PostPinActions(unittest.TestCase):
         self.assertTrue(fact["landed"], fact)
         self.assertNotEqual(fact["size_before"], fact["size_after"])
 
+    @POSIX_ONLY
     def test_mmap_write_mutates_and_keeps_the_mapping_after_the_fd_closes(self):
+        """Both halves are now PROVEN from /proc, so this runs on Linux only."""
         built = self._built()
+        built["mutated_marker"] = b"MUTATED".ljust(16, b"\0")
         fact = driver.POST_PIN_ACTIONS["mmap_write"](
-            self.ctx, driver.CASE_PLANS["E6c"], built, None)
+            self.ctx, driver.CASE_PLANS["E6c"], built, 16)
         self.assertTrue(fact["landed"], fact)
         self.assertTrue(fact["descriptor_closed"])
         self.assertTrue(fact["mapping_retained"])
@@ -3867,15 +3895,22 @@ class Trial2PostPinActions(unittest.TestCase):
 
     @unittest.skipUnless(hasattr(os, "pwrite"), "Unix-only; Linux CI runs it")
     def test_hold_writer_proves_the_inode_rather_than_the_pathname(self):
+        """N-3: without a launcher to compare against, the writer is NOT held.
+
+        The relation E5 needs is between the writer and the object the launcher
+        pinned; test_launch_exec_01_delta proves it against a live stand-in.
+        The raw (st_dev, st_ino) pair is no longer a published fact.
+        """
         built = self._built()
         landed, facts = driver.perform_post_pin(
             self.ctx, driver.CASE_PLANS["E5"],
             dict(built, hold_writer=True))
-        self.assertTrue(landed, facts)
+        self.assertFalse(landed, facts)
         fact = facts[0]
         self.assertEqual(fact["access_mode"], "O_WRONLY")
-        self.assertIn("st_ino", fact)
-        self.assertIn("st_dev", fact)
+        self.assertIs(fact["launcher_holds_same_inode"], False)
+        self.assertNotIn("st_ino", fact)
+        self.assertNotIn("st_dev", fact)
 
     def test_cleanup_removes_a_case_private_copy(self):
         target = self.tmp / "x8_copy"

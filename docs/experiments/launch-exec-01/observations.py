@@ -111,6 +111,14 @@ REPORT_SENTINEL = b"HELM-LAUNCH-EXEC-01-REPORT-BEGIN\n"
 # /proc/<pid>/status renders signal masks as 16 lowercase hex digits.
 _MASK_RE = re.compile(r"\A[0-9a-fA-F]{1,16}\Z")
 
+# The self-identity markers a frozen helper can report, and the one E6 writes
+# into helper_report's guarded region. Only these are ever published verbatim:
+# a marker outside the set is report text from an unidentified body, and is
+# published as <unrecognised> rather than reproduced.
+E6_MUTATED_MARKER = "MUTATED"
+PUBLISHABLE_MARKERS = frozenset({"helper_report", "helper_alt",
+                                 E6_MUTATED_MARKER})
+
 
 # ------------------------------------------------------------------- failures
 class Unparseable(Exception):
@@ -716,6 +724,83 @@ def parse_strace_child_window(text):
             last = stage
     return {"child_syscalls": calls, "stage_sequence": stages,
             "child_pid": child_pid, "integrity_ok": integrity_ok}
+
+
+# ------------------------------------------------- F7: the descriptor layout
+# F7 is defined by the exec descriptor and the exec-status write end sitting at
+# ADJACENT numbers, so the close_range gap between them is empty and an
+# implementation that computed it with inverted bounds would hit EINVAL. That
+# state is produced in the launcher, and it is PROVEN here from the child's own
+# close_range spans in the external syscall record, not inferred from the
+# launcher's source. Raw descriptor numbers are internal: only the boolean
+# derived from them is published.
+UINT_MAX = 4294967295
+_CLOSE_RANGE_ARGS = re.compile(
+    r"\Aclose_range\(\s*(?P<lo>\d+)\s*,\s*(?P<hi>~0U?|0x[0-9a-fA-F]+|\d+)\s*,")
+_EXECVEAT_FD = re.compile(r"\Aexecveat\(\s*(?P<fd>\d+)\s*,")
+
+
+def parse_child_descriptor_layout(text):
+    """``{"exec_fd": N, "close_ranges": [...]}`` for the child window, or None.
+
+    INTERNAL observation input: descriptor numbers are experiment-local and are
+    never published. A span whose return was not observed is kept and marked,
+    because a missing return is not the same fact as a successful close.
+    """
+    window = parse_strace_child_window(text)
+    if window is None:
+        return None
+    joined = join_trace_fragments(text)
+    child, seen_clone = window["child_pid"], False
+    ranges, exec_fd = [], None
+    for record in joined["records"]:
+        if not seen_clone:
+            seen_clone = record["call"] == "clone3"
+            continue
+        if record["task"] != child:
+            continue
+        body = record["text"].strip()
+        match = _CLOSE_RANGE_ARGS.match(body)
+        if match:
+            parts = split_syscall_record(body)
+            state = (parse_return_state(parts[2])[0] if parts is not None
+                     else RETURN_NOT_OBSERVED)
+            raw_hi = match.group("hi")
+            hi = UINT_MAX if raw_hi.startswith("~") else int(raw_hi, 0)
+            ranges.append({"lo": int(match.group("lo")), "hi": hi,
+                           "return_state": state})
+            continue
+        match = _EXECVEAT_FD.match(body)
+        if match:
+            exec_fd = int(match.group("fd"))
+            break
+    return {"exec_fd": exec_fd, "close_ranges": ranges}
+
+
+def layout_is_adjacent(layout):
+    """Whether the observed spans leave exactly the exec fd and ONE neighbour open.
+
+    True: above descriptor 2, the only descriptors no close_range span covers
+    are the exec descriptor and a descriptor next to it, and a final span runs
+    to UINT_MAX. False: the layout was observed and is not adjacent. None: the
+    record cannot say -- no exec descriptor, no span, an unobserved return, or
+    no final span -- which is missing evidence and never a layout.
+    """
+    if not isinstance(layout, dict):
+        return None
+    exec_fd, ranges = layout.get("exec_fd"), layout.get("close_ranges")
+    if not isinstance(exec_fd, int) or not ranges:
+        return None
+    if any(r.get("return_state") != RETURN_OBSERVED_SUCCESS for r in ranges):
+        return None
+    if not any(r["hi"] == UINT_MAX for r in ranges):
+        return None
+    if any(r["lo"] > r["hi"] for r in ranges):
+        return False
+    ceiling = max(max(r["lo"] for r in ranges), exec_fd + 2)
+    uncovered = [fd for fd in range(3, ceiling + 1)
+                 if not any(r["lo"] <= fd <= r["hi"] for r in ranges)]
+    return uncovered in ([exec_fd - 1, exec_fd], [exec_fd, exec_fd + 1])
 
 
 # ------------------------------------------------- M3-T: pidfd acquisition
@@ -1689,6 +1774,170 @@ def derive(rule_name, obs):
     if token is not None and not isinstance(token, str):
         raise TypeError("rule " + rule_name + " returned a non-string token")
     return token, reason
+
+
+# ------------------------------------------- N-2 / N-4a: post-rule assertions
+# A rule turns an observation into the case's frozen token. That alone cannot
+# say WHICH body produced it: helper_alt also prints a report and exits 0, so a
+# launcher that re-resolved E2's path and ran the substituted body would score
+# Exited:0 and pass. The assertions below compare what executed with what the
+# case claims, and they are kept apart from forced-state landing on purpose:
+#
+#   landing proof  -> was the case POSED?        failure is INVALID
+#   assertion      -> what did the posed case SHOW?  violation is a FAIL
+#
+# An assertion whose evidence is missing is UNOBSERVABLE, and a case that would
+# otherwise PASS without it is not posed: missing evidence never becomes
+# success. Nothing here collapses the build identity, the case-private starting
+# identity, the launcher's pre-exec measurement, the post-pin mutation and the
+# execution observation into one "executed body identity"; each assertion names
+# the two facts it compares.
+ASSERTION_HOLDS = "holds"
+ASSERTION_VIOLATED = "violated"
+ASSERTION_UNOBSERVABLE = "unobservable"
+
+# O5's two frozen bounds, from its definition row: "The poll() return count must
+# be at most 10000 and CPU under 200 ms".
+O5_CPU_BOUND_MS = 200
+O5_POLL_RETURN_BOUND = 10000
+
+
+def _landing_fact(obs, action):
+    for fact in obs.get("post_pin_evidence") or ():
+        if isinstance(fact, dict) and fact.get("action") == action:
+            return fact
+    return None
+
+
+def _plain_int(value):
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def assert_executed_marker(obs):
+    """The executed image's own marker is the one the case declares."""
+    expected = obs.get("expected_marker")
+    if not isinstance(expected, str):
+        return ASSERTION_UNOBSERVABLE, "the case declared no expected marker"
+    report, why = _usable_report(obs)
+    if report is None:
+        return ASSERTION_UNOBSERVABLE, why
+    marker = report.get("marker")
+    if not isinstance(marker, str):
+        return ASSERTION_UNOBSERVABLE, "the report carries no marker"
+    if marker == expected:
+        return ASSERTION_HOLDS, "the executed image identified itself as " + expected
+    shown = marker if marker in PUBLISHABLE_MARKERS else "<unrecognised>"
+    return (ASSERTION_VIOLATED, "the executed image identified itself as %s, "
+            "not %s" % (shown, expected))
+
+
+def assert_measured_starting_identity(obs):
+    """The launcher's PRE-EXEC measurement equals the case's STARTING identity.
+
+    Two facts, compared: the digest the launcher took through its pinned
+    descriptor before exec, and the digest this harness took independently with
+    hashlib when it bound the case's starting object. Neither is the body that
+    ran; that is what the marker is for.
+    """
+    spike = obs.get("spike")
+    measured = spike.get("pre_exec_body_sha256") if isinstance(spike, dict) else None
+    binding = obs.get("build_identity_binding")
+    starting = binding.get("object_sha256") if isinstance(binding, dict) else None
+    if not isinstance(measured, str) or not measured:
+        return ASSERTION_UNOBSERVABLE, "the receipt carries no pre-exec measurement"
+    if not isinstance(starting, str) or not starting:
+        return ASSERTION_UNOBSERVABLE, "no starting identity was bound for the case"
+    if measured == starting:
+        return (ASSERTION_HOLDS, "the pre-exec measurement equals the starting "
+                "identity taken independently before the run")
+    return (ASSERTION_VIOLATED, "the launcher measured bytes other than the "
+            "case's starting object")
+
+
+def assert_mode_measured_pre_change(obs):
+    """E6d / X1: the receipt's mode bits are the value BEFORE the post-pin change."""
+    spike = obs.get("spike")
+    recorded = spike.get("pre_exec_mode_bits") if isinstance(spike, dict) else None
+    fact = _landing_fact(obs, "fchmod")
+    if not _plain_int(recorded):
+        return ASSERTION_UNOBSERVABLE, "the receipt carries no pre-exec mode bits"
+    if fact is None or not _plain_int(fact.get("mode_before")) \
+            or not _plain_int(fact.get("mode_after")):
+        return ASSERTION_UNOBSERVABLE, "no landed mode change records its values"
+    if recorded == fact["mode_before"] and recorded != fact["mode_after"]:
+        return (ASSERTION_HOLDS, "the receipt carries the mode as it was before "
+                "the post-pin change")
+    return (ASSERTION_VIOLATED, "the receipt's mode bits are not the value from "
+            "before the post-pin change")
+
+
+def assert_bounded_drain(obs):
+    """O5: launcher CPU under 200 ms AND at most 10000 poll() returns.
+
+    The CPU is measured OUTSIDE the launcher, by the harness, from the
+    resource usage of the launcher process it reaped -- which also includes the
+    helper the launcher reaped, so it can only overstate. The poll() count is
+    the launcher's own instrumentation counter; nothing outside the launcher can
+    count the calls of an untraced process, and O-series cases are never traced.
+    Either measurement missing is unobservable, never a bounded drain.
+    """
+    cpu, polls = obs.get("launcher_cpu_ms"), obs.get("poll_returns")
+    missing = []
+    if not _plain_int(cpu) or cpu < 0:
+        missing.append("launcher CPU")
+    if not _plain_int(polls) or polls < 0:
+        missing.append("poll() return count")
+    if missing:
+        return (ASSERTION_UNOBSERVABLE, "no measurement of " +
+                " or ".join(missing) + "; a missing measurement is never a "
+                "bounded drain")
+    over = []
+    if cpu >= O5_CPU_BOUND_MS:
+        over.append("launcher CPU %d ms is not under %d ms"
+                    % (cpu, O5_CPU_BOUND_MS))
+    if polls > O5_POLL_RETURN_BOUND:
+        over.append("%d poll() returns exceed %d" % (polls, O5_POLL_RETURN_BOUND))
+    if over:
+        return ASSERTION_VIOLATED, "; ".join(over)
+    return (ASSERTION_HOLDS, "launcher CPU %d ms and %d poll() returns are "
+            "within the frozen bounds" % (cpu, polls))
+
+
+ASSERTIONS = {
+    "executed_marker": assert_executed_marker,
+    "measured_starting_identity": assert_measured_starting_identity,
+    "mode_measured_pre_change": assert_mode_measured_pre_change,
+    "bounded_drain": assert_bounded_drain,
+}
+
+# The observation keys each assertion reads, declared so a test can prove each
+# one has a producer on the path of every case that names the assertion.
+ASSERTION_READS = {
+    "executed_marker": ("expected_marker", "report", "report_state"),
+    "measured_starting_identity": ("spike", "build_identity_binding"),
+    "mode_measured_pre_change": ("spike", "post_pin_evidence"),
+    "bounded_drain": ("launcher_cpu_ms", "poll_returns"),
+}
+
+# The frozen token a violation renders as. None of these is any case's
+# prediction or safe-set member, so a violation is always a FAIL.
+ASSERTION_VIOLATION_TOKENS = {
+    "executed_marker": "executed_body_mismatch",
+    "measured_starting_identity": "measurement_mismatch",
+    "mode_measured_pre_change": "mode_measurement_mismatch",
+    "bounded_drain": "drain_unbounded",
+}
+
+
+def apply_assertions(names, obs):
+    """``{name: {"result": ..., "detail": ...}}`` for each named assertion."""
+    out = {}
+    for name in names:
+        if name not in ASSERTIONS:
+            raise KeyError("no such assertion: " + repr(name))
+        result, detail = ASSERTIONS[name](obs)
+        out[name] = {"result": result, "detail": detail}
+    return out
 
 
 def injection_modes_in(flags):

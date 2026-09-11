@@ -435,3 +435,18 @@ new hook is inactive without it, and CI never passes it. The runner was invoked 
 exited **3**. The non-trial suite ran **500 tests, OK**, with none skipped on Linux.
 
 **LAUNCH-EXEC-01 Trial #2 remains NOT_RUN. D-7 is not authorised. The valid trial count is ZERO.**
+
+## Build 6 no longer covers `launcher_spike.c` — 2026-09-11, the Trial #2 delta correction
+
+The correction that followed the
+[bounded delta review](../../implementation/HELM-LAUNCH-EXEC-01-TRIAL-002-DELTA-REVIEW.md) changed
+`launcher_spike.c`: two TEST/CONTROL-ONLY caller-state flags, `--parent-fd-set-cloexec` (F3) and
+`--parent-close-low-fds` (F6, F7), the receipt-channel restore they need, and the O5
+`poll_returns_not_in_receipt` counter. **Build 6's binary hashes are not the new source's.** No
+helper source changed.
+
+The new source has **not** been compiled here: this host has no C compiler and installing one is not
+authorised. Fresh Linux compile-only evidence — Build 7, from the existing compile-only workflow,
+with nothing executed — is required before any new D-7 decision.
+
+**LAUNCH-EXEC-01 Trial #2 remains NOT_RUN. D-7 is not authorised. The valid trial count is ZERO.**

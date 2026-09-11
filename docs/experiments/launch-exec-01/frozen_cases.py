@@ -109,6 +109,18 @@ PARENT_CONTROL_MODES = {
                                   "acquisition, run before the mechanism with "
                                   "its own fork, child and reap. Not a "
                                   "candidate mechanism",
+    # Added by the Trial #2 delta correction. None is passed by a plan's own
+    # spike_flags: the driver adds each one at spawn time from the case's
+    # declared setup or parent state, and the harness proves the resulting state
+    # at the barrier rather than trusting the flag.
+    "--post-pin-control-fd": "the post-pin barrier: every case whose setup "
+                             "declares a post-pin action or whose parent state "
+                             "must be proven in the launcher before clone3",
+    "--parent-fd-set-cloexec": "F3 only: an inherited unrelated descriptor is "
+                               "made FD_CLOEXEC in the caller before the pin",
+    "--parent-close-low-fds": "F6 (3) and F7 (1) only: descriptors 0..K-1 are "
+                              "closed in the caller before the pin, so the "
+                              "launcher's own descriptors land there",
 }
 
 # --------------------------------------------------- M3-T: the bounded claim

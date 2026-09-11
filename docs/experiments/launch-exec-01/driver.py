@@ -36,10 +36,10 @@ answer to "does a posing path exist", rather than a claim.
 
 NOT_RUN: no trial has been executed and no case has been posed.
 """
+import contextlib
 import json
 import os
 import pathlib
-import mmap
 import select
 import shutil
 import socket
@@ -48,6 +48,7 @@ import subprocess
 import time
 
 import evidence
+import harness
 import observations
 import oracles
 from frozen_cases import (
@@ -159,20 +160,26 @@ _DEFAULT_GRACE_MS = 2000
 class CasePlan:
     """One frozen case's concrete posing plan. Pure data, no behaviour."""
 
+    # Every slot is a semantic field with a declared consumer in
+    # CASEPLAN_FIELD_CONSUMERS; a field nothing reads is a test failure. The
+    # Trial #2 delta review found work_dir_kind stored and never read, so S2
+    # and S7 ran in an ordinary directory. It is gone: their construction is a
+    # setup now, and a setup's keys have consumers.
     __slots__ = ("case", "binary", "setup", "parent", "spike_flags",
                  "helper_args", "argv0", "rule", "streams", "channels",
                  "posed_when", "excused_fds", "repeat", "timeout_ms",
-                 "grace_ms", "spawn_confirm_ms", "work_dir_kind",
-                 "body_length_changed", "pre_exec_stall", "traced",
-                 "baseline_flags", "note")
+                 "grace_ms", "spawn_confirm_ms", "body_length_changed",
+                 "pre_exec_stall", "traced", "baseline_flags",
+                 "expected_marker", "assertions", "note")
 
     def __init__(self, case, binary, rule, channels, setup="none",
                  parent="none", spike_flags=(), helper_args=(), argv0=None,
                  streams=None, posed_when=None, excused_fds=(), repeat=1,
                  timeout_ms=_DEFAULT_TIMEOUT_MS, grace_ms=_DEFAULT_GRACE_MS,
                  spawn_confirm_ms=SPAWN_CONFIRM_TIMEOUT_MS,
-                 work_dir_kind="build", body_length_changed=False,
-                 pre_exec_stall=False, baseline_flags=None, note=""):
+                 body_length_changed=False, pre_exec_stall=False,
+                 baseline_flags=None, expected_marker=None, assertions=(),
+                 note=""):
         self.case = case
         self.binary = binary
         self.rule = rule
@@ -189,7 +196,6 @@ class CasePlan:
         self.timeout_ms = timeout_ms
         self.grace_ms = grace_ms
         self.spawn_confirm_ms = spawn_confirm_ms
-        self.work_dir_kind = work_dir_kind
         self.body_length_changed = body_length_changed
         self.pre_exec_stall = pre_exec_stall
         self.traced = BY_NAME[case]["traced"] if case in BY_NAME else False
@@ -199,6 +205,12 @@ class CasePlan:
         # time. None means the case has no control arm.
         self.baseline_flags = (tuple(baseline_flags)
                                if baseline_flags is not None else None)
+        # N-2. What the executed image must identify itself as, and the named
+        # post-rule assertions that compare what executed with what the case
+        # claims. Forced-state landing decides whether a case was POSED; these
+        # decide what the posed case SHOWED, so a violation is a FAIL.
+        self.expected_marker = expected_marker
+        self.assertions = tuple(assertions)
         self.note = note
 
     def total_bound_ms(self):
@@ -224,6 +236,8 @@ class CasePlan:
             "repeat": self.repeat, "traced": self.traced,
             "baseline_flags": (list(self.baseline_flags)
                                if self.baseline_flags is not None else None),
+            "expected_marker": self.expected_marker,
+            "assertions": list(self.assertions),
             "total_bound_ms": self.total_bound_ms(),
             "missing_channels": list(self.missing_channels()),
         }
@@ -263,9 +277,23 @@ def _parent(name):
     return register
 
 
-def _check(name):
+# N-3 / N-4a. A posed check that reads an observation key nothing produces can
+# never hold, and Trial #2's E5 and O5 were exactly that. Every check therefore
+# DECLARES the observation keys it reads and whether it applies to the whole
+# case or to each repeated trial. Tests prove the declaration matches the
+# function body and that every declared key has a producer on the path of every
+# case that uses the check.
+POSED_CHECK_READS = {}
+POSED_CHECK_SCOPE = {}
+CHECK_SCOPE_CASE = "case"
+CHECK_SCOPE_TRIAL = "trial"
+
+
+def _check(name, reads, scope=CHECK_SCOPE_CASE):
     def register(fn):
         POSED_CHECKS[name] = fn
+        POSED_CHECK_READS[name] = tuple(reads)
+        POSED_CHECK_SCOPE[name] = scope
         return fn
     return register
 
@@ -287,8 +315,10 @@ def _check(name):
 EXEC_PATH = "EXEC_PATH"
 IMMEDIATE_SETUP_FACT = "IMMEDIATE_SETUP_FACT"
 POST_PIN_ACTION = "POST_PIN_ACTION"
+POST_PIN_INPUT = "POST_PIN_INPUT"
 HELD_RESOURCE = "HELD_RESOURCE"
 POSED_ASSERTION_INPUT = "POSED_ASSERTION_INPUT"
+LAUNCH_ARGUMENT = "LAUNCH_ARGUMENT"
 CLEANUP_RESOURCE = "CLEANUP_RESOURCE"
 
 SETUP_RESULT_SCHEMA = {
@@ -298,15 +328,21 @@ SETUP_RESULT_SCHEMA = {
     "liveness_fifo": HELD_RESOURCE,
     "post_pin": POST_PIN_ACTION,
     "hold_writer": POST_PIN_ACTION,
-    "mutated_marker": POSED_ASSERTION_INPUT,
+    # The exact bytes a post-pin marker action writes. The action reads them
+    # back through a separate descriptor before the case may be posed, and E6's
+    # executed-marker assertion compares the report against the same bytes.
+    "mutated_marker": POST_PIN_INPUT,
+    # S2/S7: the case-private working directory handed to the launcher as its
+    # capability, changed to mode 0000 at the barrier.
+    "work_dir": LAUNCH_ARGUMENT,
     "cleanup": CLEANUP_RESOURCE,
 }
 
 # Keys whose absence from the execution path changes what a case tests.
 SEMANTIC_SETUP_KEYS = frozenset(
     name for name, role in SETUP_RESULT_SCHEMA.items()
-    if role in (POST_PIN_ACTION, HELD_RESOURCE, POSED_ASSERTION_INPUT,
-                CLEANUP_RESOURCE))
+    if role in (POST_PIN_ACTION, POST_PIN_INPUT, HELD_RESOURCE,
+                POSED_ASSERTION_INPUT, LAUNCH_ARGUMENT, CLEANUP_RESOURCE))
 
 
 # ===================================================== the post-pin barrier
@@ -341,10 +377,123 @@ def _digest(path):
 
 
 def _landed(action, ok, detail, **evidence):
-    """One structured harness fact about whether the forced state arrived."""
+    """One structured harness fact about whether the forced state arrived.
+
+    N-5: every fact is DURABLE, so it carries only normalised values --
+    booleans, digests, sizes, mode integers, marker text from a closed set and
+    basenames. No absolute path, no pid, no descriptor number and no raw
+    (st_dev, st_ino) pair is ever put into one.
+    """
     out = {"action": action, "landed": bool(ok), "detail": detail}
     out.update(evidence)
     return out
+
+
+def _problem(what, exc):
+    """A cleanup or restoration problem, normalised for durable evidence.
+
+    ``repr(OSError)`` carries the filename, which is a private host path. Only
+    the operation and the errno NAME are kept.
+    """
+    name = observations.ERRNO_NAMES.get(getattr(exc, "errno", None))
+    return "%s: %s" % (what, name or type(exc).__name__)
+
+
+def _stat_identity(path):
+    st = os.stat(str(path))
+    return (st.st_dev, st.st_ino)
+
+
+# ------------------------------------------- the launcher, observed from outside
+# At the post-pin barrier the launcher is alive, has pinned and admitted its
+# object, and has not yet cloned. The harness reads that process's own
+# descriptor table, fd flags, signal masks and environment from /proc. That is
+# a direct observation of the state the child will be cloned from, made by the
+# harness rather than reported by the mechanism, and nothing in it is published
+# raw: only the booleans derived from it reach the durable record.
+
+O_CLOEXEC_FLAG = 0o2000000          # Linux O_CLOEXEC as /proc/<pid>/fdinfo prints it
+_ACCESS_MODES = {0: "O_RDONLY", 1: "O_WRONLY", 2: "O_RDWR"}
+
+
+def _fdinfo_flags(pid, fd):
+    """The open-file flags of ``pid``'s descriptor ``fd``, or None."""
+    try:
+        text = pathlib.Path("/proc/%d/fdinfo/%d" % (pid, fd)).read_text(
+            encoding="ascii", errors="replace")
+    except OSError:
+        return None
+    for line in text.splitlines():
+        if line.startswith("flags:"):
+            try:
+                return int(line.split(":", 1)[1].strip(), 8)
+            except ValueError:
+                return None
+    return None
+
+
+def launcher_descriptors_on(pid, identity):
+    """``{fd: flags}`` for every descriptor of ``pid`` on the inode ``identity``.
+
+    Returns None when the descriptor table cannot be read at all, which is never
+    the same answer as "no such descriptor".
+    """
+    base = "/proc/%d/fd" % pid
+    try:
+        names = os.listdir(base)
+    except OSError:
+        return None
+    found = {}
+    for name in names:
+        try:
+            if _stat_identity(os.path.join(base, name)) != identity:
+                continue
+        except (OSError, ValueError):
+            continue
+        found[int(name)] = _fdinfo_flags(pid, int(name))
+    return found
+
+
+def _access_mode(flags):
+    return None if flags is None else _ACCESS_MODES.get(flags & 3)
+
+
+def _proc_status_masks(pid):
+    """``(SigBlk, SigIgn)`` of ``pid`` as integers, or ``(None, None)``."""
+    try:
+        text = pathlib.Path("/proc/%d/status" % pid).read_text(
+            encoding="ascii", errors="replace")
+    except OSError:
+        return None, None
+    masks = {}
+    for line in text.splitlines():
+        key, _, value = line.partition(":")
+        if key in ("SigBlk", "SigIgn"):
+            try:
+                masks[key] = int(value.strip(), 16)
+            except ValueError:
+                return None, None
+    return masks.get("SigBlk"), masks.get("SigIgn")
+
+
+def _proc_environment_names(pid):
+    """The NAMES in ``pid``'s environment, or None. Values are never kept."""
+    try:
+        raw = pathlib.Path("/proc/%d/environ" % pid).read_bytes()
+    except OSError:
+        return None
+    return {entry.split(b"=", 1)[0].decode("utf-8", "replace")
+            for entry in raw.split(b"\0") if entry}
+
+
+def _signal_bit(signum):
+    return 1 << (int(signum) - 1)
+
+
+def _marker_text(data):
+    """A marker as published: the text before the first NUL, closed set only."""
+    text = bytes(data).split(b"\0", 1)[0].decode("ascii", "replace")
+    return text if text in observations.PUBLISHABLE_MARKERS else "<unrecognised>"
 
 
 @_post_pin("rename_over")
@@ -404,31 +553,46 @@ def _pp_retarget_symlink(ctx, plan, built, arg):
     return _landed("retarget_symlink",
                    after == str(new_target) and after != before,
                    "the symlink now resolves elsewhere",
-                   target_before=before, target_after=after,
+                   target_before=pathlib.PurePath(before).name,
+                   target_after=pathlib.PurePath(after).name,
                    new_target_sha256=_digest(new_target))
 
 
 @_post_pin("pwrite_marker")
 def _pp_pwrite_marker(ctx, plan, built, arg):
-    """E6: a length-preserving in-place mutation, after the measurement."""
+    """E6: a length-preserving in-place mutation, after the measurement.
+
+    Writes EXACTLY the declared marker bytes and reads the region back through a
+    separate read-only descriptor; the case is posed only if the bytes on disk
+    are the declared ones. The first Trial #2 correction wrote every byte plus
+    one, so the marker E6 claims would run was never the marker it wrote.
+    """
     path = pathlib.Path(built["exec_path"])
-    offset, original = int(arg), built.get("mutated_marker")
-    if not isinstance(original, (bytes, bytearray)) or not original:
+    offset, declared = int(arg), built.get("mutated_marker")
+    if not isinstance(declared, (bytes, bytearray)) or not declared:
         return _landed("pwrite_marker", False,
-                       "the setup recorded no marker bytes to replace")
+                       "the setup recorded no marker bytes to write")
+    declared = bytes(declared)
     before, size_before = _digest(path), path.stat().st_size
-    replacement = bytes((b + 1) % 256 for b in original)
-    fd = os.open(str(path), os.O_WRONLY)
+    write_fd = os.open(str(path), os.O_WRONLY)
     try:
-        written = os.pwrite(fd, replacement, offset)
+        written = os.pwrite(write_fd, declared, offset)
     finally:
-        os.close(fd)
+        os.close(write_fd)
+    read_fd = os.open(str(path), os.O_RDONLY)
+    try:
+        readback = os.pread(read_fd, len(declared), offset)
+    finally:
+        os.close(read_fd)
     after, size_after = _digest(path), path.stat().st_size
     return _landed("pwrite_marker",
-                   written == len(replacement) and after != before
-                   and size_after == size_before,
-                   "the marker region was rewritten in place",
-                   bytes_written=written, length_preserved=size_after == size_before,
+                   written == len(declared) and readback == declared
+                   and after != before and size_after == size_before,
+                   "the declared marker bytes were written in place and read "
+                   "back through a separate read-only descriptor",
+                   marker_written=_marker_text(declared),
+                   readback_matches=readback == declared, bytes_written=written,
+                   length_preserved=size_after == size_before,
                    body_sha256_before=before, body_sha256_after=after)
 
 
@@ -450,36 +614,110 @@ def _pp_truncate_rewrite(ctx, plan, built, arg):
                    body_sha256_before=before, body_sha256_after=after)
 
 
+class _SharedMapping:
+    """A MAP_SHARED writable mapping made through libc, holding no descriptor.
+
+    CPython's ``mmap.mmap`` duplicates the descriptor it is given -- its
+    ``trackfd`` switch only arrived in 3.13, and the runner's Python is 3.12 --
+    so closing our own descriptor left a second one open and E6c's
+    ``descriptor_closed=True`` was false. libc's mmap keeps no descriptor: once
+    ours is closed, the mapping is the only thing referring to the file, which
+    is exactly the state E6c preregisters.
+    """
+
+    PROT_READ, PROT_WRITE, MAP_SHARED, MS_SYNC = 1, 2, 1, 4
+
+    def __init__(self, fd, length):
+        import ctypes
+        self._ctypes = ctypes
+        libc = ctypes.CDLL(None, use_errno=True)
+        libc.mmap.restype = ctypes.c_void_p
+        libc.mmap.argtypes = (ctypes.c_void_p, ctypes.c_size_t, ctypes.c_int,
+                              ctypes.c_int, ctypes.c_int, ctypes.c_long)
+        libc.munmap.argtypes = (ctypes.c_void_p, ctypes.c_size_t)
+        libc.msync.argtypes = (ctypes.c_void_p, ctypes.c_size_t, ctypes.c_int)
+        addr = libc.mmap(None, length, self.PROT_READ | self.PROT_WRITE,
+                         self.MAP_SHARED, fd, 0)
+        if addr is None or addr == ctypes.c_void_p(-1).value:
+            raise OSError(ctypes.get_errno(), "mmap failed")
+        self._libc, self._addr, self._length = libc, addr, length
+
+    def write(self, offset, data):
+        if self._addr is None or offset < 0 or offset + len(data) > self._length:
+            raise ValueError("write outside the mapping")
+        self._ctypes.memmove(self._addr + offset, bytes(data), len(data))
+        if self._libc.msync(self._addr, self._length, self.MS_SYNC) != 0:
+            raise OSError(self._ctypes.get_errno(), "msync failed")
+
+    def close(self):
+        if self._addr is None:
+            return
+        addr, self._addr = self._addr, None
+        if self._libc.munmap(addr, self._length) != 0:
+            raise OSError(self._ctypes.get_errno(), "munmap failed")
+
+
+def _shared_mapping_of(identity):
+    """Whether this process has a SHARED WRITABLE mapping of ``identity``'s inode.
+
+    Read from /proc/self/maps, whose inode column is decimal; None if the maps
+    cannot be read.
+    """
+    try:
+        text = pathlib.Path("/proc/self/maps").read_text(
+            encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    for line in text.splitlines():
+        parts = line.split()
+        if len(parts) >= 5 and parts[4] == str(identity[1]) \
+                and "w" in parts[1] and "s" in parts[1]:
+            return True
+    return False
+
+
 @_post_pin("mmap_write")
 def _pp_mmap_write(ctx, plan, built, arg):
     """E6c: a SHARED writable mapping mutates the body while the fd closes.
 
     The descriptor is closed immediately and the mapping is kept -- that exact
-    lifetime is the case. The mapping is released in cleanup, after the
-    launcher has returned.
+    lifetime is the case, and both halves are now PROVEN rather than asserted:
+    no descriptor of this process refers to the inode, and a shared writable
+    mapping of it is present. The mutation lands in the guarded marker region,
+    as E6's does, so the body stays ELF-valid; the first correction rewrote ELF
+    byte 0, which would have turned "the mapping did not deny the write" into
+    ENOEXEC, outside the case's safe set. The mapping is released in cleanup,
+    after the launcher has returned.
     """
     path = pathlib.Path(built["exec_path"])
-    before = _digest(path)
+    declared = built.get("mutated_marker")
+    if not isinstance(declared, (bytes, bytearray)) or not declared:
+        return _landed("mmap_write", False,
+                       "the setup recorded no marker bytes to write")
+    before, identity = _digest(path), _stat_identity(path)
     fd = os.open(str(path), os.O_RDWR)
     try:
-        mapping = mmap.mmap(fd, 0, access=mmap.ACCESS_WRITE)
-    except (OSError, ValueError) as exc:                    # noqa: BLE001
+        mapping = _SharedMapping(fd, path.stat().st_size)
+    except Exception as exc:                                # noqa: BLE001
         os.close(fd)
-        return _landed("mmap_write", False, "mmap failed: %r" % (exc,))
+        return _landed("mmap_write", False, _problem("mmap failed", exc))
     os.close(fd)                       # the DESCRIPTOR goes; the mapping stays
     try:
-        mapping[0:1] = bytes([(mapping[0] + 1) % 256])
-        mapping.flush()
-    except (OSError, ValueError, IndexError) as exc:        # noqa: BLE001
+        mapping.write(int(arg), declared)
+    except Exception as exc:                                # noqa: BLE001
         mapping.close()
-        return _landed("mmap_write", False, "write through mapping failed: %r"
-                       % (exc,))
+        return _landed("mmap_write", False,
+                       _problem("write through the mapping failed", exc))
     built.setdefault("_open_mappings", []).append(mapping)
     after = _digest(path)
-    return _landed("mmap_write", after != before,
-                   "the body was mutated through a shared mapping whose "
-                   "descriptor is already closed",
-                   descriptor_closed=True, mapping_retained=True,
+    held = launcher_descriptors_on(os.getpid(), identity)
+    closed = held == {}
+    mapped = _shared_mapping_of(identity) is True
+    return _landed("mmap_write", after != before and closed and mapped,
+                   "the body was mutated through a shared writable mapping, and "
+                   "no descriptor of the harness refers to the file any more",
+                   descriptor_closed=closed, mapping_retained=mapped,
+                   marker_written=_marker_text(declared),
                    body_sha256_before=before, body_sha256_after=after)
 
 
@@ -495,36 +733,80 @@ def _pp_fchmod(ctx, plan, built, arg):
     after = path.stat().st_mode & 0o7777
     return _landed("fchmod", after == (int(arg) & 0o7777) and after != before,
                    "the mode changed after admission",
-                   mode_before=oct(before), mode_after=oct(after))
+                   mode_before=before, mode_after=after)
+
+
+@_post_pin("chmod_work_dir")
+def _pp_chmod_work_dir(ctx, plan, built, arg):
+    """S2 / S7: the capability's directory goes to mode 0000 AFTER it was opened.
+
+    The frozen text says the capability's own descriptor is fchmod'ed. Mode is a
+    property of the inode, so the harness changes it through the path and first
+    proves that the launcher already holds a descriptor on that very inode. A
+    change made before the launcher opened the directory would not pose the
+    case: the open itself would fail, and nothing about fchdir would be tested.
+    """
+    work = pathlib.Path(built["work_dir"])
+    pid = built.get("_launcher_pid")
+    identity = _stat_identity(work)
+    held = launcher_descriptors_on(pid, identity) if pid else None
+    if not held:
+        return _landed("chmod_work_dir", False,
+                       "the launcher holds no descriptor on the working "
+                       "directory, so a mode change would not follow the "
+                       "capability", capability_open_in_launcher=False)
+    before = work.stat().st_mode & 0o7777
+    try:
+        os.chmod(str(work), int(arg))
+    except OSError as exc:                                  # noqa: BLE001
+        return _landed("chmod_work_dir", False, _problem("chmod failed", exc),
+                       capability_open_in_launcher=True)
+    after = work.stat().st_mode & 0o7777
+    return _landed("chmod_work_dir",
+                   after == (int(arg) & 0o7777) and after != before,
+                   "the directory the launcher already holds open changed mode",
+                   capability_open_in_launcher=True, mode_before=before,
+                   mode_after=after)
 
 
 def _hold_writer(ctx, plan, built):
     """E5: a second O_WRONLY descriptor on the SAME inode, held across exec.
 
-    The inode is proved by (st_dev, st_ino) taken through the descriptor
-    itself. Pathname equality is never the evidence.
+    N-3. The relation that matters is between this writer and the object the
+    LAUNCHER pinned, so it is proved against the launcher's own descriptor
+    table at the barrier: the writer's (st_dev, st_ino), taken through the
+    writer itself, must be the inode of a read-only descriptor the launcher
+    holds. Pathname equality is never the evidence, and the raw pair is used
+    here and never recorded -- the durable fact is the relation.
     """
     path = pathlib.Path(built["exec_path"])
+    pid = built.get("_launcher_pid")
     try:
         fd = os.open(str(path), os.O_WRONLY)
     except OSError as exc:                                  # noqa: BLE001
-        return _landed("hold_writer", False, "could not open a writer: %r" % (exc,))
+        return _landed("hold_writer", False,
+                       _problem("could not open a writer", exc))
     try:
-        by_fd, by_path = os.fstat(fd), os.stat(str(path))
+        st = os.fstat(fd)
     except OSError as exc:                                  # noqa: BLE001
         os.close(fd)
-        return _landed("hold_writer", False, "stat failed: %r" % (exc,))
-    same = (by_fd.st_dev, by_fd.st_ino) == (by_path.st_dev, by_path.st_ino)
+        return _landed("hold_writer", False, _problem("fstat failed", exc))
+    held = (launcher_descriptors_on(pid, (st.st_dev, st.st_ino))
+            if pid else None)
+    modes = sorted({_access_mode(flags) for flags in (held or {}).values()}
+                   - {None})
+    same = "O_RDONLY" in modes
     if not same:
         os.close(fd)
         return _landed("hold_writer", False,
-                       "the writer is not on the executable's inode")
+                       "the writer's inode is not one the launcher holds pinned",
+                       access_mode="O_WRONLY", launcher_holds_same_inode=False)
     built.setdefault("_open_writers", []).append(fd)
     return _landed("hold_writer", True,
-                   "an O_WRONLY descriptor is held on the executable's inode "
-                   "across exec",
-                   st_dev=by_fd.st_dev, st_ino=by_fd.st_ino,
-                   access_mode="O_WRONLY")
+                   "an O_WRONLY descriptor is held across exec on the inode the "
+                   "launcher pinned",
+                   access_mode="O_WRONLY", launcher_holds_same_inode=True,
+                   launcher_access_modes=modes)
 
 
 def perform_post_pin(ctx, plan, built):
@@ -559,6 +841,16 @@ def needs_post_pin(built):
     return bool(built.get("post_pin") or built.get("hold_writer"))
 
 
+def needs_barrier(built, applied=None):
+    """Whether this launch must stop at the post-pin barrier.
+
+    Either the setup declares a change that must land after the pin, or the
+    parent state must be PROVEN present in the launcher before clone3.
+    """
+    return needs_post_pin(built) or bool(applied is not None
+                                         and applied.needs_barrier)
+
+
 def release_setup_resources(built):
     """Deterministic cleanup of everything a setup held open or created.
 
@@ -570,12 +862,21 @@ def release_setup_resources(built):
         try:
             os.close(fd)
         except OSError as exc:                              # noqa: BLE001
-            problems.append("writer close failed: %r" % (exc,))
+            problems.append(_problem("writer close failed", exc))
     for mapping in built.pop("_open_mappings", []):
         try:
             mapping.close()
         except (OSError, ValueError) as exc:                # noqa: BLE001
-            problems.append("mapping close failed: %r" % (exc,))
+            problems.append(_problem("mapping release failed", exc))
+    work = built.get("work_dir")
+    if work:
+        try:
+            os.chmod(str(work), 0o755)
+            os.rmdir(str(work))
+        except FileNotFoundError:
+            pass
+        except OSError as exc:                              # noqa: BLE001
+            problems.append(_problem("working directory cleanup failed", exc))
     target = built.get("cleanup")
     if target:
         try:
@@ -583,7 +884,24 @@ def release_setup_resources(built):
         except FileNotFoundError:
             pass
         except OSError as exc:                              # noqa: BLE001
-            problems.append("cleanup unlink failed: %r" % (exc,))
+            problems.append(_problem("cleanup unlink failed", exc))
+    return problems
+
+
+def restore_after_trial(built):
+    """Undo a per-trial forced state so the NEXT repeated trial can be posed.
+
+    S7 repeats S2's construction 200 times. A directory left at mode 0000 would
+    make the next launcher's open(work_dir) fail, so each trial would test the
+    open rather than fchdir. Problems are recorded, never folded into a result.
+    """
+    problems = []
+    work = built.get("work_dir")
+    if work:
+        try:
+            os.chmod(str(work), 0o755)
+        except OSError as exc:                              # noqa: BLE001
+            problems.append(_problem("working directory mode restore failed", exc))
     return problems
 
 
@@ -881,6 +1199,17 @@ def find_marker_region(path):
     return marker_at
 
 
+MARKER_REGION_BYTES = 16
+
+
+def _marker_bytes(text):
+    """A marker as the 16 NUL-padded bytes of helper_report's guarded region."""
+    raw = str(text).encode("ascii")
+    if not raw or len(raw) >= MARKER_REGION_BYTES:
+        raise ValueError("a marker must fit the guarded region with its NUL")
+    return raw.ljust(MARKER_REGION_BYTES, b"\0")
+
+
 @_setup("mutate_marker_in_place")
 def _setup_mutate_marker(ctx, plan):
     """E6: length-preserving, ELF-valid in-place mutation of the marker region."""
@@ -889,8 +1218,10 @@ def _setup_mutate_marker(ctx, plan):
     if offset is None:
         return {"not_posed": "the guarded marker region is not uniquely "
                              "locatable in the built helper_report image"}
+    # The exact bytes the harness writes, derived from the one declared marker
+    # E6's executed-marker assertion expects, so the two cannot drift apart.
     return dict(info, post_pin=("pwrite_marker", offset),
-                mutated_marker=b"MUTATED\x00\x00\x00\x00\x00\x00\x00\x00\x00")
+                mutated_marker=_marker_bytes(plan.expected_marker))
 
 
 @_setup("truncate_and_rewrite")
@@ -909,7 +1240,14 @@ def _setup_shared_writable_mapping(ctx, plan):
     which is why the case is RECORDED and carved out of its own gate.
     """
     info = _setup_copy(ctx, plan)
-    return dict(info, post_pin=("mmap_write", None))
+    if "not_posed" in info:
+        return info
+    offset = find_marker_region(info["exec_path"])
+    if offset is None:
+        return {"not_posed": "the guarded marker region is not uniquely "
+                             "locatable in the built helper_report image"}
+    return dict(info, post_pin=("mmap_write", offset),
+                mutated_marker=_marker_bytes(observations.E6_MUTATED_MARKER))
 
 
 @_setup("fchmod_zero_after_admission")
@@ -917,6 +1255,28 @@ def _setup_fchmod_zero(ctx, plan):
     """E6d / X1: mode bits cleared AFTER admission recorded them."""
     info = _setup_copy(ctx, plan)
     return dict(info, post_pin=("fchmod", 0))
+
+
+@_setup("work_dir_fchmod_zero")
+def _setup_work_dir_fchmod_zero(ctx, plan):
+    """S2 / S7: a case-private working directory, taken to mode 0000 post-pin.
+
+    N-4b. These cases used to declare ``work_dir_kind="fchmod_zero"``, which
+    nothing read: the launcher got the ordinary build directory, the helper ran
+    and reported, and both cases were INVALID by construction. The directory is
+    now the launcher's capability and the barrier changes its mode after the
+    launcher has opened it, which is the only order in which the child's fchdir
+    is what fails.
+    """
+    info = _setup_none(ctx, plan)
+    if "not_posed" in info:
+        return info
+    work = ctx.build / (plan.case + "_workdir")
+    if work.exists():
+        os.chmod(str(work), 0o755)
+        shutil.rmtree(str(work))
+    work.mkdir(mode=0o755)
+    return dict(info, work_dir=str(work), post_pin=("chmod_work_dir", 0))
 
 
 @_setup("never_executable")
@@ -1016,6 +1376,55 @@ def _setup_privileged_setid(ctx, plan):
 
 
 # ------------------------------------------------------------- parent states
+# N-1. The Trial #2 delta review found every parent state except V1's
+# environment declared and never applied: F2 had no stray descriptor, F3 no
+# CLOEXEC one, F5 and T6 no blocked or ignored signal, F6 its stdio, F7 no
+# adjacent pair, R4 and M5 no ignored SIGCHLD. F2 -- mandatory, instant-reject,
+# "the ONLY pass" -- would have passed vacuously. The dictionary each of these
+# functions returned was never proof of anything, because nothing read it.
+#
+# A parent state is now a closed contract. Every key is declared in
+# PARENT_STATE_SCHEMA, and every key has ONE consumer that creates the state
+# (AppliedParentState) and ONE prover that observes it; a test fails if either
+# is missing. The state is created in the LAUNCHER process -- the caller whose
+# state each case describes -- and, except for M2's threads, proven from
+# outside in that process's own /proc entries at the post-pin barrier, before
+# clone3. A state that cannot be proven there does not pose its case.
+
+PS_ENV = "env"
+PS_INHERIT_FD = "inherit_fd"
+PS_BLOCK = "block_signals"
+PS_IGNORE = "ignore_signals"
+PS_CLOSE_LOW = "close_low_fds"
+PS_THREADS = "launcher_threads"
+
+PARENT_STATE_SCHEMA = {
+    PS_ENV: "the launcher's spawn environment; proven by the NAMES in "
+            "/proc/<launcher>/environ",
+    PS_INHERIT_FD: "an unrelated descriptor passed into the launcher, made "
+                   "CLOEXEC there by --parent-fd-set-cloexec when declared; "
+                   "proven by the launcher's descriptor table and fdinfo flags",
+    PS_BLOCK: "signals blocked in the harness only across the spawn and "
+              "inherited; proven by the launcher's SigBlk",
+    PS_IGNORE: "signals set to SIG_IGN in the harness only across the spawn, "
+               "with restore_signals off; proven by the launcher's SigIgn",
+    PS_CLOSE_LOW: "descriptors 0..K-1 closed in the launcher by "
+                  "--parent-close-low-fds before the pin; proven by what the "
+                  "launcher's low descriptors refer to",
+    PS_THREADS: "extra live launcher threads from the plan's --extra-threads; "
+                "proven by the receipt's parent_shape against the control arm",
+}
+
+# Keys proven live at the barrier. PS_THREADS is proven after the run, from the
+# receipt, by the threaded_parent_observed posed check.
+BARRIER_PROVEN_STATE_KEYS = frozenset({PS_ENV, PS_INHERIT_FD, PS_BLOCK,
+                                       PS_IGNORE, PS_CLOSE_LOW})
+
+# Linux x86-64 signal numbers from the one closed table observations.py owns, so
+# a parent state never depends on the harness host's own signal module.
+_SIG = {name: number for number, name in observations.SIGNAL_NAMES.items()}
+
+
 @_parent("none")
 def _parent_none(ctx, plan):
     return {}
@@ -1029,7 +1438,7 @@ def _parent_env_canaries(ctx, plan):
     arriving in the image is a failure. The values are inert markers, and the
     sanitiser never republishes an environment value in any case.
     """
-    return {"env": {"HELM_LEAK_CANARY": "canary",
+    return {PS_ENV: {"HELM_LEAK_CANARY": "canary",
                     "LD_LIBRARY_PATH": "/nonexistent",
                     "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
                     "HOME": str(ctx.build)}}
@@ -1042,32 +1451,58 @@ def _parent_non_cloexec(ctx, plan):
     Under frozen D-1 arm (i) the child not seeing it is the ONLY pass; there is
     no documented-failure acceptance path.
     """
-    return {"open_non_cloexec": str(ctx.build / "helper_report")}
+    # Passed into the launcher by pass_fds, so it is open and NOT CLOEXEC there
+    # at clone3. Opened through harness.open_non_cloexec_descriptor, which
+    # existed for exactly this and was never called.
+    return {PS_INHERIT_FD: {"path": str(ctx.build / "helper_report"),
+                            "cloexec": False}}
 
 
 @_parent("cloexec_fd")
 def _parent_cloexec(ctx, plan):
-    return {"open_cloexec": str(ctx.build / "helper_report")}
+    """F3: an unrelated descriptor that is CLOEXEC in the launcher at clone3.
+
+    The harness can hand a descriptor over but cannot mark it CLOEXEC inside
+    another process, so the launcher does that once, at startup, under the
+    TEST/CONTROL-ONLY --parent-fd-set-cloexec; the barrier proves the flag.
+    """
+    return {PS_INHERIT_FD: {"path": str(ctx.build / "helper_report"),
+                            "cloexec": True}}
 
 
 @_parent("block_and_ignore_signals")
 def _parent_signals(ctx, plan):
     """F5: block {SIGTERM, SIGUSR1} and ignore {SIGPIPE, SIGUSR2}."""
-    return {"block": [int(signal.SIGTERM), int(signal.SIGUSR1)],
-            "ignore": [int(signal.SIGPIPE), int(signal.SIGUSR2)]}
+    return {PS_BLOCK: [_SIG["SIGTERM"], _SIG["SIGUSR1"]],
+            PS_IGNORE: [_SIG["SIGPIPE"], _SIG["SIGUSR2"]]}
 
 
 @_parent("close_stdio")
 def _parent_close_stdio(ctx, plan):
-    """F6: close 0, 1 and 2 so the launcher's own pipes and exec fd can land there."""
-    return {"close_stdio": True}
+    """F6: close 0, 1 and 2 so the launcher's own pipes and exec fd can land there.
+
+    Closed in the launcher at startup by --parent-close-low-fds 3, which first
+    saves the receipt channel above 2. The barrier proves the launcher's exec
+    descriptor is 0 and its working-directory capability is 1.
+    """
+    return {PS_CLOSE_LOW: 3}
 
 
 @_parent("adjacent_fds")
 def _parent_adjacent_fds(ctx, plan):
     """F7: force the exec fd and the status write end to adjacent numbers, so a
-    close_range gap computation that inverted its bounds would return EINVAL."""
-    return {"pad_descriptors": True}
+    close_range gap computation that inverted its bounds would return EINVAL.
+
+    Descriptor 0 is closed in the launcher before the pin, so the exec
+    descriptor opens as 0 and is relocated above 2 AFTER every pipe exists --
+    to the number right after the status write end. The barrier proves the exec
+    descriptor opened as 0; the child's own close_range spans in the syscall
+    record prove the pair is adjacent (posed check adjacent_descriptors_observed).
+    The former "pad_descriptors" directive was never applied and could not have
+    produced adjacency: lowest-free allocation puts the status end far above the
+    exec descriptor however the table is padded.
+    """
+    return {PS_CLOSE_LOW: 1}
 
 
 @_parent("sigchld_ignore")
@@ -1075,14 +1510,14 @@ def _parent_sigchld_ignore(ctx, plan):
     """R4 / M5: SIGCHLD set to SIG_IGN -- a caller precondition a crate cannot
     enforce, which is why R4 is RECORDED and its gates forbid reporting a status
     the launcher never observed."""
-    return {"sigchld_ignore": True}
+    return {PS_IGNORE: [_SIG["SIGCHLD"]]}
 
 
 @_parent("sigterm_blocked_sigpipe_ignored")
 def _parent_t6(ctx, plan):
     """T6: the wall-clock shape must match T2 from a default-signal parent, which
     it can only do if the child's signal state was reset."""
-    return {"block": [int(signal.SIGTERM)], "ignore": [int(signal.SIGPIPE)]}
+    return {PS_BLOCK: [_SIG["SIGTERM"]], PS_IGNORE: [_SIG["SIGPIPE"]]}
 
 
 @_parent("multithreaded")
@@ -1090,19 +1525,229 @@ def _parent_multithreaded(ctx, plan):
     """M2: >=3 extra live threads, one allocating, one with a pthread_atfork
     handler registered.
 
-    This describes the LAUNCHER process, not this driver, and the frozen spike
-    has no threading mode -- which is why M2 declares CH_THREADED_LAUNCHER and is
-    reported unposable rather than approximated with a threaded Python parent
-    that would evidence nothing about the launcher.
+    This describes the LAUNCHER process, not this driver. The plan's own
+    --extra-threads creates it inside the launcher, and the receipt's
+    parent_shape proves it against the control arm (posed check
+    threaded_parent_observed); a threaded Python parent would evidence nothing
+    about the launcher.
     """
-    return {"threads": 3, "atfork": True, "allocation_in_flight": True}
+    return {PS_THREADS: 3}
+
+
+class AppliedParentState:
+    """One declared parent state, CREATED for exactly one launcher and released.
+
+    Construction opens any inherited descriptor and composes the caller-state
+    flags; ``spawning()`` holds the harness in a declared signal state ONLY
+    across the spawn; ``prove()`` observes the launcher at the barrier;
+    ``release()`` closes what construction opened. Nothing it changes in the
+    harness outlives the spawn, so no case's process state reaches the next.
+    """
+
+    def __init__(self, name, state):
+        state = dict(state or {})
+        unknown = sorted(set(state) - set(PARENT_STATE_SCHEMA))
+        if unknown:
+            raise ValueError("parent state %s declares keys the closed schema "
+                             "does not name: %s" % (name, unknown))
+        self.name = name
+        self.state = state
+        self.env = dict(state.get(PS_ENV) or {})
+        self.block = tuple(state.get(PS_BLOCK) or ())
+        self.ignore = tuple(state.get(PS_IGNORE) or ())
+        self.close_low = int(state.get(PS_CLOSE_LOW) or 0)
+        self.threads = state.get(PS_THREADS)
+        self.spike_flags = []
+        self.pass_fds = ()
+        self._fd, self._fd_identity, self._fd_cloexec = None, None, False
+        inherit = state.get(PS_INHERIT_FD)
+        if inherit:
+            fd = harness.open_non_cloexec_descriptor(inherit["path"])
+            st = os.fstat(fd)
+            self._fd, self._fd_identity = fd, (st.st_dev, st.st_ino)
+            self._fd_cloexec = bool(inherit.get("cloexec"))
+            self.pass_fds = (fd,)
+            if self._fd_cloexec:
+                self.spike_flags += ["--parent-fd-set-cloexec", str(fd)]
+        if self.close_low:
+            self.spike_flags += ["--parent-close-low-fds", str(self.close_low)]
+
+    @property
+    def restore_signals(self):
+        # Popen's default resets SIGPIPE to SIG_DFL in the child, which would
+        # silently undo F5 and T6's ignored SIGPIPE. It is switched off only for
+        # a state that declares ignored signals; every other case keeps it.
+        return not self.ignore
+
+    @property
+    def needs_barrier(self):
+        return bool(set(self.state) & BARRIER_PROVEN_STATE_KEYS)
+
+    @contextlib.contextmanager
+    def spawning(self):
+        """The declared signal state in the harness, for the spawn and no longer.
+
+        The blocked mask and ignored dispositions are inherited by the launcher
+        through fork and execve; the harness is restored before the launcher
+        can reach its barrier, and the restoration is unconditional.
+        """
+        saved_mask, saved = None, []
+        try:
+            if self.block:
+                saved_mask = signal.pthread_sigmask(signal.SIG_BLOCK, self.block)
+            for signum in self.ignore:
+                saved.append((signum, signal.signal(signum, signal.SIG_IGN)))
+            yield
+        finally:
+            for signum, previous in reversed(saved):
+                signal.signal(signum,
+                              signal.SIG_DFL if previous is None else previous)
+            if saved_mask is not None:
+                signal.pthread_sigmask(signal.SIG_SETMASK, saved_mask)
+
+    def prove(self, pid, exec_path, work_dir):
+        """One landing fact per barrier-proven key, observed in the launcher.
+
+        The REQUIREMENT is always read from the declared state, never from the
+        fields the consumer derived from it, so a consumer that is bypassed or
+        emptied cannot also empty what the proof demands.
+        """
+        facts = []
+        state = self.state
+        if PS_ENV in state:
+            facts.append(_prove_environment(pid, sorted(state[PS_ENV])))
+        if PS_INHERIT_FD in state:
+            facts.append(_prove_inherited_fd(
+                pid, self._fd, self._fd_identity,
+                bool(state[PS_INHERIT_FD].get("cloexec"))))
+        if PS_BLOCK in state or PS_IGNORE in state:
+            facts.append(_prove_signal_state(
+                pid, tuple(state.get(PS_BLOCK) or ()),
+                tuple(state.get(PS_IGNORE) or ())))
+        if PS_CLOSE_LOW in state:
+            facts.append(_prove_low_fds_closed(pid, int(state[PS_CLOSE_LOW]),
+                                               exec_path, work_dir))
+        return facts
+
+    def release(self):
+        problems = []
+        if self._fd is not None:
+            fd, self._fd = self._fd, None
+            try:
+                os.close(fd)
+            except OSError as exc:                          # noqa: BLE001
+                problems.append(_problem("inherited descriptor close failed",
+                                         exc))
+        return problems
+
+
+def _prove_environment(pid, names):
+    seen = _proc_environment_names(pid)
+    present = sorted(n for n in names if seen is not None and n in seen)
+    ok = seen is not None and present == list(names)
+    return _landed("parent_env", ok,
+                   "every declared name is in the launcher's environment" if ok
+                   else "the launcher's environment lacks a declared name",
+                   names_present=present, all_declared_names_present=ok)
+
+
+def _prove_inherited_fd(pid, fd, identity, want_cloexec):
+    held = launcher_descriptors_on(pid, identity) if fd is not None else None
+    flags = (held or {}).get(fd)
+    present = flags is not None
+    cloexec = present and bool(flags & O_CLOEXEC_FLAG)
+    ok = present and cloexec == want_cloexec
+    return _landed("parent_inherited_fd", ok,
+                   "the unrelated descriptor is open in the launcher with the "
+                   "declared close-on-exec flag" if ok else
+                   "the unrelated descriptor is absent from the launcher or "
+                   "carries the wrong close-on-exec flag",
+                   present_in_launcher=present, cloexec_in_launcher=cloexec,
+                   cloexec_required=bool(want_cloexec))
+
+
+def _prove_signal_state(pid, block, ignore):
+    blocked, ignored = _proc_status_masks(pid)
+    names = observations.SIGNAL_NAMES
+    readable = blocked is not None and ignored is not None
+    missing = []
+    if readable:
+        missing += [names.get(s, str(s)) for s in block
+                    if not blocked & _signal_bit(s)]
+        missing += [names.get(s, str(s)) for s in ignore
+                    if not ignored & _signal_bit(s)]
+    ok = readable and not missing
+    return _landed("parent_signal_state", ok,
+                   "every declared signal is blocked or ignored in the launcher"
+                   if ok else "the launcher's signal state is not the declared "
+                              "one",
+                   blocked_required=[names.get(s, str(s)) for s in block],
+                   ignored_required=[names.get(s, str(s)) for s in ignore],
+                   signals_missing=missing, masks_readable=readable)
+
+
+def _prove_low_fds_closed(pid, k, exec_path, work_dir):
+    def target(fd):
+        try:
+            return _stat_identity("/proc/%d/fd/%d" % (pid, fd))
+        except OSError:
+            return None
+
+    try:
+        pinned = _stat_identity(exec_path)
+    except (OSError, TypeError):
+        pinned = None
+    exec_at_0 = pinned is not None and target(0) == pinned
+    facts, ok = {"exec_fd_at_0": exec_at_0}, exec_at_0
+    if k >= 3:
+        try:
+            capability = _stat_identity(work_dir)
+        except (OSError, TypeError):
+            capability = None
+        at_1 = capability is not None and target(1) == capability
+        fd2_free = not os.path.lexists("/proc/%d/fd/2" % pid)
+        facts.update(work_dir_capability_at_1=at_1, fd2_free=fd2_free)
+        ok = ok and at_1 and fd2_free
+    return _landed("parent_low_fds_closed", ok,
+                   "the launcher's own descriptors occupy the closed low slots"
+                   if ok else "the launcher's low descriptors are not its own "
+                              "exec descriptor and capability",
+                   closed_below=k, **facts)
+
+
+def _launcher_pid(proc, plan):
+    """The launcher's pid: the spawned process, or strace's only child.
+
+    At READY the launcher has not cloned, so under a tracer it is the one child
+    of the strace process. Anything else is ambiguous, and an ambiguous launcher
+    cannot be observed.
+    """
+    if not plan.traced:
+        return proc.pid
+    try:
+        entries = os.listdir("/proc")
+    except OSError:
+        return None
+    children = []
+    for entry in entries:
+        if not entry.isdigit():
+            continue
+        try:
+            text = pathlib.Path("/proc/%s/stat" % entry).read_text(
+                encoding="ascii", errors="replace")
+        except OSError:
+            continue
+        fields = text.rsplit(")", 1)[-1].split()
+        if len(fields) > 1 and fields[1] == str(proc.pid):
+            children.append(int(entry))
+    return children[0] if len(children) == 1 else None
 
 
 # -------------------------------------------------------------- posed checks
 # A posed check answers "did the forced state actually materialise?". False means
 # the case was never a test of the mechanism, which is INVALID -- not FAIL.
 
-@_check("stderr_capture_failed")
+@_check("stderr_capture_failed", reads=("spike",))
 def _check_stderr_capture_failed(obs):
     """O7: an exit status AND a stderr capture failure simultaneously true."""
     spike = obs.get("spike")
@@ -1116,7 +1761,7 @@ def _check_stderr_capture_failed(obs):
             and spike.get("exit_code") >= 0)
 
 
-@_check("writer_retained")
+@_check("writer_retained", reads=("spike",))
 def _check_writer_retained(obs):
     """O6 / P4: a descendant really did retain the inherited write ends."""
     spike = obs.get("spike")
@@ -1127,7 +1772,7 @@ def _check_writer_retained(obs):
                for s in ("stdout", "stderr"))
 
 
-@_check("no_helper_report")
+@_check("no_helper_report", reads=("report_state",), scope=CHECK_SCOPE_TRIAL)
 def _check_no_helper_report(obs):
     """S2 / S5 / S7: the ABSENCE of the report is the independent evidence that
     the image never ran.
@@ -1144,46 +1789,70 @@ def _check_no_helper_report(obs):
     return obs.get("report_state") == observations.REPORT_ABSENT
 
 
-@_check("returned_before_descendant_lifetime")
+@_check("returned_before_descendant_lifetime", reads=("elapsed_ms",))
 def _check_returned_early(obs):
     """O6: launch() must return measurably before the descendant's sleep ends."""
     elapsed = obs.get("elapsed_ms")
     return isinstance(elapsed, int) and elapsed < P_DESCENDANT_LIFETIME_MS
 
 
-@_check("completed_under_ten_seconds")
+@_check("completed_under_ten_seconds", reads=("elapsed_ms",))
 def _check_under_ten_seconds(obs):
     """O3: 16 MiB across two streams must complete well inside the 60 s timeout."""
     elapsed = obs.get("elapsed_ms")
     return isinstance(elapsed, int) and elapsed < 10000
 
 
-@_check("bounded_poll_and_cpu")
-def _check_bounded_poll_and_cpu(obs):
-    """O5: a spinning launcher also satisfies "no hang", so the drain must be
-    bounded in CPU as well as in wall clock.
-
-    The poll() return count is not instrumented by the frozen spike; the CPU
-    bound is measured by this driver from the launcher process it spawned, which
-    is a harness-side observation requiring no change to the mechanism.
-    """
-    cpu_ms = obs.get("spike_cpu_ms")
-    if cpu_ms is None:
-        return False
-    polls = obs.get("poll_returns")
-    if polls is not None and polls > 10000:
-        return False
-    return cpu_ms < 200
+# O5's former posed check, bounded_poll_and_cpu, read a key nothing produced,
+# so O5 was INVALID on every run -- and it treated an over-bound drain as
+# "not posed" when the frozen row makes it a failure. Both bounds are now the
+# post-rule assertion observations.assert_bounded_drain: a missing measurement
+# is unobservable, an exceeded bound is a FAIL.
 
 
-@_check("same_inode_as_writer")
+@_check("same_inode_as_writer", reads=("post_pin_evidence",))
 def _check_same_inode(obs):
-    """E5: the write-deny reference must be proven against (st_dev, st_ino)."""
-    writer, pinned = obs.get("writer_inode"), obs.get("pinned_inode")
-    return writer is not None and pinned is not None and writer == pinned
+    """E5: the held writer is on the inode the LAUNCHER pinned.
+
+    Read from the hold_writer landing fact, which the barrier produces by
+    comparing the writer's own (st_dev, st_ino) with the launcher's descriptor
+    table. The former keys writer_inode and pinned_inode had no producer, so
+    E5 could never be posed.
+    """
+    fact = observations._landing_fact(obs, "hold_writer")
+    return bool(fact and fact.get("landed") is True
+                and fact.get("launcher_holds_same_inode") is True)
 
 
-@_check("trial_floor_512")
+@_check("adjacent_descriptors_observed", reads=("descriptor_layout_adjacent",))
+def _check_adjacent_descriptors(obs):
+    """F7: the child's own close_range spans show the adjacent pair.
+
+    Produced from the external syscall record of the child window, so the state
+    F7 is defined by is observed rather than inferred from the launcher source.
+    """
+    return obs.get("descriptor_layout_adjacent") is True
+
+
+@_check("threaded_parent_observed",
+        reads=("spike", "baseline_observation", "declared_launcher_threads"))
+def _check_threaded_parent(obs):
+    """M2: the threaded arm really had its extra threads; the control had none."""
+    want = obs.get("declared_launcher_threads")
+    spike, baseline = obs.get("spike"), obs.get("baseline_observation")
+    shape = spike.get("parent_shape") if isinstance(spike, dict) else None
+    base_spike = baseline.get("spike") if isinstance(baseline, dict) else None
+    base_shape = (base_spike.get("parent_shape")
+                  if isinstance(base_spike, dict) else None)
+    if not isinstance(want, int) or not isinstance(shape, dict) \
+            or not isinstance(base_shape, dict):
+        return False
+    return (shape.get("extra_threads") == want
+            and shape.get("atfork_handler_registered") is True
+            and base_shape.get("extra_threads") == 0)
+
+
+@_check("trial_floor_512", reads=("repeat_observations",))
 def _check_trial_floor(obs):
     """O8: any repeat trial short of 512 bytes is a failure of the drain, so the
     floor is checked per trial rather than on an average."""
@@ -1207,21 +1876,29 @@ def _build_plans():
 
     # ---- E: executable identity and TOCTOU --------------------------------
     # Every E case except E5 needs the helper's own marker to establish WHICH
-    # body ran, so they declare the report channel.
+    # body ran, so they declare the report channel. N-2: the marker is now
+    # ASSERTED, not merely present -- helper_alt prints a report too.
+    pinned_body = ("executed_marker", "measured_starting_identity")
     add(CasePlan("E1", "helper_report", "process_disposition",
                  (CH_RECEIPT, CH_REPORT, CH_TRACE), setup="copy",
-                 helper_args=("--exit", "0"),
+                 helper_args=("--exit", "0"), expected_marker="helper_report",
+                 assertions=pinned_body,
                  note="the measured digest must equal the independent hashlib "
                       "digest taken before the run"))
     add(CasePlan("E2", "helper_report", "process_disposition",
                  (CH_RECEIPT, CH_REPORT), setup="rename_alt_over",
-                 helper_args=("--exit", "0")))
+                 helper_args=("--exit", "0"), expected_marker="helper_report",
+                 assertions=pinned_body,
+                 note="helper_alt executing is a mechanism FAIL, never INVALID"))
     add(CasePlan("E3", "helper_report", "process_disposition",
                  (CH_RECEIPT, CH_REPORT), setup="rename_then_unlink",
-                 helper_args=("--exit", "0")))
+                 helper_args=("--exit", "0"), expected_marker="helper_report",
+                 assertions=pinned_body))
     add(CasePlan("E4", "helper_report", "process_disposition",
                  (CH_RECEIPT, CH_REPORT), setup="symlink_retarget",
-                 helper_args=("--exit", "0")))
+                 helper_args=("--exit", "0"), expected_marker="helper_report",
+                 assertions=pinned_body,
+                 note="the retargeted body executing is a mechanism FAIL"))
     add(CasePlan("E5", "helper_report", "process_disposition", (CH_RECEIPT,),
                  setup="writer_open_held", helper_args=("--exit", "0"),
                  posed_when="same_inode_as_writer",
@@ -1232,7 +1909,11 @@ def _build_plans():
                  helper_args=("--exit", "0")))
     add(CasePlan("E6", "helper_report", "process_disposition",
                  (CH_RECEIPT, CH_REPORT), setup="mutate_marker_in_place",
-                 helper_args=("--exit", "0")))
+                 helper_args=("--exit", "0"),
+                 expected_marker=observations.E6_MUTATED_MARKER,
+                 assertions=pinned_body,
+                 note="the MUTATED marker runs, and the pre-exec measurement "
+                      "is the starting (pre-mutation) identity"))
     add(CasePlan("E6b", "helper_report", "process_disposition",
                  (CH_RECEIPT, CH_REPORT), setup="truncate_and_rewrite",
                  body_length_changed=True))
@@ -1241,6 +1922,7 @@ def _build_plans():
                  body_length_changed=True))
     add(CasePlan("E6d", "helper_report", "process_disposition", (CH_RECEIPT,),
                  setup="fchmod_zero_after_admission",
+                 assertions=("mode_measured_pre_change",),
                  note="a pre-exec EACCES; the receipt carries the whole result"))
     add(CasePlan("E7", "helper_dynamic", "process_disposition",
                  (CH_RECEIPT, CH_REPORT, CH_TRACE), setup="dynamic_helper",
@@ -1279,11 +1961,13 @@ def _build_plans():
     add(CasePlan("F6", "helper_report", "fds_exactly_012",
                  (CH_RECEIPT, CH_REPORT), parent="close_stdio"))
     add(CasePlan("F7", "helper_report", "fds_exactly_012",
-                 (CH_RECEIPT, CH_REPORT, CH_TRACE), parent="adjacent_fds"))
+                 (CH_RECEIPT, CH_REPORT, CH_TRACE), parent="adjacent_fds",
+                 posed_when="adjacent_descriptors_observed"))
 
     # ---- X: exec failure and admission ------------------------------------
     add(CasePlan("X1", "helper_report", "process_disposition", (CH_RECEIPT,),
-                 setup="fchmod_zero_after_admission"))
+                 setup="fchmod_zero_after_admission",
+                 assertions=("mode_measured_pre_change",)))
     add(CasePlan("X2", "script_fixture.sh", "admission", (CH_RECEIPT,),
                  setup="script_fixture"))
     add(CasePlan("X2b", "script_fixture.sh", "process_disposition",
@@ -1336,7 +2020,7 @@ def _build_plans():
                  helper_args=("--no-report", "--stdout", "4096",
                               "--stderr", "4096", "--close-stdout-early"),
                  streams=_both_streams(4096),
-                 posed_when="bounded_poll_and_cpu"))
+                 assertions=("bounded_drain",)))
     add(CasePlan("O6", "helper_fork", "process_disposition",
                  (CH_RECEIPT, CH_PAYLOAD, CH_LIVENESS), setup="fork_helper",
                  helper_args=("--prewrite", "512", "--retain-stdio",
@@ -1433,7 +2117,7 @@ def _build_plans():
                  note="clean EOF alone is not a PASS; the report is the exec "
                       "evidence, which is why this case declares the channel"))
     add(CasePlan("S2", "helper_report", "process_disposition",
-                 (CH_RECEIPT, CH_REPORT), work_dir_kind="fchmod_zero",
+                 (CH_RECEIPT, CH_REPORT), setup="work_dir_fchmod_zero",
                  posed_when="no_helper_report",
                  note="the report's ABSENCE is the evidence, which is only "
                       "informative where the channel exists"))
@@ -1455,7 +2139,7 @@ def _build_plans():
                               str(SPAWN_CONFIRM_TIMEOUT_MS * 2)),
                  pre_exec_stall=True))
     add(CasePlan("S7", "helper_report", "process_disposition",
-                 (CH_RECEIPT, CH_REPORT), work_dir_kind="fchmod_zero",
+                 (CH_RECEIPT, CH_REPORT), setup="work_dir_fchmod_zero",
                  repeat=REPEAT_TRIALS, posed_when="no_helper_report"))
 
     # ---- M: mechanism minimality and parent shape -------------------------
@@ -1465,6 +2149,7 @@ def _build_plans():
                  (CH_RECEIPT, CH_TRACE, CH_THREADED_LAUNCHER),
                  parent="multithreaded", helper_args=("--exit", "0"),
                  spike_flags=("--extra-threads", "3"), baseline_flags=(),
+                 posed_when="threaded_parent_observed",
                  note="the frozen arm exactly: >=3 extra live threads in the "
                       "LAUNCHER, one allocating continuously and one with a "
                       "pthread_atfork handler registered. The control run is "
@@ -1493,6 +2178,23 @@ def _build_plans():
 _PLAN_LIST = _build_plans()
 DRIVER_CASE_IDS = [plan.case for plan in _PLAN_LIST]
 CASE_PLANS = {plan.case: plan for plan in _PLAN_LIST}
+
+# Every CasePlan slot and the function that reads it. A slot nothing reads is an
+# inert field, and that is how work_dir_kind hid S2/S7's missing construction;
+# a test fails on any slot absent here or not actually read by its consumer.
+# ``note`` is the only documentation-only field.
+CASEPLAN_FIELD_CONSUMERS = {
+    "case": "evaluate", "binary": "_setup_none", "setup": "prepare",
+    "parent": "pose", "spike_flags": "spike_argv", "helper_args": "spike_argv",
+    "argv0": "spike_argv", "rule": "evaluate",
+    "streams": "_launch_and_observe", "channels": "missing_channels",
+    "posed_when": "evaluate", "excused_fds": "pose", "repeat": "pose",
+    "timeout_ms": "spike_argv", "grace_ms": "spike_argv",
+    "spawn_confirm_ms": "spike_argv", "body_length_changed": "pose",
+    "pre_exec_stall": "pose", "traced": "_launch_and_observe",
+    "baseline_flags": "pose", "expected_marker": "pose",
+    "assertions": "evaluate", "note": None,
+}
 
 
 # ============================================================== completeness
@@ -1592,12 +2294,102 @@ def _asserted_unobserved_fact(spike):
     return None
 
 
+# ============================================= N-5: durable posing evidence
+# The proof that a case was posed as preregistered used to live only in the
+# in-memory observation: build-identity binding, every forced-state landing
+# fact and every cleanup problem died with the runner, and the durable record
+# could not show that any E2-X1 manipulation happened. It now travels in the
+# record, normalised: only these keys, only these values, never the raw
+# observation.
+BINDING_PUBLIC_KEYS = ("classification", "base_artefact", "object", "bound",
+                       "detail", "base_sha256", "object_sha256")
+
+FACT_PUBLIC_KEYS = frozenset({
+    "action", "landed", "detail", "trial",
+    # E-series and X1 post-pin actions
+    "pinned_body_sha256", "replacement_sha256", "path_body_sha256_after",
+    "path_exists", "renamed_away_exists", "target_before", "target_after",
+    "new_target_sha256", "marker_written", "readback_matches",
+    "bytes_written", "length_preserved", "body_sha256_before",
+    "body_sha256_after", "size_before", "size_after", "descriptor_closed",
+    "mapping_retained", "mode_before", "mode_after",
+    # E5, S2 and S7: relations to the launcher, never raw identifiers
+    "access_mode", "launcher_holds_same_inode", "launcher_access_modes",
+    "capability_open_in_launcher",
+    # parent-state proofs
+    "names_present", "all_declared_names_present", "present_in_launcher",
+    "cloexec_in_launcher", "cloexec_required", "blocked_required",
+    "ignored_required", "signals_missing", "masks_readable", "closed_below",
+    "exec_fd_at_0", "work_dir_capability_at_1", "fd2_free",
+})
+
+
+def _public_fact(fact, trial=None):
+    out = {key: value for key, value in fact.items() if key in FACT_PUBLIC_KEYS}
+    if trial is not None:
+        out["trial"] = trial
+    return out
+
+
+def posing_evidence(plan, obs):
+    """The normalised facts posing validity rests on, for the durable record."""
+    out = {}
+    binding = obs.get("build_identity_binding")
+    if isinstance(binding, dict):
+        out["build_identity_binding"] = {key: binding[key]
+                                         for key in BINDING_PUBLIC_KEYS
+                                         if key in binding}
+    trials = obs.get("repeat_observations") or [obs]
+    forced = [_public_fact(fact, index if len(trials) > 1 else None)
+              for index, trial in enumerate(trials)
+              for fact in trial.get("post_pin_evidence") or ()
+              if isinstance(fact, dict)]
+    if forced:
+        out["forced_state"] = forced
+    reads = set(POSED_CHECK_READS.get(plan.posed_when, ()))
+    for name in plan.assertions:
+        reads |= set(observations.ASSERTION_READS.get(name, ()))
+    measured = {}
+    for key in ("launcher_cpu_ms", "poll_returns", "descriptor_layout_adjacent",
+                "declared_launcher_threads"):
+        if key in reads and obs.get(key) is not None:
+            measured[key] = obs[key]
+    if "report_state" in reads:
+        states = {}
+        for trial in trials:
+            state = str(trial.get("report_state"))
+            states[state] = states.get(state, 0) + 1
+        measured["report_states"] = states
+    if "baseline_observation" in reads:
+        def threads(o):
+            spike = o.get("spike") if isinstance(o, dict) else None
+            shape = spike.get("parent_shape") if isinstance(spike, dict) else None
+            return shape.get("extra_threads") if isinstance(shape, dict) else None
+        measured["extra_threads"] = {
+            "threaded_arm": threads(obs),
+            "control_arm": threads(obs.get("baseline_observation"))}
+    if measured:
+        out["measured"] = measured
+    if "cleanup_problems" in obs:
+        out["cleanup_problems"] = list(obs.get("cleanup_problems") or ())
+    return out
+
+
+def _is_frozen_expectation(spec, token):
+    return token == spec["predict"] or token in (spec["safe"] or ())
+
+
 def evaluate(plan, obs):
     """Turn one case's observation into the record ``checker.py`` scores.
 
     The record is data. It never names its own status, and every field the
     checker needs is present or explicitly absent -- ``launch_returned`` in
     particular, whose omission is the P-8 hole and is INVALID by contract.
+
+    Two questions are kept apart. Whether the case was POSED -- its forced
+    state landed and its posed check held -- decides INVALID. What the posed
+    case SHOWED -- its rule's token and its executed-identity assertions --
+    decides PASS or FAIL. Every repeated trial must be posed and must agree.
     """
     spec = BY_NAME[plan.case]
     record = {
@@ -1608,6 +2400,9 @@ def evaluate(plan, obs):
         "elapsed_ms": obs.get("elapsed_ms"),
         "total_bound_ms": plan.total_bound_ms(),
     }
+    evidence_block = posing_evidence(plan, obs)
+    if evidence_block:
+        record["posing_evidence"] = evidence_block
 
     # A conditional case blocked on its own frozen cause is expected, and the
     # checker enforces that only a conditional case may absorb one.
@@ -1618,24 +2413,77 @@ def evaluate(plan, obs):
         record["not_posed"] = obs["not_posed"]
         return record
 
-    if obs.get("launch_returned") is False:
+    trials = obs.get("repeat_observations") or [obs]
+    for index, trial in enumerate(trials[1:], 1):
+        if trial.get("not_posed"):
+            record["not_posed"] = ("repeated trial %d was not posed: %s"
+                                   % (index, trial["not_posed"]))
+            return record
+
+    if any(trial.get("launch_returned") is False for trial in trials):
         # A launcher-side non-return is never a recordable outcome. Recorded
         # from this driver's own watchdog, so a hang can never be an absent
         # record understating a known result as an open question.
+        record["launch_returned"] = False
         record["outcome"] = None
         record["reason"] = "launch() did not return within the declared bound"
         return record
 
     if plan.posed_when is not None:
-        if not POSED_CHECKS[plan.posed_when](obs):
-            record["not_posed"] = ("the forced state did not materialise: " +
-                                   plan.posed_when)
+        per_trial = POSED_CHECK_SCOPE[plan.posed_when] == CHECK_SCOPE_TRIAL
+        targets = ([dict(obs, **trial) for trial in trials] if per_trial
+                   else [obs])
+        held = True
+        for index, target in enumerate(targets):
+            if not POSED_CHECKS[plan.posed_when](target):
+                held = False
+                record["not_posed"] = (
+                    "the forced state did not materialise: " + plan.posed_when
+                    + ("" if len(targets) == 1
+                       else " (repeated trial %d)" % index))
+                break
+        record.setdefault("posing_evidence", {})["posed_check"] = {
+            "name": plan.posed_when, "held": held}
+        if not held:
             return record
 
-    token, reason = observations.derive(plan.rule, obs)
-    if token is None:
-        record["not_posed"] = "observation not interpretable: " + reason
-        return record
+    tokens = []
+    for index, trial in enumerate(trials):
+        view = obs if index == 0 else dict(obs, **trial)
+        token, reason = observations.derive(plan.rule, view)
+        if token is None:
+            record["not_posed"] = ("observation not interpretable: " + reason
+                                   + ("" if index == 0
+                                      else " (repeated trial %d)" % index))
+            return record
+        tokens.append((token, reason))
+    token, reason = tokens[0]
+    for other, why in tokens[1:]:
+        if other != token:
+            token, reason = other, "a repeated trial disagreed: " + why
+            break
+
+    if plan.assertions:
+        results = observations.apply_assertions(plan.assertions, obs)
+        record["assertions"] = results
+        violated = [name for name in plan.assertions
+                    if results[name]["result"] == observations.ASSERTION_VIOLATED]
+        unobservable = [name for name in plan.assertions
+                        if results[name]["result"]
+                        == observations.ASSERTION_UNOBSERVABLE]
+        if violated:
+            # Posed, and it showed something other than what it claims: FAIL.
+            record["mechanism_outcome"] = token
+            token = observations.ASSERTION_VIOLATION_TOKENS[violated[0]]
+            reason = results[violated[0]]["detail"]
+        elif unobservable and _is_frozen_expectation(spec, token):
+            # It would PASS on a token alone, and the evidence that it produced
+            # what it claims is missing. Missing evidence is never success.
+            record["not_posed"] = (
+                "an executed-identity assertion could not be observed: " +
+                "; ".join(name + ": " + results[name]["detail"]
+                          for name in unobservable))
+            return record
     record["outcome"] = token
     record["reason"] = reason
 
@@ -1655,8 +2503,7 @@ def evaluate(plan, obs):
             record["acquisition_normalised"] = obs["acquisition_normalised"]
 
     if spec["gates"]:
-        record["gates"] = {gate: obs.get("gates", {}).get(gate)
-                           for gate in spec["gates"]}
+        record["gates"] = gates_for(plan, obs, token)
     if plan.case in DOCUMENTATION_GATES:
         record["documentation_gate"] = _documentation_gate(obs.get("spike"))
     offending = _asserted_unobserved_fact(obs.get("spike"))
@@ -1702,7 +2549,7 @@ def blocked_cause_for(plan, ctx):
 
 
 def spike_argv(plan, exec_path, work_dir, build, flags=None,
-               extra_helper_args=()):
+               extra_helper_args=(), parent_flags=()):
     """The exact spike invocation a case uses. Pure string construction.
 
     Exposed so the command can be reviewed, diffed and tested WITHOUT running
@@ -1720,6 +2567,9 @@ def spike_argv(plan, exec_path, work_dir, build, flags=None,
             "--post-exit-drain-ms", str(POST_EXIT_DRAIN_MS),
             "--max-capture-bytes", str(MAX_CAPTURE_BYTES)]
     argv.extend(plan.spike_flags if flags is None else flags)
+    # TEST/CONTROL-ONLY caller-state flags, supplied by the applied parent
+    # state at spawn time and never by a plan's own spike_flags.
+    argv.extend(parent_flags)
     argv.extend(["--arg", plan.argv0])
     for item in list(plan.helper_args) + list(extra_helper_args):
         argv.extend(["--arg", item])
@@ -1820,6 +2670,8 @@ def pose(plan, ctx, auth, prepared):
     _require_authorisation(auth)
     built, binding = prepared["built"], prepared["binding"]
 
+    # The DECLARATION. It is turned into real state -- once per launcher, and
+    # released after it -- by _run_once, and proven at the barrier.
     parent_state = PARENT_STATES[plan.parent](ctx, plan)
     try:
         trials = [_run_once(plan, ctx, built, parent_state)
@@ -1832,7 +2684,11 @@ def pose(plan, ctx, auth, prepared):
     obs = dict(trials[0])
     obs["repeat_observations"] = trials
     obs["build_identity_binding"] = binding
-    obs["cleanup_problems"] = cleanup_problems
+    obs["cleanup_problems"] = (
+        [p for trial in trials for p in trial.get("cleanup_problems") or ()]
+        + cleanup_problems)
+    obs["declared_launcher_threads"] = parent_state.get(PS_THREADS)
+    obs["expected_marker"] = plan.expected_marker
 
     # M2's control arm: the SAME plan with no extra threads. Its child window is
     # the baseline the threaded arm must match, and it is collected here rather
@@ -1854,16 +2710,20 @@ def pose(plan, ctx, auth, prepared):
                             + list(built.get("extra_helper_args", ())))
     obs["excused_descriptors"] = plan.excused_fds
     obs["traced"] = plan.traced
-    obs["gates"] = gates_for(plan, obs)
     return obs
 
 
-def gates_for(plan, obs):
+def gates_for(plan, obs, token=None):
     """Gated sub-assertions for the RECORDED cases, computed from observations.
 
     A gate is never derived from what the launcher intended, only from what the
     record shows. A gate whose evidence is missing stays False, because a gate
     that cannot be shown to hold has not been shown to hold.
+
+    ``token`` is the case's derived outcome. R4's never_reports_exited_zero used
+    to read an ``outcome_token`` key nothing produced, so ``None != "Exited:0"``
+    made the gate hold on every run; it is now computed from the real token, in
+    evaluate(), and an absent token does not hold it.
     """
     spec = BY_NAME[plan.case]
     if not spec["gates"]:
@@ -1894,7 +2754,7 @@ def gates_for(plan, obs):
             # never issued cannot have been issued out of order.
             out[gate] = spike.get("group_sweep_issued") in (True, False)
         elif gate == "never_reports_exited_zero":
-            out[gate] = obs.get("outcome_token") != "Exited:0"
+            out[gate] = token is not None and token != "Exited:0"
         elif gate == "never_hangs":
             out[gate] = obs.get("launch_returned") is True
         elif gate == "no_claim_that_measured_bytes_ran":
@@ -1914,14 +2774,52 @@ def gates_for(plan, obs):
     return out
 
 
+def _children_cpu_ms():
+    """CPU of every reaped child of this process so far, in ms, or None.
+
+    O5's launcher CPU is the difference across one launch, measured OUTSIDE the
+    launcher. The harness reaps nothing else while a case runs, so the
+    difference is the launcher's own CPU plus that of the helper it reaped: it
+    can overstate the launcher's share and never understate it.
+    """
+    try:
+        import resource
+    except ImportError:
+        return None
+    usage = resource.getrusage(resource.RUSAGE_CHILDREN)
+    return int(round((usage.ru_utime + usage.ru_stime) * 1000))
+
+
 def _run_once(plan, ctx, built, parent_state, flags=None):
     """One launcher invocation, with this driver's own watchdog.
 
     The watchdog is the P-8 correction in code: ``launch_returned`` is recorded
     from here, always, so a true hang is a FAIL rather than a missing record.
+
+    N-1: the declared parent state is CREATED here, for this one launcher, and
+    released afterwards together with any per-trial forced state; problems in
+    either are recorded beside the trial and never folded into its result.
     """
-    argv = spike_argv(plan, built["exec_path"], ctx.work, ctx.build, flags=flags,
-                      extra_helper_args=built.get("extra_helper_args", ()))
+    try:
+        applied = AppliedParentState(plan.parent, parent_state)
+    except OSError as exc:                                  # noqa: BLE001
+        return {"not_posed": _problem("the parent state could not be created",
+                                      exc),
+                "launch_returned": None,
+                "cleanup_problems": restore_after_trial(built)}
+    try:
+        result = _launch_and_observe(plan, ctx, built, applied, flags)
+    finally:
+        problems = applied.release() + restore_after_trial(built)
+    result["cleanup_problems"] = problems
+    return result
+
+
+def _launch_and_observe(plan, ctx, built, applied, flags):
+    argv = spike_argv(plan, built["exec_path"], built.get("work_dir") or ctx.work,
+                      ctx.build, flags=flags,
+                      extra_helper_args=built.get("extra_helper_args", ()),
+                      parent_flags=applied.spike_flags)
     trace_path = None
     if plan.traced:
         trace_path = ctx.build / (plan.case + ".strace")
@@ -1931,13 +2829,13 @@ def _run_once(plan, ctx, built, parent_state, flags=None):
                     "launch_returned": None}
         argv = tracer + argv
 
-    env = dict(parent_state.get("env") or {})
     bound_s = (plan.total_bound_ms() + 5000) / 1000.0
 
+    cpu_before = _children_cpu_ms()
     started = time.monotonic()
     post_pin_facts = None
-    if needs_post_pin(built):
-        outcome = _run_with_post_pin(argv, env, bound_s, ctx, plan, built)
+    if needs_barrier(built, applied):
+        outcome = _run_with_post_pin(argv, applied, bound_s, ctx, plan, built)
         post_pin_facts = outcome["post_pin"]
         if outcome.get("not_posed"):
             return {"not_posed": outcome["not_posed"],
@@ -1945,20 +2843,38 @@ def _run_once(plan, ctx, built, parent_state, flags=None):
                     "launch_returned": None}
         returned, stdout, stderr, rc = (outcome["returned"], outcome["stdout"],
                                         outcome["stderr"], outcome["rc"])
+        # The handshake and the harness's own action are not launch() time: the
+        # launcher's clock starts after CONTINUE, and so does this one.
+        started = outcome.get("continued_at") or started
     else:
         try:
-            proc = subprocess.run(argv, capture_output=True, env=env,
-                                  timeout=bound_s)
-            returned = True
-            stdout, stderr, rc = proc.stdout, proc.stderr, proc.returncode
-        except subprocess.TimeoutExpired as expired:
-            returned = False
-            stdout = expired.stdout or b""
-            stderr = expired.stderr or b""
-            rc = None
+            with applied.spawning():
+                proc = subprocess.Popen(argv, stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE, env=applied.env,
+                                        pass_fds=applied.pass_fds,
+                                        restore_signals=applied.restore_signals)
+        except OSError as exc:                              # noqa: BLE001
+            return {"not_posed": _problem("the launcher could not be started",
+                                          exc),
+                    "launch_returned": None}
+        try:
+            stdout, stderr = proc.communicate(timeout=bound_s)
+            returned, rc = True, proc.returncode
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            stdout, stderr = proc.communicate()
+            returned, rc = False, None
     elapsed_ms = int((time.monotonic() - started) * 1000)
+    cpu_after = _children_cpu_ms()
+    launcher_cpu_ms = (cpu_after - cpu_before
+                       if cpu_before is not None and cpu_after is not None
+                       else None)
 
     spike = observations.parse_spike_stdout(stdout)
+    # O5. The launcher's own count of drain poll() returns, emitted outside the
+    # receipt beside its elapsed time and dropped by evidence.receipt_view.
+    poll_returns = (spike.get("poll_returns_not_in_receipt")
+                    if isinstance(spike, dict) else None)
 
     # PRE-D7-B1: the helper report now travels out inside the receipt, as the
     # base64 capture prefix of descriptor 1. It is decoded HERE, in this process,
@@ -1979,10 +2895,13 @@ def _run_once(plan, ctx, built, parent_state, flags=None):
             and spike[name].get("drained_sha256") == want["sha256"]
             for name, want in plan.streams.items())
 
-    trace, acquisition, trace_digest = None, None, None
+    trace, acquisition, trace_digest, layout_adjacent = None, None, None, None
     if trace_path is not None and trace_path.exists():
         raw_trace = trace_path.read_bytes()
         trace = observations.parse_strace_child_window(raw_trace)
+        # F7. The descriptor numbers stay here; only the boolean travels.
+        layout_adjacent = observations.layout_is_adjacent(
+            observations.parse_child_descriptor_layout(raw_trace))
         # M3-T. Parsed from the same record the other traced cases use; there is
         # no second tracing framework. The raw text stays local and only its
         # digest is publishable, so a host-specific record cannot become
@@ -2009,31 +2928,40 @@ def _run_once(plan, ctx, built, parent_state, flags=None):
         "spike_exit": rc,
         "spike_stderr": (stderr or b"").decode("utf-8", "replace")[-2000:],
         "post_pin_evidence": post_pin_facts,
+        "launcher_cpu_ms": launcher_cpu_ms,
+        "poll_returns": (poll_returns if observations._plain_int(poll_returns)
+                         else None),
+        "descriptor_layout_adjacent": layout_adjacent,
     }
 
 
 
 
-def _run_with_post_pin(argv, env, bound_s, ctx, plan, built):
-    """Launch, wait for READY, land the forced state, prove it, then CONTINUE.
+def _run_with_post_pin(argv, applied, bound_s, ctx, plan, built):
+    """Launch, wait for READY, prove and land the forced state, then CONTINUE.
 
     Every wait is bounded. A control failure is never a mechanism result: if
-    READY does not arrive, or the harness action cannot be proven to have
-    landed, the control socket is closed WITHOUT sending CONTINUE, the launcher
-    dies at its own barrier, and the case is reported as not posed.
+    READY does not arrive, the launcher cannot be identified, the declared
+    parent state is not observed in it, or a harness action cannot be proven to
+    have landed, the control socket is closed WITHOUT sending CONTINUE, the
+    launcher dies at its own barrier, and the case is reported as not posed.
     """
+    if applied is None:
+        applied = AppliedParentState("none", {})
     parent_sock, child_sock = socket.socketpair()
     control = child_sock.fileno()
     argv = list(argv) + ["--post-pin-control-fd", str(control)]
-    facts, note = [], None
+    facts, note, continued_at = [], None, None
     try:
-        proc = subprocess.Popen(argv, stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE, env=env,
-                                pass_fds=(control,))
+        with applied.spawning():
+            proc = subprocess.Popen(argv, stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE, env=applied.env,
+                                    pass_fds=(control,) + tuple(applied.pass_fds),
+                                    restore_signals=applied.restore_signals)
     except OSError as exc:                                  # noqa: BLE001
         parent_sock.close()
         child_sock.close()
-        return {"not_posed": "the launcher could not be started: %r" % (exc,),
+        return {"not_posed": _problem("the launcher could not be started", exc),
                 "post_pin": facts}
     child_sock.close()          # the parent drops its copy of the child's end
 
@@ -2042,19 +2970,36 @@ def _run_with_post_pin(argv, env, bound_s, ctx, plan, built):
         try:
             ready = parent_sock.recv(1)
         except (socket.timeout, OSError) as exc:            # noqa: BLE001
-            ready, note = b"", "READY never arrived: %r" % (exc,)
+            ready, note = b"", _problem("READY never arrived", exc)
         if ready != POST_PIN_READY:
             note = note or ("the control channel produced %r instead of READY"
                             % (ready,))
         else:
-            landed, facts = perform_post_pin(ctx, plan, built)
-            if landed:
-                try:
-                    parent_sock.sendall(POST_PIN_CONTINUE)
-                except OSError as exc:                      # noqa: BLE001
-                    note = "CONTINUE could not be delivered: %r" % (exc,)
+            pid = _launcher_pid(proc, plan)
+            if pid is None:
+                note = "the launcher process could not be identified at the barrier"
             else:
-                note = "the preregistered forced state did not land"
+                # The parent state first: it must already be present in the
+                # launcher. Then the setup's own post-pin change, which may need
+                # to observe the launcher too (E5, S2, S7).
+                # The capability the launcher was actually given: a case-private
+                # directory for S2/S7, the trial's work directory otherwise.
+                facts = applied.prove(pid, built.get("exec_path"),
+                                      built.get("work_dir") or ctx.work)
+                built["_launcher_pid"] = pid
+                try:
+                    _, action_facts = perform_post_pin(ctx, plan, built)
+                finally:
+                    built.pop("_launcher_pid", None)
+                facts = facts + action_facts
+                if facts and all(fact["landed"] for fact in facts):
+                    try:
+                        parent_sock.sendall(POST_PIN_CONTINUE)
+                        continued_at = time.monotonic()
+                    except OSError as exc:                  # noqa: BLE001
+                        note = _problem("CONTINUE could not be delivered", exc)
+                else:
+                    note = "the preregistered forced state did not land"
     finally:
         parent_sock.close()     # closing without CONTINUE ends the launcher
 
@@ -2069,7 +3014,7 @@ def _run_with_post_pin(argv, env, bound_s, ctx, plan, built):
     if note is not None:
         return {"not_posed": "post-pin control: " + note, "post_pin": facts}
     return {"post_pin": facts, "returned": returned, "stdout": stdout,
-            "stderr": stderr, "rc": rc}
+            "stderr": stderr, "rc": rc, "continued_at": continued_at}
 
 
 def _descendant_alive(built, plan, timeout_ms=3000):

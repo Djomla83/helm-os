@@ -37,7 +37,7 @@ permission to implement.
 | `observations.py` | P-12: observation → frozen outcome token, from closed vocabularies. Absent evidence yields no token |
 | `evidence.py` | P-14: publication sanitiser and deterministic serialization. An environment value is never reproduced |
 | `make_fixtures.py` | Deterministic generator for the non-compiled fixtures |
-| `launcher_spike.c` | The mechanism under test: pin → measure → admission → `clone3(CLONE_PIDFD)` → child setup → `execveat`. Emits the bounded capture prefix base64-encoded (`PRE-D7-B1`) so the helper's report reaches the harness without a second descriptor. Carries two TEST/CONTROL-ONLY parent arms, `--extra-threads` (M2) and `--rejected-acquisition-arm` (M5), neither of which is part of the candidate mechanism |
+| `launcher_spike.c` | The mechanism under test: pin → measure → admission → `clone3(CLONE_PIDFD)` → child setup → `execveat`. Emits the bounded capture prefix base64-encoded (`PRE-D7-B1`) so the helper's report reaches the harness without a second descriptor. Carries TEST/CONTROL-ONLY arms that are never part of the candidate mechanism: `--extra-threads` (M2), `--rejected-acquisition-arm` (M5), the `--post-pin-control-fd` barrier, and the caller-state flags `--parent-fd-set-cloexec` (F3) and `--parent-close-low-fds` (F6, F7) |
 | `helper_report.c` | Primary helper; reports its own observed process boundary from inside the executed image |
 | `helper_alt.c` | Substitution detector: different body, different digest |
 | `helper_dynamic.c` | The one deliberately dynamic helper (E7) |
@@ -72,9 +72,11 @@ no result here supports or refutes them.
 
 ## Build state
 
-The C sources have **not** been compiled on Linux. They were authored and
-reviewed on a Windows host, where a Linux build cannot honestly be attempted:
-faking one, or reaching for WSL merely to obtain a green result, would
-manufacture evidence. First compilation is a **preflight** step of the first
-authorised trial, and any build failure found there is a preflight finding to be
-recorded, not a defect to be quietly patched after the freeze.
+The C sources are authored and reviewed on a Windows host, where a Linux build
+cannot honestly be attempted: faking one, or reaching for WSL merely to obtain a
+green result, would manufacture evidence. Linux compile-only evidence comes from
+the `launch-exec-01 compile-only pretrial` workflow and is recorded, append-only,
+in `BUILD-EVIDENCE.md`; a source change invalidates the earlier builds for that
+file. Nothing built there is executed. Any build failure found at a trial's own
+preflight is a preflight finding to be recorded, not a defect to be quietly
+patched after the freeze.
