@@ -233,3 +233,57 @@ execution authority without mutating the artefact it authorises.
 After the trial, its result needs an independent result review before ADR-0024 or
 `crates/helm-launch` may advance. A red or green workflow is not a verdict: the result comes only
 from the frozen durable evidence.
+
+
+<a id="trial-002-postmortem-decisions"></a>
+
+### Owner decision 2026-09-12 — Trial #2 result accepted; bounded postmortem scope selected
+
+The owner accepts the
+[independent Trial #2 result review](implementation/HELM-LAUNCH-EXEC-01-TRIAL-002-RESULT-REVIEW.md).
+This acceptance preserves the historical result exactly: run `34640280964`, freeze
+`ba41a3f12be411058ed50e78bcd1c7e22afb7ae4`, 59 PASS / 6 FAIL / 6 INVALID / 1 BLOCKED, aggregate
+`MECHANISM_REJECTED`, one valid Trial #2, and consumed D-7. Nothing here changes a frozen status,
+reason, aggregate, checker, case definition, evidence file or result review.
+
+These are **prospective correction decisions**. They authorise only the bounded static/process
+diagnostics named below. They do not authorise a correction implementation, a Trial #3 freeze, a
+Trial #3 execution or a Trial #3 D-7.
+
+1. **Correction scope.** A future correction may address only Trial #2's demonstrated issues:
+   `X2b`, `X2c`, `X4`, `T1`, `S4`, `M2`, `E4`, `E6`, `E6c`, `O6`, `O7`, `R3`, and the shared
+   liveness-evidence defect affecting interpretation of `P1`, `P2` and `P4`. `N3` remains a
+   separate conditional case. No unrelated case or backlog is reopened unless a correction
+   demonstrates a new reachable dependency.
+2. **S4 product semantics.** HELM launch 0.1 remains conservative: clean exec-status EOF alone is
+   not positive proof that an executable image ran. Independent test evidence may pose a future
+   S4 case, but it cannot make the launcher receipt claim an observation the launcher did not make.
+   The future S4 contract must be rewritten prospectively around this rule; the launcher must not
+   infer exec success from EOF alone.
+3. **E6c remains recorded and in scope.** Its shared-writable-mapping question remains useful.
+   Future work corrects its posing machinery and does not delete or pre-answer the case.
+4. **P1/P2/P4 evidence standing.** Their Trial #2 statuses remain historical PASS, but those records
+   are not positive architectural evidence for descendant survival or death because the relative
+   liveness-FIFO path made the observation non-probative. A future valid trial must re-observe all
+   three with the corrected fixture. This path defect alone does not invalidate P3, whose frozen
+   result is the launcher's sweep observation.
+5. **N3 remains conditional.** No privileged GitHub or self-hosted execution is introduced now.
+   Privileged-transition testing is deferred to a future controlled privileged environment; the
+   Trial #2 BLOCKED status remains valid historical evidence.
+6. **One bounded pre-correction diagnostic pass is authorised.** It is limited to static inspection
+   of the E6/E6c marker-location mechanics and an isolated `waitid`/`CLD_DUMPED` process probe for
+   R3. It is not Trial #3, uses no D-7, poses no LAUNCH-EXEC case, and may not execute
+   `launcher_spike` or any HELM helper.
+
+Settled prospective correction requirements:
+
+* `X2b/X2c/X4_FIXTURE_EXEC_MODE_CORRECTION_REQUIRED`
+* `T1_FROZEN_EXPECTATION_CORRECTION_REQUIRED`
+* `S4_CONSERVATIVE_EXEC_EVIDENCE_POLICY_SELECTED`
+* `M2_PROCESS_CLONE_CORRELATION_CORRECTION_REQUIRED`
+* `E4_PATH_CORRECTION_REQUIRED`
+* `O6_O7_ABSOLUTE_FIFO_CORRECTION_REQUIRED`
+* `P1_P2_P4_LIVENESS_REVALIDATION_REQUIRED`
+* `N3_PRIVILEGED_TEST_DEFERRED`
+
+**Trial #2 is immutable and closed. No Trial #3 exists, and no D-7 exists for Trial #3.**

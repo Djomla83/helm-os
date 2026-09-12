@@ -1,5 +1,23 @@
 # Stanje projekta
 
+<a id="launch-exec-01-trial-002-postmortem-decisions"></a>
+
+## Trial #2 postmortem decisions, 2026-09-12 — bounded diagnostics only
+
+The owner accepted the [Trial #2 result review](implementation/HELM-LAUNCH-EXEC-01-TRIAL-002-RESULT-REVIEW.md)
+and recorded the prospective [postmortem decisions](DECISIONS.md#trial-002-postmortem-decisions).
+Trial #2 remains immutable at 59 PASS / 6 FAIL / 6 INVALID / 1 BLOCKED and
+`MECHANISM_REJECTED`; D-7 remains consumed and the valid Trial #2 count remains one.
+
+Future correction scope is bounded to the demonstrated Trial #2 issues and the non-probative
+`P1`/`P2`/`P4` liveness evidence. Clean exec-status EOF remains insufficient proof of exec; E6c
+remains recorded; `P1`/`P2`/`P4` require valid liveness re-observation; N3 privileged testing is
+deferred. One pre-correction diagnostic pass is authorised only for E6/E6c marker construction and
+R3 `waitid`/`CLD_DUMPED` semantics. It is not Trial #3 and uses no D-7.
+
+**No correction implementation, Trial #3 freeze, Trial #3 execution or Trial #3 D-7 is
+authorised.**
+
 <a id="launch-exec-01-trial-002-completed"></a>
 
 ## Trial #2 completed and independently reviewed, 2026-09-11 — `MECHANISM_REJECTED`
