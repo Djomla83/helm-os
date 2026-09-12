@@ -26,6 +26,7 @@ import pathlib
 import re
 import shutil
 import stat
+import select
 import subprocess
 import sys
 import tempfile
@@ -502,7 +503,8 @@ class S4ConservativeExecEvidence(unittest.TestCase):
         self.assertEqual(self.plan.helper_args, ("--exit", str(fc.S4_EXIT_CODE)))
         self.assertEqual(self.plan.spike_flags,
                          ("--post-fork-delay-ms", str(fc.EXEC_RACE_DELAY_MS)))
-        self.assertEqual(self.plan.posed_when, "helper_report_complete")
+        # R-M1: no posed check reads the report; it is a result-side fact.
+        self.assertIsNone(self.plan.posed_when)
         self.assertEqual(self.plan.assertions,
                          ("executed_marker", "helper_exit_corroborated"))
         self.assertFalse(any("--exit-immediately" in p.helper_args
@@ -515,8 +517,9 @@ class S4ConservativeExecEvidence(unittest.TestCase):
         for name in self.plan.assertions:
             self.assertEqual(record["assertions"][name]["result"],
                              ob.ASSERTION_HOLDS, name)
-        self.assertEqual(record["posing_evidence"]["posed_check"],
-                         {"name": "helper_report_complete", "held": True})
+        self.assertNotIn("posed_check", record["posing_evidence"])
+        self.assertEqual(record["posing_evidence"]["measured"]["report_states"],
+                         {ob.REPORT_COMPLETE: 1})
 
     def test_the_launcher_claim_never_reads_the_independent_evidence(self):
         receipt = D.receipt(exit_code=fc.S4_EXIT_CODE, wait_si_code="CLD_EXITED")
@@ -547,7 +550,8 @@ class S4ConservativeExecEvidence(unittest.TestCase):
                             report_state=state)
             status, record = score(self.plan, obs)
             self.assertEqual(status, INVALID, state)
-            self.assertIn("helper_report_complete", record["not_posed"])
+            self.assertIn("an executed-identity assertion could not be observed",
+                          record["not_posed"])
         for over in ({"spike": None}, {"exit_code": "7"},
                      {"wait_si_code": "CLD_KILLED"}):
             if "spike" in over:
@@ -593,8 +597,7 @@ class S4ConservativeExecEvidence(unittest.TestCase):
         receipt = D.receipt(exit_code=0)
         self.assertEqual(driver.POSED_CHECKS["no_helper_report"](
             D.obs_for(s5, spike=receipt)), True)
-        self.assertEqual(driver.POSED_CHECKS["helper_report_complete"](
-            D.obs_for(self.plan, spike=receipt)), False)
+        self.assertNotIn("helper_report_complete", driver.POSED_CHECKS)
 
 
 # ============================================ M2: the direct-child clone3
@@ -1236,13 +1239,22 @@ class FixtureSignalDiagnostic(unittest.TestCase):
         self.assertIn('"%s%s:%d\\n", FIXTURE_SIGNAL_FAILED', body)
         self.assertIn("write_all(2, line", body)
         self.assertNotIn("fifo", body)
-        signal_block = source.split("if (fifo) {", 1)[1].split("sleep_ms(lifetime_ms)")[0]
-        self.assertIn('if (f < 0) {\n                fixture_signal_failed("open", errno);',
-                      signal_block)
+        signal_block = source.split("if (fifo && rendezvous) {", 1)[1].split(
+            "sleep_ms(lifetime_ms)")[0]
+        self.assertIn('if (f < 0) {\n                int err = errno;\n'
+                      '                fixture_signal_failed("open", err);', signal_block)
         self.assertIn('if (write_all(f, "L", 1) != 0) {\n                    '
-                      'fixture_signal_failed("write", errno);', signal_block)
-        # No descriptor is added: the only opens are /dev/null and the FIFO.
-        self.assertEqual(len(re.findall(r"\bopen\(", source)), 2)
+                      'int err = errno;\n                    '
+                      'fixture_signal_failed("write", err);', signal_block)
+        # No descriptor crosses an exec. The opens are /dev/null, the liveness
+        # rendezvous and, for P1/P2/P4 only (R-I1), the fixture-health FIFO and
+        # the non-blocking liveness precheck; every FIFO open is close-on-exec.
+        opens = re.findall(r"\bopen\(([^;]*)\);", source)
+        self.assertEqual(len(opens), 4)
+        for call in opens:
+            if "/dev/null" not in call:
+                self.assertIn("O_CLOEXEC", call)
+        self.assertIn("pipe2(gate, O_CLOEXEC)", source)
         self.assertNotIn("dup(", source.split("int main", 1)[1].replace("dup2(", ""))
 
 
@@ -1353,6 +1365,599 @@ class R3SignalPreservation(unittest.TestCase):
                 spike=D.receipt(process_disposition=disposition, **fields)))[0]
             self.assertEqual(token, "Exited:7" if action == "exit"
                              else "Signaled:SIGKILL")
+
+
+# ======= R-M1 (correction review): S4 decisive contradictions come first
+class S4DecisiveContradictionFirst(unittest.TestCase):
+    """Would fail against 7f98d4d, whose report-reading posed check made these
+    decisive launcher contradictions INVALID."""
+
+    plan = driver.CASE_PLANS["S4"]
+    EXITED_7 = dict(exit_code=fc.S4_EXIT_CODE, wait_si_code="CLD_EXITED")
+
+    def s4(self, spike, rep=None, **over):
+        return score(self.plan, D.obs_for(self.plan, spike=spike, rep=rep, **over))
+
+    def test_no_posed_check_reads_the_report(self):
+        self.assertIsNone(self.plan.posed_when)
+        self.assertNotIn("helper_report_complete", driver.POSED_CHECKS)
+        self.assertEqual(ob.ASSERTION_READS["helper_exit_corroborated"],
+                         ("report", "report_state", "spike"))
+
+    def test_an_admission_refusal_without_a_report_fails(self):
+        status, record = self.s4(D.receipt(admission="refused",
+                                           refusal="ElfNotInCohort"))
+        self.assertEqual(status, FAIL, record)
+        self.assertNotIn("not_posed", record)
+        self.assertEqual(record["outcome"], "helper_exit_contradicted")
+        self.assertEqual(record["mechanism_outcome"], "refused:ElfNotInCohort")
+
+    def test_an_explicit_pre_exec_failure_without_a_report_fails(self):
+        for stage, token in (("EXEC", "ExecFailed:EACCES"),
+                             ("CHDIR", "ExecFailed:CHDIR:EACCES")):
+            status, record = self.s4(D.receipt(
+                process_disposition="ExecFailed", exec_failed_stage=stage,
+                exec_failed_errno=13, exit_code=127))
+            self.assertEqual(status, FAIL, record)
+            self.assertEqual(record["outcome"], "helper_exit_contradicted")
+            self.assertEqual(record["mechanism_outcome"], token)
+
+    def test_other_decisive_launcher_contradictions_fail_without_a_report(self):
+        for spike in (
+                D.receipt(process_disposition="Signaled", term_signal=9,
+                          exit_code=-1, wait_si_code="CLD_KILLED"),
+                D.receipt(process_disposition="TimedOut",
+                          timeout_disposition="KilledByLauncher", term_signal=15,
+                          exit_code=-1, wait_si_code="CLD_KILLED"),
+                D.receipt(exit_code=3, wait_si_code="CLD_EXITED"),
+                D.receipt(process_disposition="ExecStatusIndeterminate",
+                          exit_code=-1),
+                D.receipt(process_disposition="ExitStatusUnobservable",
+                          exit_code=-1, wait_errno=10)):
+            status, record = self.s4(spike)
+            self.assertEqual(status, FAIL, (spike, record))
+            self.assertEqual(record["outcome"], "helper_exit_contradicted")
+
+    def test_a_conservative_receipt_without_positive_evidence_is_invalid(self):
+        receipt = D.receipt(**self.EXITED_7)
+        for state in (ob.REPORT_ABSENT, ob.REPORT_STREAM_INCOMPLETE,
+                      ob.REPORT_TRUNCATED, ob.REPORT_MALFORMED):
+            status, record = self.s4(receipt, report_state=state)
+            self.assertEqual(status, INVALID, state)
+            self.assertIn("an executed-identity assertion could not be observed",
+                          record["not_posed"])
+        # a report that parses but declares no exit is not positive evidence
+        self.assertEqual(self.s4(receipt, rep=D.report())[0], INVALID)
+        # clean exec-status EOF alone still proves nothing
+        self.assertEqual(ob.derive("launcher_receipt_claim", D.obs_for(
+            self.plan, spike=receipt, rep=None))[0], "ExecStatusIndeterminate")
+
+    def test_complete_matching_evidence_passes(self):
+        status, record = self.s4(D.receipt(**self.EXITED_7), rep=full_report())
+        self.assertEqual((status, record["outcome"]),
+                         (PASS, "ExecStatusIndeterminate"), record)
+
+    def test_a_contradiction_outranks_an_uninterpretable_other_side(self):
+        rows = ((D.receipt(exit_code=7, wait_si_code="CLD_KILLED"),
+                 full_report(declared_exit=3)),
+                (D.receipt(exit_code=3, wait_si_code="CLD_EXITED"), None),
+                (D.receipt(admission="refused", refusal="ElfNotInCohort"),
+                 full_report()))
+        for spike, rep in rows:
+            status, record = self.s4(spike, rep=rep)
+            self.assertEqual((status, record["outcome"]),
+                             (FAIL, "helper_exit_contradicted"), record)
+        # Nothing decisive on either side: still INVALID, never a guess.
+        self.assertEqual(self.s4(D.receipt(exit_code=7, wait_si_code="CLD_KILLED"),
+                                 rep=full_report())[0], INVALID)
+
+    def test_s5_is_unchanged(self):
+        s5 = driver.CASE_PLANS["S5"]
+        self.assertEqual((s5.posed_when, s5.rule, s5.assertions),
+                         ("no_helper_report", "process_disposition", ()))
+        self.assertEqual(score(s5, D.obs_for(s5, spike=D.receipt()))[0], PASS)
+        self.assertEqual(score(s5, D.obs_for(s5, spike=D.receipt(),
+                                             rep=full_report()))[0], INVALID)
+        self.assertEqual(score(s5, D.obs_for(s5, spike=D.receipt(
+            process_disposition="ExecFailed", exec_failed_stage="EXEC",
+            exec_failed_errno=13, exit_code=127)))[0], FAIL)
+
+
+# ========= R-I1 (correction review): a liveness result needs a proven fixture
+H = ob.liveness_fixture_health
+PROBE = b"PROBE_REACHED\n"
+P_CASES = ("P1", "P2", "P4")
+TRIAL3_CANDIDATE = "7f98d4dcdb098abf96fe5e15e314194f5df6cb20"
+
+
+def p_receipt(case):
+    if case != "P4":
+        return D.receipt()
+    return D.receipt(stdout={"bytes_drained": 0,
+                             "drained_sha256": oracles.digest_of(b""),
+                             "completeness": "WriterRetainedAfterChildExit"})
+
+
+def p_score(case, alive, health=None, **over):
+    plan = driver.CASE_PLANS[case]
+    fields = dict(descendant_alive_after_launch=alive, **over)
+    if health is not None:
+        fields["liveness_fixture_health"] = health
+    return score(plan, D.obs_for(plan, spike=p_receipt(case), **fields))
+
+
+class LivenessFixtureHealthGrammar(unittest.TestCase):
+    def test_the_closed_grammar(self):
+        rows = (
+            (b"", False, "none", None),
+            (PROBE, True, "none", None),
+            (PROBE + b"LIVENESS_OPEN_FAILED:2\n", True, "open_failed", 2),
+            (PROBE + b"LIVENESS_WRITE_FAILED:32\n", True, "write_failed", 32),
+            (b"LIVENESS_OPEN_FAILED:13\n", False, "open_failed", 13),
+            (b"LIVENESS_UNEXPECTED_OPEN\n", False, "unexpected_open", None),
+            (b"PROBE_REACHED", False, "malformed", None),
+            (PROBE + PROBE, False, "malformed", None),
+            (b"LIVENESS_WRITE_FAILED:32\n", False, "malformed", None),
+            (PROBE + b"LIVENESS_OPEN_FAILED:12345\n", False, "malformed", None),
+            (PROBE + b"LIVENESS_OPEN_FAILED:/tmp/O7.fifo\n", False, "malformed", None),
+            (PROBE + b"LIVENESS_UNEXPECTED_OPEN\n", False, "malformed", None),
+            (b"L", False, "malformed", None),
+            (PROBE + b"x" * ob.LIVENESS_HEALTH_MAX_BYTES, False, "malformed", None),
+            (None, False, "unreadable", None),
+        )
+        for raw, probe, failure, number in rows:
+            fact = H(raw)
+            self.assertEqual((fact["probe_reached"], fact["channel_failure"],
+                              fact["errno_number"]), (probe, failure, number), raw)
+            self.assertIn(fact["channel_failure"], ob.LIVENESS_CHANNEL_FAILURES)
+            self.assertEqual(sorted(fact), ["channel_failure", "errno",
+                                            "errno_number", "probe_reached"])
+        self.assertEqual(H(PROBE + b"LIVENESS_OPEN_FAILED:2\n")["errno"], "ENOENT")
+
+    def test_the_interpretation_algebra(self):
+        invalid = (
+            ("A: no probe, no byte", False, H(b"")),
+            ("A: no probe, a byte", True, H(b"")),
+            ("A: no health observation", False, None),
+            ("B: open failed after the probe", False, H(PROBE + b"LIVENESS_OPEN_FAILED:2\n")),
+            ("B: write failed after the probe", False,
+             H(PROBE + b"LIVENESS_WRITE_FAILED:32\n")),
+            ("B: open failed before the probe", False, H(b"LIVENESS_OPEN_FAILED:13\n")),
+            ("unexpected open", False, H(b"LIVENESS_UNEXPECTED_OPEN\n")),
+            ("malformed", False, H(PROBE + b"ALIVE\n")),
+            ("malformed with a byte", True, H(b"garbage")),
+            ("unreadable", False, H(None)),
+            ("probe but no recorded liveness", None, H(PROBE)),
+        )
+        for case in P_CASES:
+            for label, alive, health in invalid:
+                status, record = p_score(case, alive, health)
+                self.assertEqual(status, INVALID, (case, label, record))
+                self.assertIsNone(record.get("outcome"), (case, label))
+            self.assertEqual(p_score(case, True, H(PROBE))[1]["outcome"],
+                             "descendant_survived")
+            status, record = p_score(case, False, H(PROBE))
+            self.assertEqual((status, record["outcome"]), (PASS, "descendant_died"),
+                             (case, record))
+
+    def test_the_questions_and_constructions_are_unchanged(self):
+        users = sorted(p.case for p in driver._PLAN_LIST
+                       if p.rule == driver.LIVENESS_HEALTH_RULE)
+        self.assertEqual(users, list(P_CASES))
+        life = str(fc.P_DESCENDANT_LIFETIME_MS)
+        expected = {
+            "P1": ("--release-stdio", "--parent-exit", "0", "--lifetime-ms", life),
+            "P2": ("--release-stdio", "--setsid", "--parent-exit", "0",
+                   "--lifetime-ms", life),
+            "P3": ("--release-stdio", "--parent-exit", "0", "--lifetime-ms", life),
+            "P4": ("--retain-stdio", "--setsid", "--parent-exit", "0",
+                   "--lifetime-ms", life),
+        }
+        for case, args in expected.items():
+            plan = driver.CASE_PLANS[case]
+            self.assertEqual(plan.helper_args, args, case)
+            self.assertEqual(plan.setup, "fork_helper", case)
+            spec = fc.BY_NAME[case]
+            self.assertEqual(spec["cls"], fc.RECORDED, case)
+        self.assertEqual(driver.CASE_PLANS["P3"].rule, "sweep")
+        self.assertEqual(driver.CASE_PLANS["P4"].posed_when, "retention_observed")
+        self.assertIsNone(driver.CASE_PLANS["P1"].posed_when)
+        self.assertIsNone(driver.CASE_PLANS["P2"].posed_when)
+
+    def test_p_health_and_the_o6_o7_signal_never_satisfy_each_other(self):
+        o7 = driver.CASE_PLANS["O7"]
+        spike = D.receipt(exit_code=42, wait_si_code="CLD_EXITED",
+                          stderr={"bytes_drained": 0,
+                                  "drained_sha256": oracles.digest_of(b""),
+                                  "completeness": "WriterRetainedAfterChildExit"})
+        obs = D.obs_for(o7, spike=spike, fixture_descendant_signalled=False,
+                        descendant_alive_after_launch=True,
+                        liveness_fixture_health=H(PROBE))
+        self.assertEqual(score(o7, obs)[0], INVALID)
+        for case in P_CASES:
+            self.assertEqual(p_score(case, False, None,
+                                     fixture_descendant_signalled=True)[0], INVALID)
+        self.assertNotIn("liveness_fixture_health",
+                         driver.POSED_CHECK_READS["fixture_descendant_signalled"])
+        self.assertNotEqual(driver._LIVENESS_HEALTH_FD, driver._FIXTURE_FD)
+
+    def test_helper_fork_orders_release_probe_gate_and_rendezvous(self):
+        source = (EXP / "helper_fork.c").read_text(encoding="utf-8")
+        probe = source.split("static int liveness_probe", 1)[1].split("\n}\n", 1)[0]
+        order = [probe.index(s) for s in (
+            "*health = open(health_path, O_WRONLY | O_NONBLOCK | O_CLOEXEC);",
+            "int pre = open(fifo, O_WRONLY | O_NONBLOCK | O_CLOEXEC);",
+            "errno != ENXIO",
+            "health_token(*health, LIVENESS_PROBE_REACHED);",
+            "close(gate_write);")]
+        self.assertEqual(order, sorted(order))
+        child = source.split("if (pid == 0) {", 1)[1].split("_exit(0);", 1)[0]
+        order = [child.index(s) for s in (
+            "close(0);", "close(2);", 'open("/dev/null", O_RDWR)', "setsid();",
+            "liveness_probe(health_path, fifo, &health, gate[1])",
+            "int f = open(fifo, O_WRONLY | O_CLOEXEC);",
+            "health_failure(health, LIVENESS_OPEN_FAILED, err);",
+            "health_failure(health, LIVENESS_WRITE_FAILED, err);")]
+        self.assertEqual(order, sorted(order))
+        parent = source.split("_exit(0);\n    }", 1)[1]
+        self.assertLess(parent.index("close(gate[1]);"),
+                        parent.index("read(gate[0], &byte, 1)"))
+        self.assertLess(parent.index("read(gate[0], &byte, 1)"),
+                        parent.index("return parent_exit;"))
+        for token in ("PROBE_REACHED\\n", "LIVENESS_OPEN_FAILED",
+                      "LIVENESS_WRITE_FAILED", "LIVENESS_UNEXPECTED_OPEN\\n"):
+            self.assertIn('"%s"' % token, source)
+        self.assertNotIn("--setsid", driver.CASE_PLANS["P1"].helper_args)
+        spike = (EXP / "launcher_spike.c").read_text(encoding="utf-8")
+        self.assertNotIn("fixture-health", spike)
+
+    def test_the_harness_arms_before_the_spawn_and_reads_after_the_rendezvous(self):
+        node = function("_launch_and_observe")
+        lines = {}
+        for sub in ast.walk(node):
+            if isinstance(sub, ast.Call):
+                name = ast.unparse(sub.func)
+                lines[name] = min(lines.get(name, sub.lineno), sub.lineno)
+        self.assertLess(lines["_arm_liveness_health"], lines["subprocess.Popen"])
+        self.assertLess(lines["_arm_liveness_health"], lines["_run_with_post_pin"])
+        self.assertGreater(lines["_read_liveness_health"], lines["_descendant_alive"])
+        self.assertIn("disarm_liveness_health(built)", source_of("_run_once"))
+        self.assertIn("disarm_liveness_health(built)",
+                      source_of("release_setup_resources"))
+
+    def test_7f98d4d_scored_a_missing_liveness_byte_descendant_died(self):
+        """R-I1, the reviewer's false-PASS shape, against the reviewed candidate."""
+        tmp = pathlib.Path(tempfile.mkdtemp(prefix="r-i1-7f98d4d-"))
+        try:
+            for name in MANIFEST["sha256"]:
+                if name.endswith(".py"):
+                    (tmp / name).write_bytes(git_show(
+                        TRIAL3_CANDIDATE, "docs/experiments/launch-exec-01/" + name))
+            proc = subprocess.run([sys.executable, "-I", "-B", "-c", OLD_P_SCORE,
+                                   str(tmp)], capture_output=True, timeout=120,
+                                  cwd=str(tmp))
+            self.assertEqual(proc.returncode, 0,
+                             proc.stderr.decode("utf-8", "replace"))
+            old = json.loads(proc.stdout.decode("utf-8"))
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+        for case in P_CASES:
+            self.assertEqual(old[case], ["PASS", "descendant_died"], case)
+            # The same observation now: no health channel, or the health a
+            # broken liveness open reports, is INVALID and never descendant_died.
+            for health in (None, H(b"LIVENESS_OPEN_FAILED:2\n")):
+                status, record = p_score(case, False, health)
+                self.assertEqual((status, record.get("outcome")), (INVALID, None))
+
+
+OLD_P_SCORE = r'''
+import json, sys
+sys.path.insert(0, sys.argv[1])
+import checker, driver, observations as ob, oracles
+out = {}
+for case in ("P1", "P2", "P4"):
+    plan = driver.CASE_PLANS[case]
+    block = {"bytes_drained": 0, "drained_sha256": oracles.digest_of(b""),
+             "completeness": "CompleteAtEof"}
+    retained = dict(block, completeness="WriterRetainedAfterChildExit")
+    spike = {"admission": "accepted", "pre_exec_body_sha256": "a" * 64,
+             "pre_exec_body_size": 4096, "pre_exec_mode_bits": 493,
+             "process_disposition": "Exited", "timeout_disposition": "",
+             "exec_failed_stage": "", "exec_failed_errno": 0, "exit_code": 0,
+             "term_signal": -1, "launcher_signal_issued": False,
+             "group_sweep_issued": True, "wait_errno": 0,
+             "stdout": retained if case == "P4" else block, "stderr": block}
+    obs = {"spike": spike, "report": None, "report_state": ob.REPORT_ABSENT,
+           "launch_returned": True, "elapsed_ms": 12,
+           "declared_pre_exec_stall": plan.pre_exec_stall,
+           "declared_body_length_changed": plan.body_length_changed,
+           "declared_injection_modes": [], "expected_marker": plan.expected_marker,
+           "build_identity_binding": {"bound": True, "classification": "X",
+                                      "object_sha256": "a" * 64},
+           "cleanup_problems": [], "descendant_alive_after_launch": False}
+    obs["exec_confirmation"] = ob.exec_confirmation(spike, None, None,
+                                                    ob.REPORT_ABSENT)
+    obs["repeat_observations"] = [obs]
+    record = driver.evaluate(plan, obs)
+    out[case] = [checker.score_case(case, record)[0], record.get("outcome")]
+print(json.dumps(out, sort_keys=True))
+'''
+
+# A Python stand-in for helper_fork's P-series descendant, in helper_fork.c's
+# order. It is not helper_fork and not a LAUNCH-EXEC case.
+P_STANDIN = r'''
+import errno, os, sys, time
+liveness, health, workdir, mode = sys.argv[1:5]
+for fd in (0, 1, 2):                 # P1/P2: the first three actions
+    os.close(fd)
+null = os.open(os.devnull, os.O_RDWR)
+os.dup2(null, 1)
+os.dup2(null, 2)
+os.chdir(workdir)                    # the launcher's child fchdirs before execveat
+if mode == "no_health":
+    time.sleep(0.3)
+    os._exit(0)
+h = os.open(health, os.O_WRONLY | os.O_NONBLOCK | os.O_CLOEXEC)
+if mode == "malformed":
+    os.write(h, b"PROBE_REACHED\nALIVE\n")
+    os._exit(0)
+target = liveness + ".missing" if mode == "broken_path" else liveness
+try:
+    pre = os.open(target, os.O_WRONLY | os.O_NONBLOCK | os.O_CLOEXEC)
+except OSError as exc:
+    if exc.errno != errno.ENXIO:
+        os.write(h, b"LIVENESS_OPEN_FAILED:%d\n" % exc.errno)
+        os._exit(0)
+else:
+    os.close(pre)
+    os.write(h, b"LIVENESS_UNEXPECTED_OPEN\n")
+    os._exit(0)
+os.write(h, b"PROBE_REACHED\n")
+if mode == "die_after_probe":
+    os._exit(0)
+if mode == "late_open_fails":
+    os.unlink(target)
+try:
+    f = os.open(target, os.O_WRONLY | os.O_CLOEXEC)
+except OSError as exc:
+    os.write(h, b"LIVENESS_OPEN_FAILED:%d\n" % exc.errno)
+    os._exit(0)
+if mode == "write_fails":
+    os.write(h, b"LIVENESS_WRITE_FAILED:%d\n" % errno.EPIPE)
+else:
+    os.write(f, b"L")
+os.close(f)
+os._exit(0)
+'''
+
+
+@POSIX
+class LivenessFixtureHealthThroughStandIns(unittest.TestCase):
+    """Scratch FIFOs and a Python stand-in; helper_fork is never executed."""
+
+    def setUp(self):
+        self.root = pathlib.Path(tempfile.mkdtemp(prefix="p-health-"))
+        self.cwd = os.getcwd()
+        os.chdir(self.root)
+        self.build = pathlib.Path("target") / "launch-exec-01"   # relative, as in Trial #2
+        self.build.mkdir(parents=True)
+        self.work = self.root / "work-dir-capability"
+        self.work.mkdir()
+        self.ctx = driver.TrialContext(build=str(self.build), work=str(self.build),
+                                       preflight={}, freeze={},
+                                       sanitiser=evidence.Sanitiser())
+        self.built = []
+
+    def tearDown(self):
+        for built in self.built:
+            driver.disarm_liveness_health(built)
+        os.chdir(self.cwd)
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    def setup_case(self, case):
+        plan = driver.CASE_PLANS[case]
+        built = driver.SETUPS[plan.setup](self.ctx, plan)
+        self.built.append(built)
+        return plan, built
+
+    def observe(self, case, mode):
+        """Arm, run the stand-in, wait as the direct child's gate does, rendezvous."""
+        plan, built = self.setup_case(case)
+        facts, why = driver._arm_liveness_health(built, ())
+        self.assertIsNone(why)
+        proc = subprocess.Popen(
+            [sys.executable, "-I", "-c", P_STANDIN, built["liveness_fifo"],
+             built["fixture_health_fifo"], str(self.work), mode],
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL)
+        # launch() returns only after helper_fork's direct child passed its
+        # gate, i.e. after the descendant wrote its health token.
+        poller = select.poll()
+        poller.register(built[driver._LIVENESS_HEALTH_FD], select.POLLIN)
+        poller.poll(1000 if mode == "no_health" else 10000)
+        alive = driver._descendant_alive(built, plan, timeout_ms=1500)
+        raw = driver._read_liveness_health(built, timeout_ms=500)
+        proc.wait(timeout=60)
+        health = H(raw)
+        obs = D.obs_for(plan, spike=p_receipt(case),
+                        descendant_alive_after_launch=alive,
+                        liveness_fixture_health=health,
+                        liveness_health_arming=facts)
+        record = driver.evaluate(plan, obs)
+        status = checker.score_case(case, record)[0]
+        return status, record, health, alive, obs
+
+    def test_arming_is_fresh_private_non_inheritable_and_absolute(self):
+        for case in P_CASES:
+            plan, built = self.setup_case(case)
+            facts, why = driver._arm_liveness_health(built, ())
+            self.assertIsNone(why, case)
+            self.assertEqual(facts, {"armed_before_launch": True,
+                                     "reader_inheritable": False,
+                                     "reader_passed_to_launcher": False,
+                                     "fresh_fifo": True, "private_mode": True,
+                                     "helper_path_absolute": True,
+                                     "helper_path_is_armed_fifo": True}, case)
+            fd = built[driver._LIVENESS_HEALTH_FD]
+            self.assertFalse(os.get_inheritable(fd), case)
+            self.assertTrue(os.path.isabs(built["fixture_health_fifo"]), case)
+            self.assertEqual(driver._read_liveness_health(built, timeout_ms=0), b"")
+
+    def test_the_reader_passed_to_the_launcher_is_refused(self):
+        plan, built = self.setup_case("P2")
+        stale = os.open(os.devnull, os.O_RDONLY)
+        os.close(stale)              # the next descriptor the arming will get
+        facts, why = driver._arm_liveness_health(built, (stale,))
+        self.assertEqual(built[driver._LIVENESS_HEALTH_FD], stale)
+        self.assertIsNone(facts)
+        self.assertIn("held only by the harness", why)
+
+    def test_a_relative_or_foreign_health_path_is_refused(self):
+        plan, built = self.setup_case("P4")
+        liveness = built["liveness_fifo"]
+        health = built["fixture_health_fifo"]
+        built["extra_helper_args"] = ("--liveness-fifo", liveness,
+                                      "--fixture-health-fifo",
+                                      os.path.relpath(health))
+        facts, why = driver._arm_liveness_health(built, ())
+        self.assertIsNone(facts)
+        self.assertIn("not an absolute path to the armed FIFO", why)
+        built["extra_helper_args"] = ("--liveness-fifo", liveness,
+                                      "--fixture-health-fifo", liveness)
+        self.assertIn("not an absolute path to the armed FIFO",
+                      driver._arm_liveness_health(built, ())[1])
+
+    def test_an_unarmable_channel_is_not_posed_and_names_no_path(self):
+        plan, built = self.setup_case("P1")
+        built["fixture_health_fifo"] = str(self.root / "no-such-dir" / "P1.health")
+        facts, why = driver._arm_liveness_health(built, ())
+        self.assertIsNone(facts)
+        self.assertEqual(why, "the liveness fixture-health channel could not be "
+                              "armed: ENOENT")
+        record = driver.evaluate(plan, {"not_posed": why, "launch_returned": None,
+                                        "repeat_observations": []})
+        self.assertEqual(checker.score_case("P1", record)[0], INVALID)
+
+    def test_no_probe_reached_is_invalid(self):
+        for case in P_CASES:
+            status, record, health, alive, _ = self.observe(case, "no_health")
+            self.assertIs(alive, False)
+            self.assertEqual((health["probe_reached"], health["channel_failure"]),
+                             (False, "none"))
+            self.assertEqual((status, record.get("outcome")), (INVALID, None), case)
+            self.assertIn("never reported reaching the liveness probe point",
+                          record["not_posed"])
+
+    def test_the_reviewers_broken_liveness_open_is_invalid(self):
+        for case in P_CASES:
+            status, record, health, alive, _ = self.observe(case, "broken_path")
+            self.assertIs(alive, False)
+            self.assertEqual(health, {"probe_reached": False,
+                                      "channel_failure": "open_failed",
+                                      "errno": "ENOENT",
+                                      "errno_number": errno.ENOENT})
+            self.assertEqual((status, record.get("outcome")), (INVALID, None), case)
+            self.assertIn("liveness open failed with ENOENT", record["not_posed"])
+
+    def test_probe_then_liveness_open_failure_is_invalid(self):
+        for case in P_CASES:
+            status, record, health, alive, _ = self.observe(case, "late_open_fails")
+            self.assertEqual((health["probe_reached"], health["channel_failure"],
+                              health["errno"]), (True, "open_failed", "ENOENT"))
+            self.assertEqual((status, record.get("outcome")), (INVALID, None), case)
+
+    def test_probe_then_liveness_write_failure_is_invalid(self):
+        for case in P_CASES:
+            status, record, health, alive, _ = self.observe(case, "write_fails")
+            self.assertIs(alive, False)
+            self.assertEqual((health["probe_reached"], health["channel_failure"]),
+                             (True, "write_failed"))
+            self.assertEqual((status, record.get("outcome")), (INVALID, None), case)
+
+    def test_probe_then_death_before_the_rendezvous_is_descendant_died(self):
+        for case in P_CASES:
+            status, record, health, alive, _ = self.observe(case, "die_after_probe")
+            self.assertIs(alive, False)
+            self.assertEqual((health["probe_reached"], health["channel_failure"]),
+                             (True, "none"))
+            self.assertEqual((status, record["outcome"]), (PASS, "descendant_died"))
+
+    def test_probe_then_a_liveness_byte_is_descendant_survived(self):
+        for case in P_CASES:
+            status, record, health, alive, _ = self.observe(case, "ok")
+            self.assertIs(alive, True)
+            self.assertEqual((health["probe_reached"], health["channel_failure"]),
+                             (True, "none"))
+            self.assertEqual((status, record["outcome"]),
+                             (PASS, "descendant_survived"))
+
+    def test_malformed_health_is_invalid(self):
+        status, record, health, alive, _ = self.observe("P2", "malformed")
+        self.assertEqual(health["channel_failure"], "malformed")
+        self.assertEqual((status, record.get("outcome")), (INVALID, None))
+
+    def test_a_stale_token_cannot_satisfy_a_new_invocation(self):
+        plan, built = self.setup_case("P1")
+        driver._arm_liveness_health(built, ())
+        old = os.open(built["fixture_health_fifo"], os.O_WRONLY | os.O_NONBLOCK)
+        try:
+            os.write(old, PROBE)                    # buffered in the OLD node
+            facts, why = driver._arm_liveness_health(built, ())   # next invocation
+            self.assertIsNone(why)
+            self.assertIs(facts["fresh_fifo"], True)
+            # Re-arming closed the old node's only reader: a stale writer now
+            # reaches nobody, least of all the new node.
+            with self.assertRaises(BrokenPipeError):
+                os.write(old, PROBE)
+            self.assertEqual(driver._read_liveness_health(built, timeout_ms=200), b"")
+        finally:
+            os.close(old)
+        self.assertEqual(driver.disarm_liveness_health(built), [])
+        self.assertFalse(os.path.exists(built["fixture_health_fifo"]))
+        self.assertNotIn(driver._LIVENESS_HEALTH_FD, built)
+        self.assertIsNone(driver._read_liveness_health(built))
+
+    def test_both_paths_are_absolute_and_survive_a_directory_change(self):
+        canonical = pathlib.Path(os.path.realpath(self.build))
+        for case in P_CASES:
+            plan, built = self.setup_case(case)
+            driver._arm_liveness_health(built, ())
+            for flag, key in (("--liveness-fifo", "liveness_fifo"),
+                              ("--fixture-health-fifo", "fixture_health_fifo")):
+                path = driver._helper_argument(built, flag)
+                self.assertEqual(path, built[key])
+                self.assertTrue(os.path.isabs(path), (case, flag))
+                self.assertEqual(pathlib.Path(path).parent, canonical)
+                self.assertTrue(pathlib.Path(path).name.startswith(case + "."))
+                before = os.stat(path)
+                os.chdir(self.work)
+                try:
+                    after = os.stat(path)
+                finally:
+                    os.chdir(self.root)
+                self.assertTrue(stat.S_ISFIFO(after.st_mode))
+                self.assertEqual((after.st_dev, after.st_ino),
+                                 (before.st_dev, before.st_ino))
+                self.assertEqual(stat.S_IMODE(after.st_mode), 0o600)
+        for case in ("O6", "O7", "P3", "T5"):
+            plan, built = self.setup_case(case)
+            self.assertNotIn("fixture_health_fifo", built, case)
+            self.assertNotIn("--fixture-health-fifo", built["extra_helper_args"], case)
+            self.assertEqual(driver._arm_liveness_health(built, ()), (None, None))
+            driver.disarm_fixture_signal(built)
+
+    def test_published_evidence_carries_no_path(self):
+        status, record, health, alive, obs = self.observe("P1", "broken_path")
+        plan = driver.CASE_PLANS["P1"]
+        published = json.dumps(driver.posing_evidence(plan, obs, [], None),
+                               sort_keys=True)
+        self.assertEqual(driver.posing_evidence(plan, obs)["fixture"]["liveness_health"],
+                         health)
+        for private in (str(self.root), os.path.realpath(self.root), "fixture-health",
+                        ".liveness", "launch-exec-01"):
+            self.assertNotIn(private, published)
+            self.assertNotIn(private, record["not_posed"])
+        self.assertIn('"liveness_health_arming"', published)
 
 
 # ============================================ N3 and the global semantics

@@ -78,17 +78,13 @@
         "meaning": "process_disposition over the receipt with no independent exec evidence; clean exec-status EOF alone is never exec"
       }
     },
-    "posed_checks_added": {
-      "helper_report_complete": {
-        "cases": ["S4"],
-        "reads": ["report_state", "report"]
-      }
-    },
+    "posed_checks_added": {},
     "assertions_added": {
       "helper_exit_corroborated": {
         "cases": ["S4"],
         "reads": ["report", "report_state", "spike"],
-        "violation_token": "helper_exit_contradicted"
+        "violation_token": "helper_exit_contradicted",
+        "combination": "the launcher side (refusal, pre-exec failure, disposition, waitid classification, exit status) and the report side (declared exit) are judged separately and combined violated > unobservable > holds, so a decisive contradiction on either side is a FAIL even when the other side is missing (R-M1)"
       }
     },
     "assertion_cases_added": {
@@ -100,7 +96,7 @@
         "helper_args": ["--exit", "7"],
         "trial_2_helper_args": ["--exit-immediately", "7"],
         "spike_flags": ["--post-fork-delay-ms", "200"],
-        "posed_when": "helper_report_complete",
+        "posed_when": null,
         "expected_marker": "helper_report",
         "assertions": ["executed_marker", "helper_exit_corroborated"],
         "rule": "launcher_receipt_claim"
@@ -133,6 +129,19 @@
       "published_as": ["reported", "failed_step", "errno", "errno_number"],
       "role": "explains a fixture that was not established; never posing evidence"
     },
+    "liveness_fixture_health": {
+      "cases": ["P1", "P2", "P4"],
+      "selected_by": "the plan rule descendant_lifecycle; P3 and T5 keep their arguments",
+      "setup_result_key_added": "fixture_health_fifo",
+      "helper_argument": "--fixture-health-fifo <canonical absolute case-private FIFO>",
+      "arming_facts": ["armed_before_launch", "reader_inheritable", "reader_passed_to_launcher", "fresh_fifo", "private_mode", "helper_path_absolute", "helper_path_is_armed_fifo"],
+      "tokens": ["PROBE_REACHED", "LIVENESS_OPEN_FAILED:<errno number>", "LIVENESS_WRITE_FAILED:<errno number>", "LIVENESS_UNEXPECTED_OPEN"],
+      "probe_point": "in the descendant, after any stdio release and setsid: the health FIFO is opened non-blocking, the liveness FIFO is confirmed by a non-blocking write open failing ENXIO, PROBE_REACHED is written, and only then does the direct child's gate pipe close; the blocking rendezvous follows",
+      "direct_child_gate": "with a health channel, helper_fork's direct child exits once its descendant closed a close-on-exec gate pipe (or died), so the health token is buffered before the launcher can sweep; created after exec and never inherited through one",
+      "published_as": ["probe_reached", "channel_failure", "errno", "errno_number"],
+      "interpretation": "no probe, a channel failure, a malformed or unreadable channel, or an unarmed channel is INVALID; only a reached probe with no failure lets a liveness byte mean descendant_survived and its bounded absence mean descendant_died",
+      "questions": "P1, P2 and P4 ask what they asked; their safe sets, gates and classes are unchanged"
+    },
     "receipt_fields_added": {
       "wait_si_code": ["", "CLD_EXITED", "CLD_KILLED", "CLD_DUMPED"]
     },
@@ -145,5 +154,12 @@
     "a Trial #3 dispatcher and its own infrastructure review",
     "a new owner D-7 decision"
   ],
-  "requires": "ONE bounded independent correction review limited to these Trial #2 findings, before any freeze. This record grants nothing."
+  "correction_review": {
+    "commit": "ee8cd9106277a450f2987d3f4c759fd96085d5f3",
+    "classification": "TRIAL_3_CORRECTION_CANDIDATE_NEEDS_FIX",
+    "fixed_here": ["R-I1", "R-M1"],
+    "left_for_freeze": ["R-M2"],
+    "backlog": ["R-B1", "R-B2"]
+  },
+  "requires": "ONE bounded independent re-review of the R-I1 and R-M1 fix and its interaction with O6/O7, P1/P2/P4, S4/S5, the freeze-plus-delta accounting and publication privacy, before any freeze preparation. This record grants nothing."
 }

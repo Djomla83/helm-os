@@ -532,10 +532,14 @@ CASES = [
               "candidate, by the owner's conservative exec-evidence policy: the "
               "launcher's receipt alone still cannot tell an image that ran and "
               "exited from a child that died before exec, so its own claim is "
-              "ExecStatusIndeterminate. S4 is posed only by independent "
-              "evidence -- a complete helper report -- and the report's marker "
+              "ExecStatusIndeterminate. A decisive launcher contradiction -- an "
+              "admission refusal, an explicit pre-exec failure, or any observed "
+              f"status other than the direct child exiting {S4_EXIT_CODE} -- is a "
+              "FAIL even though no report can then exist. Otherwise the complete "
+              "helper report is the independent positive evidence: its marker "
               f"and declared exit {S4_EXIT_CODE} must agree with the launcher's "
-              "observed exit status; a contradiction is a FAIL. Trial #2 froze "
+              "observed exit status, a contradiction is a FAIL, and a missing or "
+              "malformed report is INVALID. Trial #2 froze "
               f"Exited:{S4_EXIT_CODE} with no channel that could evidence it"),
     case("S5", "S", MANDATORY, predict="ExecStatusIndeterminate",
          instant_reject=True,

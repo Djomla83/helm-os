@@ -1268,8 +1268,9 @@ poll.
 
 **Prediction:** `ExecStatusIndeterminate`, the launcher's conservative claim.
 
-**Posing:** the posed check `helper_report_complete` — a complete, parseable report. A missing,
-truncated, malformed or undecidable report does not pose S4.
+**Posing:** S4 has no posing precondition beyond its setup and build-identity binding. No posed
+check reads the helper report, because the report is result-side evidence (correction review
+finding R-M1).
 
 **Result:** rule `launcher_receipt_claim`, plus two assertions:
 
@@ -1280,20 +1281,27 @@ truncated, malformed or undecidable report does not pose S4.
 The launcher's exit status is its own `waitid` observation, not an exec claim. The report never
 becomes exec confirmation for the launcher's claim.
 
+**Decisive contradictions outrank missing positive evidence.** `helper_exit_corroborated` judges
+the launcher side and the report side separately and combines them FAIL-first. An admission
+refusal, an explicit pre-exec status record, or any observed status other than the direct child
+exiting 7 contradicts S4's path, so it is a FAIL even though no report can exist after it; the
+launcher's own token is kept as the record's `mechanism_outcome`. Only when nothing contradicts
+S4's path does a missing, truncated, malformed or undecidable report leave S4 INVALID.
+
 | Observation | Status |
 |---|---|
 | complete report naming `helper_report` and declaring exit 7; receipt `Exited` with status 7; launcher claim `ExecStatusIndeterminate` | PASS |
-| no report, or a truncated, malformed or undecidable one | INVALID |
-| no parseable receipt, an exit status that is not an integer, or a `wait_si_code` that is not `CLD_EXITED` beside `Exited` | INVALID |
+| receipt `Exited` 7 with `CLD_EXITED`, and no report, or a truncated, malformed or undecidable one | INVALID |
+| no parseable receipt, an exit status that is not an integer, or a `wait_si_code` that is not `CLD_EXITED` beside `Exited`, with nothing contradicting S4's path | INVALID |
 | a report naming another body | FAIL: `executed_body_mismatch` |
-| a report declaring another exit, or a launcher observing another exit status, a signal, a timeout, or an indeterminate or unobservable status | FAIL: `helper_exit_contradicted` |
-| an explicit pre-exec status record beside a report | FAIL |
+| an admission refusal or an explicit pre-exec status record, with or without a report | FAIL: `helper_exit_contradicted` |
+| a report declaring another exit, or a launcher observing another exit status, a signal, a timeout, or an indeterminate or unobservable status, with or without a report | FAIL: `helper_exit_contradicted` |
 | `launch()` not returning within its bound | FAIL |
 
 S4 and S5 now share the token `ExecStatusIndeterminate`. Their evidence tells them apart: S5 is
-posed by the report's decisive absence, and S4 by its positive presence. That is the conservative
-policy made observable. The launcher does not distinguish the two cases; the test's independent
-evidence does.
+posed by the report's decisive absence, and S4 is corroborated by its positive presence once no
+launcher contradiction has decided it. That is the conservative policy made observable. The
+launcher does not distinguish the two cases; the test's independent evidence does. S5 is unchanged.
 
 ### 10.5 M2 — the direct-child clone3
 
@@ -1387,8 +1395,46 @@ P-series `helper_fork` the same kind of canonical absolute, case-private FIFO pa
 by each setup. The path names the same node after any change of working directory. The P-series
 still opens its reader only after `launch()` returns, because its question is survival.
 
-Their process-tree questions and safe sets are unchanged, and P3 is unchanged. All three must be
-re-observed in a future valid trial.
+**A missing liveness byte proves nothing by itself** (correction review finding R-I1). A liveness
+fixture that never reached its rendezvous looks exactly like a dead descendant, so P1, P2 and P4 —
+the cases whose rule reads the rendezvous — also carry an independent **fixture-health channel**:
+
+* **Channel.** A second canonical absolute, case-private FIFO, handed to `helper_fork` as
+  `--fixture-health-fifo`. The harness creates it afresh with mode `0600` for each invocation and
+  opens its read end before the spawn: non-inheritable, never in `pass_fds`, empty, and proven to be
+  the node the absolute helper argument names. A channel that cannot be armed leaves the case not
+  posed. P3, T5, O6 and O7 do not receive it, and O6's and O7's fixture signal is unchanged.
+* **Probe point.** In the descendant, after any stdio release and `setsid`, `helper_fork` opens the
+  health FIFO without blocking, confirms that the liveness path is a FIFO it may open for writing
+  and that nobody reads yet (a non-blocking write open failing `ENXIO`), and writes
+  `PROBE_REACHED`. The blocking rendezvous follows immediately. Stdio release stays the first
+  action, so stderr is never the health authority.
+* **Failures.** A liveness open that fails before or after the probe point is reported as
+  `LIVENESS_OPEN_FAILED:<errno number>`, a failed write as `LIVENESS_WRITE_FAILED:<errno number>`,
+  and a liveness path that opens with no reader waiting as `LIVENESS_UNEXPECTED_OPEN`. Each token is
+  one write of at most 32 bytes and names no path.
+* **Ordering.** With a health channel, `helper_fork`'s direct child exits only once its descendant
+  closed a close-on-exec gate pipe after writing its token (or died). The launcher sweeps only after
+  the direct child exited, so the token is buffered before a legitimately swept descendant can be
+  killed. The gate is created after exec inside `helper_fork` and never crosses an exec; the
+  launcher's `{0, 1, 2}` contract, its group sweep and the absence of `--setsid` are unchanged.
+* **Reading.** The harness reads at most 65 bytes of the channel after the liveness rendezvous and
+  normalises them to `probe_reached`, `channel_failure` (`none`, `open_failed`, `write_failed`,
+  `unexpected_open`, `malformed` or `unreadable`), `errno` and `errno_number`, which are the only
+  published health facts.
+
+| Fixture health | Liveness byte | Result |
+|---|---|---|
+| no `PROBE_REACHED`, or no health observation | any | INVALID |
+| `PROBE_REACHED` and a reported open or write failure | any | INVALID |
+| unexpected open, malformed, unreadable or unarmed channel | any | INVALID |
+| `PROBE_REACHED`, no failure | arrived | `descendant_survived` |
+| `PROBE_REACHED`, no failure | none within the bounded rendezvous | `descendant_died` |
+
+The channel establishes only that the fixture could observe liveness; it is never the process-tree
+result, and a P health token never satisfies O6 or O7. Their process-tree questions, safe sets,
+gates and classes are unchanged, and P3 is unchanged. All three must be re-observed in a future
+valid trial.
 
 ### 10.10 R3 — `CLD_DUMPED` keeps its signal
 

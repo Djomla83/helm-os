@@ -1751,22 +1751,128 @@ def rule_privilege_transition_suppressed(obs):
             "the effective uid changed across exec")
 
 
+# ------------------------------- R-I1: the P-series liveness fixture health
+# Trial #3 correction candidate, review finding R-I1. A liveness byte that
+# never arrived was read as a dead descendant even when the liveness fixture
+# itself had failed -- the condition that made Trial #2's P1, P2 and P4 records
+# non-probative. helper_fork's descendant now writes one closed token into a
+# harness-armed, case-private FIFO once it reached the liveness probe point,
+# and reports a liveness open or write failure there. The tokens, each one
+# write of at most 32 bytes:
+#
+#   PROBE_REACHED\n                   reached the probe point; about to block in
+#                                     the liveness rendezvous
+#   LIVENESS_OPEN_FAILED:<errno>\n    the liveness open failed (before the
+#                                     probe point, or in the rendezvous after it)
+#   LIVENESS_WRITE_FAILED:<errno>\n   the liveness byte could not be written
+#   LIVENESS_UNEXPECTED_OPEN\n        the liveness path opened with no reader
+#                                     waiting, so it is not the armed rendezvous
+#
+# This channel establishes only that the fixture could observe liveness. It is
+# never the process-tree result and never an O6/O7 fixture signal.
+LIVENESS_HEALTH_MAX_BYTES = 64
+LIVENESS_CHANNEL_FAILURES = ("none", "open_failed", "write_failed",
+                             "unexpected_open", "malformed", "unreadable")
+_LIVENESS_HEALTH = re.compile(
+    rb"\A(?:(?P<probe>PROBE_REACHED\n)"
+    rb"(?:LIVENESS_(?P<late>OPEN|WRITE)_FAILED:(?P<late_errno>[0-9]{1,4})\n)?"
+    rb"|LIVENESS_OPEN_FAILED:(?P<early_errno>[0-9]{1,4})\n"
+    rb"|(?P<unexpected>LIVENESS_UNEXPECTED_OPEN\n))\Z")
+
+
+def liveness_fixture_health(raw):
+    """The fixture-health bytes of one invocation, as a normalised fact.
+
+    ``raw`` is what the harness read: ``b""`` when nothing arrived, ``None``
+    when the channel could not be read. The fact is ``probe_reached``,
+    ``channel_failure`` (one of LIVENESS_CHANNEL_FAILURES), ``errno`` (from the
+    closed table, else None) and ``errno_number``. Anything outside the closed
+    grammar, or longer than LIVENESS_HEALTH_MAX_BYTES, is ``malformed`` and
+    proves nothing. No captured byte leaves this function.
+    """
+    def fact(probe, failure, number=None):
+        return {"probe_reached": probe, "channel_failure": failure,
+                "errno": None if number is None else ERRNO_NAMES.get(number),
+                "errno_number": number}
+
+    if not isinstance(raw, (bytes, bytearray)):
+        return fact(False, "unreadable")
+    raw = bytes(raw)
+    if raw == b"":
+        return fact(False, "none")
+    match = (_LIVENESS_HEALTH.match(raw)
+             if len(raw) <= LIVENESS_HEALTH_MAX_BYTES else None)
+    if match is None:
+        return fact(False, "malformed")
+    if match.group("unexpected"):
+        return fact(False, "unexpected_open")
+    if match.group("early_errno") is not None:
+        return fact(False, "open_failed", int(match.group("early_errno")))
+    if match.group("late") is not None:
+        failure = "open_failed" if match.group("late") == b"OPEN" else "write_failed"
+        return fact(True, failure, int(match.group("late_errno")))
+    return fact(True, "none")
+
+
+def liveness_fixture_validity(health):
+    """``(True, None)`` once the liveness fixture is proven able to observe.
+
+    ``(False, why)`` otherwise. Only a fixture whose descendant reported
+    reaching the probe point, and reported no liveness-channel failure, makes a
+    missing liveness byte mean anything.
+    """
+    if not isinstance(health, dict):
+        return False, ("no liveness fixture-health observation was recorded, so "
+                       "the fixture is not proven able to observe liveness")
+    failure = health.get("channel_failure")
+    if failure == "malformed":
+        return False, ("the liveness fixture-health channel carried bytes "
+                       "outside its closed grammar")
+    if failure == "unreadable":
+        return False, "the liveness fixture-health channel could not be read"
+    if failure == "unexpected_open":
+        return False, ("the liveness path opened with no reader waiting, so it "
+                       "is not the armed rendezvous")
+    if failure in ("open_failed", "write_failed"):
+        return False, ("the liveness fixture reported that its liveness %s "
+                       "failed with %s" % (
+                           failure.split("_", 1)[0],
+                           health.get("errno")
+                           or "errno %s" % health.get("errno_number")))
+    if failure != "none":
+        return False, "the liveness fixture-health state is not recognised"
+    if health.get("probe_reached") is not True:
+        return False, ("the descendant never reported reaching the liveness "
+                       "probe point; a missing liveness byte proves nothing")
+    return True, None
+
+
 def rule_descendant_lifecycle(obs):
     """``descendant_survived`` / ``descendant_died`` for P1, P2 and P4.
 
     Both members are honest. Direct-child-only ownership is the frozen D-4
     contract, so the launcher makes NO process-tree containment claim and either
     observation is a recorded fact rather than a pass or a failure.
+
+    R-I1: neither member is rendered until the liveness fixture is proven able
+    to observe. The absence of the liveness byte by itself never proves
+    ``descendant_died``: a fixture that did not reach its probe point, or that
+    reported a liveness-channel failure, leaves the observation uninterpretable.
     """
+    valid, why = liveness_fixture_validity(obs.get("liveness_fixture_health"))
+    if not valid:
+        return None, why
     liveness = obs.get("descendant_alive_after_launch")
-    if liveness is None:
-        return None, ("the harness did not record whether the descendant "
-                      "outlived launch()")
     if liveness is True:
         return ("descendant_survived",
                 "the descendant was still alive after launch() returned")
-    return ("descendant_died",
-            "the descendant was no longer alive after launch() returned")
+    if liveness is False:
+        return ("descendant_died",
+                "the fixture reached its liveness probe point and reported no "
+                "failure, and no liveness byte arrived in the bounded rendezvous "
+                "after launch() returned")
+    return None, ("the harness did not record whether the descendant "
+                  "outlived launch()")
 
 
 def rule_sweep(obs):
@@ -2356,6 +2462,36 @@ def assert_stderr_capture_failure_reported(obs):
 # S4, Trial #3 correction candidate, by the owner's conservative exec-evidence
 # policy: the launcher's receipt is scored as the conservative claim it is, and
 # what the executed image evidenced independently is asserted beside it.
+def _s4_receipt_exit(spike):
+    """S4's launcher side: ``(result, detail)`` for the observed direct child.
+
+    Decisive on its own. An admission refusal, an explicit pre-exec failure,
+    or any observed status other than the direct child exiting S4_EXIT_CODE
+    contradicts S4's expected path whether or not a report exists -- after
+    such a contradiction no report CAN exist. Only a receipt that cannot be
+    read, or whose classification contradicts itself, is unobservable.
+    """
+    if not isinstance(spike, dict):
+        return ASSERTION_UNOBSERVABLE, "no parseable spike receipt"
+    if spike.get("admission") == "refused":
+        return (ASSERTION_VIOLATED, "the launcher refused admission where the "
+                "frozen helper was to run and exit %d" % S4_EXIT_CODE)
+    disposition = spike.get("process_disposition")
+    if disposition != "Exited":
+        return (ASSERTION_VIOLATED, "the launcher observed %s where the frozen "
+                "helper was to run and exit %d" % (disposition, S4_EXIT_CODE))
+    if spike.get("wait_si_code") not in (None, "CLD_EXITED"):
+        return (ASSERTION_UNOBSERVABLE, "the receipt's waitid classification "
+                "does not describe the exit it reports")
+    code = spike.get("exit_code")
+    if not _plain_int(code):
+        return ASSERTION_UNOBSERVABLE, "the receipt carries no exit status"
+    if code != S4_EXIT_CODE:
+        return (ASSERTION_VIOLATED, "the launcher observed exit status %d where "
+                "the frozen helper was to exit %d" % (code, S4_EXIT_CODE))
+    return ASSERTION_HOLDS, "the launcher observed the direct child exit %d" % code
+
+
 def assert_helper_exit_corroborated(obs):
     """S4: the helper's declared exit and the launcher's observed exit agree.
 
@@ -2365,33 +2501,34 @@ def assert_helper_exit_corroborated(obs):
     own waitid observation of the direct child. Neither is exec confirmation
     for the launcher's claim and neither stands in for the other: both must be
     present, and they must agree.
+
+    R-M1 (Trial #3 correction review): the two sides are judged separately and
+    combined FAIL-first, as section 9.6 orders statuses. A decisive
+    contradiction on either side is a violation even when the other side is
+    missing, so an admission refusal or an explicit pre-exec failure -- which
+    leaves no report behind -- is a FAIL rather than a missing report. Only
+    when nothing contradicts S4's path does missing or malformed positive
+    evidence leave the assertion unobservable, and the case INVALID.
     """
+    launcher = _s4_receipt_exit(obs.get("spike"))
     report, why = _usable_report(obs)
     if report is None:
-        return ASSERTION_UNOBSERVABLE, why
-    requested = report.get("requested")
-    declared = requested.get("exit") if isinstance(requested, dict) else None
-    if not _plain_int(declared):
-        return ASSERTION_UNOBSERVABLE, "the helper report declares no exit"
-    if declared != S4_EXIT_CODE:
-        return (ASSERTION_VIOLATED, "the executed helper declared exit %d, not "
-                "the frozen %d" % (declared, S4_EXIT_CODE))
-    spike = obs.get("spike")
-    if not isinstance(spike, dict):
-        return ASSERTION_UNOBSERVABLE, "no parseable spike receipt"
-    if spike.get("process_disposition") != "Exited":
-        return (ASSERTION_VIOLATED, "the launcher observed %s where the executed "
-                "helper declared exit %d" % (spike.get("process_disposition"),
-                                             S4_EXIT_CODE))
-    if spike.get("wait_si_code") not in (None, "CLD_EXITED"):
-        return (ASSERTION_UNOBSERVABLE, "the receipt's waitid classification "
-                "does not describe the exit it reports")
-    code = spike.get("exit_code")
-    if not _plain_int(code):
-        return ASSERTION_UNOBSERVABLE, "the receipt carries no exit status"
-    if code != S4_EXIT_CODE:
-        return (ASSERTION_VIOLATED, "the launcher observed exit status %d where "
-                "the executed helper declared %d" % (code, S4_EXIT_CODE))
+        executed = (ASSERTION_UNOBSERVABLE, why)
+    else:
+        requested = report.get("requested")
+        declared = requested.get("exit") if isinstance(requested, dict) else None
+        if not _plain_int(declared):
+            executed = (ASSERTION_UNOBSERVABLE, "the helper report declares no exit")
+        elif declared != S4_EXIT_CODE:
+            executed = (ASSERTION_VIOLATED, "the executed helper declared exit %d, "
+                        "not the frozen %d" % (declared, S4_EXIT_CODE))
+        else:
+            executed = (ASSERTION_HOLDS, "the executed helper declared exit %d"
+                        % declared)
+    for wanted in (ASSERTION_VIOLATED, ASSERTION_UNOBSERVABLE):
+        for side in (launcher, executed):
+            if side[0] == wanted:
+                return side
     return (ASSERTION_HOLDS, "the executed helper declared exit %d and the "
             "launcher observed the direct child exit %d"
             % (S4_EXIT_CODE, S4_EXIT_CODE))

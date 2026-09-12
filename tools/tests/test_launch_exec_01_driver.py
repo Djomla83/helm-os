@@ -685,13 +685,21 @@ class StreamTokens(unittest.TestCase):
 
 class LifecycleAndTraceTokens(unittest.TestCase):
     def test_descendant_lifecycle_both_members(self):
-        alive = observation(descendant_alive_after_launch=True)
-        dead = observation(descendant_alive_after_launch=False)
+        # Trial #3 correction candidate, R-I1: a member is rendered only once
+        # the liveness fixture proved it reached its probe point.
+        valid = ob.liveness_fixture_health(b"PROBE_REACHED\n")
+        alive = observation(descendant_alive_after_launch=True,
+                            liveness_fixture_health=valid)
+        dead = observation(descendant_alive_after_launch=False,
+                           liveness_fixture_health=valid)
         self.assertEqual(ob.derive("descendant_lifecycle", alive)[0],
                          "descendant_survived")
         self.assertEqual(ob.derive("descendant_lifecycle", dead)[0],
                          "descendant_died")
-        self.assertIsNone(ob.derive("descendant_lifecycle", observation())[0])
+        self.assertIsNone(ob.derive("descendant_lifecycle", observation(
+            liveness_fixture_health=valid))[0])
+        self.assertIsNone(ob.derive("descendant_lifecycle", observation(
+            descendant_alive_after_launch=False))[0])
 
     def test_sweep_both_members(self):
         issued = observation(spike=receipt(group_sweep_issued=True))
@@ -3785,6 +3793,7 @@ class Trial2SetupContract(unittest.TestCase):
             "cleanup": 'built.get("cleanup")',
             "liveness_fifo": 'built.get("liveness_fifo")',
             "fixture_signal_fifo": 'built.get("fixture_signal_fifo")',
+            "fixture_health_fifo": 'built.get("fixture_health_fifo")',
             "extra_helper_args": 'built.get("extra_helper_args"',
             "work_dir": 'built.get("work_dir")',
         }
@@ -3826,7 +3835,8 @@ class Trial2SetupContract(unittest.TestCase):
         affected = sorted(
             p.case for p in driver._PLAN_LIST
             if produced.get(p.setup, set()) & driver.SEMANTIC_SETUP_KEYS
-            - {"extra_helper_args", "liveness_fifo", "fixture_signal_fifo"})
+            - {"extra_helper_args", "liveness_fifo", "fixture_signal_fifo",
+               "fixture_health_fifo"})
         # T2-R1's ten -- X1 shares E6d's setup and X8 owns `cleanup` -- plus
         # S2 and S7 from the delta correction.
         self.assertEqual(affected, ["E2", "E3", "E4", "E5", "E6", "E6b",

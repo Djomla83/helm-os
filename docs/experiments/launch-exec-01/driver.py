@@ -334,6 +334,10 @@ SETUP_RESULT_SCHEMA = {
     # opens BEFORE the launcher is spawned, so helper_fork's descendant can
     # signal before the launcher's group sweep ends it.
     "fixture_signal_fifo": HELD_RESOURCE,
+    # P1, P2 and P4 (Trial #3 correction candidate, R-I1): the case-private
+    # FIFO whose read end the harness opens BEFORE the spawn, on which
+    # helper_fork's descendant proves it reached the liveness probe point.
+    "fixture_health_fifo": HELD_RESOURCE,
     "post_pin": POST_PIN_ACTION,
     "hold_writer": POST_PIN_ACTION,
     # The exact bytes a post-pin marker action writes. The action reads them
@@ -941,6 +945,8 @@ def release_setup_resources(built):
     # AB7-B1: the pre-armed fixture signal's reader and FIFO, in case an
     # exception skipped _run_once's disarm. Idempotent.
     problems += disarm_fixture_signal(built)
+    # R-I1: the P-series fixture-health reader and FIFO, likewise.
+    problems += disarm_liveness_health(built)
     return problems
 
 
@@ -1486,14 +1492,40 @@ def _setup_fork_helper(ctx, plan):
     merely that it once started. Liveness travels by pathname because this is a
     negative-control fixture, not the mechanism, and no descriptor above 2 is
     ever passed to a helper.
+
+    R-I1 (Trial #3 correction review). A byte that does NOT arrive proves
+    nothing by itself: a liveness fixture that never reached its rendezvous
+    looks exactly like a dead descendant. The cases whose rule reads the
+    rendezvous -- P1, P2 and P4 -- therefore also name a case-private
+    fixture-health FIFO. It is armed before the spawn (_arm_liveness_health),
+    and helper_fork's descendant proves on it that it reached the liveness
+    probe point, or reports why the liveness channel failed. P3 and T5 read no
+    liveness and keep exactly their arguments.
     """
     fifo = _case_private_path(ctx, plan.case + ".liveness")
     if fifo.exists() or fifo.is_symlink():
         fifo.unlink()
     os.mkfifo(str(fifo), 0o600)
+    if plan.rule != LIVENESS_HEALTH_RULE:
+        return {"exec_path": str(ctx.build / "helper_fork"),
+                "liveness_fifo": str(fifo),
+                "extra_helper_args": ("--liveness-fifo", str(fifo))}
+    health = _case_private_path(ctx, plan.case + ".fixture-health")
+    try:
+        _remove_fifo(health)
+    except OSError as exc:                                  # noqa: BLE001
+        return {"not_posed": _problem("a stale liveness fixture-health FIFO "
+                                      "could not be removed", exc)}
     return {"exec_path": str(ctx.build / "helper_fork"),
             "liveness_fifo": str(fifo),
-            "extra_helper_args": ("--liveness-fifo", str(fifo))}
+            "fixture_health_fifo": str(health),
+            "extra_helper_args": ("--liveness-fifo", str(fifo),
+                                  "--fixture-health-fifo", str(health))}
+
+
+# The rule that reads the P-series liveness rendezvous. Exactly the cases that
+# use it carry the fixture-health channel (R-I1).
+LIVENESS_HEALTH_RULE = "descendant_lifecycle"
 
 
 # The one byte helper_fork.c's descendant writes, once, on its fixture path.
@@ -1668,6 +1700,137 @@ def disarm_fixture_signal(built):
             _remove_fifo(path)
         except OSError as exc:                              # noqa: BLE001
             problems.append(_problem("fixture signal FIFO removal failed", exc))
+    return problems
+
+
+# ============================ R-I1: the P-series liveness fixture-health channel
+# Deliberately separate from O6's and O7's fixture signal above, which is left
+# unchanged: different FIFO, different setup key, different descriptor slot and
+# different reader, so neither case family's evidence can satisfy the other's.
+_LIVENESS_HEALTH_FD = "_liveness_health_fd"
+# How long, after the liveness rendezvous, the harness waits for a health token
+# that is not already buffered. helper_fork writes PROBE_REACHED before its
+# direct child may exit, so the token is normally in the pipe before launch()
+# returns; the bound only keeps a silent fixture from holding the trial.
+LIVENESS_HEALTH_READ_TIMEOUT_MS = 1000
+
+
+def _helper_argument(built, flag):
+    """The value the setup hands helper_fork after ``flag``, or None."""
+    args = tuple(built.get("extra_helper_args") or ())
+    for index, value in enumerate(args[:-1]):
+        if value == flag:
+            return args[index + 1]
+    return None
+
+
+def _arm_liveness_health(built, pass_fds=()):
+    """Create the fixture-health FIFO afresh and open its read end, before the spawn.
+
+    ``(facts, None)`` once armed, ``(None, reason)`` when it cannot be armed --
+    which leaves the case not posed -- and ``(None, None)`` when the setup
+    declares no health channel. The read end is opened O_RDONLY | O_NONBLOCK |
+    O_CLOEXEC and is checked to be a FIFO with no group or other permission,
+    non-inheritable, absent from the descriptors handed to the launcher, and
+    empty. The path handed to helper_fork must be absolute and name this very
+    node, so the launcher's fchdir cannot change what it names. The node is new
+    for every launcher invocation, so no earlier writer can reach it.
+    """
+    stale_fd = built.pop(_LIVENESS_HEALTH_FD, None)
+    if stale_fd is not None:
+        with contextlib.suppress(OSError):
+            os.close(stale_fd)
+    path = built.get("fixture_health_fifo")
+    if not path:
+        return None, None
+    try:
+        _remove_fifo(path)
+        os.mkfifo(path, 0o600)
+        fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_CLOEXEC)
+    except OSError as exc:                                  # noqa: BLE001
+        return None, _problem("the liveness fixture-health channel could not be "
+                              "armed", exc)
+    built[_LIVENESS_HEALTH_FD] = fd
+    try:
+        armed = os.fstat(fd)
+        is_fifo = stat.S_ISFIFO(armed.st_mode)
+        private = stat.S_IMODE(armed.st_mode) & 0o077 == 0
+        inheritable = os.get_inheritable(fd)
+        poller = select.poll()
+        poller.register(fd, select.POLLIN)
+        stale = bool(poller.poll(0))
+        helper_path = _helper_argument(built, "--fixture-health-fifo")
+        absolute = isinstance(helper_path, str) and os.path.isabs(helper_path)
+        same_node = absolute and (_stat_identity(helper_path)
+                                  == (armed.st_dev, armed.st_ino))
+    except OSError as exc:                                  # noqa: BLE001
+        return None, _problem("the liveness fixture-health channel could not be "
+                              "verified", exc)
+    passed = fd in tuple(pass_fds)
+    if not is_fifo or not private or inheritable or passed or stale:
+        return None, ("the liveness fixture-health reader is not a fresh, "
+                      "private, non-inheritable FIFO held only by the harness")
+    if not same_node:
+        return None, ("the fixture-health path handed to helper_fork is not an "
+                      "absolute path to the armed FIFO")
+    return {"armed_before_launch": True, "reader_inheritable": inheritable,
+            "reader_passed_to_launcher": passed, "fresh_fifo": not stale,
+            "private_mode": private, "helper_path_absolute": absolute,
+            "helper_path_is_armed_fifo": same_node}, None
+
+
+def _read_liveness_health(built, timeout_ms=LIVENESS_HEALTH_READ_TIMEOUT_MS):
+    """The health channel's bytes: ``b""`` when none arrived, None when unreadable.
+
+    Read after the liveness rendezvous, from the read end opened before the
+    spawn. Bounded twice: it waits at most ``timeout_ms`` for a first byte and
+    then only drains what is already buffered, and it reads at most one byte
+    more than LIVENESS_HEALTH_MAX_BYTES, so an overlong channel is malformed
+    rather than unbounded. It only reads; the harness never writes the FIFO.
+    """
+    fd = built.get(_LIVENESS_HEALTH_FD)
+    if fd is None:
+        return None
+    limit = observations.LIVENESS_HEALTH_MAX_BYTES + 1
+    data = b""
+    deadline = time.monotonic() + timeout_ms / 1000.0
+    try:
+        poller = select.poll()
+        poller.register(fd, select.POLLIN)
+        while len(data) < limit:
+            remaining = (0 if data else
+                         max(0, int((deadline - time.monotonic()) * 1000)))
+            if not poller.poll(remaining):
+                break
+            try:
+                chunk = os.read(fd, limit - len(data))
+            except BlockingIOError:
+                if remaining == 0:
+                    break
+                continue
+            if not chunk:
+                break
+            data += chunk
+    except OSError:                                         # noqa: BLE001
+        return None
+    return data
+
+
+def disarm_liveness_health(built):
+    """Close the fixture-health reader and remove its FIFO. Idempotent."""
+    problems = []
+    fd = built.pop(_LIVENESS_HEALTH_FD, None)
+    if fd is not None:
+        try:
+            os.close(fd)
+        except OSError as exc:                              # noqa: BLE001
+            problems.append(_problem("fixture health reader close failed", exc))
+    path = built.get("fixture_health_fifo")
+    if path:
+        try:
+            _remove_fifo(path)
+        except OSError as exc:                              # noqa: BLE001
+            problems.append(_problem("fixture health FIFO removal failed", exc))
     return problems
 
 
@@ -2131,23 +2294,6 @@ def _check_no_helper_report(obs):
     return obs.get("report_state") == observations.REPORT_ABSENT
 
 
-@_check("helper_report_complete", reads=("report_state", "report"))
-def _check_helper_report_complete(obs):
-    """S4: independent positive evidence that an executed image reported.
-
-    Owner policy after Trial #2: clean exec-status EOF never proves that an
-    image ran, and the launcher's receipt is not taught otherwise. S4 is posed
-    instead by evidence from inside the executed image -- a complete, parseable
-    helper report behind the frozen sentinel, relayed as bytes the launcher
-    does not interpret. Which body it names and which exit it declared are
-    S4's result assertions, so a substituted body or a contradicting exit is a
-    FAIL and never a posing failure. A missing, truncated or malformed report
-    does not pose the case.
-    """
-    return (obs.get("report_state") == observations.REPORT_COMPLETE
-            and isinstance(obs.get("report"), dict))
-
-
 @_check("returned_before_descendant_lifetime", reads=("elapsed_ms",))
 def _check_returned_early(obs):
     """O6: launch() must return measurably before the descendant's sleep ends."""
@@ -2497,17 +2643,20 @@ def _build_plans():
     # S4, Trial #3 correction candidate, by the owner's conservative
     # exec-evidence policy. What the receipt supports on its own and what the
     # executed image evidenced independently are two facts: the rule reads the
-    # first; the posed check and the assertions read the second.
+    # first; the assertions read both. R-M1 (correction review): no posed check
+    # reads the report, because the report is a result-side fact. S4 has no
+    # pre-mechanism posing precondition beyond its setup, so a decisive launcher
+    # contradiction is a FAIL before a missing report can make it INVALID.
     add(CasePlan("S4", "helper_report", "launcher_receipt_claim",
                  (CH_RECEIPT, CH_REPORT),
                  helper_args=("--exit", str(S4_EXIT_CODE)),
                  spike_flags=("--post-fork-delay-ms", str(EXEC_RACE_DELAY_MS)),
-                 posed_when="helper_report_complete",
                  expected_marker="helper_report",
                  assertions=("executed_marker", "helper_exit_corroborated"),
-                 note="the helper reports and then exits; the report poses S4 "
-                      "and corroborates the exit, and the launcher's own claim "
-                      "stays ExecStatusIndeterminate"))
+                 note="the helper reports and then exits; a decisive launcher "
+                      "contradiction FAILs, otherwise the report corroborates "
+                      "the exit, and the launcher's own claim stays "
+                      "ExecStatusIndeterminate"))
     add(CasePlan("S5", "helper_report", "process_disposition",
                  (CH_RECEIPT, CH_REPORT), spike_flags=("--die-before-exec",),
                  posed_when="no_helper_report",
@@ -2774,6 +2923,22 @@ def posing_evidence(plan, obs, evaluated=(), decided_by=None):
                 key: diagnostic[key] for key in (
                     "reported", "failed_step", "errno", "errno_number")
                 if key in diagnostic}
+        # R-I1: P1's, P2's and P4's liveness fixture health, normalised. Why a
+        # liveness observation is or is not interpretable; never its result.
+        health_arming = obs.get("liveness_health_arming")
+        if isinstance(health_arming, dict):
+            out["fixture"]["liveness_health_arming"] = {
+                key: health_arming[key] for key in (
+                    "armed_before_launch", "reader_inheritable",
+                    "reader_passed_to_launcher", "fresh_fifo", "private_mode",
+                    "helper_path_absolute", "helper_path_is_armed_fifo")
+                if key in health_arming}
+        health = obs.get("liveness_fixture_health")
+        if isinstance(health, dict):
+            out["fixture"]["liveness_health"] = {
+                key: health[key] for key in (
+                    "probe_reached", "channel_failure", "errno", "errno_number")
+                if key in health}
     forced =[_public_fact(fact, index if len(trials) > 1 else None)
               for index, trial in enumerate(trials) if isinstance(trial, dict)
               for fact in trial.get("post_pin_evidence") or ()
@@ -2881,6 +3046,8 @@ TRIAL_OBSERVATION_KEYS = frozenset({
     # sentinel are facts of ONE launcher invocation too.
     "fixture_descendant_signalled", "fixture_signal_arming",
     "report_sentinel_seen", "fixture_signal_diagnostic",
+    # R-I1: the P-series fixture health belongs to one invocation too.
+    "liveness_fixture_health", "liveness_health_arming",
 })
 
 
@@ -3427,7 +3594,8 @@ def _run_once(plan, ctx, built, parent_state, flags=None):
         # AB7-B1: the pre-armed fixture signal's read end and FIFO never
         # outlive the invocation that armed them, whatever it returned.
         problems = (applied.release() + restore_after_trial(built)
-                    + disarm_fixture_signal(built))
+                    + disarm_fixture_signal(built)
+                    + disarm_liveness_health(built))
     result["cleanup_problems"] = problems
     return result
 
@@ -3453,6 +3621,12 @@ def _launch_and_observe(plan, ctx, built, applied, flags):
     arming, unarmed = _arm_fixture_signal(built, applied.pass_fds)
     if unarmed is not None:
         return {"not_posed": unarmed, "launch_returned": None}
+    # R-I1. P1's, P2's and P4's fixture-health channel, armed before the
+    # launcher exists on the same terms. A channel that cannot be armed leaves
+    # the case not posed: an unproven fixture never yields a liveness result.
+    health_arming, health_unarmed = _arm_liveness_health(built, applied.pass_fds)
+    if health_unarmed is not None:
+        return {"not_posed": health_unarmed, "launch_returned": None}
 
     bound_s = (plan.total_bound_ms() + 5000) / 1000.0
 
@@ -3543,6 +3717,11 @@ def _launch_and_observe(plan, ctx, built, applied, flags):
     # byte. It is the P1/P2/P4 survival fact and nothing more (AB7-B1): a
     # descendant in the direct child's process group never survives the sweep.
     alive = _descendant_alive(built, plan)
+    # R-I1: the fixture health, read AFTER the rendezvous so a liveness failure
+    # the descendant reported while the harness waited is already buffered. It
+    # decides only whether the liveness observation above is interpretable.
+    health = (observations.liveness_fixture_health(_read_liveness_health(built))
+              if health_arming is not None else None)
     # O6's and O7's pre-armed signal, written by helper_fork's descendant before
     # the sweep and buffered in the FIFO this process kept open since before
     # the spawn. It is their fixture fact and their exec evidence.
@@ -3577,6 +3756,8 @@ def _launch_and_observe(plan, ctx, built, applied, flags):
         "fixture_signal_arming": arming,
         "report_sentinel_seen": sentinel_seen,
         "fixture_signal_diagnostic": diagnostic,
+        "liveness_fixture_health": health,
+        "liveness_health_arming": health_arming,
         "launch_returned": returned,
         "elapsed_ms": elapsed_ms,
         "spike_exit": rc,

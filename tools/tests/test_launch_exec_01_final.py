@@ -538,7 +538,11 @@ class O3O6P4(unittest.TestCase):
         return score(plan, obs_for(plan, spike=spike, payload_is_recipe=True,
                                    expected_streams=plan.streams or None,
                                    descendant_alive_after_launch=alive,
-                                   fixture_descendant_signalled=alive))
+                                   fixture_descendant_signalled=alive,
+                                   # R-I1: P4's liveness fixture reached its
+                                   # probe point; O6 never reads this fact.
+                                   liveness_fixture_health=driver.observations
+                                   .liveness_fixture_health(b"PROBE_REACHED\n")))
 
     def test_o6_completeness_is_a_result_once_the_fixture_signalled(self):
         retained, eof = "WriterRetainedAfterChildExit", "CompleteAtEof"
