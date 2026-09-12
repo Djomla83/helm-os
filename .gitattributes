@@ -14,3 +14,8 @@ docs/experiments/evidence/app-baseline-execution-2026-09-07/** -text whitespace=
 
 # A0 regression copies retain the exact published artifact bytes.
 crates/helm-evidence/tests/fixtures/a0-7zip/*.json -text whitespace=cr-at-eol
+
+# LAUNCH-EXEC-01 Trial #2 evidence is the published artifact byte-for-byte and
+# must never be normalised. PROVENANCE.md in that directory is ordinary text.
+docs/experiments/evidence/LAUNCH-EXEC-01-TRIAL-002-2026-09-11/*.json -text whitespace=cr-at-eol
+docs/experiments/evidence/LAUNCH-EXEC-01-TRIAL-002-2026-09-11/*.jsonl -text whitespace=cr-at-eol
