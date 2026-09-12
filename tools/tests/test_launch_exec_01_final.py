@@ -824,6 +824,12 @@ class PreregistrationAgrees(unittest.TestCase):
                            / "LAUNCH-EXEC-01-DEFINITION.md").read_text(encoding="utf-8")
         self.manifest = json.loads((EXP / "SOURCE-HASHES.json").read_text(
             encoding="utf-8"))
+        # SOURCE-HASHES.json is still the Trial #2 freeze. The Trial #3
+        # correction candidate declares what it adds in its own NOT_FROZEN
+        # record, and the code must be exactly the freeze plus that delta.
+        self.candidate = json.loads(
+            (EXP / "TRIAL-3-CORRECTION-CANDIDATE.json").read_text(
+                encoding="utf-8"))["contract_delta"]
 
     def test_section_9_6_freezes_the_classification(self):
         self.assertIn("### 9.6 Final classification semantics", self.definition)
@@ -835,21 +841,32 @@ class PreregistrationAgrees(unittest.TestCase):
 
     def test_the_posing_checks_in_use_are_exactly_the_preregistered_ones(self):
         used = {p.posed_when for p in driver._PLAN_LIST if p.posed_when}
-        self.assertEqual(used, self.POSING)
+        added = self.candidate["posed_checks_added"]
+        self.assertFalse(set(added) & self.POSING)
+        self.assertEqual(used, self.POSING | set(added))
         inputs = self.manifest["posing_versus_showing"]["posed_check_inputs"]
         for name in used:
-            self.assertEqual(tuple(inputs[name]), driver.POSED_CHECK_READS[name], name)
+            declared = inputs[name] if name in self.POSING else added[name]["reads"]
+            self.assertEqual(tuple(declared), driver.POSED_CHECK_READS[name], name)
+        for name, entry in added.items():
+            users = sorted(p.case for p in driver._PLAN_LIST if p.posed_when == name)
+            self.assertEqual(users, sorted(entry["cases"]), name)
         for name in used:
             self.assertFalse(set(driver.POSED_CHECK_READS[name])
                              & {"elapsed_ms", "repeat_observations",
                                 "descriptor_layout_adjacent"}, name)
 
     def test_the_manifest_assertions_are_the_implemented_ones(self):
-        declared = self.manifest["posing_versus_showing"]["assertions"]
+        declared = dict(self.manifest["posing_versus_showing"]["assertions"])
+        added = self.candidate["assertions_added"]
+        self.assertFalse(set(added) & set(declared))
+        declared.update(added)
         self.assertEqual(set(declared), set(ob.ASSERTIONS))
+        more_cases = self.candidate["assertion_cases_added"]
         for name, entry in declared.items():
             users = sorted(p.case for p in driver._PLAN_LIST if name in p.assertions)
-            self.assertEqual(sorted(entry["cases"]), users, name)
+            self.assertEqual(sorted(set(entry["cases"]) | set(more_cases.get(name, ()))),
+                             users, name)
             self.assertEqual(tuple(entry["reads"]), ob.ASSERTION_READS[name], name)
             self.assertEqual(entry["violation_token"],
                              ob.ASSERTION_VIOLATION_TOKENS[name], name)

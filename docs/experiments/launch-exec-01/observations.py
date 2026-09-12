@@ -41,6 +41,7 @@ from frozen_cases import (
     CHILD_INJECTION_MODES,
     CHILD_PERMITTED_SYSCALLS,
     CHILD_TEST_INJECTION_SYSCALLS,
+    S4_EXIT_CODE,
     STAGES,
     STRACE_MIN_VERSION,
 )
@@ -62,6 +63,14 @@ SPIKE_DISPOSITIONS = frozenset({
 SPIKE_TIMEOUT_DISPOSITIONS = frozenset({
     "", "TerminationFailed", "ExitedDuringGrace", "KilledByLauncher",
 })
+
+# The waitid si_code classifications the spike names in ``wait_si_code``, ""
+# when nothing was reaped. R3 (Trial #2): the launcher kept the terminating
+# signal only for CLD_KILLED, so a SIGSEGV the kernel classified CLD_DUMPED
+# reached the receipt as -1. Both signal terminations now keep si_status, and
+# this field keeps them distinguishable.
+SPIKE_WAIT_SI_CODES = frozenset({"", "CLD_EXITED", "CLD_KILLED", "CLD_DUMPED"})
+SIGNAL_TERMINATIONS = ("CLD_KILLED", "CLD_DUMPED")
 
 # Exactly the admission refusals launcher_spike.c can emit. A refusal outside
 # this set is not a HELM refusal.
@@ -187,6 +196,10 @@ def parse_spike_stdout(raw):
                 "term_signal", "wait_errno", "stdout", "stderr"):
         if key not in obj:
             return None
+    # Corroboration, not a new authority: when the receipt names its waitid
+    # classification it must be one the spike can print.
+    if obj.get("wait_si_code", "") not in SPIKE_WAIT_SI_CODES:
+        return None
     for stream in ("stdout", "stderr"):
         block = obj[stream]
         if not isinstance(block, dict):
@@ -346,6 +359,47 @@ def report_sentinel_seen(stream_block):
     if raw is None:
         return None
     return REPORT_SENTINEL in raw
+
+
+# ------------------------------------------- O6/O7: fixture-signal diagnosis
+# Trial #2: helper_fork's descendant skipped its fixture signal silently when
+# the FIFO did not open, so a broken fixture path looked exactly like a
+# descendant that never reached the signalling point. It now writes one line
+# naming the failed step and the errno NUMBER to its own standard error, which
+# a retained-stdio fixture shares with the launcher's stderr pipe. The line is
+# reduced here to a normalised fact explaining a fixture that was NOT
+# established. It is never posing evidence: fixture_descendant_signalled reads
+# only the pre-armed signal itself, and the receipt decides nothing about it.
+FIXTURE_SIGNAL_FAILED = b"HELM-LAUNCH-EXEC-01-FIXTURE-SIGNAL-FAILED:"
+FIXTURE_SIGNAL_STEPS = ("open", "write")
+_FIXTURE_FAILURE = re.compile(rb"\A(?P<step>[a-z]{1,8}):(?P<errno>[0-9]{1,4})\Z")
+
+
+def fixture_signal_diagnostic(stream_block):
+    """helper_fork's own report that its fixture signal failed, normalised.
+
+    ``None`` when no retained prefix can be decoded. ``{"reported": False}``
+    when the prefix holds no diagnostic line, which proves nothing about bytes
+    that were not retained. Otherwise the first line as ``failed_step``,
+    ``errno`` (from the closed table, else None) and ``errno_number``, each None
+    when the line does not parse. No captured byte leaves this function, and
+    no path: helper_fork never writes one.
+    """
+    raw = decode_capture(stream_block)
+    if raw is None:
+        return None
+    at = raw.find(FIXTURE_SIGNAL_FAILED)
+    if at < 0:
+        return {"reported": False}
+    line = raw[at + len(FIXTURE_SIGNAL_FAILED):].split(b"\n", 1)[0]
+    match = _FIXTURE_FAILURE.match(line)
+    step = match.group("step").decode("ascii") if match else None
+    if step not in FIXTURE_SIGNAL_STEPS:
+        return {"reported": True, "failed_step": None, "errno": None,
+                "errno_number": None}
+    number = int(match.group("errno"))
+    return {"reported": True, "failed_step": step,
+            "errno": ERRNO_NAMES.get(number), "errno_number": number}
 
 
 # ----------------------------------------------------------- exec confirmation
@@ -694,6 +748,80 @@ def join_trace_fragments(text):
             "malformed": malformed}
 
 
+# ---------------------------------------- M2: which clone3 made the child
+# Trial #2: under --extra-threads the launcher makes one clone3 per worker
+# thread (pthread_create, with CLONE_THREAD) before the one CLONE_PIDFD process
+# clone that creates the direct child. The window was anchored on the FIRST
+# clone3, a worker thread, so M2 compared a thread's startup and exit with the
+# control arm's child window.
+_CLONE_PIDFD_BIT = 0x00001000
+_CLONE_THREAD_BIT = 0x00010000
+
+
+def clone3_flag_names(text):
+    """The decoded ``clone_args.flags`` of one clone3 record, or None.
+
+    Symbolic names are kept as printed. A numeric part is decoded only for the
+    two bits the direct-child selection reads, CLONE_PIDFD and CLONE_THREAD.
+    """
+    match = _CLONE3_LINE.search(text or "")
+    flags = _FLAGS.search(match.group("args") or "") if match else None
+    if flags is None:
+        return None
+    names = set()
+    for part in flags.group("flags").split("|"):
+        if not part:
+            continue
+        if not part[0].isdigit():
+            names.add(part)
+            continue
+        try:
+            value = int(part, 0)
+        except ValueError:
+            return None
+        if value & _CLONE_PIDFD_BIT:
+            names.add("CLONE_PIDFD")
+        if value & _CLONE_THREAD_BIT:
+            names.add("CLONE_THREAD")
+    return frozenset(names)
+
+
+def select_direct_child_clone(records):
+    """``(index, None)`` of the clone3 that created the direct child, else ``(None, why)``.
+
+    One clone3 is the single-threaded launcher's shape and is kept exactly as
+    before, unless it carries CLONE_THREAD, which never creates a child. Several
+    clone3 records come only from a threaded launcher: each must have decodable
+    flags, the ones with CLONE_THREAD are its worker threads, exactly one
+    process clone must remain, and it must carry CLONE_PIDFD -- the launcher's
+    own direct-child acquisition is what correlates that clone with the child
+    it reaps. Anything else is refused rather than guessed.
+    """
+    clones = [(index, clone3_flag_names(record["text"]))
+              for index, record in enumerate(records)
+              if record.get("call") == "clone3"]
+    if not clones:
+        return None, "the record contains no clone3"
+    if len(clones) == 1:
+        index, names = clones[0]
+        if names is not None and "CLONE_THREAD" in names:
+            return None, "the only clone3 carries CLONE_THREAD and created no child"
+        return index, None
+    if any(names is None for _, names in clones):
+        return None, "a clone3 among several has flags that cannot be decoded"
+    process = [(index, names) for index, names in clones
+               if "CLONE_THREAD" not in names]
+    if not process:
+        return None, "every clone3 carries CLONE_THREAD; none created the child"
+    if len(process) != 1:
+        return None, "more than one clone3 could have created the direct child"
+    index, names = process[0]
+    if "CLONE_PIDFD" not in names:
+        return None, ("the one process clone among several carries no "
+                      "CLONE_PIDFD, so nothing correlates it with the child")
+    return index, None
+
+
 def parse_strace_child_window(text):
     """The child's syscall window, from the clone3 return to execveat.
 
@@ -701,6 +829,9 @@ def parse_strace_child_window(text):
     or ``None`` when the window cannot be identified. ``None`` is not an empty
     window: a case declared traced whose trace produced no record is INVALID, and
     conflating the two would let a tracer failure read as a minimal child.
+
+    The window is anchored on the clone3 select_direct_child_clone names, never
+    merely on the first clone3 in the record.
     """
     joined = join_trace_fragments(text)
     if joined is None:
@@ -713,31 +844,20 @@ def parse_strace_child_window(text):
                            ("unmatched_unfinished", "orphan_resumed",
                             "ambiguous", "malformed"))
 
-    child_pid = None
-    for record in joined["records"]:
-        if record["call"] != "clone3":
-            continue
-        parts = split_syscall_record(record["text"])
-        if parts is None:
-            # Unbounded or truncated: no return value was observed, which is
-            # not the same as a clone3 that returned an error.
-            integrity_ok = False
-            break
-        state, value, _ = parse_return_state(parts[2])
-        if state == RETURN_OBSERVED_SUCCESS:
-            child_pid = value
-        else:
-            integrity_ok = integrity_ok and state == RETURN_OBSERVED_ERROR
-        break
-    if child_pid is None:
+    selected, _ = select_direct_child_clone(joined["records"])
+    if selected is None:
+        return None
+    parts = split_syscall_record(joined["records"][selected]["text"])
+    if parts is None:
+        # Unbounded or truncated: no return value was observed, which is not
+        # the same as a clone3 that returned an error.
+        return None
+    state, child_pid, _ = parse_return_state(parts[2])
+    if state != RETURN_OBSERVED_SUCCESS:
         return None
 
-    calls, seen_clone = [], False
-    for record in joined["records"]:
-        if not seen_clone:
-            if record["call"] == "clone3":
-                seen_clone = True
-            continue
+    calls = []
+    for record in joined["records"][selected + 1:]:
         if record["task"] != child_pid or record["call"] is None:
             continue
         calls.append(record["call"])
@@ -953,12 +1073,22 @@ def parse_pidfd_acquisition(text):
         "clone3_was_joined": False,
     }
 
-    for record in joined["records"]:
+    # M2 (Trial #3 correction candidate): the facts describe the clone3 that
+    # created the direct child, as select_direct_child_clone names it, and
+    # otherwise the first clone3 exactly as before. Every clone3 is still
+    # counted, so M3's single-clone requirement is unchanged.
+    records = joined["records"]
+    described = [index for index, record in enumerate(records)
+                 if _CLONE3_LINE.search(record["text"])]
+    selected, _ = select_direct_child_clone(records)
+    chosen = (selected if selected in described
+              else described[0] if described else None)
+    for index, record in enumerate(records):
         line = record["text"]
         match = _CLONE3_LINE.search(line)
         if match:
             facts["clone3_call_count"] += 1
-            if not facts["clone3_seen"]:
+            if index == chosen:
                 facts["clone3_seen"] = True
                 facts["clone3_was_joined"] = bool(record["joined"])
                 args = match.group("args") or ""
@@ -1314,6 +1444,12 @@ def rule_process_disposition(obs):
                 "pinned image ever ran; EOF alone never means exec")
 
     if disposition == "TimedOut":
+        allowed = {"KilledByLauncher": SIGNAL_TERMINATIONS,
+                   "ExitedDuringGrace": ("CLD_EXITED",)}.get(
+                       spike.get("timeout_disposition"))
+        if allowed is not None and not _wait_classification_allows(spike, allowed):
+            return None, ("the receipt's waitid classification contradicts its "
+                          "timeout sub-disposition")
         token = _timed_out(spike.get("timeout_disposition"),
                            spike.get("exit_code"), spike.get("term_signal"))
         if token is None:
@@ -1321,6 +1457,9 @@ def rule_process_disposition(obs):
         return token, "the deadline expired with the child still running"
 
     if disposition == "Exited":
+        if not _wait_classification_allows(spike, ("CLD_EXITED",)):
+            return None, ("the receipt's waitid classification does not "
+                          "describe an exit")
         if obs.get("declared_body_length_changed"):
             # E6b/E6c rewrite the inode to a DIFFERENT length, so whatever ran is
             # not a frozen helper and its exit code carries no meaning. The
@@ -1335,12 +1474,49 @@ def rule_process_disposition(obs):
         return token, "the direct child exited and the status was observed"
 
     if disposition == "Signaled":
+        # R3: CLD_KILLED and CLD_DUMPED both carry the terminating signal. Any
+        # other classification carries none, so no signal is rendered from it.
+        if not _wait_classification_allows(spike, SIGNAL_TERMINATIONS):
+            return None, ("the receipt's waitid classification is not a signal "
+                          "termination, so it carries no terminating signal")
         token = _signaled(spike.get("term_signal"))
         if token is None:
             return None, "termination signal outside the frozen signal table"
         return token, "the direct child was terminated by a signal"
 
     return None, "unreachable disposition"
+
+
+def _wait_classification_allows(spike, allowed):
+    """Whether the receipt's ``wait_si_code``, when it names one, is allowed.
+
+    A receipt without the field has nothing to corroborate; the Trial #3
+    candidate launcher always prints it.
+    """
+    code = spike.get("wait_si_code")
+    return code is None or code in allowed
+
+
+def rule_launcher_receipt_claim(obs):
+    """What launcher_spike's receipt supports on its own, for S4.
+
+    Owner policy after Trial #2: clean exec-status EOF alone is never proof
+    that an image ran, and the launcher is not taught otherwise. S4 scores the
+    launcher's claim as process_disposition reads the receipt WITHOUT any
+    independent exec evidence -- no report, no payload, no fixture signal. For
+    a child that execed and exited that claim is ExecStatusIndeterminate, the
+    same as for a child that died before exec: the receipt cannot tell them
+    apart and does not pretend to. The helper report that poses S4 and
+    corroborates its exit is read only by S4's posed check and assertions, so
+    independent evidence never makes the receipt claim what the launcher did
+    not observe.
+    """
+    spike = obs.get("spike")
+    view = dict(obs, report=None, report_state=None, payload_is_recipe=None,
+                exec_confirmation=exec_confirmation(spike, None))
+    token, reason = rule_process_disposition(view)
+    return token, ("the launcher's receipt without independent exec evidence: "
+                   + reason)
 
 
 def rule_argv_exact(obs):
@@ -1895,6 +2071,7 @@ RULES = {
     "sequence_matches_frozen_stages": rule_sequence_matches_frozen_stages,
     "pidfd_acquired_atomically": rule_pidfd_acquired_atomically,
     "rejected_acquisition": rule_rejected_acquisition,
+    "launcher_receipt_claim": rule_launcher_receipt_claim,
 }
 
 
@@ -2176,6 +2353,50 @@ def assert_stderr_capture_failure_reported(obs):
               "failure")
 
 
+# S4, Trial #3 correction candidate, by the owner's conservative exec-evidence
+# policy: the launcher's receipt is scored as the conservative claim it is, and
+# what the executed image evidenced independently is asserted beside it.
+def assert_helper_exit_corroborated(obs):
+    """S4: the helper's declared exit and the launcher's observed exit agree.
+
+    Two facts, never one. The helper report is independent evidence, written
+    inside the executed image, that helper_report ran with its declared
+    ``--exit``; the receipt's disposition and exit status are the launcher's
+    own waitid observation of the direct child. Neither is exec confirmation
+    for the launcher's claim and neither stands in for the other: both must be
+    present, and they must agree.
+    """
+    report, why = _usable_report(obs)
+    if report is None:
+        return ASSERTION_UNOBSERVABLE, why
+    requested = report.get("requested")
+    declared = requested.get("exit") if isinstance(requested, dict) else None
+    if not _plain_int(declared):
+        return ASSERTION_UNOBSERVABLE, "the helper report declares no exit"
+    if declared != S4_EXIT_CODE:
+        return (ASSERTION_VIOLATED, "the executed helper declared exit %d, not "
+                "the frozen %d" % (declared, S4_EXIT_CODE))
+    spike = obs.get("spike")
+    if not isinstance(spike, dict):
+        return ASSERTION_UNOBSERVABLE, "no parseable spike receipt"
+    if spike.get("process_disposition") != "Exited":
+        return (ASSERTION_VIOLATED, "the launcher observed %s where the executed "
+                "helper declared exit %d" % (spike.get("process_disposition"),
+                                             S4_EXIT_CODE))
+    if spike.get("wait_si_code") not in (None, "CLD_EXITED"):
+        return (ASSERTION_UNOBSERVABLE, "the receipt's waitid classification "
+                "does not describe the exit it reports")
+    code = spike.get("exit_code")
+    if not _plain_int(code):
+        return ASSERTION_UNOBSERVABLE, "the receipt carries no exit status"
+    if code != S4_EXIT_CODE:
+        return (ASSERTION_VIOLATED, "the launcher observed exit status %d where "
+                "the executed helper declared %d" % (code, S4_EXIT_CODE))
+    return (ASSERTION_HOLDS, "the executed helper declared exit %d and the "
+            "launcher observed the direct child exit %d"
+            % (S4_EXIT_CODE, S4_EXIT_CODE))
+
+
 ASSERTIONS = {
     "executed_marker": assert_executed_marker,
     "measured_starting_identity": assert_measured_starting_identity,
@@ -2185,6 +2406,7 @@ ASSERTIONS = {
     "completed_under_ten_seconds": assert_completed_under_ten_seconds,
     "stream_completeness_as_declared": assert_stream_completeness_as_declared,
     "stderr_capture_failure_reported": assert_stderr_capture_failure_reported,
+    "helper_exit_corroborated": assert_helper_exit_corroborated,
 }
 
 # The observation keys each assertion reads, declared so a test can prove each
@@ -2198,6 +2420,7 @@ ASSERTION_READS = {
     "completed_under_ten_seconds": ("elapsed_ms",),
     "stream_completeness_as_declared": ("expected_streams", "spike"),
     "stderr_capture_failure_reported": ("spike",),
+    "helper_exit_corroborated": ("report", "report_state", "spike"),
 }
 
 # The frozen token a violation renders as. None of these is any case's
@@ -2211,6 +2434,7 @@ ASSERTION_VIOLATION_TOKENS = {
     "completed_under_ten_seconds": "completion_over_bound",
     "stream_completeness_as_declared": "completeness_mismatch",
     "stderr_capture_failure_reported": "capture_failure_not_reported",
+    "helper_exit_corroborated": "helper_exit_contradicted",
 }
 
 # AB7-M1. Assertions whose violation proves a FORBIDDEN event on its own,

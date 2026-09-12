@@ -24,7 +24,9 @@
  * Build: cc -O2 -Wall -Wextra -static -o helper_fork helper_fork.c
  */
 #define _GNU_SOURCE
+#include <errno.h>
 #include <fcntl.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -38,15 +40,40 @@ static void sleep_ms(long ms)
     nanosleep(&ts, NULL);
 }
 
-static void write_all(int fd, const char *s, size_t n)
+/* 0 when every byte was written; -1 with errno set otherwise. */
+static int write_all(int fd, const char *s, size_t n)
 {
     size_t off = 0;
     while (off < n) {
         ssize_t w = write(fd, s + off, n - off);
         if (w <= 0) {
-            return;
+            if (w == 0) {
+                errno = EIO;
+            }
+            return -1;
         }
         off += (size_t)w;
+    }
+    return 0;
+}
+
+/* Trial #2: a fixture-signal open that failed was silent, so a broken fixture
+ * path looked exactly like a descendant that never reached the signalling
+ * point. A failure is now one line on the descendant's own standard error: the
+ * failed step and the errno NUMBER, never the path. For a retained-stdio
+ * fixture that descriptor is the launcher's stderr pipe, which the harness
+ * reads as a diagnosis of an unestablished fixture, never as its proof; for a
+ * released one it is /dev/null. No descriptor is added and the signal byte is
+ * unchanged. */
+#define FIXTURE_SIGNAL_FAILED "HELM-LAUNCH-EXEC-01-FIXTURE-SIGNAL-FAILED:"
+
+static void fixture_signal_failed(const char *step, int err)
+{
+    char line[96];
+    int n = snprintf(line, sizeof(line), "%s%s:%d\n", FIXTURE_SIGNAL_FAILED,
+                     step, err);
+    if (n > 0 && (size_t)n < sizeof(line)) {
+        (void)write_all(2, line, (size_t)n);
     }
 }
 
@@ -102,8 +129,12 @@ int main(int argc, char **argv)
          * negative-control fixture and not the mechanism under test. */
         if (fifo) {
             int f = open(fifo, O_WRONLY | O_CLOEXEC);
-            if (f >= 0) {
-                write_all(f, "L", 1);
+            if (f < 0) {
+                fixture_signal_failed("open", errno);
+            } else {
+                if (write_all(f, "L", 1) != 0) {
+                    fixture_signal_failed("write", errno);
+                }
                 close(f);
             }
         }

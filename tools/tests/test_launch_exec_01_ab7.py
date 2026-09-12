@@ -569,7 +569,10 @@ class FixtureSignalHygiene(unittest.TestCase):
         self.assertEqual(facts, {"armed_before_launch": True,
                                  "reader_inheritable": False,
                                  "reader_passed_to_launcher": False,
-                                 "fresh_fifo": True})
+                                 "fresh_fifo": True,
+                                 # Trial #3 correction candidate (O6/O7)
+                                 "helper_path_absolute": True,
+                                 "helper_path_is_armed_fifo": True})
         path = built["fixture_signal_fifo"]
         self.assertEqual(driver.disarm_fixture_signal(built), [])
         self.assertFalse(os.path.exists(path))
@@ -851,7 +854,9 @@ class PrearmedSignalThroughTheRealHarness(unittest.TestCase):
         self.assertEqual(result["exec_confirmation"], ob.EXEC_REACHED)
         self.assertEqual(result["fixture_signal_arming"],
                          {"armed_before_launch": True, "reader_inheritable": False,
-                          "reader_passed_to_launcher": False, "fresh_fifo": True})
+                          "reader_passed_to_launcher": False, "fresh_fifo": True,
+                          "helper_path_absolute": True,
+                          "helper_path_is_armed_fifo": True})
         self.assertNeverReachedTheLauncher(built, result, armed)
         self.assertEqual(score(plan, pose_obs(plan, [result], built))[0], PASS)
 
@@ -917,10 +922,23 @@ class AB7Preregistration(unittest.TestCase):
             self.assertTrue(self.manifest["open_findings"][finding]
                             .startswith("BACKLOG"), finding)
 
-    def test_no_c_or_helper_source_changed(self):
+    def test_the_ab7_freeze_changed_no_c_and_the_candidate_only_what_it_declares(self):
+        # The AB7 freeze -- the Trial #2 manifest this file still is -- hashed
+        # C sources byte-identical to Build 7's, as BUILD-EVIDENCE.md records.
+        # That historical fact is checked against the record, not the working
+        # tree: the Trial #3 correction candidate changes C on purpose, and
+        # must change exactly the sources it declares and no other.
+        build = (EXP / "BUILD-EVIDENCE.md").read_text(encoding="utf-8")
+        section = build.split("## Build 7 still binds the AB7 correction freeze",
+                              1)[1]
+        candidate = json.loads((EXP / "TRIAL-3-CORRECTION-CANDIDATE.json")
+                               .read_text(encoding="utf-8"))
+        changed = set(candidate["c_sources_changed"])
         for name in C_SOURCES:
+            frozen = self.manifest["sha256"][name]
+            self.assertIn("| `%s` | `%s` |" % (name, frozen), section, name)
             actual = hashlib.sha256((EXP / name).read_bytes()).hexdigest()
-            self.assertEqual(actual, self.manifest["sha256"][name], name)
+            self.assertEqual(actual != frozen, name in changed, name)
 
     def test_the_case_table_is_untouched(self):
         self.assertEqual(fc.summary()["total"], 72)

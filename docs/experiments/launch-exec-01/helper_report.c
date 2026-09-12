@@ -33,18 +33,32 @@ extern char **environ;
 
 /* Fixed-length, uniquely locatable self-identity marker.
  *
- * E6 and E6b mutate this helper's inode in place between measurement and exec
+ * E6 and E6c mutate this helper's inode in place between measurement and exec
  * and require the mutation to be LENGTH-PRESERVING and ELF-valid. That needs a
  * region of known size at a findable offset, which a bare string literal is
- * not: `volatile` keeps the compiler from folding or duplicating it, the array
- * is exactly the same width as helper_alt's g_marker, and the surrounding
- * guard bytes make the offset locatable by an unambiguous byte search rather
- * than by hoping a 13-byte literal appears once.
+ * not.
  *
- * The harness locates HELM-MARK<16 bytes>KRAM-MLEH and pwrites 16 bytes. */
-volatile char g_marker_guard_lo[9] = "HELM-MARK";
-volatile char g_marker[16] = "helper_report\0\0\0";
-volatile char g_marker_guard_hi[9] = "KRAM-MLEH";
+ * The whole guarded region is ONE object, so its layout is a property of this
+ * declaration: HELM-MARK, the 16 marker bytes, KRAM-MLEH, and nothing between
+ * them. Trial #2 declared the guards and the marker as three separate objects;
+ * the linker emitted them reversed and padded, the region the harness searches
+ * for occurred zero times, and E6 and E6c were never posed. The bytes are a
+ * character list rather than string literals, so no second copy of a guard is
+ * emitted, the marker is exactly as wide as helper_alt's g_marker, and
+ * `volatile` keeps the read below from being folded into a constant.
+ *
+ * The harness locates exactly one HELM-MARK<16 bytes>KRAM-MLEH and pwrites the
+ * 16 bytes; the report reads them back from this same object. */
+#define MARKER_GUARD_BYTES 9
+#define MARKER_BYTES 16
+volatile unsigned char g_marker_region[MARKER_GUARD_BYTES + MARKER_BYTES +
+                                       MARKER_GUARD_BYTES] = {
+    'H', 'E', 'L', 'M', '-', 'M', 'A', 'R', 'K',
+    'h', 'e', 'l', 'p', 'e', 'r', '_', 'r', 'e', 'p', 'o', 'r', 't', 0, 0, 0,
+    'K', 'R', 'A', 'M', '-', 'M', 'L', 'E', 'H',
+};
+_Static_assert(sizeof(g_marker_region) == 2 * MARKER_GUARD_BYTES + MARKER_BYTES,
+               "the guarded marker region is one 34-byte object");
 
 #define SENTINEL "HELM-LAUNCH-EXEC-01-REPORT-BEGIN\n"
 #define REPORT_CAP (256 * 1024)
@@ -233,11 +247,11 @@ int main(int argc, char **argv)
     /* Read the fixed-length marker region, so E6's in-place mutation of the
      * inode is what the report reflects. --marker overrides it for cases that
      * need a caller-supplied value; E6 never uses that path. */
-    char marker_buf[sizeof(g_marker) + 1];
-    for (size_t mi = 0; mi < sizeof(g_marker); mi++) {
-        marker_buf[mi] = g_marker[mi];
+    char marker_buf[MARKER_BYTES + 1];
+    for (size_t mi = 0; mi < MARKER_BYTES; mi++) {
+        marker_buf[mi] = (char)g_marker_region[MARKER_GUARD_BYTES + mi];
     }
-    marker_buf[sizeof(g_marker)] = '\0';
+    marker_buf[MARKER_BYTES] = '\0';
     const char *marker = marker_buf;
     long out_bytes = 0, err_bytes = 0, sleep_ms = 0;
     int exit_code = 0, want_report = 1, exit_immediately = -1;
@@ -265,9 +279,10 @@ int main(int argc, char **argv)
         }
     }
 
-    /* R3/S4: the very first observable action, so no report, no output and no
-     * setup can precede it. This is what makes the rapid-exit schedule forced
-     * rather than hoped for. */
+    /* The very first observable action, so no report, no output and no setup
+     * can precede it. Trial #2's S4 used it; the Trial #3 correction candidate
+     * does not, because an image whose first act is _exit leaves no
+     * independent evidence that it ran. */
     if (exit_immediately >= 0) {
         _exit(exit_immediately);
     }

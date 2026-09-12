@@ -474,6 +474,8 @@ class LifecycleTokens(unittest.TestCase):
             ({"timeout_disposition": ""}, "TimedOut"),
             ({"timeout_disposition": "KilledByLauncher", "term_signal": 9},
              "TimedOut:KilledByLauncher:SIGKILL"),
+            ({"timeout_disposition": "KilledByLauncher", "term_signal": 15},
+             "TimedOut:KilledByLauncher:SIGTERM"),
             ({"timeout_disposition": "ExitedDuringGrace", "exit_code": 9},
              "TimedOut:ExitedDuringGrace:9"),
         )
@@ -4607,7 +4609,7 @@ PRODUCED_TOKENS = {
     "ExecStatusIndeterminate", "ExecStatusIndeterminate:PreExecTimeout",
     "ExitStatusUnobservable",
     "TimedOut", "TimedOut:KilledByLauncher:SIGKILL",
-    "TimedOut:ExitedDuringGrace:9",
+    "TimedOut:KilledByLauncher:SIGTERM", "TimedOut:ExitedDuringGrace:9",
     "refused:ElfNotInCohort", "refused:NotRegularFile",
     "refused:SetIdBitsPresent", "refused:DescriptorModeUnsuitable",
     "argv_exact", "environ_empty", "fds_exactly_012", "signals_reset",

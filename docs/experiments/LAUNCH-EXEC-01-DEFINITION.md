@@ -9,6 +9,11 @@ it. See [section 8](#8-what-this-definition-does-not-authorise).\
 [helm-launch architecture](../research/HELM-LAUNCH-ARCHITECTURE.md). Neither is Accepted, and
 this definition authorises nothing by itself.
 
+> **Trial #2 is immutable:** 59 PASS / 6 FAIL / 6 INVALID / 1 BLOCKED, `MECHANISM_REJECTED`, its
+> D-7 consumed, one valid trial, never to be rerun. A **Trial #3 correction candidate** is recorded
+> in [section 10](#10-trial-3-correction-candidate--not-frozen-not-authorised-not-run). It is
+> **NOT FROZEN, NOT AUTHORISED and NOT RUN**, and no Trial #3 D-7 exists.
+
 This document **freezes the case set** for the first `helm-launch` mechanism experiment, before
 any trial, following the discipline that worked for
 [OBS-FS-01](obs-fs-01/README.md): the definition is committed first, and the mechanism is not
@@ -426,7 +431,7 @@ Conflating them is a FAIL.
 
 | # | Class | Expected | Case |
 |---|---|---|---|
-| **T1** | mandatory | `TimedOut` | helper sleeps well past timeout_ms |
+| **T1** | mandatory | ~~`TimedOut`~~ `TimedOut:KilledByLauncher:SIGTERM` | helper sleeps well past timeout_ms. *Trial #2 froze the bare `TimedOut`, which this launcher never emits; the Trial #3 correction candidate expects the qualified token of the intended SIGTERM path (section 10.3)* |
 | **T2** | mandatory | `TimedOut:KilledByLauncher:SIGKILL` | helper ignores SIGTERM and the grace window elapses |
 | **T3** | mandatory | `TimedOut:ExitedDuringGrace:9` | frozen schedule: handler sleeps 500 ms then _exits 9, timeout_ms=2000, grace_ms=5000 |
 | **T4** | mandatory | `Exited:9` | frozen schedule: sleeps timeout_ms-500 then _exits 9. With the pidfd polled the exit is OBSERVED against the deadline, so TimedOut{ExitedDuringGrace} is now a FAIL, not a safe set |
@@ -470,7 +475,7 @@ a limitation.
 | **S1** | mandatory | `Exited:0` | clean EOF with no record AND the helper report received on fd 1 AND the direct child exited normally. The report is the exec evidence; clean EOF alone is not a PASS |
 | **S2** | conditional (BLOCKED if euid_zero) | `ExecFailed:CHDIR:EACCES` | the directory capability's own descriptor is fchmod'ed to 0000 after admission, so the child's fchdir fails. No helper report may be received: ~~its absence is the independent proof that the image never ran~~ *evidence amended by owner decision AB7 (section 9.7): the child's explicit `ExecFailed:CHDIR:EACCES` exec-status record is the proof that the image never ran, and no clean end-of-file is required; a helper-report sentinel observed on descriptor 1 is a FAIL even when the report does not parse* |
 | **S3** | mandatory | `Exited:127` | the helper itself exits 127 after a SUCCESSFUL exec and must not be confused with exec failure |
-| **S4** | mandatory | `Exited:7` | rapid exec-and-exit: the parent sleeps 200 ms after clone3 returns and before it polls, so the child has certainly execed and exited first. A forced schedule, not a timing hope |
+| **S4** | mandatory | ~~`Exited:7`~~ `ExecStatusIndeterminate` | rapid exec-and-exit: the parent sleeps 200 ms after clone3 returns and before it polls. ~~so the child has certainly execed and exited first. A forced schedule, not a timing hope~~ *Trial #3 correction candidate, by the owner's conservative exec-evidence policy (section 10.4): the launcher's receipt alone still cannot tell an image that ran from a child that died before exec, so its claim is `ExecStatusIndeterminate`; S4 is posed by the helper's complete report, and the report's marker and declared exit 7 must agree with the launcher's observed exit status* |
 | **S5** | mandatory | `ExecStatusIndeterminate` | child killed between the last setup stage and execveat. The parent observes clean EOF with no record, BYTE-IDENTICAL to S1, and no helper report. Reporting exec success is a FAIL and a FAIL of falsifier 8. The discriminating case for the whole confirmation design |
 | **S6** | mandatory | `ExecStatusIndeterminate:PreExecTimeout` | pre-exec stall past SPAWN_CONFIRM_TIMEOUT_MS. The launcher must terminate and reap: a leaked child or zombie is a FAIL |
 | **S7** | conditional (BLOCKED if euid_zero) | `ExecFailed:CHDIR:EACCES` | S2's construction 200 times, so the record and the hangup arrive in the same poll() return. Any trial reporting exec success, Exited:127 or ExecStatusIndeterminate is a FAIL |
@@ -1156,3 +1161,272 @@ edited.
 
 **Build.** No C or helper source changed. Build 7 (run `34575558065`) still binds every C byte and
 no Build 8 is needed. Trial #2 is NOT_RUN, D-7 is NOT granted, and the valid trial count is ZERO.
+
+## 10. Trial #3 correction candidate — NOT FROZEN, NOT AUTHORISED, NOT RUN
+
+**Historical Trial #2 is immutable.** It is the one execution of freeze
+`ba41a3f12be411058ed50e78bcd1c7e22afb7ae4` in GitHub run `34640280964`: 59 PASS / 6 FAIL /
+6 INVALID / 1 BLOCKED, aggregate `MECHANISM_REJECTED`. Its D-7 is consumed, its valid trial count
+is one, and it must not be rerun. Nothing in this section changes a Trial #2 status, reason,
+aggregate, checker, case record, evidence file or review. Sections 3 and 9 remain the Trial #2
+preregistration; where section 3 shows a struck value, the struck value is what Trial #2 froze.
+
+**The future corrected candidate is not frozen, not authorised and not run.** It is only a
+**TRIAL #3 CORRECTION CANDIDATE**. There is no Trial #3 freeze, no Trial #3 D-7 and no Trial #3
+dispatcher. It needs one bounded independent correction review, limited to these findings, before
+any freeze is cut.
+
+The correction implements the owner's
+[postmortem decisions](../DECISIONS.md#trial-002-postmortem-decisions) and the settled root causes
+of the [postmortem diagnostics](../implementation/HELM-LAUNCH-EXEC-01-TRIAL-002-POSTMORTEM-DIAGNOSTICS.md).
+Its scope is closed: `X2b`, `X2c`, `X4`, `T1`, `S4`, `M2`, `E4`, `E6`, `E6c`, `O6`, `O7` and `R3`, plus
+the liveness revalidation `P1`, `P2` and `P4` need. `N3` is unchanged. Membership stays 72, with
+54 mandatory, 11 conditional and 7 recorded cases.
+
+**`SOURCE-HASHES.json` is still the Trial #2 freeze, byte for byte** (Git blob
+`6f000fac9a48625d3c9def18e16ae7ce1b61efa8`). Its format cannot describe an unfrozen candidate
+without `--verify-freeze` calling the candidate frozen, so it is not rewritten. The candidate's
+declared delta is the NOT_FROZEN record
+[`TRIAL-3-CORRECTION-CANDIDATE.json`](launch-exec-01/TRIAL-3-CORRECTION-CANDIDATE.json). Nothing
+verifies against that record. Until a reviewed freeze is cut, `--verify-freeze` reports these
+files as drift, and a test binds the record's list to the real drift:
+
+* `driver.py`, `frozen_cases.py`, `make_fixtures.py` and `observations.py`;
+* `helper_fork.c`, `helper_report.c` and `launcher_spike.c`;
+* this definition, in the manifest's `definition_sha256`.
+
+### 10.1 Classification is unchanged
+
+The section 9.6 rule governs every candidate case:
+
+* **PASS** — honestly posed, and the observation matches the prospective expectation;
+* **FAIL** — honestly posed, and decisive evidence contradicts the prospective expectation;
+* **INVALID** — the case cannot honestly be posed, or its observation cannot be interpreted;
+* **BLOCKED** — only a conditional case's preregistered environmental cause.
+
+A repeated case is FAIL if any repetition fails, otherwise INVALID if any is INVALID, otherwise
+PASS. No case below gains a special rule chosen after a result.
+
+### 10.2 X2b, X2c and X4 — executable fixtures
+
+Trial #2 wrote every generated fixture with `write_bytes` alone. That creates mode `0666` masked by
+the umask, which never carries an execute bit. X2b, X2c and X4 therefore reached `execveat` and
+got `EACCES` before the behaviour each case tests.
+
+`make_fixtures.py` now declares each fixture's mode, and `write()` applies exactly that mode:
+
+| Fixture | Mode | Why |
+|---|---|---|
+| `script_fixture.sh` | `0755` | X2b and X2c bypass admission and must reach the script handling in `execveat` |
+| `unloadable_in_cohort.elf` | `0755` | X4 must reach the loader, which runs after the execute-permission check |
+| `helper_foreign.elf` | `0644` | E8 is refused at admission on `e_machine`; no case executes it |
+| `magic_only.bin` | `0644` | no case executes it |
+
+The fixture bytes are unchanged; their digests equal Trial #2's own build identity. A generated
+fixture whose mode is not its declared mode does not pose E8, X2, X2b, X2c or X4. The predictions
+are unchanged: X2b `ExecFailed:ENOENT`, X2c `interpreter_ran_with_devfd`, X4 `ExecFailed:ENOEXEC`.
+They remain prospective questions, and Trial #2's three FAILs remain its result.
+
+### 10.3 T1 — the qualified timeout
+
+T1's helper sleeps past `timeout_ms` with SIGTERM's default action. At the deadline the launcher
+sends SIGTERM through the pidfd, and the child dies of it inside the grace window. The launcher's
+vocabulary for that sequence is `TimedOut:KilledByLauncher:SIGTERM`, and that exact token is T1's
+prediction. The launcher never emits Trial #2's bare `TimedOut`, because every timeout branch
+assigns a sub-disposition.
+
+The checker compares a single prediction for equality, never by prefix. Any other termination path
+is a FAIL:
+
+* `TimedOut:KilledByLauncher:SIGKILL` after the grace window;
+* `TimedOut:ExitedDuringGrace:<code>`;
+* `TimedOut:TerminationFailed`;
+* the bare `TimedOut`;
+* any non-timeout disposition.
+
+A receipt whose `wait_si_code` contradicts its timeout sub-disposition is not interpretable, and is
+INVALID.
+
+### 10.4 S4 — conservative exec evidence
+
+**Owner policy.** Clean exec-status EOF alone is not positive proof that an image ran.
+`launcher_spike.c` is not changed to claim otherwise; its receipt has no exec-success field. S4
+keeps two facts apart:
+
+| | Source | What it may claim |
+|---|---|---|
+| **A. The launcher's claim** | the receipt, read by rule `launcher_receipt_claim` as `process_disposition` with no independent exec evidence | `ExecStatusIndeterminate` for a clean-EOF exit: the receipt cannot tell an image that ran from a child that died before exec |
+| **B. Independent evidence** | the helper's report, written inside the executed image behind the frozen sentinel | that `helper_report` ran and declared `--exit 7` |
+
+**Construction.** `helper_report --exit 7`, which writes its report and then exits 7. The spike flag
+`--post-fork-delay-ms 200` is unchanged. The channels are the receipt and the report.
+`--exit-immediately` is no longer used, because an image whose first act is `_exit` leaves no
+independent evidence that it ran. The helper's work before it exits is bounded — one report into
+an empty pipe — so the delay still makes simultaneous status hangup, stream end and pidfd readiness
+the expected schedule. S4's result no longer depends on the child having exited before the first
+poll.
+
+**Prediction:** `ExecStatusIndeterminate`, the launcher's conservative claim.
+
+**Posing:** the posed check `helper_report_complete` — a complete, parseable report. A missing,
+truncated, malformed or undecidable report does not pose S4.
+
+**Result:** rule `launcher_receipt_claim`, plus two assertions:
+
+* `executed_marker` — the report names `helper_report`;
+* `helper_exit_corroborated` — the report declares exit 7, and the launcher's receipt observed the
+  direct child `Exited` with exit status 7. Its violation token is `helper_exit_contradicted`.
+
+The launcher's exit status is its own `waitid` observation, not an exec claim. The report never
+becomes exec confirmation for the launcher's claim.
+
+| Observation | Status |
+|---|---|
+| complete report naming `helper_report` and declaring exit 7; receipt `Exited` with status 7; launcher claim `ExecStatusIndeterminate` | PASS |
+| no report, or a truncated, malformed or undecidable one | INVALID |
+| no parseable receipt, an exit status that is not an integer, or a `wait_si_code` that is not `CLD_EXITED` beside `Exited` | INVALID |
+| a report naming another body | FAIL: `executed_body_mismatch` |
+| a report declaring another exit, or a launcher observing another exit status, a signal, a timeout, or an indeterminate or unobservable status | FAIL: `helper_exit_contradicted` |
+| an explicit pre-exec status record beside a report | FAIL |
+| `launch()` not returning within its bound | FAIL |
+
+S4 and S5 now share the token `ExecStatusIndeterminate`. Their evidence tells them apart: S5 is
+posed by the report's decisive absence, and S4 by its positive presence. That is the conservative
+policy made observable. The launcher does not distinguish the two cases; the test's independent
+evidence does.
+
+### 10.5 M2 — the direct-child clone3
+
+Under `--extra-threads 3` the launcher makes three `pthread_create` clone3 calls, each with
+`CLONE_THREAD`, before its one `CLONE_PIDFD` process clone. Trial #2's parser anchored the child
+window on the first clone3, which was a worker thread. The candidate's
+`select_direct_child_clone` chooses the clone3 that created the direct child:
+
+* **one clone3** — the single-threaded shape, selected exactly as before, unless it carries
+  `CLONE_THREAD`, which never creates a child;
+* **several clone3 calls** — every record's flags must decode, the `CLONE_THREAD` calls are worker
+  threads, exactly one process clone must remain, and it must carry `CLONE_PIDFD`, the launcher's own
+  direct-child acquisition.
+
+Anything else yields no window, and the traced case is INVALID:
+
+* no process clone;
+* two candidates;
+* undecodable flags among several records;
+* an unbounded record, or one whose return was not observed;
+* an observed clone3 error.
+
+The window starts after the selected record and follows only the child's task. The acquisition
+facts published beside it describe the same clone3, and every clone3 is still counted, so M3's
+single-clone requirement is unchanged. The structural traced-evidence gate is unchanged. E1, E7, F4, F7, M1, M3 and M4 have one clone3, so their windows
+are unchanged. A lone clone3 without `CLONE_PIDFD` still names its child, so M3 keeps its own
+decisive FAIL for the missing flag. No new trace was run.
+
+### 10.6 E4 — the resolved symlink target
+
+Trial #2 linked the build directory's relative spelling from inside that directory. A relative
+target resolves against the directory holding the link, so `E4_link` self-nested and dangled.
+
+The candidate makes three changes. E4's question and its identity binding are unchanged.
+
+* **Targets.** The link target and the post-pin replacement are canonical absolute paths, resolved
+  before the link is made.
+* **Retarget proof.** The retarget lands only if the pathname, read through the link, now yields
+  the replacement's bytes.
+* **Binding.** A dangling link is named as such. The link must resolve to the build artefact itself,
+  not to an identical copy elsewhere.
+
+### 10.7 E6 and E6c — one contiguous marker object
+
+Trial #2 declared the low guard, the marker and the high guard as three separate C objects. The
+linker emitted them in reverse order, with padding. The region the locator required occurred zero
+times, and neither case was posed.
+
+`helper_report.c` now declares the whole region as **one** 34-byte array, `g_marker_region`:
+`HELM-MARK`, the 16 marker bytes, then `KRAM-MLEH`. The bytes are a character list, and the helper
+reads its marker at a fixed offset inside that object. The region's layout is a property of the
+declaration, not of the linker.
+
+`locate_marker_region` is the one posing primitive for both E6 and E6c. It requires exactly one
+complete region, and each guard exactly once. Zero regions, several regions or a stray guard do
+not pose the case, and the refusal names the failed condition. The E6 and E6c landing facts also
+require `outside_region_unchanged`: no byte outside the 16 marker bytes may change. E6's
+`executed_marker` assertion still reads the same bytes back from the executed image. E6c remains
+recorded, and its shared-writable-mapping result is not pre-answered.
+
+### 10.8 O6 and O7 — absolute FIFO paths and a diagnosable signal failure
+
+Trial #2 handed `helper_fork` a relative FIFO path. The launcher's child `fchdir`s into its
+working-directory capability before `execveat`, so the descendant opened the wrong path. It failed
+silently, and O6 and O7 were never posed.
+
+* **Paths.** Every helper-facing FIFO path is canonical, absolute and case-private.
+* **Arming.** The pre-armed reader keeps every section 9.7 property: a fresh FIFO per invocation,
+  mode `0600`, armed before the spawn, non-inheritable, never in `pass_fds`, and removed afterwards.
+  Arming now also proves, before the launch, that the path handed to `helper_fork` is absolute and
+  names the armed node (`helper_path_absolute`, `helper_path_is_armed_fifo`). Otherwise the case is
+  not posed.
+* **Diagnostic.** When the descendant's signal open or write fails, it writes one line on its own
+  descriptor 2: `HELM-LAUNCH-EXEC-01-FIXTURE-SIGNAL-FAILED:<open|write>:<errno number>`. It never
+  writes a path. For these retained-stdio fixtures that descriptor is the launcher's stderr pipe.
+  The harness reduces the line to the normalised fact `reported`, `failed_step`, `errno`,
+  `errno_number`, and adds it to the not-posed reason and the posing evidence. A diagnosed open
+  failure, a diagnosed write failure and a descendant that wrote nothing are therefore
+  distinguishable.
+
+The diagnostic is never posing evidence. `fixture_descendant_signalled` still reads only the exact
+byte `L`. No descriptor is added, the frozen `{0, 1, 2}` contract is unchanged, `--setsid` is not
+added, and the launcher's group sweep is unchanged. `WriterRetainedAfterChildExit` remains a result
+and is never posing evidence.
+
+### 10.9 P1, P2 and P4 — liveness revalidation
+
+Trial #2's P1, P2 and P4 statuses remain historical PASS. They are not positive architectural
+evidence, because their liveness byte travelled the same relative path. The candidate hands the
+P-series `helper_fork` the same kind of canonical absolute, case-private FIFO path, created afresh
+by each setup. The path names the same node after any change of working directory. The P-series
+still opens its reader only after `launch()` returns, because its question is survival.
+
+Their process-tree questions and safe sets are unchanged, and P3 is unchanged. All three must be
+re-observed in a future valid trial.
+
+### 10.10 R3 — `CLD_DUMPED` keeps its signal
+
+`waitid(2)` reports the terminating signal in `si_status` for `CLD_DUMPED` exactly as for
+`CLD_KILLED`. Trial #2's launcher kept it for `CLD_KILLED` alone, so R3's `SIGSEGV` became `-1`.
+
+* **`term_signal`.** `launcher_spike.c` now keeps `si_status` for both signal terminations, and `-1`
+  for anything else.
+* **`exit_code`.** Still `si_status` for `CLD_EXITED` only.
+* **`wait_si_code`.** A new receipt field: `CLD_EXITED`, `CLD_KILLED`, `CLD_DUMPED`, or empty when
+  nothing was reaped. It keeps the two signal terminations distinguishable. `waitid(WEXITED)`
+  reports no stopped or continued state.
+
+The normaliser renders `Signaled:<SIG>` only beside `CLD_KILLED` or `CLD_DUMPED`, and `Exited:<code>`
+only beside `CLD_EXITED`, whenever the receipt names its classification. No signal is invented: a
+missing or contradictory classification, or an unrenderable signal number, is INVALID. R3's
+prediction, `Signaled:SIGSEGV`, is unchanged.
+
+### 10.11 N3
+
+Unchanged: conditional on `unprivileged_runner`, with no sudo, no set-ID setup and no privileged
+runner. The privileged transition stays untested and deferred.
+
+### 10.12 Build and freeze status
+
+`launcher_spike.c`, `helper_report.c` and `helper_fork.c` changed, so **Build 7 no longer binds the
+candidate**, and Build 8 compile-only evidence is required for any future freeze. A local scratch
+compile validated the changed sources. It is not Build 8, not build evidence and not a freeze, and
+nothing it produced was executed.
+
+The later freeze step, not this correction, must still:
+
+* rewrite `SOURCE-HASHES.json` for the reviewed candidate, leaving the Trial #2 manifest
+  addressable at `ba41a3f`;
+* give the runner a trial identifier other than `trial-002`;
+* record Build 8;
+* publish a Trial #3 dispatcher behind its own review;
+* obtain a new owner D-7.
+
+**TRIAL #2 D-7 IS CONSUMED. LAUNCH-EXEC-01 TRIAL #2 VALID TRIAL COUNT IS ONE. TRIAL #2 MUST NOT BE
+RERUN. NO TRIAL #3 IS AUTHORISED. NO TRIAL #3 FREEZE EXISTS.**

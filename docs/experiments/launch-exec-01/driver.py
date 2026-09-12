@@ -51,6 +51,7 @@ import time
 import checker
 import evidence
 import harness
+import make_fixtures
 import observations
 import oracles
 from frozen_cases import (
@@ -64,6 +65,7 @@ from frozen_cases import (
     P_DESCENDANT_LIFETIME_MS,
     POST_EXIT_DRAIN_MS,
     REPEAT_TRIALS,
+    S4_EXIT_CODE,
     SPAWN_CONFIRM_TIMEOUT_MS,
     T3_GRACE_EXIT_DELAY_MS,
     T4_DELTA_MS,
@@ -382,6 +384,30 @@ def _digest(path):
         return None
 
 
+def _canonical(path):
+    """The canonical absolute spelling of ``path``, independent of the cwd."""
+    return pathlib.Path(os.path.realpath(str(path)))
+
+
+def _case_private_path(ctx, name):
+    """A case-private path in the build directory, canonical and absolute.
+
+    Anything a helper opens by name has to mean the same file after the
+    launcher's child fchdirs into its working-directory capability. Trial #2
+    handed helper_fork the build directory's relative spelling, which then
+    resolved against that directory: O6's and O7's fixture signal never
+    arrived, and P1's, P2's and P4's missing liveness byte proved nothing.
+    """
+    return _canonical(ctx.build) / name
+
+
+def _outside_region_unchanged(before, after, offset, length):
+    """Whether every byte outside ``[offset, offset + length)`` is unchanged."""
+    return (len(before) == len(after)
+            and before[:offset] == after[:offset]
+            and before[offset + length:] == after[offset + length:])
+
+
 def _landed(action, ok, detail, **evidence):
     """One structured harness fact about whether the forced state arrived.
 
@@ -543,25 +569,35 @@ def _pp_rename_away_and_unlink(ctx, plan, built, arg):
 
 @_post_pin("retarget_symlink")
 def _pp_retarget_symlink(ctx, plan, built, arg):
-    """E4: the symlink is retargeted after the launcher resolved and pinned it."""
+    """E4: the symlink is retargeted after the launcher resolved and pinned it.
+
+    The new target must be absolute: a relative one resolves against the
+    link's own directory, which is how Trial #2's E4 link dangled. The landing
+    is proven THROUGH the link -- the pathname must now yield the replacement's
+    bytes -- rather than by reading the target from the harness's cwd.
+    """
     link = pathlib.Path(built["exec_path"])
     new_target = pathlib.Path(arg)
     try:
         before = os.readlink(str(link))
     except OSError as exc:                                  # noqa: BLE001
         return _landed("retarget_symlink", False, "not a symlink: %r" % (exc,))
+    incoming = _digest(new_target)
     try:
         link.unlink()
         link.symlink_to(new_target)
         after = os.readlink(str(link))
     except OSError as exc:                                  # noqa: BLE001
         return _landed("retarget_symlink", False, "retarget failed: %r" % (exc,))
+    through = _digest(link)
     return _landed("retarget_symlink",
-                   after == str(new_target) and after != before,
-                   "the symlink now resolves elsewhere",
+                   new_target.is_absolute() and after == str(new_target)
+                   and after != before and incoming is not None
+                   and through == incoming,
+                   "the symlink now resolves to the replacement body",
                    target_before=pathlib.PurePath(before).name,
                    target_after=pathlib.PurePath(after).name,
-                   new_target_sha256=_digest(new_target))
+                   new_target_sha256=incoming, path_body_sha256_after=through)
 
 
 @_post_pin("pwrite_marker")
@@ -579,7 +615,8 @@ def _pp_pwrite_marker(ctx, plan, built, arg):
         return _landed("pwrite_marker", False,
                        "the setup recorded no marker bytes to write")
     declared = bytes(declared)
-    before, size_before = _digest(path), path.stat().st_size
+    original = path.read_bytes()
+    before, size_before = oracles.digest_of(original), len(original)
     write_fd = os.open(str(path), os.O_WRONLY)
     try:
         written = os.pwrite(write_fd, declared, offset)
@@ -590,15 +627,20 @@ def _pp_pwrite_marker(ctx, plan, built, arg):
         readback = os.pread(read_fd, len(declared), offset)
     finally:
         os.close(read_fd)
-    after, size_after = _digest(path), path.stat().st_size
+    mutated = path.read_bytes()
+    after, size_after = oracles.digest_of(mutated), len(mutated)
+    outside = _outside_region_unchanged(original, mutated, offset, len(declared))
     return _landed("pwrite_marker",
                    written == len(declared) and readback == declared
-                   and after != before and size_after == size_before,
-                   "the declared marker bytes were written in place and read "
-                   "back through a separate read-only descriptor",
+                   and after != before and size_after == size_before
+                   and outside,
+                   "the declared marker bytes were written in place, read back "
+                   "through a separate read-only descriptor, and no byte "
+                   "outside the marker region changed",
                    marker_written=_marker_text(declared),
                    readback_matches=readback == declared, bytes_written=written,
                    length_preserved=size_after == size_before,
+                   outside_region_unchanged=outside,
                    body_sha256_before=before, body_sha256_after=after)
 
 
@@ -700,7 +742,8 @@ def _pp_mmap_write(ctx, plan, built, arg):
     if not isinstance(declared, (bytes, bytearray)) or not declared:
         return _landed("mmap_write", False,
                        "the setup recorded no marker bytes to write")
-    before, identity = _digest(path), _stat_identity(path)
+    original = path.read_bytes()
+    before, identity = oracles.digest_of(original), _stat_identity(path)
     fd = os.open(str(path), os.O_RDWR)
     try:
         mapping = _SharedMapping(fd, path.stat().st_size)
@@ -715,15 +758,19 @@ def _pp_mmap_write(ctx, plan, built, arg):
         return _landed("mmap_write", False,
                        _problem("write through the mapping failed", exc))
     built.setdefault("_open_mappings", []).append(mapping)
-    after = _digest(path)
+    mutated = path.read_bytes()
+    after = oracles.digest_of(mutated)
+    outside = _outside_region_unchanged(original, mutated, int(arg), len(declared))
     held = launcher_descriptors_on(os.getpid(), identity)
     closed = held == {}
     mapped = _shared_mapping_of(identity) is True
-    return _landed("mmap_write", after != before and closed and mapped,
-                   "the body was mutated through a shared writable mapping, and "
-                   "no descriptor of the harness refers to the file any more",
+    return _landed("mmap_write", after != before and closed and mapped and outside,
+                   "the body was mutated through a shared writable mapping, no "
+                   "byte outside the marker region changed, and no descriptor "
+                   "of the harness refers to the file any more",
                    descriptor_closed=closed, mapping_retained=mapped,
                    marker_written=_marker_text(declared),
+                   outside_region_unchanged=outside,
                    body_sha256_before=before, body_sha256_after=after)
 
 
@@ -1048,11 +1095,22 @@ def bind_build_identity(ctx, plan, built):
     if classification == SYMLINK_TO_BASE:
         try:
             resolved = os.path.realpath(path)
+            artefact = os.path.realpath(str(pathlib.Path(ctx.build) / base))
         except OSError as exc:                              # noqa: BLE001
             fact.update(bound=False, detail="unreadable symlink: %r" % (exc,))
             return fact
-        if pathlib.Path(resolved).name != base:
-            fact.update(bound=False, detail="the symlink does not start at " + base)
+        # E4 (Trial #2): realpath does not raise on a dangling link, so a
+        # self-nested relative target reached the digest step and was reported
+        # only as unbound bytes. A dangling link now names its own cause.
+        if not os.path.exists(resolved):
+            fact.update(bound=False, base_sha256=identity.get("sha256"),
+                        object_sha256=None,
+                        detail="the symlink is dangling: its target does not "
+                               "exist")
+            return fact
+        if resolved != artefact:
+            fact.update(bound=False, detail="the symlink does not resolve to "
+                                            "the build artefact " + base)
             return fact
     actual = _digest(resolved)
     fact.update(base_sha256=identity.get("sha256"), object_sha256=actual,
@@ -1112,7 +1170,14 @@ def _setup_rename_then_unlink(ctx, plan):
 
 @_setup("symlink_retarget")
 def _setup_symlink_retarget(ctx, plan):
-    """E4: the pinned leaf was a symlink whose target is retargeted after the pin."""
+    """E4: the pinned leaf was a symlink whose target is retargeted after the pin.
+
+    Both targets are canonical absolute paths, resolved before the link is
+    made. Trial #2 linked the build directory's relative spelling from inside
+    that directory; a relative target resolves against the directory holding
+    the link, so E4_link pointed at <build>/<build>/helper_report, dangled, and
+    E4 was never posed. The identity binding and the question are unchanged.
+    """
     base, reason = _verified_source(ctx, "helper_report")
     if base is None:
         return {"not_posed": reason}
@@ -1124,9 +1189,9 @@ def _setup_symlink_retarget(ctx, plan):
     link = ctx.build / (plan.case + "_link")
     if link.is_symlink() or link.exists():
         link.unlink()
-    link.symlink_to(base)
+    link.symlink_to(_canonical(base))
     return {"exec_path": str(link),
-            "post_pin": ("retarget_symlink", str(private))}
+            "post_pin": ("retarget_symlink", str(_canonical(private)))}
 
 
 @_setup("writer_open_held")
@@ -1186,29 +1251,68 @@ def _setup_writer_open_closed(ctx, plan):
     return info
 
 
-def find_marker_region(path):
-    """Locate helper_report's guarded fixed-length marker in the built image.
-
-    ``helper_report.c`` declares HELM-MARK<16 bytes>KRAM-MLEH precisely so a
-    length-preserving mutation has a findable, unique target. The guard is what
-    makes E6 a mutation of a known 16 bytes rather than a search for a bare
-    string literal, which was finding P-10. A non-unique or absent guard yields
-    None and the case refuses to guess.
-    """
-    data = pathlib.Path(path).read_bytes()
-    lo, hi = b"HELM-MARK", b"KRAM-MLEH"
-    start = data.find(lo)
-    if start < 0:
-        return None
-    marker_at = start + len(lo)
-    if data[marker_at + 16:marker_at + 16 + len(hi)] != hi:
-        return None
-    if data.find(lo, start + 1) >= 0:
-        return None
-    return marker_at
-
-
+MARKER_GUARD_LO = b"HELM-MARK"
+MARKER_GUARD_HI = b"KRAM-MLEH"
 MARKER_REGION_BYTES = 16
+
+
+def _occurrences(data, needle):
+    found, at = [], data.find(needle)
+    while at >= 0:
+        found.append(at)
+        at = data.find(needle, at + 1)
+    return found
+
+
+def locate_marker_region(data):
+    """``(offset, None)`` of the one guarded marker region, else ``(None, why)``.
+
+    ``helper_report.c`` declares HELM-MARK, the 16 marker bytes and KRAM-MLEH as
+    ONE array, so the region's layout is a property of its declaration. Trial
+    #2 declared three separate objects and assumed the linker kept them
+    adjacent and in order; it emitted them reversed and padded, the region
+    occurred zero times, and E6 and E6c were never posed. Uniqueness is not
+    relaxed to find a match: exactly one complete region is required, and each
+    guard must occur exactly once. The refusal says which condition failed.
+    """
+    lo_at = _occurrences(data, MARKER_GUARD_LO)
+    hi_at = _occurrences(data, MARKER_GUARD_HI)
+    width = len(MARKER_GUARD_LO) + MARKER_REGION_BYTES
+    regions = [at for at in lo_at
+               if data[at + width:at + width + len(MARKER_GUARD_HI)]
+               == MARKER_GUARD_HI]
+    if not regions:
+        return None, ("no complete guarded region (%d low guard(s), %d high "
+                      "guard(s))" % (len(lo_at), len(hi_at)))
+    if len(regions) > 1:
+        return None, ("%d complete guarded regions where exactly one is "
+                      "required" % len(regions))
+    if len(lo_at) != 1 or len(hi_at) != 1:
+        return None, "a guard also occurs outside the one guarded region"
+    return regions[0] + len(MARKER_GUARD_LO), None
+
+
+def find_marker_region(path):
+    """The marker offset in a built image, or None; see locate_marker_region."""
+    offset, _ = locate_marker_region(pathlib.Path(path).read_bytes())
+    return offset
+
+
+def _marker_region_of(info):
+    """E6's and E6c's one posing primitive: ``(offset, None)`` or ``(None, refusal)``."""
+    if "not_posed" in info:
+        return None, info
+    try:
+        data = pathlib.Path(info["exec_path"]).read_bytes()
+    except OSError as exc:                                  # noqa: BLE001
+        return None, {"not_posed": _problem("the case copy could not be read",
+                                            exc)}
+    offset, why = locate_marker_region(data)
+    if offset is None:
+        return None, {"not_posed": "the guarded marker region is not uniquely "
+                                   "locatable in the built helper_report "
+                                   "image: " + why}
+    return offset, None
 
 
 def _marker_bytes(text):
@@ -1223,10 +1327,9 @@ def _marker_bytes(text):
 def _setup_mutate_marker(ctx, plan):
     """E6: length-preserving, ELF-valid in-place mutation of the marker region."""
     info = _setup_copy(ctx, plan)
-    offset = find_marker_region(info["exec_path"])
-    if offset is None:
-        return {"not_posed": "the guarded marker region is not uniquely "
-                             "locatable in the built helper_report image"}
+    offset, refused = _marker_region_of(info)
+    if refused is not None:
+        return refused
     # The exact bytes the harness writes, derived from the one declared marker
     # E6's executed-marker assertion expects, so the two cannot drift apart.
     return dict(info, post_pin=("pwrite_marker", offset),
@@ -1249,12 +1352,9 @@ def _setup_shared_writable_mapping(ctx, plan):
     which is why the case is RECORDED and carved out of its own gate.
     """
     info = _setup_copy(ctx, plan)
-    if "not_posed" in info:
-        return info
-    offset = find_marker_region(info["exec_path"])
-    if offset is None:
-        return {"not_posed": "the guarded marker region is not uniquely "
-                             "locatable in the built helper_report image"}
+    offset, refused = _marker_region_of(info)
+    if refused is not None:
+        return refused
     return dict(info, post_pin=("mmap_write", offset),
                 mutated_marker=_marker_bytes(observations.E6_MUTATED_MARKER))
 
@@ -1301,21 +1401,44 @@ def _setup_dynamic_helper(ctx, plan):
     return {"exec_path": str(ctx.build / "helper_dynamic")}
 
 
+def _generated_fixture(ctx, name):
+    """A make_fixtures object, posed only while it carries its declared mode.
+
+    Trial #2 gave these objects no execute bit, so X2b, X2c and X4 reached
+    execveat and got EACCES before the behaviour each was written to test, and
+    nothing said so before the launch. A mode other than the one make_fixtures
+    declares means the case cannot be posed as written.
+    """
+    path = ctx.build / name
+    declared = make_fixtures.FIXTURE_MODES.get(name)
+    try:
+        mode = stat.S_IMODE(os.stat(str(path)).st_mode)
+    except OSError as exc:                                  # noqa: BLE001
+        return {"not_posed": _problem("the generated fixture " + name
+                                      + " could not be inspected", exc)}
+    if declared is None or mode != declared:
+        return {"not_posed": "the generated fixture %s has mode %s, not its "
+                             "declared mode %s"
+                             % (name, oct(mode),
+                                None if declared is None else oct(declared))}
+    return {"exec_path": str(path)}
+
+
 @_setup("foreign_elf")
 def _setup_foreign_elf(ctx, plan):
-    return {"exec_path": str(ctx.build / "helper_foreign.elf")}
+    return _generated_fixture(ctx, "helper_foreign.elf")
 
 
 @_setup("unloadable_in_cohort")
 def _setup_unloadable(ctx, plan):
     """X4: passes the cohort rule, ``e_phnum = 0``, so it reaches execveat with
     nothing for the loader to map."""
-    return {"exec_path": str(ctx.build / "unloadable_in_cohort.elf")}
+    return _generated_fixture(ctx, "unloadable_in_cohort.elf")
 
 
 @_setup("script_fixture")
 def _setup_script(ctx, plan):
-    return {"exec_path": str(ctx.build / "script_fixture.sh")}
+    return _generated_fixture(ctx, "script_fixture.sh")
 
 
 @_setup("directory_capability")
@@ -1364,8 +1487,8 @@ def _setup_fork_helper(ctx, plan):
     negative-control fixture, not the mechanism, and no descriptor above 2 is
     ever passed to a helper.
     """
-    fifo = ctx.build / (plan.case + ".liveness")
-    if fifo.exists():
+    fifo = _case_private_path(ctx, plan.case + ".liveness")
+    if fifo.exists() or fifo.is_symlink():
         fifo.unlink()
     os.mkfifo(str(fifo), 0o600)
     return {"exec_path": str(ctx.build / "helper_fork"),
@@ -1405,7 +1528,7 @@ def _setup_fork_helper_prearmed(ctx, plan):
     node an earlier run left there. The FIFO itself is created fresh for each
     launcher invocation.
     """
-    fifo = ctx.build / (plan.case + ".fixture-signal")
+    fifo = _case_private_path(ctx, plan.case + ".fixture-signal")
     try:
         _remove_fifo(fifo)
     except OSError as exc:                                  # noqa: BLE001
@@ -1421,6 +1544,15 @@ def _remove_fifo(path):
         os.unlink(str(path))
     except FileNotFoundError:
         pass
+
+
+def _helper_fifo_argument(built):
+    """The path the setup hands helper_fork after --liveness-fifo, or None."""
+    args = tuple(built.get("extra_helper_args") or ())
+    for index, value in enumerate(args[:-1]):
+        if value == "--liveness-fifo":
+            return args[index + 1]
+    return None
 
 
 def _arm_fixture_signal(built, pass_fds=()):
@@ -1452,19 +1584,32 @@ def _arm_fixture_signal(built, pass_fds=()):
         return None, _problem("the fixture signal could not be armed", exc)
     built[_FIXTURE_FD] = fd
     try:
-        is_fifo = stat.S_ISFIFO(os.fstat(fd).st_mode)
+        armed = os.fstat(fd)
+        is_fifo = stat.S_ISFIFO(armed.st_mode)
         inheritable = os.get_inheritable(fd)
         poller = select.poll()
         poller.register(fd, select.POLLIN)
         stale = bool(poller.poll(0))
+        # The path helper_fork will open must name THIS node from any working
+        # directory: absolute, and the same inode as the armed reader.
+        helper_path = _helper_fifo_argument(built)
+        absolute = isinstance(helper_path, str) and os.path.isabs(helper_path)
+        same_node = absolute and (_stat_identity(helper_path)
+                                  == (armed.st_dev, armed.st_ino))
     except OSError as exc:                                  # noqa: BLE001
         return None, _problem("the fixture signal could not be verified", exc)
     passed = fd in tuple(pass_fds)
     if not is_fifo or inheritable or passed or stale:
         return None, ("the fixture signal reader is not a fresh, "
                       "non-inheritable FIFO held only by the harness")
+    if not same_node:
+        return None, ("the path handed to helper_fork is not an absolute path "
+                      "to the armed FIFO, so the launcher's fchdir would change "
+                      "what it names")
     return {"armed_before_launch": True, "reader_inheritable": inheritable,
-            "reader_passed_to_launcher": passed, "fresh_fifo": not stale}, None
+            "reader_passed_to_launcher": passed, "fresh_fifo": not stale,
+            "helper_path_absolute": absolute,
+            "helper_path_is_armed_fifo": same_node}, None
 
 
 def _read_fixture_signal(built, timeout_ms=FIXTURE_SIGNAL_READ_TIMEOUT_MS):
@@ -1986,6 +2131,23 @@ def _check_no_helper_report(obs):
     return obs.get("report_state") == observations.REPORT_ABSENT
 
 
+@_check("helper_report_complete", reads=("report_state", "report"))
+def _check_helper_report_complete(obs):
+    """S4: independent positive evidence that an executed image reported.
+
+    Owner policy after Trial #2: clean exec-status EOF never proves that an
+    image ran, and the launcher's receipt is not taught otherwise. S4 is posed
+    instead by evidence from inside the executed image -- a complete, parseable
+    helper report behind the frozen sentinel, relayed as bytes the launcher
+    does not interpret. Which body it names and which exit it declared are
+    S4's result assertions, so a substituted body or a contradicting exit is a
+    FAIL and never a posing failure. A missing, truncated or malformed report
+    does not pose the case.
+    """
+    return (obs.get("report_state") == observations.REPORT_COMPLETE
+            and isinstance(obs.get("report"), dict))
+
+
 @_check("returned_before_descendant_lifetime", reads=("elapsed_ms",))
 def _check_returned_early(obs):
     """O6: launch() must return measurably before the descendant's sleep ends."""
@@ -2332,12 +2494,20 @@ def _build_plans():
                       "that ran is a FAIL"))
     add(CasePlan("S3", "helper_report", "process_disposition",
                  (CH_RECEIPT, CH_REPORT), helper_args=("--exit", "127")))
-    add(CasePlan("S4", "helper_report", "process_disposition", (CH_RECEIPT,),
-                 helper_args=("--exit-immediately", "7"),
+    # S4, Trial #3 correction candidate, by the owner's conservative
+    # exec-evidence policy. What the receipt supports on its own and what the
+    # executed image evidenced independently are two facts: the rule reads the
+    # first; the posed check and the assertions read the second.
+    add(CasePlan("S4", "helper_report", "launcher_receipt_claim",
+                 (CH_RECEIPT, CH_REPORT),
+                 helper_args=("--exit", str(S4_EXIT_CODE)),
                  spike_flags=("--post-fork-delay-ms", str(EXEC_RACE_DELAY_MS)),
-                 note="--exit-immediately is the helper's first observable act, "
-                      "so no report can exist and the exit status is the whole "
-                      "of the evidence"))
+                 posed_when="helper_report_complete",
+                 expected_marker="helper_report",
+                 assertions=("executed_marker", "helper_exit_corroborated"),
+                 note="the helper reports and then exits; the report poses S4 "
+                      "and corroborates the exit, and the launcher's own claim "
+                      "stays ExecStatusIndeterminate"))
     add(CasePlan("S5", "helper_report", "process_disposition",
                  (CH_RECEIPT, CH_REPORT), spike_flags=("--die-before-exec",),
                  posed_when="no_helper_report",
@@ -2523,7 +2693,7 @@ FACT_PUBLIC_KEYS = frozenset({
     "new_target_sha256", "marker_written", "readback_matches",
     "bytes_written", "length_preserved", "body_sha256_before",
     "body_sha256_after", "size_before", "size_after", "descriptor_closed",
-    "mapping_retained", "mode_before", "mode_after",
+    "mapping_retained", "mode_before", "mode_after", "outside_region_unchanged",
     # E5, S2 and S7: relations to the launcher, never raw identifiers
     "access_mode", "launcher_holds_same_inode", "launcher_access_modes",
     "capability_open_in_launcher",
@@ -2593,8 +2763,17 @@ def posing_evidence(plan, obs, evaluated=(), decided_by=None):
             out["fixture"]["signal_arming"] = {
                 key: arming[key] for key in (
                     "armed_before_launch", "reader_inheritable",
-                    "reader_passed_to_launcher", "fresh_fifo")
+                    "reader_passed_to_launcher", "fresh_fifo",
+                    "helper_path_absolute", "helper_path_is_armed_fifo")
                 if key in arming}
+        # helper_fork's own normalised report of a failed signal: why a
+        # fixture was not established, never evidence that it was.
+        diagnostic = obs.get("fixture_signal_diagnostic")
+        if isinstance(diagnostic, dict):
+            out["fixture"]["signal_diagnostic"] = {
+                key: diagnostic[key] for key in (
+                    "reported", "failed_step", "errno", "errno_number")
+                if key in diagnostic}
     forced =[_public_fact(fact, index if len(trials) > 1 else None)
               for index, trial in enumerate(trials) if isinstance(trial, dict)
               for fact in trial.get("post_pin_evidence") or ()
@@ -2701,7 +2880,7 @@ TRIAL_OBSERVATION_KEYS = frozenset({
     # AB7: the pre-armed fixture signal, its arming facts and the report
     # sentinel are facts of ONE launcher invocation too.
     "fixture_descendant_signalled", "fixture_signal_arming",
-    "report_sentinel_seen",
+    "report_sentinel_seen", "fixture_signal_diagnostic",
 })
 
 
@@ -2748,6 +2927,27 @@ def _control_arm_verdict(plan, view):
         return ("late", "the control arm's launch() returned after %d ms, bound "
                         "%d ms" % (elapsed, bound), elapsed)
     return None
+
+
+def _fixture_signal_failure_detail(plan, view):
+    """Why O6's or O7's fixture signal is missing, as far as helper_fork said.
+
+    Appended to the not-posed reason only. It never poses a case: the posed
+    check reads the signal alone.
+    """
+    if plan.posed_when != "fixture_descendant_signalled":
+        return ""
+    diagnostic = view.get("fixture_signal_diagnostic")
+    if not isinstance(diagnostic, dict):
+        return "; no fixture-signal diagnostic could be read"
+    if not diagnostic.get("reported"):
+        return ("; helper_fork wrote no fixture-signal failure line in the "
+                "retained stderr prefix")
+    if diagnostic.get("failed_step") is None:
+        return "; helper_fork wrote a fixture-signal failure line that does not parse"
+    return "; helper_fork reported that its fixture-signal %s failed with %s" % (
+        diagnostic["failed_step"],
+        diagnostic.get("errno") or "errno %s" % diagnostic.get("errno_number"))
 
 
 def _evaluate_repetition(plan, spec, view, where=""):
@@ -2807,7 +3007,9 @@ def _evaluate_repetition(plan, spec, view, where=""):
         held = bool(POSED_CHECKS[plan.posed_when](view))
         if not held:
             record["not_posed"] = ("the forced state did not materialise: "
-                                   + plan.posed_when + where)
+                                   + plan.posed_when
+                                   + _fixture_signal_failure_detail(plan, view)
+                                   + where)
             return record, held
 
     token, reason = observations.derive(plan.rule, view)
@@ -3350,6 +3552,11 @@ def _launch_and_observe(plan, ctx, built, applied, flags):
     sentinel_seen = (observations.report_sentinel_seen(spike.get("stdout"))
                      if isinstance(spike, dict)
                      and spike.get("admission") == "accepted" else None)
+    # helper_fork's own line when its fixture signal failed, reduced to a
+    # normalised fact. It explains an absent signal and never replaces one.
+    diagnostic = (observations.fixture_signal_diagnostic(spike.get("stderr"))
+                  if plan.setup in FORK_HELPER_SETUPS and isinstance(spike, dict)
+                  and spike.get("admission") == "accepted" else None)
 
     return {
         "spike": spike,
@@ -3369,6 +3576,7 @@ def _launch_and_observe(plan, ctx, built, applied, flags):
         "fixture_descendant_signalled": signalled,
         "fixture_signal_arming": arming,
         "report_sentinel_seen": sentinel_seen,
+        "fixture_signal_diagnostic": diagnostic,
         "launch_returned": returned,
         "elapsed_ms": elapsed_ms,
         "spike_exit": rc,

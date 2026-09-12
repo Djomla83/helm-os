@@ -14,15 +14,24 @@ so their SHA-256 is a function of this file alone.
                        consulted ahead of binfmt_elf, and resolves its
                        interpreter by pathname.
 
-  magic_only.bin       X4: exactly the four bytes 7F 45 4C 46 and nothing else.
-                       It passes a magic check, reaches execveat, and must fail
-                       ENOEXEC. A non-ELF file cannot pose this case at all,
-                       because the cohort rule refuses it at admission.
+  unloadable_in_cohort.elf
+                       X4: a 64-byte ELF64 header that passes the cohort rule
+                       with e_phnum = 0, so it is admitted and reaches execveat.
+
+  magic_only.bin       Exactly the four bytes 7F 45 4C 46 and nothing else. A
+                       negative fixture for the cohort rule; no case executes it.
 
   script_fixture.sh    X2/X2b/X2c: a #! script. Refused at admission; the
                        counterfactual arms run only in a frozen spike mode.
+
+Each fixture is written with the mode FIXTURE_MODES declares for it. Trial #2
+wrote every fixture with write_bytes alone, which creates 0o666 masked by the
+umask and so never an execute bit: X2b, X2c and X4 reached execveat and got
+EACCES before the behaviour each was written to test. The mode is not part of
+the bytes, so every digest below is unchanged by it.
 """
 import hashlib
+import os
 import pathlib
 import sys
 
@@ -89,6 +98,22 @@ FIXTURES = {
     "script_fixture.sh": SCRIPT_FIXTURE,
 }
 
+# The permission bits of each fixture, declared per fixture rather than applied
+# by a broad chmod: an object a case executes carries an execute bit, and an
+# object no case executes carries only what its case needs.
+FIXTURE_MODES = {
+    # E8 is refused at admission on e_machine, which needs only read access.
+    "helper_foreign.elf": 0o644,
+    # X4 must reach execveat, and the kernel checks execute permission before
+    # any loader looks at e_phnum.
+    "unloadable_in_cohort.elf": 0o755,
+    # No case executes it.
+    "magic_only.bin": 0o644,
+    # X2 is refused at admission whatever the mode; X2b and X2c bypass
+    # admission and must reach execveat's script handling.
+    "script_fixture.sh": 0o755,
+}
+
 
 def digests():
     return {name: hashlib.sha256(data).hexdigest()
@@ -102,6 +127,9 @@ def write(out_dir):
     for name, data in sorted(FIXTURES.items()):
         path = out / name
         path.write_bytes(data)
+        # Exactly the declared mode, independent of the umask and of any mode
+        # an earlier file at this path had.
+        os.chmod(path, FIXTURE_MODES[name])
         written[name] = str(path)
     return written
 

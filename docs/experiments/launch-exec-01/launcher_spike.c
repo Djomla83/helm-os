@@ -199,6 +199,20 @@ static int move_above_2(int fd, int keep_cloexec)
     return moved;
 }
 
+/* The waitid classification the receipt names beside the exit status and the
+ * terminating signal; empty when nothing was reaped. waitid(WEXITED) reports
+ * only these three, so no stopped or continued state is ever named. */
+static const char *wait_si_code_name(int reaped, int si_code)
+{
+    if (reaped < 0) { return ""; }
+    switch (si_code) {
+    case CLD_EXITED: return "CLD_EXITED";
+    case CLD_KILLED: return "CLD_KILLED";
+    case CLD_DUMPED: return "CLD_DUMPED";
+    default: return "";
+    }
+}
+
 /* ======================================================= child setup (ST_*)
  * EVERYTHING BELOW RUNS AFTER clone3 AND BEFORE execveat.
  *
@@ -1008,6 +1022,14 @@ int main(int argc, char **argv)
     else if (info.si_code == CLD_EXITED) { disposition = "Exited"; }
     else { disposition = "Signaled"; }
 
+    /* R3 (Trial #2): waitid(2) reports the terminating signal in si_status for
+     * CLD_DUMPED exactly as for CLD_KILLED. Keeping it for CLD_KILLED alone
+     * turned R3's SIGSEGV, which the kernel classified CLD_DUMPED, into -1.
+     * Both keep it now and wait_si_code keeps them distinguishable. No other
+     * classification carries a signal, so none is invented for it. */
+    int term_signal = (info.si_code == CLD_KILLED || info.si_code == CLD_DUMPED)
+                      ? info.si_status : -1;
+
     receipt_channel();
     printf("{\"admission\":\"accepted\","
            "\"pre_exec_body_sha256\":\"%s\","
@@ -1016,7 +1038,7 @@ int main(int argc, char **argv)
            "\"process_disposition\":\"%s\","
            "\"timeout_disposition\":\"%s\","
            "\"exec_failed_stage\":\"%s\",\"exec_failed_errno\":%d,"
-           "\"exit_code\":%d,\"term_signal\":%d,"
+           "\"exit_code\":%d,\"term_signal\":%d,\"wait_si_code\":\"%s\","
            "\"launcher_signal_issued\":%s,"
            "\"group_sweep_issued\":%s,"
            "\"wait_errno\":%d,",
@@ -1024,7 +1046,7 @@ int main(int argc, char **argv)
            disposition, timeout_disposition,
            exec_failed ? stage_name(rec.stage) : "", exec_failed ? rec.err : 0,
            info.si_code == CLD_EXITED ? info.si_status : -1,
-           info.si_code == CLD_KILLED ? info.si_status : -1,
+           term_signal, wait_si_code_name(reaped, info.si_code),
            timed_out ? "true" : "false",
            sweep_issued ? "true" : "false",
            wait_errno);

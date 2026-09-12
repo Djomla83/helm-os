@@ -884,8 +884,11 @@ class E6cMapping(unittest.TestCase):
         self.assertNotIn("descriptor_closed=True", body)
 
     def test_e6c_mutates_the_marker_region_not_the_elf_header(self):
-        self.assertIn("find_marker_region", source_of(
-            "_setup_shared_writable_mapping"))
+        # Trial #3 correction candidate: E6 and E6c share ONE posing primitive,
+        # which locates helper_report's one guarded marker region.
+        for setup in ("_setup_shared_writable_mapping", "_setup_mutate_marker"):
+            self.assertIn("_marker_region_of(info)", source_of(setup), setup)
+        self.assertIn("locate_marker_region", source_of("_marker_region_of"))
 
 
 class ManifestAgreesWithTheCorrection(unittest.TestCase):

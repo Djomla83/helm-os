@@ -1,0 +1,1388 @@
+"""Trial #3 correction candidate: regressions for the bounded Trial #2 findings.
+
+Scope, and nothing else: X2b/X2c/X4, T1, S4, M2, E4, E6/E6c, O6/O7 and R3, plus
+the liveness revalidation support P1/P2/P4 need. N3 stays conditional.
+
+The candidate is NOT FROZEN, NOT AUTHORISED and NOT RUN. Nothing here poses a
+LAUNCH-EXEC case, runs launcher_spike, or executes a helper or a generated ELF.
+Observations are fabricated in-process. The POSIX-only tests use scratch FIFOs
+and symlinks, Python stand-ins and isolated fork/waitid probes that are not
+LAUNCH-EXEC cases. The compiler-backed test compiles helper_report.c into a
+scratch directory and reads the result as bytes only. No test constructs a
+driver.Authorisation.
+
+Trial #2 is immutable. Its replay here runs the modules frozen at ba41a3f, in a
+separate interpreter, over the preserved journal, and must still produce
+59 PASS / 6 FAIL / 6 INVALID / 1 BLOCKED and MECHANISM_REJECTED.
+"""
+import ast
+import base64
+import contextlib
+import errno
+import hashlib
+import json
+import os
+import pathlib
+import re
+import shutil
+import stat
+import subprocess
+import sys
+import tempfile
+import unittest
+
+HERE = pathlib.Path(__file__).resolve().parent
+ROOT = HERE.parents[1]
+EXP = ROOT / "docs" / "experiments" / "launch-exec-01"
+for _path in (str(EXP), str(HERE)):
+    if _path not in sys.path:
+        sys.path.insert(0, _path)
+
+import checker              # noqa: E402
+import driver               # noqa: E402
+import evidence             # noqa: E402
+import frozen_cases as fc   # noqa: E402
+import harness              # noqa: E402
+import make_fixtures        # noqa: E402
+import observations as ob   # noqa: E402
+import oracles              # noqa: E402
+import run_launch_exec_01 as runner   # noqa: E402
+import test_launch_exec_01_delta as D   # noqa: E402  fabrication helpers only
+
+PASS, FAIL, INVALID, BLOCKED = (checker.PASS, checker.FAIL, checker.INVALID,
+                                checker.BLOCKED)
+POSIX = unittest.skipUnless(os.name == "posix",
+                            "FIFOs, symlinks and POSIX modes; Linux CI and WSL run it")
+LINUX = unittest.skipUnless(sys.platform.startswith("linux"),
+                            "reads /proc; Linux CI and WSL run it")
+DRIVER_SOURCE = (EXP / "driver.py").read_text(encoding="utf-8")
+DRIVER_TREE = ast.parse(DRIVER_SOURCE)
+TRIAL2_DIR = (ROOT / "docs" / "experiments" / "evidence"
+              / "LAUNCH-EXEC-01-TRIAL-002-2026-09-11")
+MANIFEST = json.loads((EXP / "SOURCE-HASHES.json").read_text(encoding="utf-8"))
+CANDIDATE = json.loads((EXP / "TRIAL-3-CORRECTION-CANDIDATE.json").read_text(
+    encoding="utf-8"))
+TRIAL2_FREEZE = "ba41a3f12be411058ed50e78bcd1c7e22afb7ae4"
+
+
+def sha256(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def git_blob(data):
+    return hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest()
+
+
+def function(name, tree=DRIVER_TREE):
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name == name:
+            return node
+    raise KeyError(name)
+
+
+def source_of(name, tree=DRIVER_TREE):
+    return ast.unparse(function(name, tree))
+
+
+def score(plan, obs):
+    record = driver.evaluate(plan, obs)
+    return checker.score_case(plan.case, record)[0], record
+
+
+def full_report(marker="helper_report", declared_exit=fc.S4_EXIT_CODE):
+    rep = D.report(marker)
+    rep["requested"] = {"stdout": 0, "stderr": 0, "exit": declared_exit}
+    return rep
+
+
+def capture(data, completeness="CompleteAtEof"):
+    """A stream block with its retained prefix, as launcher_spike.c prints it."""
+    return {"bytes_drained": len(data), "drained_sha256": sha256(data),
+            "completeness": completeness, "capture_prefix_length": len(data),
+            "capture_prefix_truncated": False,
+            "capture_prefix_base64": base64.b64encode(data).decode("ascii")}
+
+
+class SafetyBarrier(unittest.TestCase):
+    def test_this_suite_constructs_no_authorisation(self):
+        text = pathlib.Path(__file__).read_text(encoding="utf-8")
+        self.assertNotIn("Authorisation" + "(True)", text)
+        self.assertNotIn("driver." + "observe(", text)
+        self.assertNotIn("driver." + "pose(", text)
+        self.assertNotIn("_launch_" + "and_observe(", text)
+
+
+# ======================================================= Trial #2 is immutable
+TRIAL2_EVIDENCE_SHA256 = {
+    "preflight.json":
+        "4669c8490811ef5a3bd0fff812c877ee46e7d7c0a830670456e0bc0b5019a892",
+    "build-identity.json":
+        "cbf015a64b7b5bf0034fb6e638bbfdaaccbc9110a95236ea58f06efac45bb21b",
+    "journal.jsonl":
+        "451e471d68ab8bb6509eca3974ab54bcfa08b89ecf37bd99f7541dfd664a6558",
+    "evidence.json":
+        "c105223789a5f8576035fa06cd348b71bda78b34132c13e0785fb75e37fdfb9f",
+    "runner-stdout.json":
+        "c105223789a5f8576035fa06cd348b71bda78b34132c13e0785fb75e37fdfb9f",
+}
+
+# Committed blobs of the Trial #2 records this correction must not touch.
+TRIAL2_RECORD_BLOBS = {
+    "docs/implementation/HELM-LAUNCH-EXEC-01-TRIAL-002-RESULT-REVIEW.md":
+        "f6593f5cb29c9407b4b07376a337b75cab61ace3",
+    "docs/implementation/HELM-LAUNCH-EXEC-01-TRIAL-002-POSTMORTEM-DIAGNOSTICS.md":
+        "17cafc675695edb50fccf073cc0086dada2547f2",
+    "docs/experiments/evidence/LAUNCH-EXEC-01-TRIAL-002-2026-09-11/PROVENANCE.md":
+        "f9021abe6429c36089c4f90e8ce6e36f608c8b73",
+    "docs/experiments/launch-exec-01/SOURCE-HASHES.json":
+        "6f000fac9a48625d3c9def18e16ae7ce1b61efa8",
+}
+
+# The frozen modules the historical replay needs, from the Trial #2 freeze.
+REPLAY_MODULES = ("checker.py", "frozen_cases.py", "journal.py", "evidence.py",
+                  "observations.py")
+
+REPLAY = r'''
+import json, sys
+sys.path.insert(0, sys.argv[1])
+import checker, frozen_cases, journal
+records, torn = journal.read(sys.argv[2])
+state = journal.replay(records)
+report = checker.report(journal.recovered_records(state))
+first = next(r for r in records if r.get("kind") == "case_pose_started")
+sys.stdout.write(json.dumps({
+    "torn": torn,
+    "project": journal.project_status(state),
+    "aggregate": report["aggregate"], "counts": report["counts"],
+    "detail": report["detail"], "statuses": report["statuses"],
+    "trial_ends": sum(1 for r in records if r.get("kind") == "trial_end"),
+    "first_pose_started": [first["case"], first["n"]],
+    "pose_started": len(state["pose_started"]),
+    "entered": len(state["entered"]), "completed": len(state["completed"]),
+    "predictions": {n: frozen_cases.BY_NAME[n]["predict"] for n in ("T1", "S4")},
+}, sort_keys=True))
+'''
+
+
+def git_show(revision, path):
+    git = shutil.which("git")
+    if git is None:
+        raise unittest.SkipTest("git is needed to read the frozen Trial #2 sources")
+    root = str(ROOT).replace("\\", "/")
+    proc = subprocess.run([git, "-C", str(ROOT), "-c", "safe.directory=" + root,
+                           "show", "%s:%s" % (revision, path)],
+                          capture_output=True, timeout=60)
+    if proc.returncode != 0:
+        raise AssertionError("git show %s:%s failed: %s" % (
+            revision, path, proc.stderr.decode("utf-8", "replace")))
+    return proc.stdout
+
+
+class Trial2StaysImmutable(unittest.TestCase):
+    def test_the_preserved_evidence_is_byte_exact(self):
+        for name, digest in TRIAL2_EVIDENCE_SHA256.items():
+            self.assertEqual(sha256((TRIAL2_DIR / name).read_bytes()), digest, name)
+        self.assertEqual(sorted(p.name for p in TRIAL2_DIR.iterdir()),
+                         sorted(list(TRIAL2_EVIDENCE_SHA256) + ["PROVENANCE.md"]))
+
+    def test_the_trial_2_records_and_manifest_are_the_committed_blobs(self):
+        for path, blob in TRIAL2_RECORD_BLOBS.items():
+            self.assertEqual(git_blob((ROOT / path).read_bytes()), blob, path)
+        trial2 = CANDIDATE["trial_2"]
+        data = (EXP / "SOURCE-HASHES.json").read_bytes()
+        self.assertEqual(git_blob(data), trial2["manifest_git_blob"])
+        self.assertEqual(sha256(data), trial2["manifest_sha256"])
+
+    def test_the_historical_replay_with_the_ba41a3f_checker_is_unchanged(self):
+        tmp = pathlib.Path(tempfile.mkdtemp(prefix="trial2-replay-"))
+        try:
+            for name in REPLAY_MODULES:
+                data = git_show(TRIAL2_FREEZE, "docs/experiments/launch-exec-01/"
+                                + name)
+                # The replay runs exactly the bytes Trial #2 executed.
+                self.assertEqual(sha256(data), MANIFEST["sha256"][name], name)
+                (tmp / name).write_bytes(data)
+            proc = subprocess.run(
+                [sys.executable, "-I", "-B", "-c", REPLAY, str(tmp),
+                 str(TRIAL2_DIR / "journal.jsonl")],
+                capture_output=True, timeout=120, cwd=str(tmp))
+            self.assertEqual(proc.returncode, 0, proc.stderr.decode("utf-8",
+                                                                   "replace"))
+            got = json.loads(proc.stdout.decode("utf-8"))
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+        self.assertEqual(got["aggregate"], "MECHANISM_REJECTED")
+        self.assertEqual(got["counts"], {"PASS": 59, "FAIL": 6, "INVALID": 6,
+                                         "BLOCKED": 1})
+        self.assertEqual(got["detail"]["failing_cases"],
+                         ["X2b", "X2c", "X4", "T1", "S4", "M2"])
+        published = json.loads((TRIAL2_DIR / "evidence.json").read_text(
+            encoding="utf-8"))
+        self.assertEqual(got["aggregate"], published["aggregate"])
+        self.assertEqual(got["counts"], published["counts"])
+        self.assertEqual(got["detail"], published["detail"])
+        self.assertEqual(len(got["statuses"]), 72)
+        for name, entry in published["cases"].items():
+            self.assertEqual(got["statuses"][name],
+                             {"status": entry["status"], "reason": entry["reason"]},
+                             name)
+        # D-7 consumed at E1's durable pose start; exactly one valid trial.
+        self.assertIs(got["torn"], False)
+        self.assertEqual(got["project"]["trial_status"], "TRIAL_COMPLETED")
+        self.assertIs(got["project"]["d7_consumed"], True)
+        self.assertEqual(got["first_pose_started"], ["E1", 4])
+        self.assertEqual((got["trial_ends"], got["entered"], got["completed"],
+                          got["pose_started"]), (1, 72, 72, 68))
+        # The frozen predictions the candidate corrects, read from the freeze.
+        for case, pair in CANDIDATE["contract_delta"]["predictions"].items():
+            self.assertEqual(got["predictions"][case], pair["trial_2"], case)
+
+
+class CandidateRecord(unittest.TestCase):
+    def test_it_is_a_candidate_and_grants_nothing(self):
+        self.assertEqual(CANDIDATE["record"], "TRIAL_3_CORRECTION_CANDIDATE")
+        self.assertEqual(CANDIDATE["state"], "NOT_FROZEN")
+        self.assertIs(CANDIDATE["trial_3_authorised"], False)
+        self.assertIsNone(CANDIDATE["trial_3_d7"])
+        self.assertIs(CANDIDATE["trial_3_executed"], False)
+        self.assertEqual(CANDIDATE["build"]["status"],
+                         "BUILD_8_REQUIRED_FOR_FUTURE_FREEZE")
+        self.assertIs(CANDIDATE["build"]["build_7_binds_candidate"], False)
+        trial2 = CANDIDATE["trial_2"]
+        self.assertEqual(trial2["freeze"], TRIAL2_FREEZE)
+        self.assertEqual((trial2["aggregate"], trial2["d7"],
+                          trial2["valid_trial_count"], trial2["rerun"]),
+                         ("MECHANISM_REJECTED", "CONSUMED", 1, "FORBIDDEN"))
+        self.assertEqual(trial2["counts"], {"PASS": 59, "FAIL": 6, "INVALID": 6,
+                                            "BLOCKED": 1})
+        self.assertNotIn("freeze", CANDIDATE["record"].lower())
+        self.assertNotIn("sha256", CANDIDATE)
+
+    def test_the_declared_drift_is_exactly_the_real_drift(self):
+        drift = sorted(name for name, digest in MANIFEST["sha256"].items()
+                       if sha256((EXP / name).read_bytes()) != digest)
+        self.assertEqual(drift, CANDIDATE["sources_differing_from_trial_2_freeze"])
+        documents = sorted(path for path, digest
+                           in MANIFEST["definition_sha256"].items()
+                           if sha256((ROOT / path).read_bytes()) != digest)
+        self.assertEqual(documents,
+                         CANDIDATE["definition_files_differing_from_trial_2_freeze"])
+        self.assertEqual(sorted(n for n in drift if n.endswith(".c")),
+                         CANDIDATE["c_sources_changed"])
+
+    def test_the_runner_does_not_call_the_candidate_frozen(self):
+        ok, detail = runner.verify_freeze()
+        self.assertIs(ok, False)
+        for name in CANDIDATE["sources_differing_from_trial_2_freeze"]:
+            self.assertIn(name + ":", detail)
+        runner_source = (EXP / "run_launch_exec_01.py").read_text(encoding="utf-8")
+        self.assertNotIn("TRIAL-3-CORRECTION-CANDIDATE", runner_source)
+
+    def test_the_scope_is_the_bounded_finding_set(self):
+        scope = CANDIDATE["scope"]
+        self.assertEqual(sorted(scope["corrected_findings"]),
+                         sorted(["X2b", "X2c", "X4", "T1", "S4", "M2", "E4", "E6",
+                                 "E6c", "O6", "O7", "R3"]))
+        self.assertEqual(scope["revalidation_support"], ["P1", "P2", "P4"])
+        summary = fc.summary()
+        self.assertEqual(scope["membership_unchanged"],
+                         {k: summary[k] for k in ("conditional", "mandatory",
+                                                  "recorded", "total")})
+
+    def test_the_declared_contract_delta_is_the_code(self):
+        delta = CANDIDATE["contract_delta"]
+        for case, pair in delta["predictions"].items():
+            self.assertEqual(fc.BY_NAME[case]["predict"], pair["candidate"], case)
+        for rule, entry in delta["rules_added"].items():
+            self.assertIn(rule, ob.RULES)
+            self.assertEqual(sorted(p.case for p in driver._PLAN_LIST
+                                    if p.rule == rule), entry["cases"])
+        s4 = driver.CASE_PLANS["S4"]
+        declared = delta["plans_changed"]["S4"]
+        self.assertEqual(list(s4.channels), declared["channels"])
+        self.assertEqual(list(s4.helper_args), declared["helper_args"])
+        self.assertEqual(list(s4.spike_flags), declared["spike_flags"])
+        self.assertEqual(s4.posed_when, declared["posed_when"])
+        self.assertEqual(s4.expected_marker, declared["expected_marker"])
+        self.assertEqual(list(s4.assertions), declared["assertions"])
+        self.assertEqual(s4.rule, declared["rule"])
+        self.assertEqual({name: int(mode, 8) for name, mode
+                          in delta["fixture_modes"].items()},
+                         make_fixtures.FIXTURE_MODES)
+        self.assertEqual(set(delta["receipt_fields_added"]["wait_si_code"]),
+                         set(ob.SPIKE_WAIT_SI_CODES))
+        self.assertEqual(delta["fixture_signal_diagnostic"]["line"].split("<")[0],
+                         ob.FIXTURE_SIGNAL_FAILED.decode("ascii"))
+
+
+# ============================================ X2b / X2c / X4: fixture modes
+class FixtureModes(unittest.TestCase):
+    EXECUTED = ("script_fixture.sh", "unloadable_in_cohort.elf")
+    NEVER_EXECUTED = ("helper_foreign.elf", "magic_only.bin")
+
+    def test_every_fixture_declares_exactly_one_mode(self):
+        self.assertEqual(set(make_fixtures.FIXTURE_MODES),
+                         set(make_fixtures.FIXTURES))
+        for name, mode in make_fixtures.FIXTURE_MODES.items():
+            self.assertIsInstance(mode, int, name)
+            self.assertEqual(mode & ~0o777, 0, name)
+
+    def test_executed_fixtures_are_executable_and_the_others_are_not(self):
+        for name in self.EXECUTED:
+            self.assertEqual(make_fixtures.FIXTURE_MODES[name], 0o755, name)
+        for name in self.NEVER_EXECUTED:
+            self.assertEqual(make_fixtures.FIXTURE_MODES[name], 0o644, name)
+            self.assertEqual(make_fixtures.FIXTURE_MODES[name] & 0o111, 0, name)
+        users = {p.case: p.setup for p in driver._PLAN_LIST
+                 if p.setup in ("script_fixture", "unloadable_in_cohort")}
+        self.assertEqual(sorted(users), ["X2", "X2b", "X2c", "X4"])
+        for case in ("X2b", "X2c", "X4"):
+            self.assertIn("--bypass-admission", driver.CASE_PLANS[case].spike_flags)
+
+    def test_the_bytes_are_trial_2s_whatever_the_mode(self):
+        identity = json.loads((TRIAL2_DIR / "build-identity.json").read_text(
+            encoding="utf-8"))["artefacts"]
+        for name, digest in make_fixtures.digests().items():
+            self.assertEqual(identity[name]["sha256"], digest, name)
+            self.assertEqual(identity[name]["size"],
+                             len(make_fixtures.FIXTURES[name]), name)
+
+    def test_modes_are_applied_per_fixture_not_by_a_broad_chmod(self):
+        tree = ast.parse((EXP / "make_fixtures.py").read_text(encoding="utf-8"))
+        chmods = [n for n in ast.walk(function("write", tree))
+                  if isinstance(n, ast.Call) and ast.unparse(n.func) == "os.chmod"]
+        self.assertEqual(len(chmods), 1)
+        self.assertEqual(ast.unparse(chmods[0].args[1]), "FIXTURE_MODES[name]")
+        self.assertNotIn("0o755", source_of("write", tree))
+
+    @POSIX
+    def test_write_applies_each_declared_mode_under_any_umask(self):
+        for umask in (0o000, 0o022, 0o077, 0o777):
+            tmp = pathlib.Path(tempfile.mkdtemp(prefix="fixture-modes-"))
+            # The directory exists first: the umask under test is the one the
+            # fixture FILES are created under.
+            (tmp / "build").mkdir()
+            old = os.umask(umask)
+            try:
+                make_fixtures.write(str(tmp / "build"))
+            finally:
+                os.umask(old)
+            try:
+                for name, data in make_fixtures.FIXTURES.items():
+                    path = tmp / "build" / name
+                    self.assertEqual(stat.S_IMODE(path.stat().st_mode),
+                                     make_fixtures.FIXTURE_MODES[name],
+                                     (oct(umask), name))
+                    self.assertEqual(path.read_bytes(), data, name)
+            finally:
+                shutil.rmtree(tmp, ignore_errors=True)
+
+    @POSIX
+    def test_a_rewrite_restores_the_declared_mode(self):
+        tmp = pathlib.Path(tempfile.mkdtemp(prefix="fixture-rewrite-"))
+        try:
+            make_fixtures.write(str(tmp))
+            os.chmod(tmp / "script_fixture.sh", 0o600)
+            os.chmod(tmp / "magic_only.bin", 0o755)
+            make_fixtures.write(str(tmp))
+            self.assertEqual(stat.S_IMODE((tmp / "script_fixture.sh").stat().st_mode),
+                             0o755)
+            self.assertEqual(stat.S_IMODE((tmp / "magic_only.bin").stat().st_mode),
+                             0o644)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    @POSIX
+    def test_a_fixture_without_its_declared_mode_does_not_pose(self):
+        tmp = pathlib.Path(tempfile.mkdtemp(prefix="fixture-posing-"))
+        try:
+            make_fixtures.write(str(tmp))
+            ctx = driver.TrialContext(build=str(tmp), work=str(tmp), preflight={},
+                                      freeze={}, sanitiser=evidence.Sanitiser())
+            for case in ("E8", "X2", "X2b", "X2c", "X4"):
+                plan = driver.CASE_PLANS[case]
+                built = driver.SETUPS[plan.setup](ctx, plan)
+                self.assertNotIn("not_posed", built, case)
+                self.assertTrue(os.access(built["exec_path"], os.R_OK), case)
+            os.chmod(tmp / "script_fixture.sh", 0o644)
+            os.chmod(tmp / "unloadable_in_cohort.elf", 0o644)
+            for case in ("X2b", "X2c", "X4"):
+                plan = driver.CASE_PLANS[case]
+                built = driver.SETUPS[plan.setup](ctx, plan)
+                self.assertIn("declared mode 0o755", built["not_posed"], case)
+                record = dict(built, launch_returned=None)
+                self.assertEqual(checker.score_case(case, record)[0], INVALID)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+# ================================================== T1: the qualified timeout
+class T1QualifiedTimeout(unittest.TestCase):
+    plan = driver.CASE_PLANS["T1"]
+    TOKEN = "TimedOut:KilledByLauncher:SIGTERM"
+
+    def t1(self, **over):
+        fields = dict(process_disposition="TimedOut",
+                      timeout_disposition="KilledByLauncher", term_signal=15,
+                      exit_code=-1, wait_si_code="CLD_KILLED",
+                      launcher_signal_issued=True)
+        fields.update(over)
+        obs = D.obs_for(self.plan, spike=D.receipt(**fields), rep=full_report(),
+                        elapsed_ms=2006)
+        return score(self.plan, obs)
+
+    def test_the_prediction_is_the_exact_qualified_token(self):
+        self.assertEqual(fc.BY_NAME["T1"]["predict"], self.TOKEN)
+        self.assertEqual(fc.BY_NAME["T1"]["cls"], fc.MANDATORY)
+        self.assertIsNone(fc.BY_NAME["T1"]["safe"])
+        # The checker compares a single prediction for equality, never a prefix.
+        self.assertIn('outcome != spec["predict"]',
+                      (EXP / "checker.py").read_text(encoding="utf-8"))
+
+    def test_the_intended_sigterm_sequence_passes(self):
+        status, record = self.t1()
+        self.assertEqual(status, PASS, record)
+        self.assertEqual(record["outcome"], self.TOKEN)
+
+    def test_every_other_termination_path_fails(self):
+        for over in ({"term_signal": 9},
+                     {"timeout_disposition": "ExitedDuringGrace", "exit_code": 9,
+                      "term_signal": -1, "wait_si_code": "CLD_EXITED"},
+                     {"timeout_disposition": "TerminationFailed", "term_signal": -1,
+                      "wait_si_code": ""},
+                     {"timeout_disposition": "", "term_signal": -1},
+                     {"process_disposition": "Signaled", "timeout_disposition": ""},
+                     {"process_disposition": "Exited", "timeout_disposition": "",
+                      "exit_code": 0, "term_signal": -1,
+                      "wait_si_code": "CLD_EXITED"}):
+            status, record = self.t1(**over)
+            self.assertEqual(status, FAIL, (over, record))
+            self.assertNotEqual(record["outcome"], self.TOKEN)
+
+    def test_the_trial_2_observation_now_matches_and_the_bare_token_fails(self):
+        # Trial #2 observed exactly this token; the candidate expects it.
+        self.assertEqual(self.t1(wait_si_code=None)[0], PASS)
+        status, record = self.t1(timeout_disposition="")
+        self.assertEqual((status, record["outcome"]), (FAIL, "TimedOut"))
+
+    def test_a_classification_contradicting_the_sub_disposition_is_invalid(self):
+        status, record = self.t1(wait_si_code="CLD_EXITED")
+        self.assertEqual(status, INVALID, record)
+
+    def test_the_construction_takes_the_sigterm_path(self):
+        self.assertEqual(self.plan.helper_args, ("--sleep-ms", "60000"))
+        self.assertEqual((self.plan.timeout_ms, self.plan.grace_ms), (2000, 2000))
+        self.assertEqual(self.plan.rule, "process_disposition")
+        # The bare TimedOut is unreachable: every timeout branch of the
+        # launcher assigns a non-empty sub-disposition.
+        spike = (EXP / "launcher_spike.c").read_text(encoding="utf-8")
+        branch = spike.split("else if (timed_out) {", 1)[1].split(
+            'else if (info.si_code == CLD_EXITED) { disposition = "Exited"; }', 1)[0]
+        for sub in ("TerminationFailed", "ExitedDuringGrace", "KilledByLauncher"):
+            self.assertIn('timeout_disposition = "%s"' % sub, branch)
+        self.assertEqual(branch.count("timeout_disposition = "), 3)
+
+
+# ======================================== S4: conservative exec evidence
+class S4ConservativeExecEvidence(unittest.TestCase):
+    plan = driver.CASE_PLANS["S4"]
+
+    def s4(self, spike=None, rep=None, **over):
+        spike = D.receipt(exit_code=fc.S4_EXIT_CODE, wait_si_code="CLD_EXITED") \
+            if spike is None else spike
+        rep = full_report() if rep is None else rep
+        return score(self.plan, D.obs_for(self.plan, spike=spike, rep=rep, **over))
+
+    def test_the_case_and_plan(self):
+        spec = fc.BY_NAME["S4"]
+        self.assertEqual((spec["cls"], spec["predict"], spec["instant_reject"]),
+                         (fc.MANDATORY, "ExecStatusIndeterminate", True))
+        self.assertEqual(self.plan.rule, "launcher_receipt_claim")
+        self.assertEqual(self.plan.channels, (driver.CH_RECEIPT, driver.CH_REPORT))
+        self.assertEqual(self.plan.helper_args, ("--exit", str(fc.S4_EXIT_CODE)))
+        self.assertEqual(self.plan.spike_flags,
+                         ("--post-fork-delay-ms", str(fc.EXEC_RACE_DELAY_MS)))
+        self.assertEqual(self.plan.posed_when, "helper_report_complete")
+        self.assertEqual(self.plan.assertions,
+                         ("executed_marker", "helper_exit_corroborated"))
+        self.assertFalse(any("--exit-immediately" in p.helper_args
+                             for p in driver._PLAN_LIST))
+
+    def test_a_conservative_claim_with_independent_evidence_passes(self):
+        status, record = self.s4()
+        self.assertEqual(status, PASS, record)
+        self.assertEqual(record["outcome"], "ExecStatusIndeterminate")
+        for name in self.plan.assertions:
+            self.assertEqual(record["assertions"][name]["result"],
+                             ob.ASSERTION_HOLDS, name)
+        self.assertEqual(record["posing_evidence"]["posed_check"],
+                         {"name": "helper_report_complete", "held": True})
+
+    def test_the_launcher_claim_never_reads_the_independent_evidence(self):
+        receipt = D.receipt(exit_code=fc.S4_EXIT_CODE, wait_si_code="CLD_EXITED")
+        with_report = D.obs_for(self.plan, spike=receipt, rep=full_report())
+        without = D.obs_for(self.plan, spike=receipt, rep=None)
+        payload = D.obs_for(self.plan, spike=receipt, payload_is_recipe=True)
+        for obs in (with_report, without, payload):
+            self.assertEqual(ob.derive("launcher_receipt_claim", obs)[0],
+                             "ExecStatusIndeterminate")
+        # A receipt asserting its own exec success changes nothing.
+        boastful = dict(receipt, exec_confirmed=True, exec_reached=True)
+        self.assertEqual(ob.derive("launcher_receipt_claim", D.obs_for(
+            self.plan, spike=boastful, rep=full_report()))[0],
+                         "ExecStatusIndeterminate")
+        body = ast.unparse(function("rule_launcher_receipt_claim",
+                                    ast.parse((EXP / "observations.py").read_text(
+                                        encoding="utf-8"))))
+        self.assertIn("exec_confirmation(spike, None)", body)
+        self.assertIn("report=None", body)
+        launcher = (EXP / "launcher_spike.c").read_text(encoding="utf-8")
+        accepted = launcher.split('printf("{\\"admission\\":\\"accepted\\",', 1)[1]
+        self.assertNotIn("exec_confirmed", accepted.split("rejected_acquisition_arm")[0])
+
+    def test_missing_or_uninterpretable_independent_evidence_is_invalid(self):
+        for state in (ob.REPORT_ABSENT, ob.REPORT_TRUNCATED, ob.REPORT_MALFORMED,
+                      ob.REPORT_STREAM_INCOMPLETE):
+            obs = D.obs_for(self.plan, spike=D.receipt(exit_code=7), rep=None,
+                            report_state=state)
+            status, record = score(self.plan, obs)
+            self.assertEqual(status, INVALID, state)
+            self.assertIn("helper_report_complete", record["not_posed"])
+        for over in ({"spike": None}, {"exit_code": "7"},
+                     {"wait_si_code": "CLD_KILLED"}):
+            if "spike" in over:
+                obs = D.obs_for(self.plan, rep=full_report())
+                obs["spike"] = None
+                obs["repeat_observations"] = [obs]
+                status = score(self.plan, obs)[0]
+            else:
+                status = self.s4(spike=D.receipt(**dict(
+                    {"exit_code": 7, "wait_si_code": "CLD_EXITED"}, **over)))[0]
+            self.assertEqual(status, INVALID, over)
+        self.assertEqual(self.s4(rep=D.report())[0], INVALID)   # no declared exit
+
+    def test_contradictory_evidence_fails(self):
+        rows = (
+            (dict(spike=D.receipt(exit_code=3, wait_si_code="CLD_EXITED")),
+             "helper_exit_contradicted"),
+            (dict(rep=full_report(declared_exit=3)), "helper_exit_contradicted"),
+            (dict(rep=full_report(marker="helper_alt")), "executed_body_mismatch"),
+            (dict(spike=D.receipt(process_disposition="Signaled", term_signal=9,
+                                  exit_code=-1, wait_si_code="CLD_KILLED")),
+             "helper_exit_contradicted"),
+            (dict(spike=D.receipt(process_disposition="ExecStatusIndeterminate",
+                                  exit_code=-1)), "helper_exit_contradicted"),
+            (dict(spike=D.receipt(process_disposition="ExecFailed",
+                                  exec_failed_stage="EXEC", exec_failed_errno=13,
+                                  exit_code=127)), None),
+            (dict(spike=D.receipt(process_disposition="ExitStatusUnobservable",
+                                  exit_code=-1, wait_errno=10)), None),
+        )
+        for over, token in rows:
+            status, record = self.s4(**over)
+            self.assertEqual(status, FAIL, (over, record))
+            if token is not None:
+                self.assertEqual(record["outcome"], token, over)
+        self.assertEqual(self.s4(launch_returned=False)[0], FAIL)
+
+    def test_s4_and_s5_differ_by_their_evidence_not_their_token(self):
+        s5 = driver.CASE_PLANS["S5"]
+        self.assertEqual(fc.BY_NAME["S5"]["predict"], fc.BY_NAME["S4"]["predict"])
+        self.assertEqual(s5.posed_when, "no_helper_report")
+        self.assertEqual(s5.rule, "process_disposition")
+        receipt = D.receipt(exit_code=0)
+        self.assertEqual(driver.POSED_CHECKS["no_helper_report"](
+            D.obs_for(s5, spike=receipt)), True)
+        self.assertEqual(driver.POSED_CHECKS["helper_report_complete"](
+            D.obs_for(self.plan, spike=receipt)), False)
+
+
+# ============================================ M2: the direct-child clone3
+THREAD_FLAGS = ("CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|"
+                "CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID")
+CHILD_WINDOW = (
+    "dup2(5, 0) = 0", "dup2(6, 1) = 1", "dup2(7, 2) = 2",
+    "fcntl(0, F_SETFD, 0) = 0", "fchdir(8) = 0", "close_range(3, 7, 0) = 0",
+    "setpgid(0, 0) = 0", "rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0",
+    "rt_sigaction(SIGHUP, {sa_handler=SIG_DFL}, NULL, 8) = 0",
+    "prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) = 0",
+    'execveat(3, "", ["helper_report"], [], AT_EMPTY_PATH) = 0',
+)
+CHILD_CALLS = [line.split("(", 1)[0] for line in CHILD_WINDOW]
+THREAD_LIFE = (
+    "rseq(0x7f00, 32, 0, 0x53053053) = 0", "set_robust_list(0x7f10, 24) = 0",
+    "rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0",
+    "mmap(NULL, 134217728, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f",
+    "madvise(0x7f20, 8368128, MADV_DONTNEED) = 0",
+)
+
+
+def clone3_line(task, flags, ret, pidfd=None):
+    out = " => {pidfd=[%d]}" % pidfd if pidfd is not None else ""
+    signal_name = "0" if "CLONE_THREAD" in flags else "SIGCHLD"
+    return ("%d clone3({flags=%s, pidfd=0x7ffd0000, exit_signal=%s}%s, 88) = %s"
+            % (task, flags, signal_name, out, ret))
+
+
+def threaded_trace(child=222, threads=(301, 302, 303), process_clone=None,
+                   extra_child=()):
+    lines = [clone3_line(111, THREAD_FLAGS, tid) for tid in threads]
+    lines += ["%d %s" % (tid, THREAD_LIFE[0]) for tid in threads]
+    lines.append(process_clone if process_clone is not None
+                 else clone3_line(111, "CLONE_PIDFD", child, pidfd=4))
+    calls = list(CHILD_WINDOW)
+    for position, call in enumerate(extra_child):
+        calls.insert(4, call)
+    for index, call in enumerate(calls):
+        lines.append("%d %s" % (child, call))
+        tid = threads[index % len(threads)]
+        lines.append("%d %s" % (tid, THREAD_LIFE[1 + index % (len(THREAD_LIFE) - 1)]))
+    lines += ["%d exit(0) = ?" % tid for tid in threads]
+    lines.append("111 waitid(P_PIDFD, 4, {si_signo=SIGCHLD, si_code=CLD_EXITED, "
+                 "si_pid=%d, si_status=0}, WEXITED, NULL) = 0" % child)
+    return "\n".join(lines) + "\n"
+
+
+def control_trace(child=223):
+    lines = [clone3_line(111, "CLONE_PIDFD", child, pidfd=4)]
+    lines += ["%d %s" % (child, call) for call in CHILD_WINDOW]
+    return "\n".join(lines) + "\n"
+
+
+class M2DirectChildWindow(unittest.TestCase):
+    def test_thread_clones_before_the_process_clone_are_not_the_child(self):
+        window = ob.parse_strace_child_window(threaded_trace())
+        self.assertEqual(window["child_pid"], 222)
+        self.assertEqual(window["child_syscalls"], CHILD_CALLS)
+        self.assertEqual(window["stage_sequence"],
+                         ["DUP2", "CLEAR_CLOEXEC", "CHDIR", "CLOSE_RANGE", "SETPGID",
+                          "SIGMASK", "SIGACTION", "NO_NEW_PRIVS", "EXEC"])
+        self.assertIs(window["integrity_ok"], True)
+        for thread_call in ("rseq", "set_robust_list", "madvise", "exit"):
+            self.assertNotIn(thread_call, window["child_syscalls"])
+        records = ob.join_trace_fragments(threaded_trace())["records"]
+        index, why = ob.select_direct_child_clone(records)
+        self.assertIsNone(why)
+        self.assertEqual(records[index]["text"].count("CLONE_PIDFD"), 1)
+        first_clone = next(i for i, r in enumerate(records) if r["call"] == "clone3")
+        self.assertNotEqual(index, first_clone, "Trial #2 anchored on this thread")
+
+    def test_the_published_acquisition_facts_describe_the_same_clone(self):
+        facts = ob.parse_pidfd_acquisition(threaded_trace())
+        self.assertEqual(facts["clone3_call_count"], 4)
+        self.assertEqual(facts["clone3_flags"], ["CLONE_PIDFD"])
+        self.assertIs(facts["clone_pidfd_flag"], True)
+        self.assertEqual((facts["clone3_return"], facts["pidfd_from_clone3"]),
+                         (222, 4))
+        self.assertEqual(ob.normalise_acquisition(facts)["direct_child_pidfd"],
+                         "DIRECT_CHILD_PIDFD")
+        # M3's requirement still counts every clone3 and refuses several.
+        self.assertIsNone(ob.derive("pidfd_acquired_atomically",
+                                    {"acquisition": facts})[0])
+        lone_thread = ob.parse_pidfd_acquisition(clone3_line(111, THREAD_FLAGS, 301))
+        self.assertEqual((lone_thread["clone3_call_count"],
+                          lone_thread["clone3_return"]), (1, 301))
+
+    def test_the_arms_compare_equal_and_a_real_difference_still_fails(self):
+        threaded = ob.parse_strace_child_window(threaded_trace())
+        control = ob.parse_strace_child_window(control_trace())
+        obs = {"trace": threaded,
+               "single_threaded_child_syscalls": control["child_syscalls"]}
+        self.assertEqual(ob.derive("identical_to_single_threaded_arm", obs)[0],
+                         "identical_to_single_threaded_arm")
+        differing = ob.parse_strace_child_window(threaded_trace(
+            extra_child=("mmap(NULL, 4096, PROT_READ, MAP_PRIVATE, -1, 0) = 0x7f",)))
+        obs["trace"] = differing
+        self.assertEqual(ob.derive("identical_to_single_threaded_arm", obs)[0],
+                         "differs_from_single_threaded_arm")
+
+    def test_a_thread_created_after_the_process_clone_changes_nothing(self):
+        text = threaded_trace().replace(
+            "111 waitid(", clone3_line(111, THREAD_FLAGS, 399) + "\n111 waitid(")
+        self.assertEqual(ob.parse_strace_child_window(text)["child_syscalls"],
+                         CHILD_CALLS)
+
+    def test_no_qualifying_process_clone_fails_safe(self):
+        only_threads = "\n".join([clone3_line(111, THREAD_FLAGS, 301),
+                                  clone3_line(111, THREAD_FLAGS, 302),
+                                  "301 rseq(0x7f00, 32, 0, 0) = 0"]) + "\n"
+        self.assertIsNone(ob.parse_strace_child_window(only_threads))
+        lone_thread = clone3_line(111, THREAD_FLAGS, 301) + "\n301 exit(0) = ?\n"
+        self.assertIsNone(ob.parse_strace_child_window(lone_thread))
+        self.assertEqual(ob.select_direct_child_clone([])[0], None)
+
+    def test_malformed_or_ambiguous_candidates_fail_safe(self):
+        good = clone3_line(111, "CLONE_PIDFD", 222, pidfd=4)
+        variants = {
+            "undecodable flags among several": "111 clone3(0x7ffd1234, 88) = 222",
+            "no CLONE_PIDFD among thread clones":
+                clone3_line(111, "0", 222).replace("flags=0", "flags=CLONE_PARENT"),
+            "unbounded record": good.rsplit(", 88) = 222", 1)[0],
+            "return not observed": good.replace("= 222", "= ?"),
+            "observed error": good.replace("= 222", "= -1 EPERM (Operation not "
+                                                   "permitted)"),
+        }
+        for label, line in variants.items():
+            self.assertIsNone(ob.parse_strace_child_window(
+                threaded_trace(process_clone=line)), label)
+        two = threaded_trace().replace(
+            good, good + "\n" + clone3_line(111, "CLONE_PIDFD", 333, pidfd=5))
+        self.assertIsNone(ob.parse_strace_child_window(two), "two process clones")
+        unfinished = threaded_trace(process_clone=good.replace(
+            " => {pidfd=[4]}, 88) = 222", " <unfinished ...>"))
+        self.assertIsNone(ob.parse_strace_child_window(unfinished), "never resumed")
+
+    def test_a_split_process_clone_is_rejoined_before_it_is_selected(self):
+        split = ("111 clone3({flags=CLONE_PIDFD, pidfd=0x7ffd0000, "
+                 "exit_signal=SIGCHLD} <unfinished ...>\n"
+                 "301 set_robust_list(0x7f10, 24) = 0\n"
+                 "111 <... clone3 resumed> => {pidfd=[4]}, 88) = 222")
+        window = ob.parse_strace_child_window(threaded_trace(process_clone=split))
+        self.assertEqual(window["child_syscalls"], CHILD_CALLS)
+        self.assertIs(window["integrity_ok"], True)
+
+    def test_numeric_flags_decode_only_the_two_selection_bits(self):
+        names = ob.clone3_flag_names
+        self.assertEqual(names("clone3({flags=0x1000, exit_signal=SIGCHLD}, 88)"),
+                         frozenset({"CLONE_PIDFD"}))
+        self.assertEqual(names("clone3({flags=CLONE_VM|0x10000}, 88)"),
+                         frozenset({"CLONE_VM", "CLONE_THREAD"}))
+        self.assertIsNone(names("clone3({flags=0x1g}, 88)"))
+        self.assertIsNone(names("clone3({exit_signal=SIGCHLD}, 88)"))
+
+    def test_the_single_threaded_shape_is_unchanged(self):
+        window = ob.parse_strace_child_window(control_trace())
+        self.assertEqual(window["child_syscalls"], CHILD_CALLS)
+        # A lone clone3 without CLONE_PIDFD still names its child, so M3 keeps
+        # its own decisive FAIL for the missing flag instead of an INVALID.
+        text = control_trace().replace("flags=CLONE_PIDFD", "flags=CLONE_PARENT")
+        self.assertEqual(ob.parse_strace_child_window(text)["child_syscalls"],
+                         CHILD_CALLS)
+        self.assertEqual(ob.derive("pidfd_acquired_atomically",
+                                   {"acquisition": ob.parse_pidfd_acquisition(text)})[0],
+                         "pidfd_not_acquired_atomically")
+
+    def test_structural_validation_still_comes_first(self):
+        text = threaded_trace() + "302 <... futex resumed>) = 0\n"
+        window = ob.parse_strace_child_window(text)
+        self.assertIs(window["integrity_ok"], False)
+        self.assertFalse(checker.valid_trace_record(window)[0])
+
+
+# ===================================================== E4: resolved target
+@POSIX
+class E4ResolvedSymlinkTarget(unittest.TestCase):
+    BODY = b"\x7fELF" + b"REPORT" * 64
+    ALT = b"\x7fELF" + b"ALTERN" * 64
+
+    def setUp(self):
+        self.root = pathlib.Path(tempfile.mkdtemp(prefix="e4-"))
+        self.cwd = os.getcwd()
+        os.chdir(self.root)
+        # Trial #2's shape: the runner passed a RELATIVE, nested build directory.
+        self.build = pathlib.Path("target") / "launch-exec-01"
+        self.build.mkdir(parents=True)
+        (self.build / "helper_report").write_bytes(self.BODY)
+        (self.build / "helper_alt").write_bytes(self.ALT)
+        self.identity = harness.build_identity(str(self.build))
+        self.ctx = driver.TrialContext(build=str(self.build), work=str(self.build),
+                                       preflight={}, freeze={},
+                                       sanitiser=evidence.Sanitiser(),
+                                       build_identity=self.identity)
+        self.plan = driver.CASE_PLANS["E4"]
+
+    def tearDown(self):
+        os.chdir(self.cwd)
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    def test_the_link_targets_the_canonical_build_artefact(self):
+        built = driver.SETUPS["symlink_retarget"](self.ctx, self.plan)
+        target = os.readlink(built["exec_path"])
+        self.assertTrue(os.path.isabs(target))
+        self.assertEqual(target, os.path.realpath(self.build / "helper_report"))
+        self.assertEqual(target.count("launch-exec-01"), 1, "self-nested")
+        self.assertEqual(pathlib.Path(built["exec_path"]).read_bytes(), self.BODY)
+        action, replacement = built["post_pin"]
+        self.assertEqual(action, "retarget_symlink")
+        self.assertTrue(os.path.isabs(replacement))
+        self.assertEqual(pathlib.Path(replacement).read_bytes(), self.ALT)
+
+    def test_the_binding_still_names_the_built_artefact(self):
+        built = driver.SETUPS["symlink_retarget"](self.ctx, self.plan)
+        fact = driver.bind_build_identity(self.ctx, self.plan, built)
+        self.assertIs(fact["bound"], True, fact)
+        self.assertEqual((fact["classification"], fact["base_artefact"]),
+                         (driver.SYMLINK_TO_BASE, "helper_report"))
+        self.assertEqual(fact["object_sha256"], self.identity["helper_report"]["sha256"])
+
+    def test_the_link_means_the_same_file_from_another_directory(self):
+        built = driver.SETUPS["symlink_retarget"](self.ctx, self.plan)
+        link = self.root / built["exec_path"]
+        elsewhere = self.root / "a" / "b" / "c"
+        elsewhere.mkdir(parents=True)
+        os.chdir(elsewhere)
+        self.assertEqual(link.read_bytes(), self.BODY)
+        self.assertEqual(os.path.realpath(link),
+                         os.path.realpath(self.root / self.build / "helper_report"))
+
+    def test_trial_2s_relative_target_dangles_and_now_says_so(self):
+        link = self.build / "E4_link"
+        link.symlink_to(self.build / "helper_report")     # the frozen construction
+        self.assertFalse(link.exists())
+        fact = driver.bind_build_identity(self.ctx, self.plan,
+                                          {"exec_path": str(link)})
+        self.assertIs(fact["bound"], False)
+        self.assertIn("dangling", fact["detail"])
+        self.assertIsNone(fact["object_sha256"])
+
+    def test_an_identical_copy_elsewhere_is_not_the_artefact(self):
+        copy = self.root / "elsewhere" / "helper_report"
+        copy.parent.mkdir()
+        copy.write_bytes(self.BODY)
+        link = self.build / "E4_link"
+        link.symlink_to(copy)
+        fact = driver.bind_build_identity(self.ctx, self.plan,
+                                          {"exec_path": str(link)})
+        self.assertIs(fact["bound"], False)
+        self.assertIn("does not resolve to the build artefact", fact["detail"])
+
+    def test_the_retarget_lands_only_through_the_link(self):
+        built = driver.SETUPS["symlink_retarget"](self.ctx, self.plan)
+        fact = driver.POST_PIN_ACTIONS["retarget_symlink"](
+            self.ctx, self.plan, built, built["post_pin"][1])
+        self.assertIs(fact["landed"], True, fact)
+        self.assertEqual(fact["path_body_sha256_after"], sha256(self.ALT))
+        again = driver.SETUPS["symlink_retarget"](self.ctx, self.plan)
+        relative = os.path.relpath(again["post_pin"][1])
+        fact = driver.POST_PIN_ACTIONS["retarget_symlink"](
+            self.ctx, self.plan, again, relative)
+        self.assertIs(fact["landed"], False, fact)
+
+
+# ===================================== E6 / E6c: one contiguous marker object
+REGION = (driver.MARKER_GUARD_LO + b"helper_report".ljust(16, b"\0")
+          + driver.MARKER_GUARD_HI)
+
+
+def elf_symbols(data):
+    """``{name: (file_offset, size)}`` for defined symbols, read as data only."""
+    import struct
+    if data[:4] != b"\x7fELF" or data[4] != 2 or data[5] != 1:
+        raise ValueError("not an ELF64 little-endian image")
+    shoff = struct.unpack_from("<Q", data, 0x28)[0]
+    shentsize, shnum = struct.unpack_from("<HH", data, 0x3A)
+    sections = [struct.unpack_from("<IIQQQQIIQQ", data, shoff + i * shentsize)
+                for i in range(shnum)]
+    symtab = next(s for s in sections if s[1] == 2)             # SHT_SYMTAB
+    strtab = sections[symtab[6]]
+    out = {}
+    for j in range(symtab[5] // symtab[9]):
+        name, _, _, shndx, value, size = struct.unpack_from(
+            "<IBBHQQ", data, symtab[4] + j * symtab[9])
+        if shndx == 0 or shndx >= len(sections) or sections[shndx][1] == 8:
+            continue
+        start = strtab[4] + name
+        label = data[start:data.index(b"\0", start)].decode("ascii", "replace")
+        out[label] = (sections[shndx][4] + value - sections[shndx][3], size)
+    return out
+
+
+def scratch_compiler():
+    return (os.environ.get("HELM_LAUNCH_EXEC_01_TEST_CC") or shutil.which("cc")
+            or shutil.which("gcc"))
+
+
+class E6ContiguousMarkerRegion(unittest.TestCase):
+    PAD = b"\0" * 100
+
+    def image(self, *parts):
+        return b"\x7fELF" + self.PAD + b"".join(parts) + self.PAD
+
+    def test_exactly_one_region_is_located_at_its_marker_bytes(self):
+        data = self.image(REGION)
+        offset, why = driver.locate_marker_region(data)
+        self.assertIsNone(why)
+        self.assertEqual(offset, 4 + len(self.PAD) + len(driver.MARKER_GUARD_LO))
+        self.assertEqual(data[offset:offset + driver.MARKER_REGION_BYTES],
+                         b"helper_report\0\0\0")
+        at_end = b"x" + REGION
+        self.assertEqual(driver.locate_marker_region(at_end)[0], 10)
+
+    def test_trial_2s_reversed_padded_layout_is_zero_regions(self):
+        # nm at ba41a3f: KRAM-MLEH, 15 padding bytes, the marker, HELM-MARK.
+        layout = (driver.MARKER_GUARD_HI + b"\0" * 15 + b"helper_report\0\0\0"
+                  + driver.MARKER_GUARD_LO)
+        offset, why = driver.locate_marker_region(self.image(layout))
+        self.assertIsNone(offset)
+        self.assertIn("no complete guarded region (1 low guard(s), 1 high guard(s))",
+                      why)
+
+    def test_zero_or_several_regions_or_a_stray_guard_do_not_pose(self):
+        rows = ((self.image(), "no complete guarded region (0 low"),
+                (self.image(REGION, self.PAD, REGION),
+                 "2 complete guarded regions"),
+                (self.image(REGION, self.PAD, driver.MARKER_GUARD_LO),
+                 "outside the one guarded region"),
+                (self.image(driver.MARKER_GUARD_HI, self.PAD, REGION),
+                 "outside the one guarded region"),
+                (self.image(driver.MARKER_GUARD_LO, b"\0" * 15,
+                            driver.MARKER_GUARD_HI), "no complete guarded region"))
+        for data, reason in rows:
+            offset, why = driver.locate_marker_region(data)
+            self.assertIsNone(offset, reason)
+            self.assertIn(reason, why)
+
+    def test_e6_and_e6c_share_one_posing_primitive(self):
+        for setup in ("_setup_mutate_marker", "_setup_shared_writable_mapping"):
+            self.assertIn("_marker_region_of(info)", source_of(setup), setup)
+        callers = sorted({fn.name for fn in ast.walk(DRIVER_TREE)
+                          if isinstance(fn, ast.FunctionDef)
+                          for node in ast.walk(fn) if isinstance(node, ast.Call)
+                          and ast.unparse(node.func) == "locate_marker_region"})
+        self.assertEqual(callers, ["_marker_region_of", "find_marker_region"])
+
+    def test_helper_report_declares_the_region_as_one_object(self):
+        source = (EXP / "helper_report.c").read_text(encoding="utf-8")
+        for gone in ("g_marker_guard_lo", "g_marker_guard_hi", "g_marker[16]"):
+            self.assertNotIn(gone, source)
+        declarations = re.findall(
+            r"volatile unsigned char g_marker_region\[[^\]]*\]\s*=\s*\{(.*?)\};",
+            source, re.S)
+        self.assertEqual(len(declarations), 1)
+        items = [item.strip() for item in declarations[0].split(",") if item.strip()]
+        data = bytes(ord(item[1]) if item.startswith("'") else int(item, 0)
+                     for item in items)
+        self.assertEqual(data, REGION)
+        self.assertIn("g_marker_region[MARKER_GUARD_BYTES + mi]", source)
+        self.assertIn("_Static_assert(sizeof(g_marker_region)", source)
+
+    @POSIX
+    def test_the_setups_pose_from_the_region_or_refuse_with_the_reason(self):
+        tmp = pathlib.Path(tempfile.mkdtemp(prefix="e6-setup-"))
+        try:
+            (tmp / "helper_report").write_bytes(self.image(REGION))
+            ctx = driver.TrialContext(build=str(tmp), work=str(tmp), preflight={},
+                                      freeze={}, sanitiser=evidence.Sanitiser(),
+                                      build_identity=harness.build_identity(str(tmp)))
+            offset = driver.locate_marker_region(self.image(REGION))[0]
+            e6 = driver.SETUPS["mutate_marker_in_place"](ctx, driver.CASE_PLANS["E6"])
+            self.assertEqual(e6["post_pin"], ("pwrite_marker", offset))
+            self.assertEqual(e6["mutated_marker"], b"MUTATED" + b"\0" * 9)
+            e6c = driver.SETUPS["shared_writable_mapping"](ctx,
+                                                           driver.CASE_PLANS["E6c"])
+            self.assertEqual(e6c["post_pin"], ("mmap_write", offset))
+            (tmp / "helper_report").write_bytes(self.image(REGION, REGION))
+            ctx.build_identity = harness.build_identity(str(tmp))
+            for setup, case in (("mutate_marker_in_place", "E6"),
+                                ("shared_writable_mapping", "E6c")):
+                built = driver.SETUPS[setup](ctx, driver.CASE_PLANS[case])
+                self.assertIn("exactly one is required", built["not_posed"], case)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    @POSIX
+    def test_the_mutation_touches_exactly_the_marker_bytes(self):
+        tmp = pathlib.Path(tempfile.mkdtemp(prefix="e6-mutate-"))
+        try:
+            original = self.image(REGION)
+            path = tmp / "E6_helper_report"
+            path.write_bytes(original)
+            offset = driver.locate_marker_region(original)[0]
+            built = {"exec_path": str(path),
+                     "mutated_marker": driver._marker_bytes(ob.E6_MUTATED_MARKER)}
+            fact = driver.POST_PIN_ACTIONS["pwrite_marker"](
+                None, driver.CASE_PLANS["E6"], built, offset)
+            self.assertIs(fact["landed"], True, fact)
+            self.assertIs(fact["outside_region_unchanged"], True)
+            mutated = path.read_bytes()
+            changed = [i for i in range(len(original)) if original[i] != mutated[i]]
+            self.assertTrue(changed)
+            self.assertGreaterEqual(min(changed), offset)
+            self.assertLess(max(changed), offset + driver.MARKER_REGION_BYTES)
+            self.assertEqual(driver.locate_marker_region(mutated)[0], offset)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_a_compiled_scratch_helper_has_one_region_in_one_symbol(self):
+        cc = scratch_compiler()
+        if cc is None:
+            self.skipTest("no C compiler; the compile-only workflow and WSL run it")
+        tmp = pathlib.Path(tempfile.mkdtemp(prefix="e6-compile-"))
+        try:
+            image = tmp / "helper_report-inspection-only"
+            proc = subprocess.run([cc, "-O2", "-Wall", "-Wextra", "-static", "-o",
+                                   str(image), str(EXP / "helper_report.c")],
+                                  capture_output=True, timeout=600)
+            self.assertEqual(proc.returncode, 0, proc.stderr.decode("utf-8", "replace"))
+            self.assertNotIn(b"warning:", proc.stderr)
+            data = image.read_bytes()        # read as data; never executed
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+        offset, why = driver.locate_marker_region(data)
+        self.assertIsNone(why)
+        self.assertEqual(data.count(driver.MARKER_GUARD_LO), 1)
+        self.assertEqual(data.count(driver.MARKER_GUARD_HI), 1)
+        start = offset - len(driver.MARKER_GUARD_LO)
+        self.assertEqual(data[start:start + len(REGION)], REGION)
+        symbols = elf_symbols(data)
+        self.assertEqual(symbols["g_marker_region"], (start, len(REGION)))
+        for gone in ("g_marker_guard_lo", "g_marker_guard_hi", "g_marker"):
+            self.assertNotIn(gone, symbols)
+        marker = driver._marker_bytes(ob.E6_MUTATED_MARKER)
+        mutated = data[:offset] + marker + data[offset + len(marker):]
+        self.assertTrue(driver._outside_region_unchanged(data, mutated, offset,
+                                                         len(marker)))
+        self.assertEqual(driver.locate_marker_region(mutated)[0], offset)
+
+
+# ==================================== O6 / O7 and P1 / P2 / P4: FIFO paths
+FORKLIKE = r'''
+import os, sys
+fifo, workdir = sys.argv[1], sys.argv[2]
+os.chdir(workdir)          # the launcher's child fchdirs before execveat
+try:
+    f = os.open(fifo, os.O_WRONLY | os.O_CLOEXEC)
+except OSError as exc:
+    os.write(2, b"HELM-LAUNCH-EXEC-01-FIXTURE-SIGNAL-FAILED:open:%d\n" % exc.errno)
+    sys.exit(0)
+os.write(f, b"L")
+os.close(f)
+'''
+
+
+@POSIX
+class HelperFacingFifoPaths(unittest.TestCase):
+    def setUp(self):
+        self.root = pathlib.Path(tempfile.mkdtemp(prefix="fifo-paths-"))
+        self.cwd = os.getcwd()
+        os.chdir(self.root)
+        self.build = pathlib.Path("target") / "launch-exec-01"   # relative, as in Trial #2
+        self.build.mkdir(parents=True)
+        self.work = self.root / "work-dir-capability"
+        self.work.mkdir()
+        self.ctx = driver.TrialContext(build=str(self.build), work=str(self.build),
+                                       preflight={}, freeze={},
+                                       sanitiser=evidence.Sanitiser())
+        self.armed = []
+
+    def tearDown(self):
+        for built in self.armed:
+            driver.disarm_fixture_signal(built)
+        os.chdir(self.cwd)
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    def setup(self, case):
+        plan = driver.CASE_PLANS[case]
+        built = driver.SETUPS[plan.setup](self.ctx, plan)
+        self.armed.append(built)
+        return plan, built
+
+    def standin(self, path):
+        return subprocess.run([sys.executable, "-I", "-c", FORKLIKE, path,
+                               str(self.work)], capture_output=True, timeout=60)
+
+    def test_every_fork_helper_fixture_hands_an_absolute_case_private_path(self):
+        users = sorted(p.case for p in driver._PLAN_LIST
+                       if p.setup in driver.FORK_HELPER_SETUPS)
+        self.assertEqual(users, ["O6", "O7", "P1", "P2", "P3", "P4", "T5"])
+        canonical = pathlib.Path(os.path.realpath(self.build))
+        for case in users:
+            plan, built = self.setup(case)
+            path = driver._helper_fifo_argument(built)
+            self.assertTrue(os.path.isabs(path), case)
+            self.assertEqual(pathlib.Path(path).parent, canonical, case)
+            self.assertTrue(pathlib.Path(path).name.startswith(case + "."), case)
+            key = ("fixture_signal_fifo" if plan.setup == "fork_helper_prearmed"
+                   else "liveness_fifo")
+            self.assertEqual(built[key], path, case)
+
+    def test_the_path_names_the_same_fifo_after_a_change_of_directory(self):
+        for case in ("O6", "O7", "P1", "P2", "P4"):
+            plan, built = self.setup(case)
+            if plan.setup == "fork_helper_prearmed":
+                facts, why = driver._arm_fixture_signal(built, ())
+                self.assertIsNone(why, case)
+                self.assertIs(facts["helper_path_absolute"], True, case)
+                self.assertIs(facts["helper_path_is_armed_fifo"], True, case)
+            path = driver._helper_fifo_argument(built)
+            before = os.stat(path)
+            os.chdir(self.work)
+            try:
+                after = os.stat(path)
+            finally:
+                os.chdir(self.root)
+            self.assertTrue(stat.S_ISFIFO(after.st_mode), case)
+            self.assertEqual((after.st_dev, after.st_ino),
+                             (before.st_dev, before.st_ino), case)
+            self.assertEqual(stat.S_IMODE(after.st_mode), 0o600, case)
+
+    def test_a_relative_or_foreign_helper_path_is_refused_before_launch(self):
+        _, built = self.setup("O7")
+        built["extra_helper_args"] = ("--liveness-fifo",
+                                      os.path.relpath(built["fixture_signal_fifo"]))
+        facts, why = driver._arm_fixture_signal(built, ())
+        self.assertIsNone(facts)
+        self.assertIn("not an absolute path to the armed FIFO", why)
+        other = self.root / "someone-elses.fifo"
+        os.mkfifo(str(other), 0o600)
+        built["extra_helper_args"] = ("--liveness-fifo", str(other))
+        facts, why = driver._arm_fixture_signal(built, ())
+        self.assertIsNone(facts)
+        self.assertIn("not an absolute path to the armed FIFO", why)
+
+    def test_a_stand_in_that_changes_directory_still_signals(self):
+        _, built = self.setup("O6")
+        _, why = driver._arm_fixture_signal(built, ())
+        self.assertIsNone(why)
+        proc = self.standin(driver._helper_fifo_argument(built))
+        self.assertEqual(proc.stderr, b"")
+        self.assertIs(driver._read_fixture_signal(built, timeout_ms=2000), True)
+
+    def test_trial_2s_relative_path_breaks_after_the_change_and_is_diagnosed(self):
+        _, built = self.setup("O7")
+        _, why = driver._arm_fixture_signal(built, ())
+        self.assertIsNone(why)
+        proc = self.standin(os.path.relpath(built["fixture_signal_fifo"]))
+        self.assertIs(driver._read_fixture_signal(built, timeout_ms=300), False)
+        diagnostic = ob.fixture_signal_diagnostic(capture(proc.stderr))
+        self.assertEqual(diagnostic, {"reported": True, "failed_step": "open",
+                                      "errno": "ENOENT",
+                                      "errno_number": errno.ENOENT})
+
+    def test_the_p_series_rendezvous_works_across_the_change(self):
+        plan, built = self.setup("P2")
+        writer = subprocess.Popen([sys.executable, "-I", "-c", FORKLIKE,
+                                   driver._helper_fifo_argument(built),
+                                   str(self.work)], stderr=subprocess.PIPE)
+        try:
+            alive = driver._descendant_alive(built, plan, timeout_ms=10000)
+        finally:
+            _, err = writer.communicate(timeout=60)
+        self.assertEqual(err, b"")
+        self.assertIs(alive, True)
+
+    def test_a_p_series_node_is_fresh_so_no_earlier_signal_is_read(self):
+        plan, built = self.setup("P1")
+        path = built["liveness_fifo"]
+        stale = os.open(path, os.O_RDWR | os.O_NONBLOCK)
+        try:
+            os.write(stale, b"L")                   # buffered in the OLD node
+            _, again = self.setup("P1")
+            self.assertEqual(again["liveness_fifo"], path)
+            self.assertIs(driver._descendant_alive(again, plan, timeout_ms=200),
+                          False)
+        finally:
+            os.close(stale)
+
+
+class FixtureSignalDiagnostic(unittest.TestCase):
+    PREFIX = ob.FIXTURE_SIGNAL_FAILED
+
+    def test_the_line_is_reduced_to_a_normalised_fact(self):
+        rows = ((self.PREFIX + b"open:2\n", {"reported": True, "failed_step": "open",
+                                             "errno": "ENOENT", "errno_number": 2}),
+                (b"noise\n" + self.PREFIX + b"write:32",
+                 {"reported": True, "failed_step": "write", "errno": None,
+                  "errno_number": 32}),
+                (self.PREFIX + b"/tmp/private/O7.fixture-signal\n",
+                 {"reported": True, "failed_step": None, "errno": None,
+                  "errno_number": None}),
+                (self.PREFIX + b"unlink:2\n",
+                 {"reported": True, "failed_step": None, "errno": None,
+                  "errno_number": None}),
+                (b"stderr without a diagnostic\n", {"reported": False}))
+        for data, want in rows:
+            self.assertEqual(ob.fixture_signal_diagnostic(capture(data)), want, data)
+        self.assertIsNone(ob.fixture_signal_diagnostic({"completeness": "CompleteAtEof"}))
+        self.assertIsNone(ob.fixture_signal_diagnostic(None))
+
+    def o7(self, signalled, diagnostic):
+        plan = driver.CASE_PLANS["O7"]
+        spike = D.receipt(exit_code=42, wait_si_code="CLD_EXITED",
+                          stderr={"bytes_drained": 0,
+                                  "drained_sha256": oracles.digest_of(b""),
+                                  "completeness": "WriterRetainedAfterChildExit"})
+        obs = D.obs_for(plan, spike=spike, fixture_descendant_signalled=signalled,
+                        fixture_signal_diagnostic=diagnostic)
+        obs["exec_confirmation"] = ob.exec_confirmation(
+            spike, None, None, obs["report_state"], fixture_signalled=signalled)
+        return score(plan, obs)
+
+    def test_a_diagnosed_failure_is_distinct_from_silence_and_never_poses(self):
+        failed = {"reported": True, "failed_step": "open", "errno": "ENOENT",
+                  "errno_number": 2}
+        status, record = self.o7(False, failed)
+        self.assertEqual(status, INVALID)
+        self.assertIn("fixture_descendant_signalled", record["not_posed"])
+        self.assertIn("fixture-signal open failed with ENOENT", record["not_posed"])
+        self.assertEqual(record["posing_evidence"]["fixture"]["signal_diagnostic"],
+                         failed)
+        status, record = self.o7(False, {"reported": False})
+        self.assertEqual(status, INVALID)
+        self.assertIn("wrote no fixture-signal failure line", record["not_posed"])
+        self.assertNotIn("failed with", record["not_posed"])
+        # The diagnostic never stands in for the signal, in either direction.
+        self.assertEqual(self.o7(True, failed)[0], PASS)
+        self.assertEqual(driver.POSED_CHECK_READS["fixture_descendant_signalled"],
+                         ("fixture_descendant_signalled",))
+        published = json.dumps(record["posing_evidence"])
+        self.assertNotIn("/tmp", published)
+
+    def test_helper_fork_writes_one_pathless_line_on_failure_only(self):
+        source = (EXP / "helper_fork.c").read_text(encoding="utf-8")
+        self.assertIn('#define FIXTURE_SIGNAL_FAILED "%s"'
+                      % ob.FIXTURE_SIGNAL_FAILED.decode("ascii"), source)
+        body = source.split("static void fixture_signal_failed", 1)[1].split("\n}\n", 1)[0]
+        self.assertIn('"%s%s:%d\\n", FIXTURE_SIGNAL_FAILED', body)
+        self.assertIn("write_all(2, line", body)
+        self.assertNotIn("fifo", body)
+        signal_block = source.split("if (fifo) {", 1)[1].split("sleep_ms(lifetime_ms)")[0]
+        self.assertIn('if (f < 0) {\n                fixture_signal_failed("open", errno);',
+                      signal_block)
+        self.assertIn('if (write_all(f, "L", 1) != 0) {\n                    '
+                      'fixture_signal_failed("write", errno);', signal_block)
+        # No descriptor is added: the only opens are /dev/null and the FIFO.
+        self.assertEqual(len(re.findall(r"\bopen\(", source)), 2)
+        self.assertNotIn("dup(", source.split("int main", 1)[1].replace("dup2(", ""))
+
+
+# ======================================= R3: CLD_DUMPED keeps its signal
+CLD_EXITED, CLD_KILLED, CLD_DUMPED = 1, 2, 3
+
+
+def receipt_status_fields(si_code, si_status, reaped=True):
+    """launcher_spike.c's three receipt expressions, for a synthetic siginfo.
+
+    ``test_the_launcher_expressions_are_these`` pins this restatement to the C.
+    """
+    if not reaped:
+        si_code = si_status = 0
+    return {"exit_code": si_status if si_code == CLD_EXITED else -1,
+            "term_signal": si_status if si_code in (CLD_KILLED, CLD_DUMPED) else -1,
+            "wait_si_code": {CLD_EXITED: "CLD_EXITED", CLD_KILLED: "CLD_KILLED",
+                             CLD_DUMPED: "CLD_DUMPED"}.get(si_code, "")}
+
+
+class R3SignalPreservation(unittest.TestCase):
+    def score_receipt(self, case, disposition, fields, rep=True):
+        plan = driver.CASE_PLANS[case]
+        spike = D.receipt(process_disposition=disposition, **fields)
+        return score(plan, D.obs_for(plan, spike=spike,
+                                     rep=full_report() if rep else None))
+
+    def test_the_launcher_expressions_are_these(self):
+        source = (EXP / "launcher_spike.c").read_text(encoding="utf-8")
+        self.assertIn("int term_signal = (info.si_code == CLD_KILLED || "
+                      "info.si_code == CLD_DUMPED)\n                      "
+                      "? info.si_status : -1;", source)
+        self.assertNotIn("info.si_code == CLD_KILLED ? info.si_status : -1", source)
+        self.assertIn("info.si_code == CLD_EXITED ? info.si_status : -1,", source)
+        self.assertIn('\\"wait_si_code\\":\\"%s\\"', source)
+        self.assertIn("term_signal, wait_si_code_name(reaped, info.si_code),", source)
+        mapping = source.split("static const char *wait_si_code_name", 1)[1].split(
+            "\n}\n", 1)[0]
+        self.assertEqual(re.findall(r'case (CLD_\w+): return "(CLD_\w+)";', mapping),
+                         [("CLD_EXITED", "CLD_EXITED"), ("CLD_KILLED", "CLD_KILLED"),
+                          ("CLD_DUMPED", "CLD_DUMPED")])
+        self.assertIn('if (reaped < 0) { return ""; }', mapping)
+        self.assertIn('default: return "";', mapping)
+
+    def test_cld_dumped_and_cld_killed_both_keep_the_signal(self):
+        for code in (CLD_DUMPED, CLD_KILLED):
+            status, record = self.score_receipt(
+                "R3", "Signaled", receipt_status_fields(code, 11))
+            self.assertEqual((status, record["outcome"]), (PASS, "Signaled:SIGSEGV"),
+                             code)
+
+    def test_cld_exited_keeps_the_exit_status(self):
+        for case, code in (("R1", 0), ("R2", 42)):
+            status, record = self.score_receipt(
+                case, "Exited", receipt_status_fields(CLD_EXITED, code))
+            self.assertEqual((status, record["outcome"]), (PASS, "Exited:%d" % code))
+
+    def test_no_signal_is_invented(self):
+        # Trial #2's R3: CLD_DUMPED reached the receipt as term_signal -1.
+        status, record = self.score_receipt(
+            "R3", "Signaled", {"exit_code": -1, "term_signal": -1,
+                               "wait_si_code": "CLD_DUMPED"})
+        self.assertEqual(status, INVALID)
+        self.assertIn("termination signal outside the frozen signal table",
+                      record["not_posed"])
+        for fields in (receipt_status_fields(0, 0, reaped=False),
+                       dict(receipt_status_fields(CLD_EXITED, 0), term_signal=11),
+                       {"exit_code": -1, "term_signal": 11, "wait_si_code": ""}):
+            self.assertEqual(self.score_receipt("R3", "Signaled", fields)[0], INVALID,
+                             fields)
+        self.assertEqual(self.score_receipt(
+            "R1", "Exited", dict(receipt_status_fields(CLD_DUMPED, 11),
+                                 exit_code=0))[0], INVALID)
+
+    def test_the_parser_accepts_exactly_the_closed_classifications(self):
+        for code in ("", "CLD_EXITED", "CLD_KILLED", "CLD_DUMPED"):
+            self.assertIsNotNone(ob.parse_spike_stdout(json.dumps(
+                D.receipt(wait_si_code=code))), code)
+        for code in ("CLD_STOPPED", "CLD_CONTINUED", "CLD_TRAPPED", 3, None):
+            self.assertIsNone(ob.parse_spike_stdout(json.dumps(
+                D.receipt(wait_si_code=code))), code)
+        self.assertIsNotNone(ob.parse_spike_stdout(json.dumps(D.receipt())))
+
+    @LINUX
+    def test_waitid_reports_si_status_for_an_exit_and_a_kill(self):
+        # Isolated fork/waitid probes, not LAUNCH-EXEC cases. No core-dumping
+        # signal is raised here, so no crash handler is invoked; CLD_DUMPED's
+        # identical si_status rule is waitid(2)'s and the postmortem's probe's.
+        self.assertEqual((os.CLD_EXITED, os.CLD_KILLED, os.CLD_DUMPED),
+                         (CLD_EXITED, CLD_KILLED, CLD_DUMPED))
+        for action, want_code, want_status in (("exit", os.CLD_EXITED, 7),
+                                               ("kill", os.CLD_KILLED, 9)):
+            pid = os.fork()
+            if pid == 0:                                    # pragma: no cover
+                try:
+                    if action == "exit":
+                        os._exit(7)
+                    os.kill(os.getpid(), 9)
+                finally:
+                    os._exit(99)
+            info = os.waitid(os.P_PID, pid, os.WEXITED)
+            self.assertEqual((info.si_pid, info.si_code, info.si_status),
+                             (pid, want_code, want_status), action)
+            fields = receipt_status_fields(info.si_code, info.si_status)
+            disposition = "Exited" if action == "exit" else "Signaled"
+            token = ob.derive("process_disposition", D.obs_for(
+                driver.CASE_PLANS["R1"], rep=full_report(),
+                spike=D.receipt(process_disposition=disposition, **fields)))[0]
+            self.assertEqual(token, "Exited:7" if action == "exit"
+                             else "Signaled:SIGKILL")
+
+
+# ============================================ N3 and the global semantics
+class UnchangedByTheCorrection(unittest.TestCase):
+    def test_n3_stays_conditional_and_manufactures_nothing(self):
+        spec = fc.BY_NAME["N3"]
+        self.assertEqual((spec["cls"], spec["blocked_if"], spec["predict"]),
+                         (fc.CONDITIONAL, "unprivileged_runner",
+                          "privilege_transition_suppressed"))
+        plan = driver.CASE_PLANS["N3"]
+        self.assertIn("no privileged identity",
+                      driver.SETUPS[plan.setup](None, plan)["not_posed"])
+        record = driver.evaluate(plan, {"blocked": "unprivileged_runner",
+                                        "launch_returned": None})
+        self.assertEqual(checker.score_case("N3", record)[0], BLOCKED)
+        self.assertEqual(checker.score_case("N3", {"outcome": "x",
+                                                   "blocked": "euid_zero"})[0],
+                         INVALID)
+        self.assertNotIn("N3", CANDIDATE["scope"]["corrected_findings"])
+
+    def test_the_classification_and_reduction_are_the_frozen_ones(self):
+        self.assertEqual(driver.STATUS_PRECEDENCE, (FAIL, INVALID, PASS))
+        self.assertEqual(driver.reduce_repetitions([PASS, INVALID, FAIL, PASS]), FAIL)
+        self.assertEqual(driver.reduce_repetitions([PASS, INVALID, PASS]), INVALID)
+        self.assertEqual(driver.reduce_repetitions([PASS, PASS]), PASS)
+        self.assertEqual(checker.score_case("S4", {"blocked": "euid_zero"})[0], INVALID)
+        trial2_checker = git_blob((EXP / "checker.py").read_bytes())
+        self.assertEqual(sha256((EXP / "checker.py").read_bytes()),
+                         MANIFEST["sha256"]["checker.py"], trial2_checker)
+
+
+if __name__ == "__main__":
+    unittest.main()

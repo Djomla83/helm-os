@@ -1,5 +1,25 @@
 # Stanje projekta
 
+<a id="launch-exec-01-trial-003-correction-candidate"></a>
+
+## Trial #3 correction candidate, 2026-09-12 — NOT FROZEN, NOT AUTHORISED, NOT RUN
+
+On the owner's instruction after the [postmortem decisions](DECISIONS.md#trial-002-postmortem-decisions)
+and the [postmortem diagnostics](implementation/HELM-LAUNCH-EXEC-01-TRIAL-002-POSTMORTEM-DIAGNOSTICS.md),
+a bounded prospective correction is implemented locally and is not pushed. It is recorded in
+[definition section 10](experiments/LAUNCH-EXEC-01-DEFINITION.md#10-trial-3-correction-candidate--not-frozen-not-authorised-not-run)
+and in the NOT_FROZEN record
+[`TRIAL-3-CORRECTION-CANDIDATE.json`](experiments/launch-exec-01/TRIAL-3-CORRECTION-CANDIDATE.json).
+
+Its scope is X2b, X2c, X4, T1, S4, M2, E4, E6, E6c, O6, O7 and R3, plus liveness revalidation
+support for P1, P2 and P4. N3 is unchanged. `SOURCE-HASHES.json` remains the Trial #2 freeze byte
+for byte. Trial #2's evidence, statuses and `MECHANISM_REJECTED` aggregate are unchanged, and its
+replay with the `ba41a3f` checker still reproduces them. C sources changed, so Build 7 no longer
+binds: **BUILD_8_REQUIRED_FOR_FUTURE_FREEZE**.
+
+The candidate needs one bounded independent correction review, limited to these findings, before
+any freeze. **No Trial #3 freeze, Trial #3 D-7, Trial #3 dispatcher or Trial #3 execution exists.**
+
 <a id="launch-exec-01-trial-002-postmortem-decisions"></a>
 
 ## Trial #2 postmortem decisions, 2026-09-12 — bounded diagnostics only

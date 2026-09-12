@@ -558,3 +558,39 @@ and no Build 8 is required. No compiler ran for this record. A trial records its
 identity before its first case.
 
 **LAUNCH-EXEC-01 Trial #2 remains NOT_RUN. D-7 is not authorised. The valid trial count is ZERO.**
+
+## Build 7 no longer binds the Trial #3 correction candidate — 2026-09-12, no build evidence
+
+The records above stay as they were: they describe Trial #2's sources, and Trial #2 has since
+completed and is immutable. The Trial #3 correction candidate
+([definition section 10](../LAUNCH-EXEC-01-DEFINITION.md#10-trial-3-correction-candidate--not-frozen-not-authorised-not-run))
+changes three C sources:
+
+* `launcher_spike.c` — R3's `CLD_DUMPED` terminating signal and the `wait_si_code` receipt field;
+* `helper_report.c` — E6's and E6c's one contiguous marker object;
+* `helper_fork.c` — O6's and O7's fixture-signal failure diagnostic.
+
+**Build 7's binaries are not the candidate's, and Build 7 is not carried forward.** `helper_alt.c`,
+`helper_dynamic.c` and `helper_setid.c` are byte-identical to the Trial #2 freeze.
+**BUILD_8_REQUIRED_FOR_FUTURE_FREEZE:** Build 8 comes only from the compile-only workflow, after the
+candidate is reviewed and frozen.
+
+A local scratch compile checked that the changed sources compile. It is **not Build 8**, and it
+records no digest as evidence.
+
+| | |
+|---|---|
+| Environment | WSL2 Ubuntu 24.04, kernel `6.6.87.2-microsoft-standard-WSL2`, x86_64 |
+| Compiler | `x86_64-linux-gnu-gcc-13 (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0`, unpacked unprivileged from official Ubuntu packages into a scratch directory and run through a sysroot wrapper; nothing was installed |
+| `launcher_spike.c` | `-O2 -Wall -Wextra -static -pthread`: no diagnostic |
+| `helper_report.c`, `helper_fork.c`, `helper_alt.c`, `helper_setid.c` | `-O2 -Wall -Wextra -static`: no diagnostic |
+| Linkage | the five outputs carry no PT_INTERP |
+| `helper_dynamic.c` | unchanged; not linked there, because the scratch sysroot had no `libgcc_s.so.1` |
+
+The candidate `helper_report` image holds one 34-byte `g_marker_region` object and exactly one
+guarded region. The same compiler, over `helper_report.c` from `ba41a3f`, reproduced the postmortem's
+reversed three-object layout, in which no region exists. Every binary was read as data with `nm`,
+`readelf`, `objdump` and a Python byte scan. None was executed, and the scratch outputs are not kept.
+
+**LAUNCH-EXEC-01 Trial #2 is complete and immutable, and its D-7 is consumed. No Trial #3 is
+authorised and no Trial #3 freeze exists.**

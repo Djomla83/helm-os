@@ -40,6 +40,7 @@ POST_EXIT_DRAIN_MS = 2000
 MAX_CAPTURE_BYTES = 64 * 1024
 MAX_ARG_BYTES = 4 * 1024
 EXEC_RACE_DELAY_MS = 200          # S4 forced schedule
+S4_EXIT_CODE = 7                  # S4: the exit helper_report declares and makes
 T3_GRACE_EXIT_DELAY_MS = 500
 T4_DELTA_MS = 500
 P_DESCENDANT_LIFETIME_MS = 20000
@@ -438,7 +439,13 @@ CASES = [
               "acceptable"),
 
     # ---- T: timeout -------------------------------------------------------
-    case("T1", "T", MANDATORY, predict="TimedOut"),
+    case("T1", "T", MANDATORY, predict="TimedOut:KilledByLauncher:SIGTERM",
+         note="helper sleeps well past timeout_ms and keeps SIGTERM's default "
+              "action, so the launcher's SIGTERM at the deadline ends it inside "
+              "the grace window. Trial #3 correction candidate: Trial #2 froze "
+              "the bare TimedOut, which this launcher never emits because every "
+              "timeout carries a sub-disposition; SIGKILL after the grace "
+              "window, an exit during grace or a termination failure is a FAIL"),
     case("T2", "T", MANDATORY, predict="TimedOut:KilledByLauncher:SIGKILL",
          note="helper ignores SIGTERM and the grace window elapses"),
     case("T3", "T", MANDATORY, predict="TimedOut:ExitedDuringGrace:9",
@@ -518,11 +525,18 @@ CASES = [
     case("S3", "S", MANDATORY, predict="Exited:127",
          note="the helper itself exits 127 after a SUCCESSFUL exec and must not "
               "be confused with exec failure"),
-    case("S4", "S", MANDATORY, predict="Exited:7", instant_reject=True,
+    case("S4", "S", MANDATORY, predict="ExecStatusIndeterminate",
+         instant_reject=True,
          note=f"rapid exec-and-exit: the parent sleeps {EXEC_RACE_DELAY_MS} ms "
-              "after clone3 returns and before it polls, so the child has "
-              "certainly execed and exited first. A forced schedule, not a "
-              "timing hope"),
+              "after clone3 returns and before it polls. Trial #3 correction "
+              "candidate, by the owner's conservative exec-evidence policy: the "
+              "launcher's receipt alone still cannot tell an image that ran and "
+              "exited from a child that died before exec, so its own claim is "
+              "ExecStatusIndeterminate. S4 is posed only by independent "
+              "evidence -- a complete helper report -- and the report's marker "
+              f"and declared exit {S4_EXIT_CODE} must agree with the launcher's "
+              "observed exit status; a contradiction is a FAIL. Trial #2 froze "
+              f"Exited:{S4_EXIT_CODE} with no channel that could evidence it"),
     case("S5", "S", MANDATORY, predict="ExecStatusIndeterminate",
          instant_reject=True,
          note="child killed between the last setup stage and execveat. The "
