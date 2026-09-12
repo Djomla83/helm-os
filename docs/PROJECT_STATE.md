@@ -1,5 +1,30 @@
 # Stanje projekta
 
+<a id="launch-exec-01-trial-002-completed"></a>
+
+## Trial #2 completed and independently reviewed, 2026-09-11 — `MECHANISM_REJECTED`
+
+GitHub Actions run `34640280964`, job `103397999925`, performed the one authorised execution of
+freeze `ba41a3f12be411058ed50e78bcd1c7e22afb7ae4`. The complete journal has one valid
+`trial_end`, 72 entered and completed cases, and the frozen result **59 PASS / 6 FAIL / 6 INVALID /
+1 BLOCKED**. Offline replay with the frozen checker reproduces the aggregate
+**`MECHANISM_REJECTED`** and every case status and reason exactly; the
+[independent result review](implementation/HELM-LAUNCH-EXEC-01-TRIAL-002-RESULT-REVIEW.md) keeps
+that frozen result separate from its post-trial engineering diagnoses.
+
+The five published evidence files are preserved byte-for-byte under
+[`docs/experiments/evidence/LAUNCH-EXEC-01-TRIAL-002-2026-09-11/`](experiments/evidence/LAUNCH-EXEC-01-TRIAL-002-2026-09-11/)
+in commit `8a9dc7721751d2c94a91f109959b8d6416184843`. The first durable
+`case_pose_started` is `E1` at journal record `n = 4`; therefore:
+
+**TRIAL #2 D-7 IS CONSUMED**
+
+**LAUNCH-EXEC-01 TRIAL #2 VALID TRIAL COUNT IS ONE**
+
+**TRIAL #2 MUST NOT BE RERUN**
+
+**NO TRIAL #3 IS AUTHORISED**
+
 <a id="launch-exec-01-trial-002-d7-authorised"></a>
 
 ## Trial #2 D-7 authorised, 2026-09-11 — LAUNCH-EXEC-01 Trial #2 still NOT_RUN
