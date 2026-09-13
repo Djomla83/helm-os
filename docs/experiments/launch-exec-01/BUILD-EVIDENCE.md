@@ -746,3 +746,179 @@ Build 8 evidence review.
 **TRIAL #2 D-7 IS CONSUMED. LAUNCH-EXEC-01 TRIAL #2 VALID TRIAL COUNT IS ONE. TRIAL #2 MUST NOT BE
 RERUN. TRIAL #3 FREEZE IS PUBLISHED. LAUNCH-EXEC-01 TRIAL #3 VALID TRIAL COUNT IS ZERO. TRIAL #3 D-7
 IS NOT AUTHORISED. TRIAL #3 IS NOT_RUN. TRIAL #3 MUST NOT BE EXECUTED.**
+
+## Build 8 evidence correction — post-review
+
+This correction is appended because this file is append-only. The Build 8 section above stays exactly
+as committed; where the two differ, this correction governs. It corrects the record only. No build fact
+changes, no build was repeated, and no second Build 8 exists.
+
+| | |
+|---|---|
+| Original evidence commit | `b8acabfb5c3cf4193e56f2beffc3af63930a6178` |
+| Independent evidence review | `d1dc86e14dfc68c45dc16e82301cf8fd0aac2856` — the [Build 8 evidence review](../../implementation/HELM-LAUNCH-EXEC-01-BUILD-008-EVIDENCE-REVIEW.md), findings BR-I1 and BR-M1 to BR-M6 |
+| Formal run | `34754901079`: run number 11, attempt 1, event `push`, branch `docs/helm-launch-architecture`, conclusion `success` |
+| Formal job | `103717520698` |
+| Freeze | `bebd8a5f83d4d0daebe9b068050cb5436289c75e` |
+| Workflow head | `69f13a78810e1d270e4540b1fa169c8a8e9eb5fd` |
+| Result | **BUILD_8_FORMAL_COMPILE_ONLY_SUCCESS**, unchanged. Run `34754901079` is the one and only formal Build 8 attempt |
+
+### Durable log identity (BR-I1)
+
+The **only durable Build 8 log identity is the SHA-256 of the job log** that
+`gh api repos/Djomla83/helm-os/actions/jobs/103717520698/logs` returns:
+
+`6c16e23ea03a7593e09911ca968c4313ab7764a05b98fd5b19c4756da9930a15`
+
+The independent evidence review reproduced that digest from fresh downloads.
+
+The run log archive, `gh api repos/Djomla83/helm-os/actions/runs/34754901079/logs`, is **not
+byte-stable**: GitHub may regenerate that container. Two downloads observed it differently:
+
+| Run log archive download | SHA-256 | Size | Entries |
+|---|---|---|---|
+| immediately after the run, when the section above was written | `f23db84bd3e4badcaa210a23f4239cf5f0dbb54b289db0accf37fc230a07f2af` | 77,376 bytes | 19 |
+| later, during the independent evidence review | `0eb52f24c236bcee4a77ed95163faa6d095f4a613a5dc8f8f1641b04b9389b03` | 36,023 bytes | 2 |
+
+The later archive's `0_compile-only.txt` is byte-identical to the independently downloaded job log.
+
+* Neither archive digest is a durable identity. Both are transient download observations.
+* The build facts are unchanged; only the archive container differs.
+* The job-log SHA-256 is the sole durable log identity.
+
+This supersedes two statements in the section above:
+
+* the "Run log archive" row of its log identity table, wherever that row is read as an identity;
+* the sentence "The digests let a reviewer verify a fresh download while GitHub retains the run's
+  logs", which holds for the job log only.
+
+No archive digest is reproducible authority.
+
+### Repeated downloads (BR-M1)
+
+The "Stability" row above ("a second download of both files was byte-identical") is superseded:
+
+* the job-log SHA-256 was independently reproduced;
+* the run log archive is regenerated and is not byte-stable;
+* archive-byte equality is not part of Build 8's authority.
+
+### Compiler diagnostics (BR-M2)
+
+The sentence "The log contains only two `error` strings" and its substring count are withdrawn. The
+load-bearing fact is unchanged: **no compiler warning and no compiler error occurred**. Both compile
+steps printed only their commands and succeeded.
+
+* The environment inventory step emitted two `printf: write error: Broken pipe` diagnostics from
+  `ldd --version | head -1`. They are not compiler failures.
+* The `actions/checkout@v4` Node.js 20 deprecation warning is a GitHub platform notice, not a
+  compiler diagnostic.
+
+### Execution boundary wording (BR-M3)
+
+The banner "No binary produced here was executed, traced, `ldd`'d or loaded" is superseded.
+
+* `/tmp/probe`, the static-link probe, is workflow infrastructure and not a LAUNCH-EXEC experimental
+  ELF. It was passed to `ldd`, which reported that it is not a dynamic executable.
+* No experiment binary was executed; experiment binaries were inspected only as data.
+* No produced experimental ELF crossed the execution boundary.
+
+### Line count (BR-M4)
+
+The "1,358 lines" in the job log row is withdrawn and is no part of the log identity; the SHA-256 is
+authoritative. For description only: counting lines as LF-terminated lines, the job log has 1,357 —
+it holds 1,357 LF bytes and its last byte is LF. The withdrawn figure counted the empty element after
+the final LF.
+
+### Where `build/` paths appear (BR-M5)
+
+The sentence "`build/` paths appear only as data: in `for` lists, `file`, `readelf` and `sha256sum`"
+is superseded. No exhaustive list of occurrences is claimed. The invariant is:
+
+* build outputs appear in the compile commands;
+* they appear as operands to static inspection and hash tools;
+* they may appear in echoed script text, test output or other log text;
+* no produced experiment `build/*` ELF is invoked as an executable command.
+
+### Provenance (BR-M6)
+
+The sentence "Every fact in this section was read from that log or from Git" is superseded. The
+Build 8 evidence comes from several primary sources:
+
+| Source | Facts |
+|---|---|
+| GitHub Actions API metadata | run id, job id, run number, attempt, event, branch, head SHA, timestamps, conclusions; the absence of any other attempt or compile-only run for the head; the separate Rust workspace CI run and its result; the push record |
+| The exact job log | the checkout SHA and freeze verification output; the environment; the compile commands and compiler output; the link shape and marker; the artefact hashes; the Linux test result; the runner refusal |
+| Git repository and history | freeze ancestry; the workflow revision; the manifest; frozen input identity; byte identity of the freeze and its review commit; the Build 7 comparison inputs; the fixture sizes recomputed from `make_fixtures.py` |
+| Independent review observations (`d1dc86e`) | the fresh reproduction of the job-log SHA-256; the discovery that run log archives are regenerated |
+
+### Raw logs
+
+**RAW_BUILD8_LOGS_REPO_PRESERVATION_NOT_REQUIRED.** Raw logs are not committed, because:
+
+* every load-bearing fact is transcribed in this file;
+* those facts were independently checked while GitHub still served the logs;
+* the exact job-log SHA-256 is preserved;
+* the source, the workflow and the Git history independently support the negative execution and D-7
+  claims;
+* run log archives are regenerated and are not suitable as a stable identity;
+* raw logs expose host identity that this project has no need to publish;
+* Builds 1 to 7 follow the same no-raw-log convention.
+
+### Artefact hash set unchanged
+
+No Build 8 artefact hash is altered. The confirmed set remains:
+
+```
+build/helper_alt               d13082b12b26cb35d6707f6575feaab3b17368a13b6fd0ccf6ed7ae10c98e26d
+build/helper_dynamic           c854162ddf4074cdfe132492ddc595ae6345f820c22a1cd082e32dd1646850cc
+build/helper_foreign.elf       415f14b8538c8e59832a107b12c54f2fae9cd2ab5637df2f8a6facb82a9cfd52
+build/helper_fork              b0c9c01f7cf5d514c15ee0e94027f38de41ef63e9eb675227773b2eb94c4fe44
+build/helper_report            f04323e1061c753192ffc0959a2f9094ad7d89a8ceecb8c815785a6f78b2c5be
+build/helper_setid             500c4af1934be000acefc6daa49ebe8ac984686b23a4358bd134464e02f66c10
+build/launcher_spike           2f5cf10a0b1375e04657e5da7cf7ad2bba7f1da814404a10ab11ffaa15bf55eb
+build/magic_only.bin           3bdbb4fe8397cd2b842430b39ccff01a8663c751945ef5e9a09e267fb8b1d359
+build/script_fixture.sh        37f800b1a77f026dbf2ee2724829458ddf78dd8329527deee3d086025959208a
+build/unloadable_in_cohort.elf 51224867e5fb13d0c6052397c9f4959c7c87bb8bc7d750c91429728a18b507d9
+```
+
+### Future publication CI — owner preclassification
+
+This is the owner's disposition, recorded here; this correction pushes nothing.
+
+When the Build 8 evidence, this correction and their reviews are published, the existing
+path-triggered compile-only workflow will probably run automatically. That run is preclassified as
+**POST_BUILD8_EVIDENCE_PUBLICATION_CI**.
+
+* **What it is.** Ordinary repository CI. It is not Build 8, not Build 8 attempt 2, not a Build 8
+  retry and not replacement build evidence. It is not Trial #3 execution and not D-7 evidence.
+* **How to identify it.** By `event=push`, the publication commit as its head, and the compile-only
+  workflow (`354258342`, `.github/workflows/launch-exec-01-compile-only.yml`). Never by a run number.
+* **Handling.** It is never dispatched by hand and never re-run.
+
+What happens next depends on its outcome:
+
+* **If it passes,** no new Build 8 evidence review is required because of it.
+* **If it fails,** the failure is preserved and not retried. Build 8 remains run `34754901079`. Work
+  stops before any Trial #3 dispatcher or D-7 publication, and the matter returns to the owner.
+
+No later ordinary CI run can retroactively replace or invalidate Build 8.
+
+### Next gate
+
+Build 8's evidence is **not yet accepted** for Trial #3 authority decisions. Exactly one fresh,
+bounded, independent re-review of this correction remains. It covers:
+
+* BR-I1 and BR-M1 to BR-M6;
+* the unchanged Build 8 result and artefact hashes;
+* the raw-log decision;
+* the unchanged authority;
+* the publication-CI preclassification.
+
+Only if that re-review passes does "BUILD 8 EVIDENCE IS ACCEPTED FOR TRIAL #3 AUTHORITY DECISIONS"
+apply. Backlog items BR-B1, BR-B3 and BR-B4 are unchanged here. BR-B2 is covered by the
+preclassification above.
+
+**TRIAL #2 D-7 IS CONSUMED. LAUNCH-EXEC-01 TRIAL #2 VALID TRIAL COUNT IS ONE. TRIAL #2 MUST NOT BE
+RERUN. TRIAL #3 FREEZE IS PUBLISHED. BUILD 8 FORMAL COMPILE-ONLY ATTEMPT SUCCEEDED. LAUNCH-EXEC-01
+TRIAL #3 VALID TRIAL COUNT IS ZERO. TRIAL #3 D-7 IS NOT AUTHORISED. TRIAL #3 IS NOT_RUN. TRIAL #3
+MUST NOT BE EXECUTED.** No Trial #3 dispatcher exists.
