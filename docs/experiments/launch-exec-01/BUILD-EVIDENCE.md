@@ -594,3 +594,155 @@ reversed three-object layout, in which no region exists. Every binary was read a
 
 **LAUNCH-EXEC-01 Trial #2 is complete and immutable, and its D-7 is consumed. No Trial #3 is
 authorised and no Trial #3 freeze exists.**
+
+## Build 8 — 2026-09-13, the published Trial #3 freeze, clean
+
+This is the first and only authorised formal compile of the Trial #3 freeze. The owner authorised
+one fast-forward publication, `1f0b86a..69f13a7` on `docs/helm-launch-architecture`, and exactly
+one compile-only run: the run that push triggered. This is **not** D-7. No run was dispatched by
+hand, re-run or retried.
+
+The Trial #3 freeze now exists and is published, so the closing sentence of the 2026-09-12 section
+above no longer describes the current state. That section is left as it was written.
+
+> **No binary produced here was executed, traced, `ldd`'d or loaded.** Every property below comes
+> from compiling and from reading the produced files as data. Trial #3 is NOT_RUN, its D-7 is not
+> authorised, and no case was posed.
+
+| | |
+|---|---|
+| Frozen object | Trial #3 freeze `bebd8a5f83d4d0daebe9b068050cb5436289c75e`; manifest blob `8cd290b573408510f8c16cd8dafe676354140a38`, SHA-256 `ea482c6feaf77abac1edcc23d26afbc4f249638170f60ed897088d5cda79ba70` |
+| Commit built | `69f13a78810e1d270e4540b1fa169c8a8e9eb5fd` — the [independent freeze review](../../implementation/HELM-LAUNCH-EXEC-01-TRIAL-003-FREEZE-REVIEW.md), a docs-only child of the freeze |
+| Byte identity, checked before the push | the manifest, all 17 source inputs and all 3 definition inputs have equal Git blobs and SHA-256 at `bebd8a5` and `69f13a7` (21 of 21); the experiment directory, `.github/workflows` and `tools/tests` trees are identical; `git diff --name-status bebd8a5 69f13a7` lists only the review record |
+| Publication | one fast-forward push, `1f0b86a..69f13a7`, at 2026-09-13T11:37:00Z; `main` unchanged at `d8a6887` |
+| Workflow run | `34754901079`, run number 11, **attempt 1**, event **push**, branch **`docs/helm-launch-architecture`**, head `69f13a78810e1d270e4540b1fa169c8a8e9eb5fd`, workflow `354258342` (`.github/workflows/launch-exec-01-compile-only.yml`) |
+| Job | `103717520698` (`compile-only`), 2026-09-13T11:37:05Z to 11:38:22Z, conclusion **success**; every step succeeded |
+| Uniqueness | the only compile-only run for `69f13a7`, with `run_attempt` 1. The same push also started the ordinary HELM Rust workspace Linux workflow (`34754901075`, through its `tools/tests/**` path filter), which succeeded; it is not a compile-only run and is not part of Build 8 |
+| Source binding | the checkout printed `69f13a78810e1d270e4540b1fa169c8a8e9eb5fd` twice, from `git rev-parse refs/remotes/origin/docs/helm-launch-architecture` and from `git log -1 --format=%H`. `--verify-freeze` then printed `"freeze_verified": true` against that commit's manifest, which is the Trial #3 manifest above |
+| Runner | GitHub-hosted `ubuntu-24.04`, image version `20260907.300.1`, runner `2.337.0`, Ubuntu 24.04.5 LTS |
+| Kernel / arch | `6.17.0-1022-azure`, `x86_64` |
+| Compiler | `cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0` |
+| C library | `ldd (Ubuntu GLIBC 2.39-0ubuntu8.8) 2.39` |
+| Static command | `cc -O2 -Wall -Wextra -static -o build/<t> <t>.c` for helper_report, helper_alt, helper_fork, helper_setid |
+| Spike command | `cc -O2 -Wall -Wextra -static -pthread -o build/launcher_spike launcher_spike.c` |
+| Dynamic command | `cc -O2 -Wall -Wextra -o build/helper_dynamic helper_dynamic.c` |
+| Fixtures | `python3 make_fixtures.py build` |
+| Compiler diagnostics | **none** — no warning and no error under `-Wall -Wextra` |
+
+The log contains only two `error` strings. Both are `ldd` broken-pipe messages from the environment
+inventory's `ldd --version | head -1`, not compiler output. Its only `##[warning]` annotation is
+GitHub's notice that `actions/checkout@v4` targets Node.js 20 and was run on Node.js 24; that
+concerns the runner platform, not the build.
+
+### Sources compiled
+
+| Source | SHA-256 at `69f13a7`, equal to the Trial #3 manifest | Against Build 7 |
+|---|---|---|
+| `launcher_spike.c` | `4d6a0ac71cf6f0dee26ccc7ac608f88c90d8f4697e88b363626915b7b43345aa` | changed |
+| `helper_report.c` | `ceaac0dc7c929db770d6146230136d72cb4f740dcc218cd59270440ec9253a81` | changed |
+| `helper_fork.c` | `52089697db8bb27138b2ecf1e96b0d2d567ef2917c7b9e03e35799bda7187cb0` | changed |
+| `helper_alt.c` | `7993aa631abdca6796171fe4ffafb2d296f2a00b61ea2322ee8e624731b99113` | unchanged |
+| `helper_dynamic.c` | `b3c398d840c16dfa4e0dbc56593b905b4019bfe2316fc339049b8a69930350a0` | unchanged |
+| `helper_setid.c` | `c609755d105122eea304f5fe12685d8dcc24064d77659295a11a76d42b86329f` | unchanged |
+| `make_fixtures.py` | `baa61170d9ea6f2f621b0dd2451417f03f0964273566b332b518008ea1fd8b50` | changed by the fixture-mode correction; the fixture bytes are unchanged |
+
+### Environment the run recorded
+
+These are the compile-only job's own probes. A trial records its own preflight before its first
+case.
+
+| Fact | Observed |
+|---|---|
+| euid | `1001` (unprivileged) |
+| page size | 4096 |
+| `NoNewPrivs` / `Seccomp` / `Seccomp_filters` | 0 / 0 / 0 |
+| `ptrace_scope` | 1 |
+| `strace` | `/usr/bin/strace`, `strace -- version 6.8` |
+| `binfmt_misc` | enabled: `llvm-16`, `llvm-17` and `llvm-18` runtimes (magic `4243`) and `python3.12` (magic `cb0d0d0a`); none matches `\x7fELF` |
+| `clone3` probe | available; `EINVAL` from rejected arguments |
+| noexec and unprivileged-writable mounts | `/run/lock`, `/dev/mqueue` |
+| derived block reasons | `unprivileged_runner` only |
+| static-link probe | `/tmp/probe` statically linked; `ldd`: `not a dynamic executable` |
+
+### Produced artefacts
+
+| SHA-256 | Size (bytes) | Artefact | Classification | Against Build 7 |
+|---|---|---|---|---|
+| `d13082b12b26cb35d6707f6575feaab3b17368a13b6fd0ccf6ed7ae10c98e26d` | not emitted | `helper_alt` | ELF, static, no PT_INTERP | unchanged |
+| `c854162ddf4074cdfe132492ddc595ae6345f820c22a1cd082e32dd1646850cc` | not emitted | `helper_dynamic` | ELF PIE, dynamic, PT_INTERP `/lib64/ld-linux-x86-64.so.2` | unchanged |
+| `415f14b8538c8e59832a107b12c54f2fae9cd2ab5637df2f8a6facb82a9cfd52` | 64 | `helper_foreign.elf` | generated fixture | unchanged |
+| `b0c9c01f7cf5d514c15ee0e94027f38de41ef63e9eb675227773b2eb94c4fe44` | not emitted | `helper_fork` | ELF, static, no PT_INTERP | **new**; Build 7 was `3232d09f…` |
+| `f04323e1061c753192ffc0959a2f9094ad7d89a8ceecb8c815785a6f78b2c5be` | not emitted | `helper_report` | ELF, static, no PT_INTERP; E6 marker guard present | **new**; Build 7 was `423ac81e…` |
+| `500c4af1934be000acefc6daa49ebe8ac984686b23a4358bd134464e02f66c10` | not emitted | `helper_setid` | ELF, static, no PT_INTERP | unchanged |
+| `2f5cf10a0b1375e04657e5da7cf7ad2bba7f1da814404a10ab11ffaa15bf55eb` | not emitted | `launcher_spike` | ELF, static, no PT_INTERP | **new**; Build 7 was `4d42212f…` |
+| `3bdbb4fe8397cd2b842430b39ccff01a8663c751945ef5e9a09e267fb8b1d359` | 4 | `magic_only.bin` | generated fixture | unchanged |
+| `37f800b1a77f026dbf2ee2724829458ddf78dd8329527deee3d086025959208a` | 490 | `script_fixture.sh` | generated fixture | unchanged |
+| `51224867e5fb13d0c6052397c9f4959c7c87bb8bc7d750c91429728a18b507d9` | 64 | `unloadable_in_cohort.elf` | generated fixture | unchanged |
+
+Exactly the three C sources that differ from Build 7's bytes produced new binaries: `helper_fork`,
+`helper_report` and `launcher_spike`. That is what the manifest's `c_sources_changed_since_build_7`
+predicts. The other three binaries and all four fixtures are byte-identical to Build 7.
+
+* **Linkage.** The five static targets report no PT_INTERP, and `helper_dynamic` has one, which is
+  what E7 requires. The assertion step printed no FAIL.
+* **Sizes.** The workflow prints SHA-256 values and never sizes, so no binary size is invented here.
+  The four fixture sizes were recomputed from `make_fixtures.FIXTURES` at the frozen bytes, and
+  those bytes hash to exactly the digests above.
+* **Modes.** The declared fixture modes — `0755` for `script_fixture.sh` and
+  `unloadable_in_cohort.elf`, `0644` for the other two — are not printed by this workflow and were
+  not observed here. A trial checks them before posing.
+
+These are compile-only artefacts from a disposable runner and are **not** Trial #3 build identity. A
+trial builds and hashes the files it consumes in its own run, before its first case.
+
+### Tests and runner refusal
+
+`python3 -m unittest discover -s tools/tests -v` ran **783 tests in 64.334 s, OK, none skipped**.
+Because the runner has a C compiler,
+`E6ContiguousMarkerRegion.test_a_compiled_scratch_helper_has_one_region_in_one_symbol` ran and
+passed. It compiles `helper_report.c` into a temporary directory and reads the image as data; it
+never executes it.
+
+Invoked without D-7, the runner printed `"status": "NOT_RUN"` and the reason "D-7 (execution
+authorisation) is not granted. This definition is frozen for independent pre-trial review, not for
+execution. No case was posed." It then printed `runner exit code: 3 (3 = refused, D-7 not
+granted)`.
+
+### Nothing ran
+
+* **Commands.** The complete set of `set -x` command verbs in the log is `cat`, `cc`, `command`,
+  `echo`, `file`, `for`, `getconf`, `grep`, `head`, `id`, `ldd`, `mkdir`, `printf`, `readelf`,
+  `sha256sum`, `sort`, `true` and `uname`.
+* **`ldd`** ran only on the static-link probe `/tmp/probe`, never on an experiment binary.
+* **`build/` paths** appear only as data: in `for` lists, `file`, `readelf` and `sha256sum`.
+* **Flags.** `--i-have-owner-authorisation-d7`, `--post-pin-control-fd`, `--parent-fd-set-cloexec`,
+  `--parent-close-low-fds`, `--fixture-health-fifo`, `--liveness-fifo` and `--bypass-admission`
+  appear **zero** times.
+* **Python steps.** The only Python steps were the freeze verifier, the compile-only preflight
+  probes, fixture generation, the non-trial test suite and the refused runner.
+
+### Log identity
+
+| Item | Value |
+|---|---|
+| Job log | `gh api repos/Djomla83/helm-os/actions/jobs/103717520698/logs`: 182,255 bytes, 1,358 lines, LF only; SHA-256 `6c16e23ea03a7593e09911ca968c4313ab7764a05b98fd5b19c4756da9930a15` |
+| Run log archive | `gh api repos/Djomla83/helm-os/actions/runs/34754901079/logs`: 77,376 bytes, 19 entries; SHA-256 `f23db84bd3e4badcaa210a23f4239cf5f0dbb54b289db0accf37fc230a07f2af`. Its `0_compile-only.txt` is the job log above |
+| Stability | a second download of both files was byte-identical |
+
+Every fact in this section was read from that log or from Git.
+
+* **Raw bytes.** Following Builds 1 to 7, the raw log bytes are not committed. The digests let a
+  reviewer verify a fresh download while GitHub retains the run's logs.
+* **Relation to the frozen documents.** Definition §10.12 and the manifest's
+  `build_8_evidence: null` describe the moment of the freeze and stay unchanged. This append-only
+  record, outside the manifest, is where Build 8 lives, so the freeze still verifies.
+
+**BUILD_8_FORMAL_COMPILE_ONLY_SUCCESS.** Build 8, run `34754901079`, is the formal compile-only
+evidence for the Trial #3 freeze `bebd8a5`. Every C byte the freeze hashes compiled cleanly with the
+frozen commands, and the three sources that differ from Build 7 are exactly the three whose
+binaries changed. This record was committed locally and is not pushed. It requires one independent
+Build 8 evidence review.
+
+**TRIAL #2 D-7 IS CONSUMED. LAUNCH-EXEC-01 TRIAL #2 VALID TRIAL COUNT IS ONE. TRIAL #2 MUST NOT BE
+RERUN. TRIAL #3 FREEZE IS PUBLISHED. LAUNCH-EXEC-01 TRIAL #3 VALID TRIAL COUNT IS ZERO. TRIAL #3 D-7
+IS NOT AUTHORISED. TRIAL #3 IS NOT_RUN. TRIAL #3 MUST NOT BE EXECUTED.**
