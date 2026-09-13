@@ -1288,6 +1288,21 @@ exiting 7 contradicts S4's path, so it is a FAIL even though no report can exist
 launcher's own token is kept as the record's `mechanism_outcome`. Only when nothing contradicts
 S4's path does a missing, truncated, malformed or undecidable report leave S4 INVALID.
 
+**A missing symbolic errno name is not missing failure evidence** (re-review finding RR-I1). After
+honest posing, an explicit **structured** pre-exec failure is a FAIL even when its valid numeric errno
+has no name in the frozen errno table. The load-bearing fields are:
+* `admission` accepted;
+* `process_disposition` `ExecFailed`;
+* an empty `timeout_disposition`;
+* `exec_failed_stage` one of the frozen stages;
+* `exec_failed_errno` a plain integer from 1 to 4095.
+
+`helper_exit_corroborated` joins `no_executed_image` among the assertions that decide a repetition
+even when the rule renders no token. An `ExecFailed` record that fails any structural condition — a
+missing, non-integer or out-of-range errno, an empty or unknown stage, or a timeout beside it — is
+unobservable on the launcher side and stays INVALID unless another side independently contradicts
+S4's path. The errno table, the symbolic tokens and every other case are unchanged.
+
 | Observation | Status |
 |---|---|
 | complete report naming `helper_report` and declaring exit 7; receipt `Exited` with status 7; launcher claim `ExecStatusIndeterminate` | PASS |

@@ -1463,6 +1463,169 @@ class S4DecisiveContradictionFirst(unittest.TestCase):
             exec_failed_errno=13, exit_code=127)))[0], FAIL)
 
 
+# ===== RR-I1 (re-review db45336): a structured pre-exec failure is decisive
+# whether or not its errno has a symbolic name.
+REREVIEWED_FIX = "53ad8bfef1b66592f2ae2e4e3df5fc847b526834"
+UNNAMED_ERRNO = 7        # E2BIG on Linux x86-64; deliberately absent from ERRNO_NAMES
+FROZEN_ERRNO_NUMBERS = {1, 2, 3, 4, 5, 8, 9, 10, 12, 13, 14, 20, 21, 22, 24, 26, 36,
+                        38, 40}
+
+OLD_S4_SCORE = r'''
+import json, sys
+sys.path.insert(0, sys.argv[1])
+import checker, driver, observations as ob, oracles
+plan = driver.CASE_PLANS["S4"]
+block = {"bytes_drained": 0, "drained_sha256": oracles.digest_of(b""),
+         "completeness": "CompleteAtEof"}
+spike = {"admission": "accepted", "pre_exec_body_sha256": "a" * 64,
+         "pre_exec_body_size": 4096, "pre_exec_mode_bits": 493,
+         "process_disposition": "ExecFailed", "timeout_disposition": "",
+         "exec_failed_stage": "EXEC", "exec_failed_errno": int(sys.argv[2]),
+         "exit_code": 127, "term_signal": -1, "wait_si_code": "CLD_EXITED",
+         "launcher_signal_issued": False, "group_sweep_issued": True,
+         "wait_errno": 0, "stdout": block, "stderr": block}
+obs = {"spike": spike, "report": None, "report_state": ob.REPORT_ABSENT,
+       "launch_returned": True, "elapsed_ms": 12,
+       "declared_pre_exec_stall": plan.pre_exec_stall,
+       "declared_body_length_changed": plan.body_length_changed,
+       "declared_injection_modes": [], "expected_marker": plan.expected_marker,
+       "build_identity_binding": {"bound": True, "classification": "X",
+                                  "object_sha256": "a" * 64},
+       "cleanup_problems": []}
+obs["exec_confirmation"] = ob.exec_confirmation(spike, None, None, ob.REPORT_ABSENT)
+obs["repeat_observations"] = [obs]
+record = driver.evaluate(plan, obs)
+print(json.dumps([checker.score_case("S4", record)[0], record.get("outcome")]))
+'''
+
+
+class S4StructuredPreExecFailure(unittest.TestCase):
+    plan = driver.CASE_PLANS["S4"]
+
+    def exec_failed(self, **over):
+        fields = dict(process_disposition="ExecFailed", exec_failed_stage="EXEC",
+                      exec_failed_errno=13, exit_code=127, wait_si_code="CLD_EXITED")
+        fields.update(over)
+        spike = D.receipt(**fields)
+        for key in [k for k, v in fields.items() if v is D]:
+            spike.pop(key)          # D marks a field that must be absent
+        return spike
+
+    def s4(self, spike, rep=None, **over):
+        return score(self.plan, D.obs_for(self.plan, spike=spike, rep=rep, **over))
+
+    def test_the_errno_table_is_not_widened(self):
+        self.assertEqual(set(ob.ERRNO_NAMES), FROZEN_ERRNO_NUMBERS)
+        self.assertNotIn(UNNAMED_ERRNO, ob.ERRNO_NAMES)
+
+    def test_a_known_errno_pre_exec_failure_fails(self):                     # A, F
+        for stage in ("EXEC", "CHDIR", "DUP2"):
+            status, record = self.s4(self.exec_failed(exec_failed_stage=stage))
+            self.assertEqual((status, record["outcome"]),
+                             (FAIL, "helper_exit_contradicted"), (stage, record))
+
+    def test_an_unnamed_valid_errno_pre_exec_failure_fails(self):            # B
+        for stage, number in (("EXEC", UNNAMED_ERRNO), ("SETPGID", 11),
+                              ("CLOSE_RANGE", ob.ERRNO_NUMBER_MAX)):
+            spike = self.exec_failed(exec_failed_stage=stage, exec_failed_errno=number)
+            self.assertIs(ob.explicit_pre_exec_failure(spike), True)
+            # the claim rule still renders no symbolic token for it
+            self.assertIsNone(ob.derive("launcher_receipt_claim", D.obs_for(
+                self.plan, spike=spike))[0])
+            status, record = self.s4(spike)
+            self.assertEqual((status, record["outcome"]),
+                             (FAIL, "helper_exit_contradicted"), (stage, number, record))
+            self.assertEqual(record["assertions"]["helper_exit_corroborated"]["result"],
+                             ob.ASSERTION_VIOLATED)
+
+    def test_the_rr_i1_regression_against_53ad8bf(self):
+        tmp = pathlib.Path(tempfile.mkdtemp(prefix="rr-i1-53ad8bf-"))
+        try:
+            for name in MANIFEST["sha256"]:
+                if name.endswith(".py"):
+                    (tmp / name).write_bytes(git_show(
+                        REREVIEWED_FIX, "docs/experiments/launch-exec-01/" + name))
+            proc = subprocess.run([sys.executable, "-I", "-B", "-c", OLD_S4_SCORE,
+                                   str(tmp), str(UNNAMED_ERRNO)],
+                                  capture_output=True, timeout=120, cwd=str(tmp))
+            self.assertEqual(proc.returncode, 0, proc.stderr.decode("utf-8", "replace"))
+            old = json.loads(proc.stdout.decode("utf-8"))
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+        self.assertEqual(old, ["INVALID", None])
+        status, record = self.s4(self.exec_failed(exec_failed_errno=UNNAMED_ERRNO))
+        self.assertEqual((status, record["outcome"]), (FAIL, "helper_exit_contradicted"))
+
+    def test_a_structurally_invalid_pre_exec_failure_is_invalid(self):       # C, D
+        rows = (
+            dict(exec_failed_errno="13"), dict(exec_failed_errno="7"),
+            dict(exec_failed_errno=None), dict(exec_failed_errno=7.0),
+            dict(exec_failed_errno=0),
+            dict(exec_failed_errno=-7), dict(exec_failed_errno=ob.ERRNO_NUMBER_MAX + 1),
+            dict(exec_failed_errno=D),                       # missing field
+            dict(exec_failed_errno=UNNAMED_ERRNO, exec_failed_stage=""),
+            dict(exec_failed_errno=UNNAMED_ERRNO, exec_failed_stage="UNKNOWN"),
+            dict(exec_failed_errno=UNNAMED_ERRNO, exec_failed_stage="ExecFailed text"),
+            dict(exec_failed_errno=UNNAMED_ERRNO, exec_failed_stage=D),
+            dict(exec_failed_errno=UNNAMED_ERRNO, timeout_disposition="KilledByLauncher"),
+        )
+        for over in rows:
+            spike = self.exec_failed(**over)
+            self.assertIs(ob.explicit_pre_exec_failure(spike), False, over)
+            status, record = self.s4(spike)
+            self.assertEqual((status, record.get("outcome")), (INVALID, None),
+                             (over, record))
+        self.assertIs(ob.explicit_pre_exec_failure(None), False)
+        # a boolean is not an errno number, whatever Python's int subclassing says
+        self.assertIs(ob.explicit_pre_exec_failure(
+            self.exec_failed(exec_failed_errno=True)), False)
+        self.assertIs(ob.explicit_pre_exec_failure(
+            {"admission": "refused", "process_disposition": "ExecFailed",
+             "timeout_disposition": "", "exec_failed_stage": "EXEC",
+             "exec_failed_errno": 13}), False)
+
+    def test_another_decisive_side_still_decides_a_malformed_record(self):
+        spike = self.exec_failed(exec_failed_errno="13")
+        status, record = self.s4(spike, rep=full_report(declared_exit=3))
+        self.assertEqual((status, record["outcome"]), (FAIL, "helper_exit_contradicted"))
+        # a malformed record beside a matching report decides nothing
+        self.assertEqual(self.s4(spike, rep=full_report())[0], INVALID)
+
+    def test_the_rest_of_the_s4_precedence_is_unchanged(self):              # E, G-M
+        e7 = dict(exit_code=fc.S4_EXIT_CODE, wait_si_code="CLD_EXITED")
+        fails = (
+            D.receipt(admission="refused", refusal="ElfNotInCohort"),
+            D.receipt(process_disposition="TimedOut",
+                      timeout_disposition="KilledByLauncher", term_signal=15,
+                      exit_code=-1, wait_si_code="CLD_KILLED"),
+            D.receipt(process_disposition="Signaled", term_signal=11, exit_code=-1,
+                      wait_si_code="CLD_DUMPED"),
+            D.receipt(exit_code=3, wait_si_code="CLD_EXITED"),
+        )
+        for spike in fails:
+            status, record = self.s4(spike)
+            self.assertEqual((status, record["outcome"]),
+                             (FAIL, "helper_exit_contradicted"), spike)
+        receipt = D.receipt(**e7)
+        for state in (ob.REPORT_ABSENT, ob.REPORT_MALFORMED, ob.REPORT_TRUNCATED):
+            self.assertEqual(self.s4(receipt, report_state=state)[0], INVALID, state)
+        status, record = self.s4(receipt, rep=full_report())
+        self.assertEqual((status, record["outcome"]), (PASS, "ExecStatusIndeterminate"))
+        # the accepted conservative exec-status claim is not a contradiction
+        claim = ob.derive("launcher_receipt_claim", D.obs_for(self.plan, spike=receipt))
+        self.assertEqual(claim[0], fc.BY_NAME["S4"]["predict"])
+        self.assertEqual(ob._s4_receipt_exit(receipt)[0], ob.ASSERTION_HOLDS)
+
+    def test_s2_s5_and_s7_are_untouched(self):
+        s5 = driver.CASE_PLANS["S5"]
+        self.assertNotIn("helper_exit_corroborated", s5.assertions)
+        self.assertEqual(score(s5, D.obs_for(s5, spike=self.exec_failed(
+            exec_failed_errno=UNNAMED_ERRNO)))[0], INVALID)
+        self.assertEqual(score(s5, D.obs_for(s5, spike=self.exec_failed()))[0], FAIL)
+        for case in ("S2", "S7"):
+            self.assertEqual(driver.CASE_PLANS[case].assertions, ("no_executed_image",))
+
+
 # ========= R-I1 (correction review): a liveness result needs a proven fixture
 H = ob.liveness_fixture_health
 PROBE = b"PROBE_REACHED\n"

@@ -502,13 +502,22 @@ class S2S7ExecStatusIsAuthoritative(unittest.TestCase):
         self.assertIs(ob.report_sentinel_seen({"completeness": EOF}), None)
         self.assertIs(ob.report_sentinel_seen(None), None)
 
-    def test_only_s2_and_s7_may_fail_without_a_rule_token(self):
+    def test_only_declared_cases_may_fail_without_a_rule_token(self):
+        # AB7-M1 froze {no_executed_image}, used by S2 and S7. The Trial #3
+        # correction candidate declares exactly one addition in its NOT_FROZEN
+        # record (RR-I1): S4's helper_exit_corroborated.
+        added = set(json.loads((EXP / "TRIAL-3-CORRECTION-CANDIDATE.json").read_text(
+            encoding="utf-8"))["contract_delta"]["decisive_without_token_added"])
+        self.assertEqual(added, {"helper_exit_corroborated"})
         self.assertEqual(ob.DECISIVE_WITHOUT_TOKEN_ASSERTIONS,
-                         frozenset({"no_executed_image"}))
+                         frozenset({"no_executed_image"}) | added)
         users = sorted(p.case for p in driver._PLAN_LIST
                        if set(p.assertions) & ob.DECISIVE_WITHOUT_TOKEN_ASSERTIONS)
-        self.assertEqual(users, ["S2", "S7"])
-        for case in ("S2", "S7"):
+        self.assertEqual(users, ["S2", "S4", "S7"])
+        s2_s7 = sorted(p.case for p in driver._PLAN_LIST
+                       if "no_executed_image" in p.assertions)
+        self.assertEqual(s2_s7, ["S2", "S7"])
+        for case in ("S2", "S4", "S7"):
             self.assertIsNone(driver.CASE_PLANS[case].posed_when, case)
 
     def test_the_sentinel_is_durable_as_a_normalised_count(self):
@@ -909,7 +918,12 @@ class AB7Preregistration(unittest.TestCase):
                          ["fixture_descendant_signalled"])
         self.assertEqual(pvs["assertions"]["no_executed_image"]["reads"],
                          list(ob.ASSERTION_READS["no_executed_image"]))
-        self.assertEqual(sorted(pvs["decisive_without_token"]["assertions"]),
+        # The Trial #2 freeze plus the candidate's declared RR-I1 addition.
+        added = json.loads((EXP / "TRIAL-3-CORRECTION-CANDIDATE.json").read_text(
+            encoding="utf-8"))["contract_delta"]["decisive_without_token_added"]
+        self.assertFalse(set(added) & set(pvs["decisive_without_token"]["assertions"]))
+        self.assertEqual(sorted(set(pvs["decisive_without_token"]["assertions"])
+                                | set(added)),
                          sorted(ob.DECISIVE_WITHOUT_TOKEN_ASSERTIONS))
         for block in ("o6", "o7", "s2_s7", "fixture_signal"):
             self.assertIn(block, pvs, block)

@@ -2462,6 +2462,43 @@ def assert_stderr_capture_failure_reported(obs):
 # S4, Trial #3 correction candidate, by the owner's conservative exec-evidence
 # policy: the launcher's receipt is scored as the conservative claim it is, and
 # what the executed image evidenced independently is asserted beside it.
+
+# The errno numbers the kernel can report (MAX_ERRNO). A record's errno inside
+# this range is a structurally valid number whether or not ERRNO_NAMES names it.
+ERRNO_NUMBER_MIN, ERRNO_NUMBER_MAX = 1, 4095
+
+
+def explicit_pre_exec_failure(spike):
+    """Whether the receipt STRUCTURALLY proves an explicit pre-exec failure.
+
+    RR-I1 (Trial #3 correction re-review). Three things are kept apart:
+
+    * this structural fact -- the child wrote a complete exec-status record
+      before any image ran;
+    * the symbolic token ``_exec_failed`` renders from it, which needs the
+      errno in the closed ERRNO_NAMES table;
+    * a malformed record, which proves nothing.
+
+    Load-bearing fields, all of them required: ``admission == "accepted"``,
+    ``process_disposition == "ExecFailed"`` (launcher_spike.c sets it only for
+    a record of exactly ``sizeof(struct exec_status)`` bytes),
+    ``timeout_disposition == ""`` (no timeout branch accompanies ExecFailed),
+    ``exec_failed_stage`` one of the frozen STAGES (never "" or the launcher's
+    "UNKNOWN"), and ``exec_failed_errno`` a plain integer in
+    ERRNO_NUMBER_MIN..ERRNO_NUMBER_MAX. A symbolic errno name is NOT required:
+    a missing name is missing rendering, not missing failure evidence.
+    """
+    if not isinstance(spike, dict):
+        return False
+    number = spike.get("exec_failed_errno")
+    return (spike.get("admission") == "accepted"
+            and spike.get("process_disposition") == "ExecFailed"
+            and spike.get("timeout_disposition") == ""
+            and spike.get("exec_failed_stage") in STAGES
+            and _plain_int(number)
+            and ERRNO_NUMBER_MIN <= number <= ERRNO_NUMBER_MAX)
+
+
 def _s4_receipt_exit(spike):
     """S4's launcher side: ``(result, detail)`` for the observed direct child.
 
@@ -2477,6 +2514,17 @@ def _s4_receipt_exit(spike):
         return (ASSERTION_VIOLATED, "the launcher refused admission where the "
                 "frozen helper was to run and exit %d" % S4_EXIT_CODE)
     disposition = spike.get("process_disposition")
+    if disposition == "ExecFailed":
+        # RR-I1: decided by the structural fact, never by whether the errno
+        # has a symbolic name. A record that is not structurally valid is
+        # unobservable here; any other decisive side still decides.
+        if not explicit_pre_exec_failure(spike):
+            return (ASSERTION_UNOBSERVABLE, "the receipt reports ExecFailed "
+                    "without a frozen stage and a valid errno number")
+        return (ASSERTION_VIOLATED, "the child reported an explicit pre-exec "
+                "failure at stage %s, errno %d, where the frozen helper was to "
+                "run and exit %d" % (spike["exec_failed_stage"],
+                                     spike["exec_failed_errno"], S4_EXIT_CODE))
     if disposition != "Exited":
         return (ASSERTION_VIOLATED, "the launcher observed %s where the frozen "
                 "helper was to run and exit %d" % (disposition, S4_EXIT_CODE))
@@ -2579,7 +2627,15 @@ ASSERTION_VIOLATION_TOKENS = {
 # rule renders no token -- S2/S7's report sentinel beside a report that does
 # not parse, where exec confirmation is uninterpretable. Every other assertion
 # still needs the rule's token.
-DECISIVE_WITHOUT_TOKEN_ASSERTIONS = frozenset({"no_executed_image"})
+#
+# RR-I1 (Trial #3 correction candidate, declared in its NOT_FROZEN record):
+# S4's helper_exit_corroborated joins the set. Its violation is itself a
+# decisive mechanism contradiction -- an explicit structured pre-exec failure,
+# a refusal, or an observed status other than exit 7 -- so an ExecFailed record
+# whose errno ERRNO_NAMES cannot name, for which the claim rule renders no
+# token, is still a FAIL. Its unobservable result never decides.
+DECISIVE_WITHOUT_TOKEN_ASSERTIONS = frozenset({"no_executed_image",
+                                               "helper_exit_corroborated"})
 
 
 def apply_assertions(names, obs):

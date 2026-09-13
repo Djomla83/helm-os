@@ -87,6 +87,14 @@
         "combination": "the launcher side (refusal, pre-exec failure, disposition, waitid classification, exit status) and the report side (declared exit) are judged separately and combined violated > unobservable > holds, so a decisive contradiction on either side is a FAIL even when the other side is missing (R-M1)"
       }
     },
+    "decisive_without_token_added": {
+      "helper_exit_corroborated": {
+        "cases": ["S4"],
+        "finding": "RR-I1 (re-review db45336)",
+        "structural_pre_exec_failure": "observations.explicit_pre_exec_failure: admission accepted, process_disposition ExecFailed, timeout_disposition empty, exec_failed_stage one of the frozen STAGES, exec_failed_errno a plain integer from 1 to 4095; a symbolic ERRNO_NAMES entry is not required",
+        "malformed": "an ExecFailed record failing any structural condition is unobservable on the launcher side and never decides"
+      }
+    },
     "assertion_cases_added": {
       "executed_marker": ["S4"]
     },
@@ -161,5 +169,12 @@
     "left_for_freeze": ["R-M2"],
     "backlog": ["R-B1", "R-B2"]
   },
-  "requires": "ONE bounded independent re-review of the R-I1 and R-M1 fix and its interaction with O6/O7, P1/P2/P4, S4/S5, the freeze-plus-delta accounting and publication privacy, before any freeze preparation. This record grants nothing."
+  "correction_rereview": {
+    "commit": "db45336684817d95edbb7fcea3cf0191f7eee528",
+    "classification": "TRIAL_3_RI1_RM1_REREVIEW_NEEDS_FIX",
+    "fixed_here": ["RR-I1"],
+    "left_for_freeze": ["RR-M1", "RR-M2"],
+    "backlog": ["RR-B1", "RR-B2"]
+  },
+  "requires": "ONE micro independent RR-I1 review before freeze preparation. This record grants nothing."
 }
