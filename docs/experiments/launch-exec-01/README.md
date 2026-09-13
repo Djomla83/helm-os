@@ -1,15 +1,20 @@
 # LAUNCH-EXEC-01 experiment sources
 
-**Status: NOT_RUN.** No trial has been executed, no case has been posed, and no
-result exists. `crates/helm-launch` does not exist and must not be created
-before this experiment has run and been reviewed.
+**Trial #2 is complete** — freeze `ba41a3f`, GitHub run `34640280964`: 59 PASS /
+6 FAIL / 6 INVALID / 1 BLOCKED, `MECHANISM_REJECTED`. Its D-7 is consumed, its
+valid trial count is one, and it must never be rerun.
 
-**D-7 (execution authorisation) is NOT granted.** These sources are frozen for
-independent pre-trial review, not for execution. `run_launch_exec_01.py` refuses
-to pose a case without both a verified source freeze and an explicit
-owner-authorisation flag, and the case-posing driver is deliberately left
-unimplemented until D-7 is granted, so no path in this repository can pose a
-case by accident.
+**Status: Trial #3 (`trial-003`) FROZEN — NOT_RUN.** No Trial #3 case has been
+posed, the valid Trial #3 count is zero, and no Trial #3 result exists.
+`crates/helm-launch` does not exist and must not be created before a valid trial
+has run and been reviewed.
+
+**D-7 for Trial #3 is NOT granted, and no Trial #3 dispatcher exists.** These
+sources are frozen for independent freeze review, not for execution.
+`run_launch_exec_01.py` refuses to pose a case without both a verified source
+freeze and an explicit owner-authorisation flag, so no path in this repository
+can pose a case by accident. Build 7 does not bind the Trial #3 C sources, and
+formal Build 8 evidence is still required.
 
 Authority: proposed [ADR-0024](../../adr/ADR-0024-launch-authority.md), the
 [architecture](../../research/HELM-LAUNCH-ARCHITECTURE.md), the
@@ -43,7 +48,9 @@ permission to implement.
 | `helper_dynamic.c` | The one deliberately dynamic helper (E7) |
 | `helper_fork.c` | Process-tree negative control, in two descendant shapes |
 | `helper_setid.c` | Set-user-ID admission fixture (D-9); exists to be refused |
-| `SOURCE-HASHES.json` | The source freeze. Does not hash itself, following OBS-FS-01 |
+| `SOURCE-HASHES.json` | The Trial #3 source freeze (`trial-003`): 17 source and 3 definition hashes. Does not hash itself, following OBS-FS-01; the Trial #2 manifest stays addressable at `ba41a3f` |
+| `TRIAL-3-CORRECTION-CANDIDATE.json` | Superseded NOT_FROZEN correction provenance; not hashed and never freeze authority |
+| `BUILD-EVIDENCE.md` | Append-only compile-only build record; not hashed |
 
 ## Owner decisions reflected here
 

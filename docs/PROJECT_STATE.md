@@ -1,5 +1,33 @@
 # Stanje projekta
 
+<a id="launch-exec-01-trial-003-freeze"></a>
+
+## Trial #3 freeze cut locally, 2026-09-13 — FROZEN, NOT_RUN, NOT AUTHORISED
+
+After the [final RR-I1 micro review](implementation/HELM-LAUNCH-EXEC-01-TRIAL-003-RRI1-MICRO-REVIEW.md)
+closed the correction review, the LAUNCH-EXEC-01 **Trial #3 freeze** (`trial-003`) was cut locally
+and is not pushed. It covers the reviewed correction sequence `7f98d4d`, `53ad8bf` and `f1e7eea`,
+reviewed at `ee8cd91`, `db45336` and `030d88a`.
+
+* **Manifest.** `SOURCE-HASHES.json` is now the Trial #3 manifest. It binds 17 source hashes and
+  3 definition hashes, and has SHA-256 `ea482c6feaf77abac1edcc23d26afbc4f249638170f60ed897088d5cda79ba70`.
+  The Trial #2 manifest stays addressable at `ba41a3f`.
+* **Identity.** The runner's trial identifier is `trial-003`.
+* **Freeze step.** The freeze step also records three wording corrections in
+  [definition section 10](experiments/LAUNCH-EXEC-01-DEFINITION.md#10-trial-3-freeze--frozen-not-authorised-not-run):
+  R-M2, RR-M1 and RR-M3.
+* **Superseded record.** The NOT_FROZEN
+  [correction record](experiments/launch-exec-01/TRIAL-3-CORRECTION-CANDIDATE.json) is superseded
+  provenance and never freeze authority.
+* **Shape.** 72 cases (54 mandatory, 11 conditional, 7 recorded), traced `E1 E7 F4 F7 M1 M2 M3 M4`,
+  72 handlers, 72 posable, 0 unposable.
+* **Build.** Build 7 does not bind the changed C sources: **Build 8 is required** and does not
+  exist yet.
+
+**Trial #2:** completed, D-7 consumed, valid count one, `MECHANISM_REJECTED`, never to be rerun.
+**Trial #3:** frozen locally, NOT_RUN, valid count zero, no D-7 and no dispatcher. The freeze is
+not published. One independent Trial #3 freeze review is required before publication and Build 8.
+
 <a id="launch-exec-01-trial-003-correction-candidate"></a>
 
 ## Trial #3 correction candidate, 2026-09-12 — NOT FROZEN, NOT AUTHORISED, NOT RUN

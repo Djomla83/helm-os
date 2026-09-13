@@ -1,11 +1,19 @@
 {
   "experiment": "LAUNCH-EXEC-01",
   "record": "TRIAL_3_CORRECTION_CANDIDATE",
-  "state": "NOT_FROZEN",
+  "state": "SUPERSEDED_BY_TRIAL_003_FREEZE",
   "trial_3_authorised": false,
   "trial_3_d7": null,
   "trial_3_executed": false,
-  "is_not": "a source freeze, a Trial #3 freeze, a D-7, a dispatcher or a result. Nothing verifies against this record. run_launch_exec_01.py --verify-freeze reads SOURCE-HASHES.json alone, which is still the Trial #2 freeze byte for byte, so it reports every file listed in sources_differing_from_trial_2_freeze as drift until a reviewed freeze is cut.",
+  "superseded_by": {
+    "trial": "trial-003",
+    "manifest": "SOURCE-HASHES.json",
+    "manifest_sha256": "ea482c6feaf77abac1edcc23d26afbc4f249638170f60ed897088d5cda79ba70",
+    "freeze_state": "FROZEN",
+    "authority": "none",
+    "note": "the Trial #3 manifest alone is the freeze; this record is historical provenance of the reviewed NOT_FROZEN correction candidate and is never freeze authority"
+  },
+  "is_not": "a source freeze, a Trial #3 freeze, a D-7, a dispatcher or a result. Nothing verifies against this record. It described the NOT_FROZEN candidate while SOURCE-HASHES.json was still the Trial #2 manifest; the Trial #3 freeze manifest has replaced that, and run_launch_exec_01.py --verify-freeze reads SOURCE-HASHES.json alone.",
   "definition_section": "docs/experiments/LAUNCH-EXEC-01-DEFINITION.md section 10",
   "trial_2": {
     "status": "IMMUTABLE",
@@ -176,5 +184,12 @@
     "left_for_freeze": ["RR-M1", "RR-M2"],
     "backlog": ["RR-B1", "RR-B2"]
   },
-  "requires": "ONE micro independent RR-I1 review before freeze preparation. This record grants nothing."
+  "correction_micro_review": {
+    "commit": "030d88a6c96e1dd97b3ebf7839dc4b2dafed9d70",
+    "classification": "TRIAL_3_FINAL_RRI1_MICRO_REVIEW_PASSED_READY_FOR_FREEZE_PREPARATION",
+    "left_for_freeze": ["RR-M3"],
+    "backlog": ["RR-B3", "RR-B4", "RR-B5"]
+  },
+  "freeze_step_items_status": "cut at the Trial #3 freeze: SOURCE-HASHES.json rewritten with the Trial #2 manifest addressable at ba41a3f, and the runner's trial identifier trial-003. Still outstanding: an independent freeze review, Build 8 compile-only evidence, a Trial #3 dispatcher with its own review, and a new owner D-7",
+  "requires": "nothing: superseded by the Trial #3 freeze manifest SOURCE-HASHES.json and kept as provenance. This record grants nothing."
 }

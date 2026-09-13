@@ -2,11 +2,12 @@
 
 Disposable spike tooling.
 
->>> NOT_RUN <<<
-This runner has never been executed against the preregistered case set. It
-refuses to run unless BOTH a frozen source-hash manifest exists AND the operator
-passes --i-have-owner-authorisation-d7, because D-7 (execution authorisation) is
-NOT granted: the definition is frozen for review, not for execution.
+>>> Trial #3 (trial-003): FROZEN, NOT_RUN <<<
+This runner refuses to run unless BOTH its frozen source-hash manifest verifies
+AND the operator passes --i-have-owner-authorisation-d7. D-7 for Trial #3 is NOT
+granted: the definition is frozen for review, not for execution. Trial #2
+(trial-002) is complete and immutable, and its preserved evidence keeps its own
+trial identifier.
 
 The case-posing driver now EXISTS -- it lives in ``driver.py``, with the P-12
 observation-to-token mapping in ``observations.py`` and the P-14 sanitiser in
@@ -174,7 +175,7 @@ def preflight_gates(preflight, build_dir):
     return halts
 
 
-TRIAL_ID = "trial-002"
+TRIAL_ID = "trial-003"
 
 PREFLIGHT_FILE = "preflight.json"
 BUILD_IDENTITY_FILE = "build-identity.json"

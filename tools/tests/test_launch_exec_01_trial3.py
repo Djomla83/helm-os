@@ -3,7 +3,10 @@
 Scope, and nothing else: X2b/X2c/X4, T1, S4, M2, E4, E6/E6c, O6/O7 and R3, plus
 the liveness revalidation support P1/P2/P4 need. N3 stays conditional.
 
-The candidate is NOT FROZEN, NOT AUTHORISED and NOT RUN. Nothing here poses a
+The reviewed candidate is now the Trial #3 freeze (trial-003): FROZEN and NOT_RUN,
+with no Trial #3 D-7. The Trial3Freeze tests bind the working tree directly to
+the Trial #3 SOURCE-HASHES.json; the superseded NOT_FROZEN record is provenance
+only. Nothing here poses a
 LAUNCH-EXEC case, runs launcher_spike, or executes a helper or a generated ELF.
 Observations are fabricated in-process. The POSIX-only tests use scratch FIFOs
 and symlinks, Python stand-ins and isolated fork/waitid probes that are not
@@ -135,9 +138,13 @@ TRIAL2_RECORD_BLOBS = {
         "17cafc675695edb50fccf073cc0086dada2547f2",
     "docs/experiments/evidence/LAUNCH-EXEC-01-TRIAL-002-2026-09-11/PROVENANCE.md":
         "f9021abe6429c36089c4f90e8ce6e36f608c8b73",
-    "docs/experiments/launch-exec-01/SOURCE-HASHES.json":
-        "6f000fac9a48625d3c9def18e16ae7ce1b61efa8",
 }
+
+# The Trial #2 manifest is no longer the working SOURCE-HASHES.json: the Trial #3
+# freeze replaced it. It stays addressable at the Trial #2 freeze, byte for byte.
+MANIFEST_PATH = "docs/experiments/launch-exec-01/SOURCE-HASHES.json"
+TRIAL2_MANIFEST_BLOB = "6f000fac9a48625d3c9def18e16ae7ce1b61efa8"
+TRIAL2_MANIFEST_SHA256 = "616dc6b340c5453a013259554b10fd997a90c990da3395449ba3497f186c9a94"
 
 # The frozen modules the historical replay needs, from the Trial #2 freeze.
 REPLAY_MODULES = ("checker.py", "frozen_cases.py", "journal.py", "evidence.py",
@@ -189,19 +196,24 @@ class Trial2StaysImmutable(unittest.TestCase):
     def test_the_trial_2_records_and_manifest_are_the_committed_blobs(self):
         for path, blob in TRIAL2_RECORD_BLOBS.items():
             self.assertEqual(git_blob((ROOT / path).read_bytes()), blob, path)
-        trial2 = CANDIDATE["trial_2"]
-        data = (EXP / "SOURCE-HASHES.json").read_bytes()
-        self.assertEqual(git_blob(data), trial2["manifest_git_blob"])
-        self.assertEqual(sha256(data), trial2["manifest_sha256"])
+        historical = git_show(TRIAL2_FREEZE, MANIFEST_PATH)
+        self.assertEqual(git_blob(historical), TRIAL2_MANIFEST_BLOB)
+        self.assertEqual(sha256(historical), TRIAL2_MANIFEST_SHA256)
+        for record in (CANDIDATE["trial_2"], MANIFEST["trial_2"]):
+            self.assertEqual((record["manifest_git_blob"], record["manifest_sha256"]),
+                             (TRIAL2_MANIFEST_BLOB, TRIAL2_MANIFEST_SHA256))
+        self.assertNotEqual(sha256((EXP / "SOURCE-HASHES.json").read_bytes()),
+                            TRIAL2_MANIFEST_SHA256)
 
     def test_the_historical_replay_with_the_ba41a3f_checker_is_unchanged(self):
+        historical = json.loads(git_show(TRIAL2_FREEZE, MANIFEST_PATH))
         tmp = pathlib.Path(tempfile.mkdtemp(prefix="trial2-replay-"))
         try:
             for name in REPLAY_MODULES:
                 data = git_show(TRIAL2_FREEZE, "docs/experiments/launch-exec-01/"
                                 + name)
                 # The replay runs exactly the bytes Trial #2 executed.
-                self.assertEqual(sha256(data), MANIFEST["sha256"][name], name)
+                self.assertEqual(sha256(data), historical["sha256"][name], name)
                 (tmp / name).write_bytes(data)
             proc = subprocess.run(
                 [sys.executable, "-I", "-B", "-c", REPLAY, str(tmp),
@@ -240,14 +252,17 @@ class Trial2StaysImmutable(unittest.TestCase):
 
 
 class CandidateRecord(unittest.TestCase):
-    def test_it_is_a_candidate_and_grants_nothing(self):
+    """The NOT_FROZEN correction record, superseded by the Trial #3 freeze.
+
+    Provenance only: it grants nothing, is not hashed, and active freeze
+    validation never reads it (see Trial3Freeze)."""
+
+    def test_it_is_superseded_provenance_and_grants_nothing(self):
         self.assertEqual(CANDIDATE["record"], "TRIAL_3_CORRECTION_CANDIDATE")
-        self.assertEqual(CANDIDATE["state"], "NOT_FROZEN")
+        self.assertEqual(CANDIDATE["state"], "SUPERSEDED_BY_TRIAL_003_FREEZE")
         self.assertIs(CANDIDATE["trial_3_authorised"], False)
         self.assertIsNone(CANDIDATE["trial_3_d7"])
         self.assertIs(CANDIDATE["trial_3_executed"], False)
-        self.assertEqual(CANDIDATE["build"]["status"],
-                         "BUILD_8_REQUIRED_FOR_FUTURE_FREEZE")
         self.assertIs(CANDIDATE["build"]["build_7_binds_candidate"], False)
         trial2 = CANDIDATE["trial_2"]
         self.assertEqual(trial2["freeze"], TRIAL2_FREEZE)
@@ -258,26 +273,37 @@ class CandidateRecord(unittest.TestCase):
                                             "BLOCKED": 1})
         self.assertNotIn("freeze", CANDIDATE["record"].lower())
         self.assertNotIn("sha256", CANDIDATE)
+        superseded = CANDIDATE["superseded_by"]
+        self.assertEqual((superseded["trial"], superseded["manifest"],
+                          superseded["freeze_state"], superseded["authority"]),
+                         ("trial-003", "SOURCE-HASHES.json", "FROZEN", "none"))
+        self.assertEqual(superseded["manifest_sha256"],
+                         sha256((EXP / "SOURCE-HASHES.json").read_bytes()))
+        self.assertEqual(MANIFEST["correction_candidate_record"]["state"],
+                         CANDIDATE["state"])
 
-    def test_the_declared_drift_is_exactly_the_real_drift(self):
-        drift = sorted(name for name, digest in MANIFEST["sha256"].items()
-                       if sha256((EXP / name).read_bytes()) != digest)
-        self.assertEqual(drift, CANDIDATE["sources_differing_from_trial_2_freeze"])
+    def test_its_historical_drift_is_the_difference_between_the_two_manifests(self):
+        # Committed data against committed data: the Trial #2 manifest at
+        # ba41a3f and the Trial #3 manifest. Never the files under test.
+        historical = json.loads(git_show(TRIAL2_FREEZE, MANIFEST_PATH))
+        drift = sorted(name for name, digest in historical["sha256"].items()
+                       if MANIFEST["sha256"][name] != digest)
+        freeze_step = ["README.md", "run_launch_exec_01.py"]
+        self.assertEqual(sorted(set(drift) - set(freeze_step)),
+                         CANDIDATE["sources_differing_from_trial_2_freeze"])
+        self.assertLessEqual(set(freeze_step), set(drift))
         documents = sorted(path for path, digest
-                           in MANIFEST["definition_sha256"].items()
-                           if sha256((ROOT / path).read_bytes()) != digest)
+                           in historical["definition_sha256"].items()
+                           if MANIFEST["definition_sha256"][path] != digest)
         self.assertEqual(documents,
                          CANDIDATE["definition_files_differing_from_trial_2_freeze"])
         self.assertEqual(sorted(n for n in drift if n.endswith(".c")),
                          CANDIDATE["c_sources_changed"])
 
-    def test_the_runner_does_not_call_the_candidate_frozen(self):
-        ok, detail = runner.verify_freeze()
-        self.assertIs(ok, False)
-        for name in CANDIDATE["sources_differing_from_trial_2_freeze"]:
-            self.assertIn(name + ":", detail)
+    def test_the_runner_never_reads_the_superseded_record(self):
         runner_source = (EXP / "run_launch_exec_01.py").read_text(encoding="utf-8")
         self.assertNotIn("TRIAL-3-CORRECTION-CANDIDATE", runner_source)
+        self.assertIn('SOURCE_HASHES = HERE / "SOURCE-HASHES.json"', runner_source)
 
     def test_the_scope_is_the_bounded_finding_set(self):
         scope = CANDIDATE["scope"]
@@ -2147,9 +2173,230 @@ class UnchangedByTheCorrection(unittest.TestCase):
         self.assertEqual(driver.reduce_repetitions([PASS, INVALID, PASS]), INVALID)
         self.assertEqual(driver.reduce_repetitions([PASS, PASS]), PASS)
         self.assertEqual(checker.score_case("S4", {"blocked": "euid_zero"})[0], INVALID)
-        trial2_checker = git_blob((EXP / "checker.py").read_bytes())
-        self.assertEqual(sha256((EXP / "checker.py").read_bytes()),
-                         MANIFEST["sha256"]["checker.py"], trial2_checker)
+        digest = sha256((EXP / "checker.py").read_bytes())
+        historical = json.loads(git_show(TRIAL2_FREEZE, MANIFEST_PATH))
+        self.assertEqual(digest, historical["sha256"]["checker.py"])
+        self.assertEqual(digest, MANIFEST["sha256"]["checker.py"])
+
+
+# ============================================ Trial #3 freeze (trial-003)
+# Active freeze validation binds the working tree to the Trial #3 manifest
+# DIRECTLY. The expected paths and states below are literals of this freeze,
+# and every expected hash comes from the manifest, never from the file under test.
+TRIAL3_SOURCES = ["README.md", "checker.py", "driver.py", "evidence.py",
+                  "frozen_cases.py", "harness.py", "helper_alt.c", "helper_dynamic.c",
+                  "helper_fork.c", "helper_report.c", "helper_setid.c", "journal.py",
+                  "launcher_spike.c", "make_fixtures.py", "observations.py",
+                  "oracles.py", "run_launch_exec_01.py"]
+TRIAL3_DEFINITIONS = ["docs/adr/ADR-0024-launch-authority.md",
+                      "docs/experiments/LAUNCH-EXEC-01-DEFINITION.md",
+                      "docs/research/HELM-LAUNCH-ARCHITECTURE.md"]
+TRIAL3_TRACED = ["E1", "E7", "F4", "F7", "M1", "M2", "M3", "M4"]
+TRIAL3_C_CHANGED = ["helper_fork.c", "helper_report.c", "launcher_spike.c"]
+
+VERIFY_FREEZE = r'''
+import sys
+sys.path.insert(0, sys.argv[1])
+import run_launch_exec_01 as runner
+print("true" if runner.verify_freeze()[0] else "false")
+'''
+
+
+def source_drift(exp_dir, manifest):
+    return sorted(name for name, digest in manifest["sha256"].items()
+                  if not (exp_dir / name).is_file()
+                  or sha256((exp_dir / name).read_bytes()) != digest)
+
+
+def definition_drift(root, manifest):
+    return sorted(path for path, digest in manifest["definition_sha256"].items()
+                  if not (root / path).is_file()
+                  or sha256((root / path).read_bytes()) != digest)
+
+
+def frozen_input_names(exp_dir):
+    """Every file of a frozen kind in the experiment directory."""
+    return sorted(p.name for p in exp_dir.iterdir() if p.is_file()
+                  and (p.suffix in (".py", ".c") or p.name == "README.md"))
+
+
+class Trial3Freeze(unittest.TestCase):
+    def test_the_manifest_is_the_trial_3_freeze_and_grants_nothing(self):
+        self.assertEqual((MANIFEST["trial"], MANIFEST["status"], MANIFEST["freeze_state"],
+                          MANIFEST["valid_trial_count"],
+                          MANIFEST["d7_execution_authorised"]),
+                         ("trial-003", "NOT_RUN", "FROZEN", 0, False))
+        self.assertEqual(MANIFEST["trial_3"], {
+            "trial": "trial-003", "freeze_state": "FROZEN", "execution": "NOT_RUN",
+            "valid_trial_count": 0, "aggregate": None, "d7": "NOT_AUTHORISED",
+            "dispatcher": "NONE", "build": "BUILD_8_REQUIRED",
+            "independent_freeze_review": "REQUIRED", "published": False})
+        self.assertNotIn("aggregate", MANIFEST)
+        text = json.dumps(MANIFEST["trial_3"])
+        for verdict in ("MECHANISM_ACCEPTED", "MECHANISM_REJECTED",
+                        "MECHANISM_INCONCLUSIVE"):
+            self.assertNotIn(verdict, text)
+        self.assertEqual(MANIFEST["supersedes"], TRIAL2_FREEZE)
+        self.assertEqual(MANIFEST["build"]["status"], "BUILD_8_REQUIRED")
+        self.assertIs(MANIFEST["build"]["build_7_binds"], False)
+        self.assertIsNone(MANIFEST["build"]["build_8_evidence"])
+        self.assertEqual(MANIFEST["build"]["c_sources_changed_since_build_7"],
+                         TRIAL3_C_CHANGED)
+        self.assertEqual(MANIFEST["correction_candidate_record"]["authority"],
+                         "none; this manifest alone is the Trial #3 freeze")
+        self.assertEqual(MANIFEST["verify_freeze"]["does_not_check"], "definition_sha256")
+        self.assertEqual(MANIFEST["trial_2"]["aggregate"], "MECHANISM_REJECTED")
+
+    def test_the_closed_input_set_is_bound_exactly(self):
+        historical = json.loads(git_show(TRIAL2_FREEZE, MANIFEST_PATH))
+        self.assertEqual(sorted(MANIFEST["sha256"]), TRIAL3_SOURCES)
+        self.assertEqual(sorted(MANIFEST["definition_sha256"]), TRIAL3_DEFINITIONS)
+        self.assertEqual(sorted(historical["sha256"]), TRIAL3_SOURCES)
+        self.assertEqual(sorted(historical["definition_sha256"]), TRIAL3_DEFINITIONS)
+        self.assertEqual(frozen_input_names(EXP), TRIAL3_SOURCES)
+        for digest in list(MANIFEST["sha256"].values()) + list(
+                MANIFEST["definition_sha256"].values()):
+            self.assertRegex(digest, r"\A[0-9a-f]{64}\Z")
+
+    def test_the_exact_frozen_bytes_verify(self):
+        self.assertEqual(source_drift(EXP, MANIFEST), [])
+        self.assertEqual(definition_drift(ROOT, MANIFEST), [])
+        ok, detail = runner.verify_freeze()
+        self.assertIs(ok, True, detail)
+
+    def test_drift_fails_on_a_disposable_copy(self):
+        tmp = pathlib.Path(tempfile.mkdtemp(prefix="trial3-freeze-"))
+        try:
+            exp = tmp / "docs" / "experiments" / "launch-exec-01"
+            shutil.copytree(EXP, exp, ignore=shutil.ignore_patterns("__pycache__"))
+            for path in TRIAL3_DEFINITIONS:
+                (tmp / path).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(ROOT / path, tmp / path)
+
+            def verify():
+                proc = subprocess.run([sys.executable, "-I", "-B", "-c", VERIFY_FREEZE,
+                                       str(exp)], capture_output=True, timeout=120,
+                                      cwd=str(exp))
+                self.assertEqual(proc.returncode, 0,
+                                 proc.stderr.decode("utf-8", "replace"))
+                return proc.stdout.decode("ascii").strip() == "true"
+
+            self.assertIs(verify(), True)
+            self.assertEqual(source_drift(exp, MANIFEST), [])
+            self.assertEqual(definition_drift(tmp, MANIFEST), [])
+
+            driver_py = exp / "driver.py"
+            original = driver_py.read_bytes()
+            self.assertTrue(original.endswith(b"\n"))
+            # One byte, and still importable: the final newline becomes a space.
+            driver_py.write_bytes(original[:-1] + b" ")
+            self.assertIs(verify(), False)
+            self.assertEqual(source_drift(exp, MANIFEST), ["driver.py"])
+            driver_py.write_bytes(original)
+
+            alt = exp / "helper_alt.c"
+            kept = alt.read_bytes()
+            alt.unlink()
+            self.assertIs(verify(), False)
+            self.assertEqual(source_drift(exp, MANIFEST), ["helper_alt.c"])
+            alt.write_bytes(kept)
+
+            definition = tmp / "docs" / "experiments" / "LAUNCH-EXEC-01-DEFINITION.md"
+            text = definition.read_bytes()
+            definition.write_bytes(text + b"\n")
+            self.assertEqual(definition_drift(tmp, MANIFEST),
+                             ["docs/experiments/LAUNCH-EXEC-01-DEFINITION.md"])
+            # --verify-freeze checks source hashes only (R-M2); the definition
+            # hash contract above is what catches this drift.
+            self.assertIs(verify(), True)
+            definition.write_bytes(text)
+
+            (exp / "undeclared.py").write_text("X = 1\n", encoding="utf-8")
+            self.assertNotEqual(frozen_input_names(exp), TRIAL3_SOURCES)
+            self.assertNotIn("undeclared.py", MANIFEST["sha256"])
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_the_trial_identity_is_trial_003(self):
+        self.assertEqual(runner.TRIAL_ID, "trial-003")
+        self.assertEqual(MANIFEST["trial"], runner.TRIAL_ID)
+        source = (EXP / "run_launch_exec_01.py").read_text(encoding="utf-8")
+        self.assertIn('TRIAL_ID = "trial-003"', source)
+        self.assertNotIn('"trial-002"', source)
+        self.assertIn("trial=TRIAL_ID", source)
+        self.assertIn('{"trial": TRIAL_ID,', source)
+        # Trial #2's preserved journal keeps its own identity.
+        trials = {json.loads(line)["trial"] for line in
+                  (TRIAL2_DIR / "journal.jsonl").read_text(encoding="utf-8").splitlines()
+                  if line.strip()}
+        self.assertEqual(trials, {"trial-002"})
+
+    def test_the_global_shape_is_the_frozen_one(self):
+        summary = fc.summary()
+        self.assertEqual({k: summary[k] for k in ("total", "mandatory", "conditional",
+                                                    "recorded")},
+                         {"total": 72, "mandatory": 54, "conditional": 11,
+                          "recorded": 7})
+        self.assertEqual(sorted(summary["traced"]), TRIAL3_TRACED)
+        self.assertEqual(len(fc.MEMBERSHIP), len(set(fc.MEMBERSHIP)))
+        completeness = driver.completeness()
+        self.assertIs(completeness["complete"], True)
+        self.assertEqual((completeness["frozen_total"], completeness["driver_total"]),
+                         (72, 72))
+        for key in ("missing", "unknown", "duplicates"):
+            self.assertEqual(completeness[key], [], key)
+        self.assertEqual(driver.unposable_cases(), {})
+        self.assertEqual(MANIFEST["case_membership"],
+                         {"total": 72, "mandatory": 54, "conditional": 11,
+                          "recorded": 7})
+        self.assertEqual(MANIFEST["traced_cases"]["cases"], TRIAL3_TRACED)
+        self.assertEqual((MANIFEST["driver"]["case_handlers"],
+                          MANIFEST["driver"]["posable_against_this_freeze"],
+                          MANIFEST["driver"]["unposable_against_this_freeze"]),
+                         (72, 72, []))
+        self.assertEqual(MANIFEST["vocabulary"]["tokens_protected"],
+                         len(evidence.vocabulary()))
+
+    def test_the_frozen_contract_blocks_are_the_code(self):
+        pvs = MANIFEST["posing_versus_showing"]
+        plans = driver._PLAN_LIST
+        self.assertEqual(sorted(pvs["decisive_without_token"]["assertions"]),
+                         sorted(ob.DECISIVE_WITHOUT_TOKEN_ASSERTIONS))
+        self.assertEqual(pvs["decisive_without_token"]["assertions"],
+                         ["helper_exit_corroborated", "no_executed_image"])
+        self.assertEqual(pvs["expected_markers"],
+                         {p.case: p.expected_marker for p in plans if p.expected_marker})
+        self.assertEqual(pvs["liveness_fixture_health"]["cases"], ["P1", "P2", "P4"])
+        self.assertEqual(pvs["s4"]["assertions"], list(driver.CASE_PLANS["S4"].assertions))
+        for finding in ("R-M2", "RR-M1", "RR-M3"):
+            self.assertTrue(MANIFEST["open_findings"][finding].startswith(
+                "CORRECTED at this freeze"), finding)
+        self.assertTrue(MANIFEST["open_findings"]["RR-M2"].startswith("MINOR, ACCEPTED"))
+
+
+class Trial3FreezeCapturesReviewedSemantics(unittest.TestCase):
+    """Freeze-integrity assertions, not another review: the frozen bytes still
+    carry the reviewed S4 and P-series behaviour."""
+
+    def test_s4(self):
+        plan = driver.CASE_PLANS["S4"]
+        unnamed = D.receipt(process_disposition="ExecFailed", exec_failed_stage="EXEC",
+                            exec_failed_errno=UNNAMED_ERRNO, exit_code=127,
+                            wait_si_code="CLD_EXITED")
+        self.assertEqual(score(plan, D.obs_for(plan, spike=unnamed))[0], FAIL)
+        accepted = D.receipt(exit_code=fc.S4_EXIT_CODE, wait_si_code="CLD_EXITED")
+        self.assertEqual(score(plan, D.obs_for(plan, spike=accepted))[0], INVALID)
+        self.assertEqual(score(plan, D.obs_for(plan, spike=accepted,
+                                               rep=full_report()))[0], PASS)
+
+    def test_p1_p2_p4(self):
+        for case in P_CASES:
+            for broken in (None, H(b""), H(b"LIVENESS_OPEN_FAILED:2\n")):
+                self.assertEqual(p_score(case, False, broken)[0], INVALID, case)
+            self.assertEqual(p_score(case, False, H(PROBE))[1]["outcome"],
+                             "descendant_died", case)
+            self.assertEqual(p_score(case, True, H(PROBE))[1]["outcome"],
+                             "descendant_survived", case)
 
 
 if __name__ == "__main__":

@@ -1,18 +1,17 @@
 # LAUNCH-EXEC-01 — preregistered execution definition
 
-**Status: FROZEN FOR PRE-TRIAL REVIEW — NOT_RUN. No trial has been executed and no result
-exists.**\
-**Execution authorisation (D-7): NOT GRANTED.** Freezing the definition is not permission to run
-it. See [section 8](#8-what-this-definition-does-not-authorise).\
+**Status: Trial #3 FROZEN — NOT_RUN. Trials #1 and #2 are closed; no Trial #3 result exists.**\
+**Execution authorisation (D-7) for Trial #3: NOT GRANTED.** Freezing the definition is not
+permission to run it. See [section 8](#8-what-this-definition-does-not-authorise).\
 **Authoritative base:** `5cc56384257a2ec1f2a2a9c64f7f4328da6cef2e`.\
 **Authority:** Proposed [ADR-0024](../adr/ADR-0024-launch-authority.md) and the
 [helm-launch architecture](../research/HELM-LAUNCH-ARCHITECTURE.md). Neither is Accepted, and
 this definition authorises nothing by itself.
 
 > **Trial #2 is immutable:** 59 PASS / 6 FAIL / 6 INVALID / 1 BLOCKED, `MECHANISM_REJECTED`, its
-> D-7 consumed, one valid trial, never to be rerun. A **Trial #3 correction candidate** is recorded
-> in [section 10](#10-trial-3-correction-candidate--not-frozen-not-authorised-not-run). It is
-> **NOT FROZEN, NOT AUTHORISED and NOT RUN**, and no Trial #3 D-7 exists.
+> D-7 consumed, one valid trial, never to be rerun. **Trial #3 (`trial-003`) is frozen** by
+> [section 10](#10-trial-3-freeze--frozen-not-authorised-not-run): **FROZEN and NOT_RUN**, a valid
+> Trial #3 count of zero, no Trial #3 D-7, no Trial #3 dispatcher, and Build 8 still required.
 
 This document **freezes the case set** for the first `helm-launch` mechanism experiment, before
 any trial, following the discipline that worked for
@@ -1162,7 +1161,9 @@ edited.
 **Build.** No C or helper source changed. Build 7 (run `34575558065`) still binds every C byte and
 no Build 8 is needed. Trial #2 is NOT_RUN, D-7 is NOT granted, and the valid trial count is ZERO.
 
-## 10. Trial #3 correction candidate — NOT FROZEN, NOT AUTHORISED, NOT RUN
+<a id="10-trial-3-correction-candidate--not-frozen-not-authorised-not-run"></a>
+
+## 10. Trial #3 freeze — FROZEN, NOT AUTHORISED, NOT RUN
 
 **Historical Trial #2 is immutable.** It is the one execution of freeze
 `ba41a3f12be411058ed50e78bcd1c7e22afb7ae4` in GitHub run `34640280964`: 59 PASS / 6 FAIL /
@@ -1171,10 +1172,25 @@ is one, and it must not be rerun. Nothing in this section changes a Trial #2 sta
 aggregate, checker, case record, evidence file or review. Sections 3 and 9 remain the Trial #2
 preregistration; where section 3 shows a struck value, the struck value is what Trial #2 froze.
 
-**The future corrected candidate is not frozen, not authorised and not run.** It is only a
-**TRIAL #3 CORRECTION CANDIDATE**. There is no Trial #3 freeze, no Trial #3 D-7 and no Trial #3
-dispatcher. It needs one bounded independent correction review, limited to these findings, before
-any freeze is cut.
+**This section is the Trial #3 preregistration.** Trial #3 (`trial-003`) is **FROZEN and NOT_RUN**.
+Its valid trial count is zero, no Trial #3 D-7 exists, no Trial #3 dispatcher exists, and no Trial #3
+aggregate exists. The freeze is cut over the reviewed correction sequence ending at `f1e7eea`, with
+review evidence through `030d88a`:
+
+| Commit | Role |
+|---|---|
+| `7f98d4d` | bounded Trial #3 correction candidate |
+| `ee8cd91` | independent correction review — needs fix (R-I1, R-M1) |
+| `53ad8bf` | R-I1 and R-M1 fix |
+| `db45336` | bounded R-I1/R-M1 re-review — needs fix (RR-I1) |
+| `f1e7eea` | RR-I1 fix |
+| `030d88a` | final RR-I1 micro review — correction review closed |
+
+The freeze step itself adds only the runner's trial identifier `trial-003`, the experiment README's
+status, the new manifest, and three wording corrections in this section: R-M2 (below), RR-M3 (§10.4)
+and RR-M1 (§10.9). It still requires one independent freeze review, then publication and formal
+Build 8 evidence, then a new owner D-7 and a Trial #3 dispatcher behind its own review. This freeze
+grants none of them.
 
 The correction implements the owner's
 [postmortem decisions](../DECISIONS.md#trial-002-postmortem-decisions) and the settled root causes
@@ -1183,17 +1199,24 @@ Its scope is closed: `X2b`, `X2c`, `X4`, `T1`, `S4`, `M2`, `E4`, `E6`, `E6c`, `O
 the liveness revalidation `P1`, `P2` and `P4` need. `N3` is unchanged. Membership stays 72, with
 54 mandatory, 11 conditional and 7 recorded cases.
 
-**`SOURCE-HASHES.json` is still the Trial #2 freeze, byte for byte** (Git blob
-`6f000fac9a48625d3c9def18e16ae7ce1b61efa8`). Its format cannot describe an unfrozen candidate
-without `--verify-freeze` calling the candidate frozen, so it is not rewritten. The candidate's
-declared delta is the NOT_FROZEN record
-[`TRIAL-3-CORRECTION-CANDIDATE.json`](launch-exec-01/TRIAL-3-CORRECTION-CANDIDATE.json). Nothing
-verifies against that record. Until a reviewed freeze is cut, `--verify-freeze` reports these
-files as drift, and a test binds the record's list to the real drift:
+**The Trial #3 manifest.** `SOURCE-HASHES.json` is now the Trial #3 freeze manifest. It binds the
+SHA-256 of the same closed input set Trial #2 bound: 17 experiment sources and 3 definition
+documents, this one included. The Trial #2 manifest stays addressable at `ba41a3f` (Git blob
+`6f000fac9a48625d3c9def18e16ae7ce1b61efa8`). Against it, the Trial #3 manifest rehashes:
 
-* `driver.py`, `frozen_cases.py`, `make_fixtures.py` and `observations.py`;
-* `helper_fork.c`, `helper_report.c` and `launcher_spike.c`;
-* this definition, in the manifest's `definition_sha256`.
+* the reviewed corrections: `driver.py`, `frozen_cases.py`, `make_fixtures.py`, `observations.py`,
+  `helper_fork.c`, `helper_report.c` and `launcher_spike.c`;
+* the freeze step: `README.md` and `run_launch_exec_01.py`;
+* this definition.
+
+The former NOT_FROZEN record
+[`TRIAL-3-CORRECTION-CANDIDATE.json`](launch-exec-01/TRIAL-3-CORRECTION-CANDIDATE.json) is kept as
+superseded provenance. It is not hashed, is never freeze authority, and grants nothing.
+
+**Two verifications, not one** (correction review finding R-M2). `run_launch_exec_01.py
+--verify-freeze` checks the manifest's 17 source hashes and nothing else; it does not read
+`definition_sha256`. The three definition hashes are verified separately, by the manifest-coupled
+freeze tests in `tools/tests`. Neither verification poses a case.
 
 ### 10.1 Classification is unchanged
 
@@ -1298,10 +1321,22 @@ has no name in the frozen errno table. The load-bearing fields are:
 * `exec_failed_errno` a plain integer from 1 to 4095.
 
 `helper_exit_corroborated` joins `no_executed_image` among the assertions that decide a repetition
-even when the rule renders no token. An `ExecFailed` record that fails any structural condition — a
-missing, non-integer or out-of-range errno, an empty or unknown stage, or a timeout beside it — is
-unobservable on the launcher side and stays INVALID unless another side independently contradicts
-S4's path. The errno table, the symbolic tokens and every other case are unchanged.
+even when the rule renders no token. What the structural fact adds, and what it does not (re-review
+finding RR-M3):
+
+* An `ExecFailed` record that fails a structural condition — a missing, non-integer or out-of-range
+  errno, an empty or unknown stage, or a timeout beside it — gains no authority from RR-I1. S4's
+  launcher-side check is unobservable on it and never decides.
+* Such a record is not thereby INVALID. The shared rule `rule_process_disposition` is unchanged, and
+  where it still renders a symbolic token from the record — a known errno beside an empty stage
+  renders, for example, `ExecFailed:EACCES` — that token is not S4's prediction, so S4 FAILs on it,
+  as it did before RR-I1. `launcher_spike.c` cannot emit those shapes, and the receipt parser rejects
+  an unknown stage.
+* Where the shared rule renders no token, the record decides nothing. Another side that
+  independently contradicts S4's path, such as a report declaring another exit, still makes S4
+  FAIL; otherwise S4 is INVALID.
+
+The errno table, the symbolic tokens and every other case are unchanged.
 
 | Observation | Status |
 |---|---|
@@ -1429,10 +1464,23 @@ the cases whose rule reads the rendezvous — also carry an independent **fixtur
   and a liveness path that opens with no reader waiting as `LIVENESS_UNEXPECTED_OPEN`. Each token is
   one write of at most 32 bytes and names no path.
 * **Ordering.** With a health channel, `helper_fork`'s direct child exits only once its descendant
-  closed a close-on-exec gate pipe after writing its token (or died). The launcher sweeps only after
-  the direct child exited, so the token is buffered before a legitimately swept descendant can be
-  killed. The gate is created after exec inside `helper_fork` and never crosses an exec; the
-  launcher's `{0, 1, 2}` contract, its group sweep and the absence of `--setsid` are unchanged.
+  closed a close-on-exec gate pipe after writing its token (or died). The gate is fixture
+  synchronisation, never a result (re-review finding RR-M1):
+  * It waits only until the descendant has done its case's own preparation — stdio release for P1
+    and P2, `setsid` for P2 and P4 — and reached the probe point. It never waits for a liveness
+    result.
+  * It releases the direct child before any liveness byte can exist, because the harness opens the
+    liveness reader only after `launch()` returned.
+  * The launcher sweeps only after the direct child exited. The health token is therefore buffered
+    before a legitimately swept descendant can be killed, and P2's descendant has already called
+    `setsid` before the sweep can run. Without the gate the sweep could reach a P2 descendant that
+    had not yet left the process group, so an earlier `descendant_died` could have been a fixture
+    race rather than the mechanism.
+  * Whether the descendant then survives is decided by the launcher's own lifecycle and group
+    sweep alone, so the P-series questions are unchanged.
+
+  The gate is created after exec inside `helper_fork` and never crosses an exec; the launcher's
+  `{0, 1, 2}` contract, its group sweep and the absence of any added `--setsid` are unchanged.
 * **Reading.** The harness reads at most 65 bytes of the channel after the liveness rendezvous and
   normalises them to `probe_reached`, `channel_failure` (`none`, `open_failed`, `write_failed`,
   `unexpected_open`, `malformed` or `unreadable`), `errno` and `errno_number`, which are the only
@@ -1475,19 +1523,27 @@ runner. The privileged transition stays untested and deferred.
 
 ### 10.12 Build and freeze status
 
-`launcher_spike.c`, `helper_report.c` and `helper_fork.c` changed, so **Build 7 no longer binds the
-candidate**, and Build 8 compile-only evidence is required for any future freeze. A local scratch
-compile validated the changed sources. It is not Build 8, not build evidence and not a freeze, and
-nothing it produced was executed.
+**Freeze.** Trial #3 is frozen by `SOURCE-HASHES.json` with trial identifier `trial-003`:
+* 17 source hashes and 3 definition hashes;
+* 72 cases — 54 mandatory, 11 conditional, 7 recorded;
+* traced exactly `E1`, `E7`, `F4`, `F7`, `M1`, `M2`, `M3` and `M4`;
+* 72 driver handlers — 72 statically posable, 0 unposable.
 
-The later freeze step, not this correction, must still:
+The runner's trial identifier is `trial-003`; Trial #2's preserved evidence keeps `trial-002`. The
+status is NOT_RUN, the valid Trial #3 count is zero, and no aggregate exists.
 
-* rewrite `SOURCE-HASHES.json` for the reviewed candidate, leaving the Trial #2 manifest
-  addressable at `ba41a3f`;
-* give the runner a trial identifier other than `trial-002`;
-* record Build 8;
-* publish a Trial #3 dispatcher behind its own review;
-* obtain a new owner D-7.
+**Build.** `launcher_spike.c`, `helper_report.c` and `helper_fork.c` differ from the bytes Build 7
+compiled, so **Build 7 does not bind Trial #3: BUILD_8_REQUIRED**. No Build 8 evidence exists. Local
+scratch compiles validated the changed sources; they are not Build 8 and not build evidence, and
+nothing they produced was executed.
+
+Still required, in this order, and none of it granted by this freeze:
+
+1. one independent Trial #3 freeze review;
+2. publication, and formal Build 8 compile-only evidence;
+3. a new owner D-7 for Trial #3;
+4. a Trial #3 dispatcher behind its own review.
 
 **TRIAL #2 D-7 IS CONSUMED. LAUNCH-EXEC-01 TRIAL #2 VALID TRIAL COUNT IS ONE. TRIAL #2 MUST NOT BE
-RERUN. NO TRIAL #3 IS AUTHORISED. NO TRIAL #3 FREEZE EXISTS.**
+RERUN. TRIAL #3 IS FROZEN AND NOT_RUN. LAUNCH-EXEC-01 TRIAL #3 VALID TRIAL COUNT IS ZERO. TRIAL #3 D-7
+IS NOT AUTHORISED.**

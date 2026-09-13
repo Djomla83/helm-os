@@ -504,13 +504,13 @@ class S2S7ExecStatusIsAuthoritative(unittest.TestCase):
 
     def test_only_declared_cases_may_fail_without_a_rule_token(self):
         # AB7-M1 froze {no_executed_image}, used by S2 and S7. The Trial #3
-        # correction candidate declares exactly one addition in its NOT_FROZEN
-        # record (RR-I1): S4's helper_exit_corroborated.
-        added = set(json.loads((EXP / "TRIAL-3-CORRECTION-CANDIDATE.json").read_text(
-            encoding="utf-8"))["contract_delta"]["decisive_without_token_added"])
-        self.assertEqual(added, {"helper_exit_corroborated"})
-        self.assertEqual(ob.DECISIVE_WITHOUT_TOKEN_ASSERTIONS,
-                         frozenset({"no_executed_image"}) | added)
+        # freeze manifest binds the set directly, with S4's
+        # helper_exit_corroborated added by RR-I1.
+        frozen = set(json.loads((EXP / "SOURCE-HASHES.json").read_text(
+            encoding="utf-8"))["posing_versus_showing"]["decisive_without_token"]
+            ["assertions"])
+        self.assertEqual(frozen, {"no_executed_image", "helper_exit_corroborated"})
+        self.assertEqual(ob.DECISIVE_WITHOUT_TOKEN_ASSERTIONS, frozenset(frozen))
         users = sorted(p.case for p in driver._PLAN_LIST
                        if set(p.assertions) & ob.DECISIVE_WITHOUT_TOKEN_ASSERTIONS)
         self.assertEqual(users, ["S2", "S4", "S7"])
@@ -918,12 +918,8 @@ class AB7Preregistration(unittest.TestCase):
                          ["fixture_descendant_signalled"])
         self.assertEqual(pvs["assertions"]["no_executed_image"]["reads"],
                          list(ob.ASSERTION_READS["no_executed_image"]))
-        # The Trial #2 freeze plus the candidate's declared RR-I1 addition.
-        added = json.loads((EXP / "TRIAL-3-CORRECTION-CANDIDATE.json").read_text(
-            encoding="utf-8"))["contract_delta"]["decisive_without_token_added"]
-        self.assertFalse(set(added) & set(pvs["decisive_without_token"]["assertions"]))
-        self.assertEqual(sorted(set(pvs["decisive_without_token"]["assertions"])
-                                | set(added)),
+        # The Trial #3 freeze manifest binds the decisive set directly.
+        self.assertEqual(sorted(pvs["decisive_without_token"]["assertions"]),
                          sorted(ob.DECISIVE_WITHOUT_TOKEN_ASSERTIONS))
         for block in ("o6", "o7", "s2_s7", "fixture_signal"):
             self.assertIn(block, pvs, block)
@@ -936,23 +932,38 @@ class AB7Preregistration(unittest.TestCase):
             self.assertTrue(self.manifest["open_findings"][finding]
                             .startswith("BACKLOG"), finding)
 
-    def test_the_ab7_freeze_changed_no_c_and_the_candidate_only_what_it_declares(self):
-        # The AB7 freeze -- the Trial #2 manifest this file still is -- hashed
-        # C sources byte-identical to Build 7's, as BUILD-EVIDENCE.md records.
-        # That historical fact is checked against the record, not the working
-        # tree: the Trial #3 correction candidate changes C on purpose, and
-        # must change exactly the sources it declares and no other.
+    def test_build_7_bound_the_ab7_c_bytes_and_the_trial_3_freeze_changes_three(self):
+        # The AB7 freeze -- the Trial #2 manifest, addressable at ba41a3f --
+        # hashed C sources byte-identical to Build 7's, as BUILD-EVIDENCE.md
+        # records. The Trial #3 freeze changes exactly three of them, so Build 7
+        # does not bind it.
+        import shutil
+        import subprocess
+        git = shutil.which("git")
+        if git is None:
+            self.skipTest("git is needed to read the Trial #2 manifest")
+        root = str(ROOT).replace("\\", "/")
+        proc = subprocess.run(
+            [git, "-C", str(ROOT), "-c", "safe.directory=" + root, "show",
+             "ba41a3f12be411058ed50e78bcd1c7e22afb7ae4:"
+             "docs/experiments/launch-exec-01/SOURCE-HASHES.json"],
+            capture_output=True, timeout=60)
+        self.assertEqual(proc.returncode, 0, proc.stderr.decode("utf-8", "replace"))
+        historical = json.loads(proc.stdout.decode("utf-8"))
         build = (EXP / "BUILD-EVIDENCE.md").read_text(encoding="utf-8")
         section = build.split("## Build 7 still binds the AB7 correction freeze",
                               1)[1]
-        candidate = json.loads((EXP / "TRIAL-3-CORRECTION-CANDIDATE.json")
-                               .read_text(encoding="utf-8"))
-        changed = set(candidate["c_sources_changed"])
+        changed = {"helper_fork.c", "helper_report.c", "launcher_spike.c"}
         for name in C_SOURCES:
-            frozen = self.manifest["sha256"][name]
+            frozen = historical["sha256"][name]
             self.assertIn("| `%s` | `%s` |" % (name, frozen), section, name)
+            self.assertEqual(self.manifest["sha256"][name] != frozen, name in changed,
+                             name)
             actual = hashlib.sha256((EXP / name).read_bytes()).hexdigest()
-            self.assertEqual(actual != frozen, name in changed, name)
+            self.assertEqual(actual, self.manifest["sha256"][name], name)
+        self.assertEqual(self.manifest["build"]["c_sources_changed_since_build_7"],
+                         sorted(changed))
+        self.assertEqual(self.manifest["build"]["status"], "BUILD_8_REQUIRED")
 
     def test_the_case_table_is_untouched(self):
         self.assertEqual(fc.summary()["total"], 72)
