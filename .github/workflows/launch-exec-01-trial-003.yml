@@ -1,0 +1,481 @@
+# LAUNCH-EXEC-01 Trial #3 one-shot dispatcher CANDIDATE — MANUAL DISPATCH ONLY.
+#
+# THIS DISPATCHER CANDIDATE HAS NO EXECUTION AUTHORITY UNTIL THE OWNER LATER
+# AUTHORIZES D-7 FOR THIS EXACT REVIEWED WORKFLOW BLOB AND IT IS PUBLISHED
+# BYTE-IDENTICALLY TO MAIN.
+#
+# At authoring time Trial #3 D-7 is NOT authorised, Trial #3 is NOT_RUN and its
+# valid trial count is zero. The presence of the runner's
+# --i-have-owner-authorisation-d7 flag below is the intended final invocation
+# the owner may later consider; it is not authority. The order is: independent
+# review of this exact blob, milestone publication with zero runs, an owner D-7
+# decision naming this blob, byte-identical publication to main with zero runs,
+# then one manual dispatch.
+#
+# Bound to:
+#
+#   freeze                   bebd8a5f83d4d0daebe9b068050cb5436289c75e
+#   manifest blob            8cd290b573408510f8c16cd8dafe676354140a38
+#   manifest SHA-256         ea482c6feaf77abac1edcc23d26afbc4f249638170f60ed897088d5cda79ba70
+#   freeze review            69f13a78810e1d270e4540b1fa169c8a8e9eb5fd
+#   Build 8 evidence accept  5a6be5959c5a9131afa1154c015369df46a5deb8
+#   formal Build 8           run 34754901079, job 103717520698, attempt 1,
+#                            BUILD_8_FORMAL_COMPILE_ONLY_SUCCESS, durable job-log
+#                            SHA-256 6c16e23ea03a7593e09911ca968c4313ab7764a05b98fd5b19c4756da9930a15
+#
+# Build 8 is pretrial compile evidence only. Nothing here downloads, reuses or
+# executes a Build 8 binary; the frozen runner builds the frozen sources itself.
+#
+# This is a NEW file with a NEW name, confirmation, concurrency group and
+# artefact name. The Trial #2 dispatcher (launch-exec-01-trial-002.yml) is
+# completed history and is not touched; run_number counts runs of THIS file
+# only, so run 1 is the first dispatch of this dispatcher.
+#
+# ONE SHOT. The first step refuses anything but a manual dispatch on main, run
+# number 1, attempt 1 and the exact confirmation, before anything is checked
+# out. run_number rejects a second dispatch; run_attempt rejects "Re-run jobs".
+# Every run of this file consumes a run number, so a rejected first dispatch
+# spends the dispatcher as well. There is no retry, resume or second path.
+#
+# THE BOUNDARY. A Trial #3 D-7, if the owner ever grants one, is consumed when
+# the frozen runner fsyncs the FIRST case_pose_started record. Dispatch,
+# checkout, the identity gates, the freeze and definition checks, the static
+# gates, the preflight, the build and runner startup consume nothing: before
+# that record no case status or aggregate exists and the valid Trial #3 count
+# stays zero. After it there is no retry, no resume and no rerun-to-green.
+#
+# OPERATOR PRECONDITION. The freeze, the freeze review and the Build 8 evidence
+# acceptance commits must stay reachable from a remote head at dispatch time,
+# because the full-history checkout below binds them as Git objects.
+name: launch-exec-01 trial-003 one-shot trial
+
+# workflow_dispatch ONLY: no push, pull_request, schedule, workflow_run or
+# repository_dispatch trigger.
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type RUN-TRIAL-003-ONE-VALID-TRIAL. Only run 1 can be a trial; a rejected or repeated dispatch never is.'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# A running trial is never cancelled in favour of another request.
+concurrency:
+  group: launch-exec-01-trial-003
+  cancel-in-progress: false
+
+env:
+  FREEZE_SHA: bebd8a5f83d4d0daebe9b068050cb5436289c75e
+  MANIFEST_SHA256: ea482c6feaf77abac1edcc23d26afbc4f249638170f60ed897088d5cda79ba70
+  MANIFEST_GIT_BLOB: 8cd290b573408510f8c16cd8dafe676354140a38
+  FREEZE_REVIEW_SHA: 69f13a78810e1d270e4540b1fa169c8a8e9eb5fd
+  FREEZE_REVIEW_RECORD: docs/implementation/HELM-LAUNCH-EXEC-01-TRIAL-003-FREEZE-REVIEW.md
+  BUILD8_EVIDENCE_SHA: 5a6be5959c5a9131afa1154c015369df46a5deb8
+  BUILD8_REREVIEW_RECORD: docs/implementation/HELM-LAUNCH-EXEC-01-BUILD-008-EVIDENCE-CORRECTION-REREVIEW.md
+  BUILD8_EVIDENCE_RECORD: docs/experiments/launch-exec-01/BUILD-EVIDENCE.md
+  REQUIRED_CONFIRMATION: RUN-TRIAL-003-ONE-VALID-TRIAL
+  EXPERIMENT_DIR: docs/experiments/launch-exec-01
+  # The frozen runner's own defaults, passed explicitly so the preservation
+  # paths below cannot drift from them. Both are relative to EXPERIMENT_DIR.
+  BUILD_DIR: target/launch-exec-01
+  OUT_DIR: trial-output
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  trial-003:
+    runs-on: ubuntu-24.04
+    # Worst case re-derived statically from the frozen Trial #3 plan table and
+    # driver constants (72 plans; O8 and S7 repeat 200; M2 adds one control arm):
+    #
+    #   471 launches, every driver watchdog (total_bound_ms + 5 s) firing
+    #     66 x 19 s + M2 control 19 s + O8 200 x 19 s + S7 200 x 19 s
+    #     + T1, T2, T6 3 x 16 s + O3 74 s                   8,995 s  149.9 min
+    #   post-launch reads: liveness 3 s x 7, fixture health
+    #     1 s x 5, O6/O7 fixture signal 2 s x 2                 30 s    0.5 min
+    #   post-pin READY 30 s expiring at every launch with a
+    #     setup or parent state (242, an over-count)         7,260 s  121.0 min
+    #   preflight subprocess bounds 7 x 30 s + static probe 120 s
+    #                                                          330 s    5.5 min
+    #   total                                               16,615 s  276.9 min
+    #
+    # The trial step gets 330 minutes, 53.1 above that bound. Not bounded by a
+    # frozen constant: the compile (the whole Build 8 job took 77 s) and the
+    # drain after a watchdog kill; the step timeout backstops both. The job
+    # keeps 20 more minutes so the gates, preservation and reporting still run.
+    timeout-minutes: 350
+    steps:
+      # ======================================= one-shot guards, before checkout
+      # Inputs and contexts reach the shell only through env, never through
+      # ${{ }} inside the script, so no input can inject shell text.
+      - name: One-shot guards (nothing is checked out yet)
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+          EVENT_NAME: ${{ github.event_name }}
+          GIT_REF: ${{ github.ref }}
+          RUN_NUMBER: ${{ github.run_number }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          set -eu
+          echo "event=$EVENT_NAME ref=$GIT_REF run_number=$RUN_NUMBER run_attempt=$RUN_ATTEMPT"
+          fail=0
+          if [ "$EVENT_NAME" != "workflow_dispatch" ]; then
+            echo "HALT: not a manual workflow_dispatch."; fail=1
+          fi
+          if [ "$GIT_REF" != "refs/heads/main" ]; then
+            echo "HALT: dispatched on $GIT_REF, not refs/heads/main."; fail=1
+          fi
+          if [ "$RUN_NUMBER" != "1" ]; then
+            echo "HALT: run number $RUN_NUMBER. Only the first dispatch of this"
+            echo "workflow may be Trial #3; a second dispatch is never a trial."; fail=1
+          fi
+          if [ "$RUN_ATTEMPT" != "1" ]; then
+            echo "HALT: Actions attempt $RUN_ATTEMPT. A re-run is a new trial,"
+            echo "not a retry, and one D-7 can cover exactly one."; fail=1
+          fi
+          if [ "$CONFIRMATION" != "$REQUIRED_CONFIRMATION" ]; then
+            echo "HALT: the confirmation is not $REQUIRED_CONFIRMATION."; fail=1
+          fi
+          if [ "$fail" -ne 0 ]; then
+            echo "Nothing was checked out, built or posed. This run is not a trial,"
+            echo "produces no trial result and consumes no D-7."
+            exit 1
+          fi
+          echo "one-shot guards passed"
+
+      # ============================================== the exact frozen bytes
+      # ref is the literal Trial #3 freeze: never github.sha, the dispatched
+      # branch tip, an input or a tag. Full history, so the freeze review and
+      # the Build 8 evidence acceptance can be bound as Git objects.
+      - name: 'Check out the Trial #3 freeze by literal SHA'
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: bebd8a5f83d4d0daebe9b068050cb5436289c75e
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Identity gates — freeze, manifest, freeze review and Build 8 evidence
+        run: |
+          set -eu
+          halt() { echo "HALT: $*"; echo "No case was posed."; exit 1; }
+          # To a file, then grep -F: under GitHub's pipefail an early-exiting
+          # grep -q can SIGPIPE the writer and fail a correct binding.
+          require_text() {
+            grep -qF -- "$2" "$1" || halt "$3"
+          }
+          head=$(git rev-parse HEAD)
+          echo "checked out: $head"
+          [ "$head" = "$FREEZE_SHA" ] || halt "HEAD $head is not the Trial #3 freeze"
+          [ -z "$(git status --porcelain)" ] || halt "the checked-out tree is not clean"
+          manifest="$EXPERIMENT_DIR/SOURCE-HASHES.json"
+          sha=$(sha256sum "$manifest" | cut -d' ' -f1)
+          blob_file=$(git hash-object "$manifest")
+          blob_tree=$(git rev-parse "HEAD:$manifest")
+          echo "manifest sha256: $sha"
+          echo "manifest blob (file): $blob_file"
+          echo "manifest blob (tree): $blob_tree"
+          [ "$sha" = "$MANIFEST_SHA256" ] || halt "manifest SHA-256 is not the frozen one"
+          [ "$blob_file" = "$MANIFEST_GIT_BLOB" ] || halt "manifest file blob is not the frozen one"
+          [ "$blob_tree" = "$MANIFEST_GIT_BLOB" ] || halt "manifest tree blob is not the frozen one"
+
+          # The independent freeze review: an exact commit descending from the
+          # freeze, whose exact record carries the accepted classification.
+          git cat-file -e "$FREEZE_REVIEW_SHA^{commit}" || halt "freeze review commit is absent"
+          git merge-base --is-ancestor "$FREEZE_SHA" "$FREEZE_REVIEW_SHA" \
+            || halt "the freeze review does not descend from the freeze"
+          git show "$FREEZE_REVIEW_SHA:$FREEZE_REVIEW_RECORD" > "$RUNNER_TEMP/freeze-review.md" \
+            || halt "the freeze review record is absent at the freeze review commit"
+          require_text "$RUNNER_TEMP/freeze-review.md" \
+            'Classification: **TRIAL_3_FREEZE_REVIEW_PASSED_READY_FOR_PUBLICATION_AND_BUILD_8**' \
+            "the freeze review record does not carry the accepted classification"
+
+          # The accepted Build 8 evidence: an exact commit descending from the
+          # freeze review, whose exact re-review record accepts the evidence and
+          # whose exact evidence record names the formal Build 8. Bound from Git
+          # objects only; no GitHub API call and no raw-log retention is relied on.
+          git cat-file -e "$BUILD8_EVIDENCE_SHA^{commit}" || halt "Build 8 evidence acceptance commit is absent"
+          git merge-base --is-ancestor "$FREEZE_REVIEW_SHA" "$BUILD8_EVIDENCE_SHA" \
+            || halt "the Build 8 evidence acceptance does not descend from the freeze review"
+          git show "$BUILD8_EVIDENCE_SHA:$BUILD8_REREVIEW_RECORD" > "$RUNNER_TEMP/build8-rereview.md" \
+            || halt "the Build 8 re-review record is absent at the acceptance commit"
+          git show "$BUILD8_EVIDENCE_SHA:$BUILD8_EVIDENCE_RECORD" > "$RUNNER_TEMP/build8-evidence.md" \
+            || halt "the Build 8 evidence record is absent at the acceptance commit"
+          rr="$RUNNER_TEMP/build8-rereview.md"
+          ev="$RUNNER_TEMP/build8-evidence.md"
+          require_text "$rr" \
+            'Classification: **BUILD_8_EVIDENCE_CORRECTION_REREVIEW_PASSED_READY_FOR_TRIAL3_AUTHORITY_DECISIONS**' \
+            "the Build 8 re-review record does not carry the accepted classification"
+          require_text "$rr" '**BUILD 8 EVIDENCE IS ACCEPTED FOR TRIAL #3 AUTHORITY DECISIONS.**' \
+            "the Build 8 re-review record does not accept the evidence"
+          require_text "$rr" 'run `34754901079`, job `103717520698`, run number 11, attempt 1' \
+            "the Build 8 re-review record does not name run 34754901079, job 103717520698, attempt 1"
+          require_text "$rr" '`6c16e23ea03a7593e09911ca968c4313ab7764a05b98fd5b19c4756da9930a15`' \
+            "the Build 8 re-review record does not name the durable job-log identity"
+          require_text "$ev" '| Formal run | `34754901079`: run number 11, attempt 1,' \
+            "the Build 8 evidence record does not name formal run 34754901079 attempt 1"
+          require_text "$ev" '| Formal job | `103717520698` |' \
+            "the Build 8 evidence record does not name formal job 103717520698"
+          require_text "$ev" '| Result | **BUILD_8_FORMAL_COMPILE_ONLY_SUCCESS**' \
+            "the Build 8 evidence record does not carry BUILD_8_FORMAL_COMPILE_ONLY_SUCCESS"
+          require_text "$ev" '`6c16e23ea03a7593e09911ca968c4313ab7764a05b98fd5b19c4756da9930a15`' \
+            "the Build 8 evidence record does not name the durable job-log identity"
+          require_text "$ev" "head \`$FREEZE_REVIEW_SHA\`" \
+            "the Build 8 evidence record does not name the freeze review as the workflow head"
+          echo "bound to freeze, manifest, freeze review and accepted Build 8 evidence"
+
+      # Not a directory diff: the authority commits add documentation under
+      # EXPERIMENT_DIR (BUILD-EVIDENCE.md, which the manifest does not hash).
+      # The exact frozen sets come from the manifest itself.
+      - name: Frozen bytes unchanged through the freeze review and Build 8 evidence
+        run: |
+          set -eu
+          python3 - <<'PY'
+          import json, os, subprocess, sys
+
+          exp = os.environ["EXPERIMENT_DIR"]
+          freeze = os.environ["FREEZE_SHA"]
+          authorities = (("freeze review", os.environ["FREEZE_REVIEW_SHA"]),
+                         ("Build 8 evidence", os.environ["BUILD8_EVIDENCE_SHA"]))
+
+          def halt(message):
+              sys.exit("HALT: " + message + "; no case was posed")
+
+          def blob(commit, path):
+              r = subprocess.run(["git", "rev-parse", "--verify", "--quiet",
+                                  commit + ":" + path],
+                                 capture_output=True, text=True)
+              return r.stdout.strip() if r.returncode == 0 else None
+
+          manifest_path = exp + "/SOURCE-HASHES.json"
+          with open(manifest_path, encoding="utf-8") as handle:
+              manifest = json.load(handle)
+          sources = sorted(exp + "/" + name for name in manifest.get("sha256") or {})
+          definitions = sorted(manifest.get("definition_sha256") or {})
+          if len(sources) != 17:
+              halt("the manifest lists %d frozen sources, not 17" % len(sources))
+          if len(definitions) != 3:
+              halt("the manifest lists %d definitions, not 3" % len(definitions))
+
+          for label, commit in authorities:
+              if blob(commit, manifest_path) != os.environ["MANIFEST_GIT_BLOB"]:
+                  halt("SOURCE-HASHES.json at the %s commit is not the frozen blob" % label)
+          drift = []
+          for kind, paths in (("source", sources), ("definition", definitions)):
+              for path in paths:
+                  frozen = blob(freeze, path)
+                  if frozen is None:
+                      drift.append("%s %s: absent at the freeze" % (kind, path))
+                      continue
+                  for label, commit in authorities:
+                      if blob(commit, path) != frozen:
+                          drift.append("%s %s: differs at the %s commit" % (kind, path, label))
+          for line in drift:
+              print("DRIFT " + line)
+          if drift:
+              halt("frozen bytes differ between the freeze and an authority commit")
+          print("17/17 frozen sources and 3/3 definitions identical at the freeze, "
+                "the freeze review and the Build 8 evidence acceptance")
+          PY
+
+      # The frozen verifier checks the 17 source hashes in the manifest's
+      # sha256 table and nothing else. It does NOT check definition_sha256.
+      - name: Frozen source-freeze verification (17 sources)
+        working-directory: docs/experiments/launch-exec-01
+        run: |
+          set -eu
+          python3 run_launch_exec_01.py --verify-freeze > "$RUNNER_TEMP/verify-freeze.json"
+          cat "$RUNNER_TEMP/verify-freeze.json"
+          python3 - "$RUNNER_TEMP/verify-freeze.json" <<'PY'
+          import json, sys
+          doc = json.load(open(sys.argv[1], encoding="utf-8"))
+          if doc.get("freeze_verified") is not True:
+              sys.exit("HALT: --verify-freeze did not report true; no case was posed")
+          print("freeze_verified: true (17 source hashes)")
+          PY
+
+      # Closes the Trial #2 dispatcher's gap: the source verifier never checked
+      # the definitions. The manifest, already bound by blob and SHA-256 above,
+      # is the authority for their hashes; only the closed path set is literal.
+      - name: Definition hash verification (3 definitions)
+        run: |
+          set -eu
+          python3 - <<'PY'
+          import hashlib, json, os, re, sys
+
+          EXPECTED_PATHS = {
+              "docs/adr/ADR-0024-launch-authority.md",
+              "docs/experiments/LAUNCH-EXEC-01-DEFINITION.md",
+              "docs/research/HELM-LAUNCH-ARCHITECTURE.md",
+          }
+
+          def halt(message):
+              sys.exit("HALT: " + message + "; no case was posed")
+
+          path = os.environ["EXPERIMENT_DIR"] + "/SOURCE-HASHES.json"
+          with open(path, encoding="utf-8") as handle:
+              manifest = json.load(handle)
+          definitions = manifest.get("definition_sha256")
+          if not isinstance(definitions, dict):
+              halt("the manifest has no definition_sha256 table")
+          if len(definitions) != 3:
+              halt("definition_sha256 has %d entries, not 3" % len(definitions))
+          missing = sorted(EXPECTED_PATHS - set(definitions))
+          extra = sorted(set(definitions) - EXPECTED_PATHS)
+          if missing or extra:
+              halt("definition authority is not the closed set: missing %s, extra %s"
+                   % (missing, extra))
+          failed = []
+          for name in sorted(definitions):
+              expected = definitions[name]
+              if not isinstance(expected, str) or not re.fullmatch(r"[0-9a-f]{64}", expected):
+                  halt("the manifest hash for %s is not a SHA-256 digest" % name)
+              try:
+                  with open(name, "rb") as handle:
+                      actual = hashlib.sha256(handle.read()).hexdigest()
+              except OSError as exc:
+                  halt("definition %s cannot be read: %s" % (name, exc))
+              ok = actual == expected
+              print(("ok   " if ok else "FAIL ") + name + " " + actual)
+              if not ok:
+                  failed.append(name)
+          if failed:
+              halt("definition hashes differ from the manifest: %s" % failed)
+          print("definition hashes verified: 3/3")
+          PY
+
+      # Static only: walks the frozen tables and the plan table, calls no
+      # handler, builds nothing and poses nothing.
+      - name: Membership, driver completeness and static posability
+        working-directory: docs/experiments/launch-exec-01
+        run: |
+          set -eu
+          python3 run_launch_exec_01.py --driver-completeness > "$RUNNER_TEMP/driver-completeness.json"
+          python3 - "$RUNNER_TEMP/driver-completeness.json" <<'PY'
+          import json, sys
+          sys.path.insert(0, ".")
+          import frozen_cases
+
+          doc = json.load(open(sys.argv[1], encoding="utf-8"))
+          c, unposable = doc["completeness"], doc["unposable"]
+          s = frozen_cases.summary()
+          traced = ["E1", "E7", "F4", "F7", "M1", "M2", "M3", "M4"]
+          checks = {
+              "total 72": s["total"] == 72,
+              "mandatory 54": s["mandatory"] == 54,
+              "conditional 11": s["conditional"] == 11,
+              "recorded 7": s["recorded"] == 7,
+              "traced 8 exact": sorted(s["traced"]) == traced,
+              "driver complete": c["complete"] is True,
+              "72 frozen": c["frozen_total"] == 72,
+              "72 handlers": c["driver_total"] == 72,
+              "nothing missing, unknown or duplicated":
+                  not (c["missing"] or c["unknown"] or c["duplicates"]),
+              "every setup, parent, rule, check and channel resolves":
+                  not (c["unresolved_setups"] or c["unresolved_parents"]
+                       or c["unresolved_rules"] or c["unresolved_checks"]
+                       or c["unknown_channels"]),
+              "72 posable, 0 unposable": unposable == {},
+          }
+          for name, ok in checks.items():
+              print(("ok   " if ok else "FAIL ") + name)
+          if not all(checks.values()):
+              sys.exit("HALT: membership or driver completeness is not the frozen one; "
+                       "no case was posed")
+          PY
+
+      # ====================================================================
+      # THE IMMUTABILITY BOUNDARY IS INSIDE THIS STEP.
+      #
+      # The frozen runner is invoked ONCE. It verifies the freeze again, runs
+      # the preregistered preflight and writes preflight.json, and HALTs with
+      # zero cases posed if a mandatory gate is false. It builds the exact
+      # frozen sources itself (never Build 8's binaries), writes
+      # build-identity.json and verifies it before the first case. It journals
+      # trial_begin, preflight, build_identity, case_entered and, for each
+      # genuinely posed case, an fsynced case_pose_started before the launcher
+      # exists. The first such record would consume a Trial #3 D-7.
+      #
+      # No loop, no per-case invocation, no resume, no retry and no fallback.
+      # The exit code is recorded, not acted on here, so that preservation
+      # cannot be skipped. MECHANISM_REJECTED and MECHANISM_INCONCLUSIVE are
+      # legitimate outcomes.
+      # ====================================================================
+      - name: 'TRIAL #3 — the frozen runner, exactly once'
+        id: trial
+        working-directory: docs/experiments/launch-exec-01
+        timeout-minutes: 330
+        run: |
+          set +e
+          python3 run_launch_exec_01.py --i-have-owner-authorisation-d7 \
+            --build-dir "$BUILD_DIR" --out-dir "$OUT_DIR" \
+            > "$RUNNER_TEMP/runner-stdout.json"
+          code=$?
+          set -e
+          echo "frozen runner exit code: $code"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      # Preservation, never reinterpretation. It runs after any runner outcome:
+      # a completed trial, MECHANISM_REJECTED, MECHANISM_INCONCLUSIVE, a HALT,
+      # a harness exception, an abort after the boundary, a timeout or a
+      # cancellation. Only the frozen publication boundary's sanitised files are
+      # staged: never the build directory, raw strace, private FIFO paths,
+      # captured bytes, the environment or the runner's stderr.
+      - name: 'Stage the sanitised Trial #3 evidence'
+        if: always() && steps.trial.outcome != 'skipped'
+        working-directory: docs/experiments/launch-exec-01
+        run: |
+          set -u
+          stage="$RUNNER_TEMP/launch-exec-01-trial-003-evidence"
+          mkdir -p "$stage"
+          for name in preflight.json build-identity.json journal.jsonl evidence.json; do
+            if [ -f "$OUT_DIR/$name" ]; then
+              cp "$OUT_DIR/$name" "$stage/$name"
+            else
+              echo "not produced: $name"
+            fi
+          done
+          # The runner's stdout is the one document evidence.publish wrote there:
+          # the sanitised RUN or HALT document. Empty after a crash.
+          if [ -s "$RUNNER_TEMP/runner-stdout.json" ]; then
+            cp "$RUNNER_TEMP/runner-stdout.json" "$stage/runner-stdout.json"
+          fi
+          ( cd "$stage" && ls -l && sha256sum -- * 2>/dev/null ) || true
+          exit 0
+
+      # Artefact retention is temporary. A later result-preservation step must
+      # commit the sanitised evidence to the repository well before it expires.
+      - name: 'Preserve the sanitised Trial #3 evidence'
+        if: always() && steps.trial.outcome != 'skipped'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: launch-exec-01-trial-003-evidence
+          path: ${{ runner.temp }}/launch-exec-01-trial-003-evidence/
+          if-no-files-found: warn
+          retention-days: 90
+
+      # Only now may the job reflect what the frozen runner did. The job's
+      # colour is the runner's exit code (0 for any completed RUN, including
+      # MECHANISM_REJECTED; 6 for a preflight or build-identity HALT; 4 for a
+      # drifted freeze; nonzero for a harness exception), not the experiment
+      # result, which comes only from the preserved durable evidence and its
+      # independent review.
+      - name: Report the frozen runner's exit code (after preservation)
+        if: always() && steps.trial.outcome != 'skipped'
+        env:
+          CODE: ${{ steps.trial.outputs.code }}
+        run: |
+          set -eu
+          if [ -z "$CODE" ]; then
+            echo "The frozen runner reported no exit code: it was stopped, timed out"
+            echo "or cancelled. Its preserved evidence decides what happened."
+            exit 1
+          fi
+          echo "frozen runner exit code: $CODE"
+          echo "A CI colour is not a verdict; the durable evidence is."
+          exit "$CODE"
