@@ -287,3 +287,122 @@ Settled prospective correction requirements:
 * `N3_PRIVILEGED_TEST_DEFERRED`
 
 **Trial #2 is immutable and closed. No Trial #3 exists, and no D-7 exists for Trial #3.**
+
+
+<a id="d-7-authorised-trial-003"></a>
+
+### Owner decision 2026-09-14 — **Trial #3 D-7 AUTHORISED** for exactly one valid LAUNCH-EXEC-01 Trial #3 execution
+
+**D-7 — execution authorisation — is GRANTED PROSPECTIVELY for LAUNCH-EXEC-01 Trial #3.** It is
+bound to one exact frozen object, one exact reviewed dispatcher blob and **exactly one valid Trial #3
+execution**. It is a new authorisation. The consumed D-7 authorisations of Trial #1 and Trial #2 are
+not reused. Every earlier section is left as written, including the 2026-09-12 statement above that
+no D-7 existed for Trial #3.
+
+**AUTHORISED IS NOT CONSUMED.** At this record Trial #3 D-7 is **AUTHORISED** and **NOT CONSUMED**,
+Trial #3 is **NOT_RUN**, and its valid trial count is **ZERO**. **Trial #3 must not yet be
+dispatched.** The dispatcher is published on the milestone branch only. It is not on `main`, and
+its zero-run state on `main` has not been proven.
+
+| Binding | Value |
+|---|---|
+| Trial | **trial-003** |
+| D-7 status | **AUTHORISED PROSPECTIVELY — NOT CONSUMED** |
+| Scope | **exactly one** valid Trial #3 execution |
+| Freeze commit | `bebd8a5f83d4d0daebe9b068050cb5436289c75e` |
+| `SOURCE-HASHES.json` Git blob | `8cd290b573408510f8c16cd8dafe676354140a38` |
+| `SOURCE-HASHES.json` SHA-256 | `ea482c6feaf77abac1edcc23d26afbc4f249638170f60ed897088d5cda79ba70` |
+| Independent freeze review | `69f13a78810e1d270e4540b1fa169c8a8e9eb5fd` — [record](implementation/HELM-LAUNCH-EXEC-01-TRIAL-003-FREEZE-REVIEW.md), `TRIAL_3_FREEZE_REVIEW_PASSED_READY_FOR_PUBLICATION_AND_BUILD_8` |
+| Formal Build 8 | run `34754901079`, job `103717520698`, attempt 1 |
+| Formal Build 8 result | **`BUILD_8_FORMAL_COMPILE_ONLY_SUCCESS`** — pretrial compile evidence only; the trial builds and hashes its own binaries |
+| Accepted Build 8 evidence authority | `5a6be5959c5a9131afa1154c015369df46a5deb8` — [re-review](implementation/HELM-LAUNCH-EXEC-01-BUILD-008-EVIDENCE-CORRECTION-REREVIEW.md), `BUILD_8_EVIDENCE_CORRECTION_REREVIEW_PASSED_READY_FOR_TRIAL3_AUTHORITY_DECISIONS` |
+| Build 8 durable job-log SHA-256 | `6c16e23ea03a7593e09911ca968c4313ab7764a05b98fd5b19c4756da9930a15` |
+| Dispatcher candidate commit | `f1973867a709735b7c7e967f7f4b320774de2aa2` |
+| Independent dispatcher review | `4f1989737631b66f8cd4ebc8f7fdfc71ec1a5165` — [record](implementation/HELM-LAUNCH-EXEC-01-TRIAL-003-DISPATCHER-REVIEW.md), `TRIAL_3_DISPATCHER_REVIEW_PASSED_READY_FOR_MILESTONE_PUBLICATION` |
+| Dispatcher path | [`.github/workflows/launch-exec-01-trial-003.yml`](../.github/workflows/launch-exec-01-trial-003.yml) |
+| Authorised dispatcher Git blob | `64ce3d433a47eaae3eb28b8bb28f7300a330d762` |
+| Authorised dispatcher file SHA-256 | `9158e2932cc4f639c9e9be30ab445d9bcf1797dd7526274b7f96f1948fb9e4c8` |
+| Required human confirmation | `RUN-TRIAL-003-ONE-VALID-TRIAL` |
+| D-7 consumption boundary | the **first fsynced `case_pose_started`** record |
+
+**The frozen source, definition and manifest remain immutable, and so does the dispatcher.** This
+authorisation is recorded here, outside the freeze, so that granting it changes no frozen byte and
+no dispatcher byte. `status: NOT_RUN`, `d7_execution_authorised: false` and the `trial_3` block inside
+`SOURCE-HASHES.json` are left untouched. They record the state at which the immutable freeze was
+cut. This external decision supersedes them for execution authority without mutating the artefact
+it authorises.
+
+**Operator invariants.** They are part of this authority.
+
+1. This D-7 authorises **only** the exact dispatcher path, Git blob and file SHA-256 above.
+2. Before dispatch, that exact workflow must be published **byte-identically** to `main`.
+3. Immediately before dispatch, `main` must contain `.github/workflows/launch-exec-01-trial-003.yml`
+   with blob `64ce3d433a47eaae3eb28b8bb28f7300a330d762` and SHA-256
+   `9158e2932cc4f639c9e9be30ab445d9bcf1797dd7526274b7f96f1948fb9e4c8`.
+4. Before the authorised human dispatch, the Trial #3 workflow run count must still be **zero**, and
+   run number 1 must be unused.
+5. Between this authorisation and completion of the authorised run:
+   * do not edit the Trial #3 dispatcher;
+   * do not rename it;
+   * do not copy it to another executable workflow path;
+   * do not delete and recreate it;
+   * do not replace its bytes;
+   * do not force-push authority-bearing history.
+6. **The remote milestone branch `docs/helm-launch-architecture` must not be deleted while this D-7
+   remains live.** The authority commits `bebd8a5`, `69f13a7`, `5a6be59`, `f197386` and `4f19897`
+   must remain reachable from remote repository history, because the dispatcher's identity gates
+   bind them. Any of the following means **STOP, NO DISPATCH, OWNER DECISION REQUIRED**:
+   * deleting the milestone branch;
+   * force-moving it so that those commits become unreachable;
+   * otherwise breaking their required reachability.
+7. The dispatcher may be manually dispatched **exactly once**, from `main`, using exactly
+   `RUN-TRIAL-003-ONE-VALID-TRIAL`.
+8. No rerun, retry, resume, replacement dispatch, second dispatch or rerun-to-green is authorised.
+9. After dispatch, the exact GitHub run commit must be verified to carry
+   `.github/workflows/launch-exec-01-trial-003.yml` at blob
+   `64ce3d433a47eaae3eb28b8bb28f7300a330d762`.
+10. Any dispatcher path, blob or SHA-256 mismatch means **STOP — NO EXECUTION AUTHORITY**. This D-7
+    gives no authority to execute changed dispatcher bytes.
+11. **Before the boundary.** If the first dispatch is rejected or fails before the first fsynced
+    `case_pose_started`:
+    * D-7 remains unconsumed;
+    * the valid Trial #3 count remains zero;
+    * run number 1 and this dispatcher instance are spent.
+
+    This D-7 does **not** transfer to another dispatcher or a second run. A new owner decision is
+    required.
+12. **At the boundary.** Once the first fsynced `case_pose_started` exists, **TRIAL #3 D-7 IS
+    CONSUMED**. That holds regardless of the eventual aggregate, a harness failure, a timeout or an
+    abort. An abort after the boundary is read from the preserved journal under the manifest's
+    frozen `partial_reading` rules, with no aggregate derived after the fact.
+13. **After the boundary:** **no retry, no resume and no second Trial #3 under this D-7.**
+
+**Scope limits carried from the Trial #2 record.** They restrict this authorisation and add no
+authority. It does not extend to:
+
+* another freeze, freeze SHA or dispatcher blob;
+* arbitrary HELM execution;
+* Trial #1 or Trial #2;
+* any rerun, resume or retry to obtain a better result, or rerunning failed, invalid or blocked
+  cases;
+* modifying frozen experiment bytes or the dispatcher before or during the trial;
+* changing checker or verdict semantics after observing results;
+* creating `crates/helm-launch`, or accepting ADR-0024.
+
+After the trial, its result needs an independent result review before ADR-0024 or
+`crates/helm-launch` may advance. A red or green workflow is not a verdict: the result comes only
+from the frozen durable evidence.
+
+**TRIAL #3 D-7 IS AUTHORISED.**
+
+**TRIAL #3 D-7 IS NOT CONSUMED.**
+
+**LAUNCH-EXEC-01 TRIAL #3 VALID TRIAL COUNT IS ZERO.**
+
+**TRIAL #3 IS NOT_RUN.**
+
+**TRIAL #3 MUST NOT YET BE DISPATCHED.** The next gates are:
+
+1. byte-identical publication of the dispatcher to `main`;
+2. confirmation that GitHub registers the workflow at that path;
+3. proof that it still has zero runs and an unused run number 1.

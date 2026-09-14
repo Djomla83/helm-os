@@ -1,5 +1,51 @@
 # Stanje projekta
 
+<a id="launch-exec-01-trial-003-d7-authorised"></a>
+
+## Trial #3 D-7 authorised, 2026-09-14 — LAUNCH-EXEC-01 Trial #3 still NOT_RUN and not yet dispatchable
+
+The owner granted [D-7 for Trial #3](DECISIONS.md#d-7-authorised-trial-003) prospectively: exactly
+one valid Trial #3 execution, bound to the exact freeze, manifest, freeze review, accepted Build 8
+evidence and reviewed dispatcher blob below. This replaces the "no D-7 and no dispatcher" state of
+the freeze section below. That section is left as written.
+
+* **Freeze published.** Freeze `bebd8a5f83d4d0daebe9b068050cb5436289c75e`, manifest blob
+  `8cd290b573408510f8c16cd8dafe676354140a38`, SHA-256
+  `ea482c6feaf77abac1edcc23d26afbc4f249638170f60ed897088d5cda79ba70`. The
+  [independent freeze review](implementation/HELM-LAUNCH-EXEC-01-TRIAL-003-FREEZE-REVIEW.md)
+  `69f13a7` passed.
+* **Build 8 evidence published and accepted.** Formal run `34754901079`, job `103717520698`,
+  attempt 1, `BUILD_8_FORMAL_COMPILE_ONLY_SUCCESS`, with durable job-log SHA-256
+  `6c16e23ea03a7593e09911ca968c4313ab7764a05b98fd5b19c4756da9930a15`. It was accepted at `5a6be59`
+  by the [evidence-correction re-review](implementation/HELM-LAUNCH-EXEC-01-BUILD-008-EVIDENCE-CORRECTION-REREVIEW.md).
+  It is pretrial compile evidence only.
+* **Dispatcher reviewed and published on the milestone branch only.** Candidate `f197386` passed
+  its [independent review](implementation/HELM-LAUNCH-EXEC-01-TRIAL-003-DISPATCHER-REVIEW.md)
+  `4f19897`. Both were pushed to `docs/helm-launch-architecture` in one fast-forward,
+  `5a6be59..4f19897`.
+  * Path: `.github/workflows/launch-exec-01-trial-003.yml`.
+  * Blob: `64ce3d433a47eaae3eb28b8bb28f7300a330d762`.
+  * SHA-256: `9158e2932cc4f639c9e9be30ab445d9bcf1797dd7526274b7f96f1948fb9e4c8`.
+  * After publication GitHub showed zero Trial #3 runs and no Trial #3 workflow registered.
+* **Dispatcher absent from `main`.** `main` is still `d8a6887d508be3b4bb5707c40e6433cee21411b5`.
+* **D-7 authorised and not consumed.** It is consumed by the first fsynced `case_pose_started`.
+  While it is live:
+  * the dispatcher must not be edited, renamed, copied, recreated or replaced;
+  * authority-bearing history must not be force-pushed;
+  * the milestone branch must not be deleted, because the dispatcher's identity gates need
+    `bebd8a5`, `69f13a7`, `5a6be59`, `f197386` and `4f19897` to stay reachable.
+* **No frozen byte changed.** `SOURCE-HASHES.json` keeps `status: NOT_RUN` and
+  `d7_execution_authorised: false` as freeze-time fields.
+
+**Human dispatch is NOT yet permitted.** The next gate is:
+
+1. byte-identical publication of the dispatcher to `main`;
+2. confirmation that GitHub registers the workflow at that path;
+3. proof that it still has zero runs and an unused run number 1.
+
+**Trial #2:** D-7 consumed, valid count one, `MECHANISM_REJECTED`, never to be rerun.
+**Trial #3:** D-7 authorised and not consumed, NOT_RUN, valid count zero, not yet dispatchable.
+
 <a id="launch-exec-01-trial-003-freeze"></a>
 
 ## Trial #3 freeze cut locally, 2026-09-13 — FROZEN, NOT_RUN, NOT AUTHORISED
