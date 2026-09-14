@@ -1,5 +1,48 @@
 # Stanje projekta
 
+<a id="launch-exec-01-trial-003-completed"></a>
+
+## Trial #3 completed and independently reviewed, 2026-09-14 — `MECHANISM_REJECTED`
+
+GitHub Actions run `34883316368`, job `104107679380`, performed the one authorised execution of
+freeze `bebd8a5f83d4d0daebe9b068050cb5436289c75e`. The run details:
+
+* workflow `357912663`, `workflow_dispatch` on `main` at `501a7fa`;
+* run number 1, attempt 1;
+* the D-7 dispatcher blob `64ce3d433a47eaae3eb28b8bb28f7300a330d762`.
+
+Trial #3 executed exactly once. This supersedes the "not yet dispatchable" state of the D-7 section
+below, which is left as written.
+
+* **Evidence preserved.** The five artifact files are preserved byte-for-byte under
+  [`docs/experiments/evidence/LAUNCH-EXEC-01-TRIAL-003-2026-09-14/`](experiments/evidence/LAUNCH-EXEC-01-TRIAL-003-2026-09-14/)
+  in local commit `11bddc5ca8a56f5b71f817f6aa28c01a7f26c93b`. The source is artifact `10364580293`;
+  its ZIP SHA-256 `92ee47033513761ec5947ae10e3175bb78bd0a444799cc4fb3c3f5fbb3bcaeee` is transport
+  only.
+* **Independently reviewed.** The [independent result review](implementation/HELM-LAUNCH-EXEC-01-TRIAL-003-RESULT-REVIEW.md)
+  is committed locally with this section. Offline replay with the frozen `bebd8a5` checker
+  reproduces the aggregate, the counts and all 72 case statuses and reasons exactly.
+* **Frozen result: 70 PASS / 1 FAIL / 1 BLOCKED, `MECHANISM_REJECTED`.**
+  * Sole FAIL: `X2c` (`ExecStatusIndeterminate`, not the frozen prediction
+    `interpreter_ran_with_devfd`).
+  * Sole BLOCKED: `N3` (`unprivileged_runner`, never posed).
+* **Journal.** The first durable `case_pose_started` is `E1` at `n = 4`, and the journal ends in one
+  valid `trial_end` at `n = 218`.
+* **No diagnosis.** Nothing here diagnoses why X2c failed.
+
+**TRIAL #3 D-7 IS CONSUMED**
+
+**LAUNCH-EXEC-01 TRIAL #3 VALID TRIAL COUNT IS ONE**
+
+**TRIAL #3 MUST NOT BE RERUN**
+
+**NO TRIAL #4 IS AUTHORISED**
+
+**Next gate:** one bounded X2c postmortem and owner decision.
+
+**Trial #2:** completed, D-7 consumed, valid count one, `MECHANISM_REJECTED`, never to be rerun.
+**Trial #3:** completed, D-7 consumed, valid count one, `MECHANISM_REJECTED`, never to be rerun.
+
 <a id="launch-exec-01-trial-003-d7-authorised"></a>
 
 ## Trial #3 D-7 authorised, 2026-09-14 — LAUNCH-EXEC-01 Trial #3 still NOT_RUN and not yet dispatchable
