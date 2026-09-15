@@ -1,5 +1,50 @@
 # Stanje projekta
 
+<a id="launch-exec-01-trial-003-x2c-disposition"></a>
+
+## Trial #3 X2c postmortem accepted, 2026-09-15 — formal LAUNCH-EXEC-01 trial line CLOSED
+
+The owner [accepted the X2c postmortem disposition](DECISIONS.md#trial-003-x2c-postmortem-owner-disposition).
+The [X2c postmortem](implementation/HELM-LAUNCH-EXEC-01-TRIAL-003-X2C-POSTMORTEM.md) is commit
+`585caf924454faf5fb92e1e1dbd54675a1b7c0bf`. This supersedes the "next gate" of the Trial #3
+completion section below, which is left as written. No frozen byte, evidence file, review or
+postmortem changed.
+
+| Item | State |
+|---|---|
+| Trial #3 | **COMPLETED** |
+| Frozen result | **`MECHANISM_REJECTED`**, 70 PASS / 1 FAIL / 1 BLOCKED (sole FAIL `X2c`, sole BLOCKED `N3`) |
+| D-7 | **CONSUMED** |
+| Valid Trial #3 count | **ONE** |
+| X2c postmortem | **ACCEPTED** (`TRIAL_3_X2C_POSTMORTEM_ACCEPTED`) |
+| Engineering disposition | **PRODUCT MECHANISM NOT IMPLICATED BY X2c** |
+| Trial #4 | **NOT AUTHORISED** |
+| Current formal trial line | **CLOSED** |
+| Next gate | **HELM-LAUNCH PRODUCTIZATION PLAN** |
+| ADR-0024 | **PROPOSED** |
+| helm-launch product crate | **NOT YET CREATED** |
+
+* **Classification.** Product mechanism `MECHANISM_NOT_IMPLICATED`; frozen expectation
+  `EXPECTATION_EVIDENCE_MISMATCH`; observability `OBSERVABILITY_INCOMPLETE`; harness
+  `STATIC_POSABILITY_DEFECT` + `FIXTURE_DEFECT`.
+* **Not an acceptance.** The formal result stays `MECHANISM_REJECTED`. X2c no longer blocks
+  productization planning of the supported ELF launch path, but Trial #3 is not reclassified as
+  `MECHANISM_ACCEPTED`.
+* **S4 policy unchanged.** Clean exec-status EOF alone is not positive exec proof.
+* **Scripts.** `#!` script execution stays outside the 0.1 supported product path.
+* **N3.** Still BLOCKED on `unprivileged_runner`; no real privilege transition is validated.
+* **Backlog, not implemented.** R3-M1 (future evidence contract: integrity digests must commit to
+  reproducible published bytes) and a report-producer / static-posability audit of
+  report-declaring plans.
+
+**TRIAL #3 MUST NOT BE RERUN. NO TRIAL #4 IS AUTHORISED.**
+
+**Next gate:** one bounded helm-launch productization plan — API boundaries, Linux backend
+boundary, safe/unsafe split, lifecycle and result model, integration with helm-bind, helm-observe
+and helm-evidence, supported versus unsupported 0.1 behaviour, product test strategy, and migration
+from experiment code without copying the harness wholesale. No `crates/helm-launch` is created and
+ADR-0024 is not accepted.
+
 <a id="launch-exec-01-trial-003-completed"></a>
 
 ## Trial #3 completed and independently reviewed, 2026-09-14 — `MECHANISM_REJECTED`

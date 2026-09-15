@@ -406,3 +406,132 @@ from the frozen durable evidence.
 1. byte-identical publication of the dispatcher to `main`;
 2. confirmation that GitHub registers the workflow at that path;
 3. proof that it still has zero runs and an unused run number 1.
+
+
+<a id="trial-003-x2c-postmortem-owner-disposition"></a>
+
+### Owner decision 2026-09-15 — Trial #3 X2c postmortem accepted; formal LAUNCH-EXEC-01 trial line **CLOSED**; **no Trial #4**
+
+The owner accepts the
+[Trial #3 X2c postmortem](implementation/HELM-LAUNCH-EXEC-01-TRIAL-003-X2C-POSTMORTEM.md) at
+`585caf924454faf5fb92e1e1dbd54675a1b7c0bf`, which follows the
+[independent Trial #3 result review](implementation/HELM-LAUNCH-EXEC-01-TRIAL-003-RESULT-REVIEW.md)
+at `8dc9e96c64c2e590434e6e210875ce6d13fefc32`. The postmortem is engineering diagnosis made after
+the frozen result. This decision changes no frozen source, definition, manifest, checker, fixture,
+launcher, dispatcher, evidence file, review or postmortem. Every earlier section is left as written,
+including the prospective Trial #3 D-7 record above.
+
+**`TRIAL_3_X2C_POSTMORTEM_ACCEPTED`**
+
+#### 1. X2c disposition
+
+**X2C_PRIMARY_DIAGNOSIS:** X2c's frozen success rule required a structured helper report behind the
+frozen report sentinel, but the frozen `script_fixture.sh` could never emit that report. Static
+posability certified X2c because the launcher supplied the report **transport channel**, without
+establishing that the **executed object** could produce the report required by the success rule.
+
+| Layer | Classification |
+|---|---|
+| Product mechanism | **`MECHANISM_NOT_IMPLICATED`** |
+| Frozen expectation | **`EXPECTATION_EVIDENCE_MISMATCH`** |
+| Observability | **`OBSERVABILITY_INCOMPLETE`** |
+| Harness | **`STATIC_POSABILITY_DEFECT`** + **`FIXTURE_DEFECT`** |
+
+The conservative [Trial #2 / S4 policy](#trial-002-postmortem-decisions) remains in force and is not
+weakened: **clean exec-status EOF alone is not positive exec proof.**
+
+#### 2. Frozen history
+
+Trial #3 remains exactly as frozen and reviewed: **70 PASS / 1 FAIL / 1 BLOCKED**, aggregate
+**`MECHANISM_REJECTED`**, sole FAIL `X2c`, sole BLOCKED `N3`. X2c is not changed to PASS and is not
+removed from Trial #3; the aggregate is not recomputed under a corrected rule; Trial #3 was **not**
+`MECHANISM_ACCEPTED`.
+
+#### 3. No Trial #4
+
+**No Trial #4 is authorised.** No Trial #4 candidate, freeze, Build 9 for an acceptance trial or
+D-7 is created or prepared. A formal trial being rejected does not make another trial an automatic
+consequence. Any future formal trial requires a **new explicit owner decision** after a new
+preregistration and review process.
+
+#### 4. Product engineering disposition
+
+* **Formal experimental result:** `MECHANISM_REJECTED`.
+* **Engineering disposition:** the sole reject-causing case does not demonstrate a defect in the
+  supported product launch mechanism.
+
+The supported ELF launch mechanism is therefore **not blocked by X2c** from moving into
+productization planning. This is **not** a statement that Trial #3 is `MECHANISM_ACCEPTED`, and it
+must not be read or cited as one.
+
+#### 5. Script scope
+
+**`#!` script execution is not a supported LAUNCH-EXEC-01 0.1 product path.** The 0.1 mechanism
+admits the declared ELF cohort and refuses scripts. X2b and X2c were counterfactual control arms
+used to understand the reason for script refusal. The X2c observability defect does not require
+changing the product mechanism to support scripts, and 0.1 scope is not expanded.
+
+#### 6. N3
+
+N3 remains **BLOCKED** on `unprivileged_runner`. No real privileged identity was manufactured, so
+Trial #3 establishes no new claim about a real privilege transition. Existing conservative product
+policy stands, including refusal of set-ID objects at admission (D-9). N3 is not reopened.
+
+#### 7. R3-M1
+
+R3-M1 is **future evidence-contract work**. `aggregate_input_digest` was calculated from
+pre-sanitisation records, while the sanctioned preserved evidence intentionally withholds eight
+`child_pid` values, so the digest cannot be independently recomputed from the public preserved
+evidence.
+
+* **MINOR**; **nonblocking** for Trial #3 result authority; **not related** to X2c.
+* Trial #3 history is **not** repaired.
+* For a future evidence contract, any integrity digest intended for independent reproduction must
+  commit to sanctioned preserved bytes or another reproducible published representation. That
+  correction is not implemented by this decision.
+
+#### 8. Future X2c / posability work — backlog, not a trial
+
+* A report-declaring case must prove that its planned **executed object** can actually produce the
+  evidence its rule requires. Global channel availability is not enough.
+* X2c's fixture and evidence construction must be corrected before X2c is used in any future formal
+  acceptance claim.
+* The postmortem noted `helper_setid` / N3 as a possible audit target of the same unchecked
+  property. N3 was outside the X2c diagnosis and remains blocked; the X2c diagnosis is **not**
+  generalised to N3.
+* A later bounded test-contract audit may inspect all report-declaring plans.
+
+#### 9. ADR and product crate boundary
+
+* **ADR-0024 remains Proposed.** This decision does not accept it.
+* This decision does **not** create `crates/helm-launch`.
+* The next phase is **productization planning**, not implementation.
+
+#### 10. Next gate
+
+**The current LAUNCH-EXEC-01 formal trial line is CLOSED.** No additional formal trial is
+authorised.
+
+**Next gate: one bounded helm-launch productization plan.** It must translate the experimentally
+supported invariants into:
+
+* product API boundaries;
+* the Linux backend boundary;
+* the safe/unsafe split;
+* the lifecycle and result model;
+* integration points with helm-bind, helm-observe and helm-evidence;
+* supported versus unsupported 0.1 behaviour;
+* a product test strategy;
+* migration from experiment code to product code.
+
+It must not copy the experiment harness wholesale into the product.
+
+**TRIAL #3 FROZEN RESULT REMAINS MECHANISM_REJECTED.**
+
+**TRIAL #3 D-7 IS CONSUMED.**
+
+**LAUNCH-EXEC-01 TRIAL #3 VALID TRIAL COUNT IS ONE.**
+
+**TRIAL #3 MUST NOT BE RERUN.**
+
+**NO TRIAL #4 IS AUTHORISED.**
