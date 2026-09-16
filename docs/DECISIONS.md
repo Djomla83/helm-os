@@ -535,3 +535,130 @@ It must not copy the experiment harness wholesale into the product.
 **TRIAL #3 MUST NOT BE RERUN.**
 
 **NO TRIAL #4 IS AUTHORISED.**
+
+
+<a id="helm-launch-productization-plan-owner-review"></a>
+
+### Owner decision 2026-09-16 — helm-launch productization plan owner review **PASSED WITH BOUNDED AMENDMENTS**; ADR-0024 revision prepared, **still Proposed**
+
+The owner reviewed the
+[helm-launch 0.1 productization plan](implementation/HELM-LAUNCH-PRODUCTIZATION-PLAN.md) as proposed
+at `930ec14b940da9b136c7d2ad024b441d47ceba6c`. This decision changes no frozen experiment source,
+LAUNCH-EXEC-01 definition, manifest, checker, fixture, launcher, dispatcher, evidence file, review or
+postmortem. Its effect on ADR-0024, a file the Trial #3 freeze bound as a definition input, is stated
+in section 6. Every earlier section is left as written, including the ADR-0024 index row, every D-7
+record and every Trial #3 record.
+
+**`HELM_LAUNCH_PRODUCTIZATION_PLAN_OWNER_REVIEW_PASSED_WITH_BOUNDED_AMENDMENTS`**
+
+#### 1. Q1 — ADR-0024 disposition: **APPROVED**
+
+ADR-0024 must be revised before it can be considered for acceptance. Its Proposed text of 2026-09-09
+is stale and must not be accepted as-is.
+
+#### 2. Q2 — post-experiment product refinements: **APPROVED WITH AMENDMENTS, AS AN EXACT NARROWING**
+
+Approved as 0.1 design obligations, to be validated by normal product tests and **not** by another
+formal D-7 trial:
+
+* refuse writable executable capabilities;
+* relocate all child-side preserved descriptors to `>= 3` before final mapping;
+* block all blockable signals across `clone3`, and restore or reset child signal state in the closed
+  child sequence;
+* guard the process-group sweep on positively established group authority;
+* bound the reap after `SIGKILL`, and represent a child that still cannot be observed ended honestly;
+* distinguish read failure from EOF;
+* record timeout and termination actions as facts, without unsupported causal claims;
+* `POST_KILL_REAP_MS = 5000` as the initial 0.1 bound;
+* a maximum admitted executable size of 512 MiB as the initial 0.1 product bound.
+
+These are product design choices. They are **not** claims that LAUNCH-EXEC-01 directly validated
+them.
+
+#### 3. Q3 — process-group sweep: **APPROVED WITH A GROUP-AUTHORITY GUARD**
+
+* Exactly one `SIGKILL` process-group sweep is the fixed 0.1 cleanup policy on every return or
+  completion path **after** the launcher has positively established the direct child's dedicated
+  process group. This includes a normal direct-child exit.
+* The sweep **must** occur before the direct child is reaped.
+* If dedicated process-group establishment was not positively established, the launcher **must not**
+  infer or guess a group id and **must not** issue a group sweep.
+* Issuance is recorded as a fact. No descendant-killed claim and no containment claim follows.
+* **Accepted consequence.** Same-group descendants may be killed when `launch()` completes, including
+  after a normal direct-child exit: a same-group background process may be terminated even when the
+  direct child exited normally. That is intentional 0.1 cleanup policy. A descendant that leaves the
+  group may survive.
+* This is **best-effort cleanup** and must not be described as process-tree containment.
+
+#### 4. Required amendments
+
+**A. Measurement instability.** `helm-launch` refuses admission when the defined measurement protocol
+**detects** instability during measurement. Failure to detect instability does not prove that no
+concurrent mutation occurred, immutability, a snapshot, or that the measured bytes are the bytes
+later executed. The executable digest remains only a **pre-execution measurement of the pinned
+object**. Any detection method is described by what it actually observes, and no attestation claim
+is introduced.
+
+**B. Receipt authenticity.** `LaunchReceipt` is not globally "unforgeable". The safe Rust API may
+prevent an external caller from constructing an authority-bearing capability or `AuthorizedLaunch`
+value through ordinary public constructors. That does not make serialised receipt bytes authentic. A
+durable receipt is deterministic data, carries zero execution authority, may be copied, may be
+fabricated outside the crate, is not cryptographically signed, and is not proof of provenance by
+itself. `helm-launch` provides no receipt-authenticity claim. Provenance and bundle validation belong
+above `helm-launch`, and `helm-evidence` does not become launch authority.
+
+**C. "Executes exactly one".** The product contract authorises and **attempts** execution of exactly
+one admitted ELF object through the exact authorised descriptor. No prose may imply that the receipt
+always proves that the measured image executed successfully. **Clean exec-status EOF alone is not
+positive exec proof.** The durable model contains no unconditional `ExecSucceeded` fact, and where
+positive exec cannot be independently established, `ExecStatusIndeterminate` is preserved.
+
+#### 5. Execution mechanism and signal contract
+
+* Direct-child creation and atomic pidfd acquisition use `clone3(CLONE_PIDFD)`, which replaces the
+  stale `fork` plus `pidfd_open` mechanism. `clone3` avoids the post-fork `pidfd_open` preconditions
+  and the `pthread_atfork` surface identified during the experiment line.
+* The execution target is `execveat(exec_fd, "", argv, envp, AT_EMPTY_PATH)`. The `/proc/self/fd`
+  fallback is not a 0.1 product path. `std::process::Command`, `posix_spawn` and a helper or
+  trampoline are rejected alternatives, never fallbacks.
+* **Signals.** Before `clone3`, the calling thread saves its signal mask and blocks all blockable
+  signals for the clone window. The child starts with that blocked mask, establishes its setup,
+  restores the required dispositions while delivery is blocked, restores the intended final mask only
+  after the dispositions are ready, then applies `no_new_privs` and reaches `execveat` in the
+  approved sequence. The parent restores its original mask after `clone3`. `SIGKILL` and `SIGSTOP`
+  are not blockable. No process-wide signal control is claimed in a multithreaded caller: the
+  operation controls the calling thread and the child's inheritance boundary.
+
+#### 6. ADR-0024 and the plan
+
+* The amendments are applied in place in the plan, and its section 19 lists every amended passage.
+* [ADR-0024](adr/ADR-0024-launch-authority.md) is **revised in place** to the current intended
+  product contract and **stays Proposed**. No acceptance date and no approver are entered.
+* The Trial #3 freeze bound the pre-revision ADR-0024 bytes as a definition input (SHA-256
+  `c1f3cce88438439aab6632a9c56450ae98d1c64adb31b13c742e2febb1476351`). Those bytes remain
+  addressable at freeze commit `bebd8a5f83d4d0daebe9b068050cb5436289c75e`. The revision changes no
+  freeze manifest, experiment source, LAUNCH-EXEC-01 definition or evidence file.
+
+#### 7. Trial history
+
+Trial #3's frozen result stays **`MECHANISM_REJECTED`**, 70 PASS / 1 FAIL / 1 BLOCKED. The sole FAIL,
+X2c, was subsequently accepted by owner postmortem as `PRODUCT_MECHANISM: MECHANISM_NOT_IMPLICATED`,
+and the formal result is **not** rewritten as accepted. N3 remains unvalidated for a real privilege
+transition. R3-M1 is future evidence-contract work. The LAUNCH-EXEC-01 formal trial line is closed.
+
+#### 8. Boundary and next gate
+
+* **ADR-0024 is not accepted** and remains Proposed.
+* **`crates/helm-launch` remains unauthorised** and is not created. No implementation is authorised.
+* **No Trial #4** is authorised, prepared or implied.
+* `main` is unchanged.
+
+**Next gate: owner review of revised ADR-0024.**
+
+**ADR-0024 REMAINS PROPOSED.**
+
+**`crates/helm-launch` IS NOT AUTHORISED.**
+
+**TRIAL #3 FROZEN RESULT REMAINS MECHANISM_REJECTED.**
+
+**NO TRIAL #4 IS AUTHORISED.**

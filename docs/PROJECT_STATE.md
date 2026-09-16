@@ -1,5 +1,53 @@
 # Stanje projekta
 
+<a id="helm-launch-productization-plan-owner-review"></a>
+
+## helm-launch productization plan owner-reviewed, 2026-09-16 — ADR-0024 revision prepared, still PROPOSED
+
+The owner [reviewed the productization plan](DECISIONS.md#helm-launch-productization-plan-owner-review)
+and passed it with bounded amendments. The amendments are applied in the
+[plan](implementation/HELM-LAUNCH-PRODUCTIZATION-PLAN.md#19-owner-review-amendments-2026-09-16), and
+[ADR-0024](adr/ADR-0024-launch-authority.md) is revised in place to the current intended product
+contract. This supersedes the "next gate" of the X2c section below, which is left as written.
+
+| Item | State |
+|---|---|
+| HELM-LAUNCH PRODUCTIZATION PLAN | **OWNER-REVIEWED** (`HELM_LAUNCH_PRODUCTIZATION_PLAN_OWNER_REVIEW_PASSED_WITH_BOUNDED_AMENDMENTS`) |
+| Plan proposal commit | `930ec14b940da9b136c7d2ad024b441d47ceba6c` |
+| Q1 / Q2 / Q3 | **APPROVED** / **APPROVED WITH EXACT NARROWING** / **APPROVED WITH A GROUP-AUTHORITY GUARD** |
+| ADR-0024 | **REVISION PREPARED / STILL PROPOSED** |
+| crates/helm-launch | **NOT CREATED** |
+| Implementation | **NOT AUTHORISED** |
+| Trial #3 frozen result | **`MECHANISM_REJECTED`**, 70 PASS / 1 FAIL / 1 BLOCKED |
+| LAUNCH-EXEC-01 formal trial line | **CLOSED** |
+| Trial #4 | **NOT AUTHORISED** |
+| Next gate | **OWNER REVIEW OF REVISED ADR-0024** |
+
+* **The contract as proposed.** Execution authority is an already-open, admitted executable
+  descriptor; a plan, specification, observation or binding report grants none. The target is one
+  regular ELF64 x86_64 object on Linux x86_64. The mechanism is `clone3(CLONE_PIDFD)` followed by
+  `execveat(exec_fd, "", argv, envp, AT_EMPTY_PATH)`, with no procfs fallback. Clean exec-status EOF
+  alone is not positive exec proof. Lifecycle is direct-child only, with one guarded `SIGKILL`
+  group sweep before the reap as best-effort cleanup, never containment. One `cfg`-gated backend
+  module holds all `unsafe`, and the crate has zero HELM crate dependencies.
+* **Approved refinements are obligations, not evidence.** They are to be validated by ordinary
+  product tests. LAUNCH-EXEC-01 did not validate them, and no formal trial is authorised for them.
+* **Frozen ADR bytes stay addressable.** The Trial #3 manifest bound the pre-revision ADR-0024 bytes
+  (SHA-256 `c1f3cce88438439aab6632a9c56450ae98d1c64adb31b13c742e2febb1476351`), which remain at
+  freeze commit `bebd8a5`. No freeze manifest, experiment source, LAUNCH-EXEC-01 definition or
+  evidence file changed.
+* **Open validation conflict — owner decision needed.** `Trial3Freeze` in
+  `tools/tests/test_launch_exec_01_trial3.py` compares the **working-tree** ADR-0024 with that frozen
+  hash. With the ordered in-place revision, `test_the_exact_frozen_bytes_verify` and
+  `test_drift_fails_on_a_disposable_copy` report definition drift for exactly that path: 783 tests,
+  2 failures, 74 skipped. Changing the test lies outside this revision's file scope, so reconciling
+  the binding with the revision is an owner decision. `--verify-freeze` checks source hashes only and
+  still passes.
+
+**None of this is acceptance.** ADR-0024 is **PROPOSED**, `crates/helm-launch` is **NOT CREATED**,
+implementation is **NOT AUTHORISED**, **TRIAL #3 MUST NOT BE RERUN**, and **NO TRIAL #4 IS
+AUTHORISED**.
+
 <a id="launch-exec-01-trial-003-x2c-disposition"></a>
 
 ## Trial #3 X2c postmortem accepted, 2026-09-15 — formal LAUNCH-EXEC-01 trial line CLOSED

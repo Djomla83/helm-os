@@ -4,6 +4,7 @@
 > **NO PRODUCT CRATE EXISTS.**
 > **ADR-0024 REMAINS PROPOSED.**
 > **NO TRIAL #4 IS AUTHORISED.**
+> **OWNER-REVIEWED 2026-09-16: `HELM_LAUNCH_PRODUCTIZATION_PLAN_OWNER_REVIEW_PASSED_WITH_BOUNDED_AMENDMENTS`.**
 
 This plan turns the closed LAUNCH-EXEC-01 experiment line into an implementation-ready product
 design for `helm-launch` 0.1. It creates no crate, changes no code, accepts no ADR and authorises
@@ -14,6 +15,17 @@ launch mechanism. It does **not** say Trial #3 was `MECHANISM_ACCEPTED`, and not
 Every "must" below is a proposed product-contract rule for owner approval. Section 18 lists what
 the owner must approve before `crates/helm-launch` may be created.
 
+**Owner review, 2026-09-16.** The owner reviewed this plan as proposed at
+`930ec14b940da9b136c7d2ad024b441d47ceba6c` and
+[passed it with bounded amendments](../DECISIONS.md#helm-launch-productization-plan-owner-review):
+Q1 approved, Q2 approved with an exact narrowing, Q3 approved with a group-authority guard, and
+three required wording amendments on measurement instability, receipt authenticity and "executes
+exactly one". They are applied in place, and [section 19](#19-owner-review-amendments-2026-09-16)
+lists every amended passage. The approved refinements are product design obligations to be
+validated by ordinary product tests. They are not claims that LAUNCH-EXEC-01 validated them, and
+approval changes no evidence class in section 3. [ADR-0024](../adr/ADR-0024-launch-authority.md) is
+revised to this contract and **stays Proposed**.
+
 **Starting state.** Branch `docs/helm-launch-architecture` at
 `174caad1a3980a35b2ea841f49e05555753710b5`, `main` at `501a7fa95c4884da4fec9a20a512c2d63f2b30cc`.
 Crates on the branch: `helm-app-spec`, `helm-observe`, `helm-bind`, `helm-evidence`.
@@ -23,16 +35,17 @@ Crates on the branch: `helm-app-spec`, `helm-observe`, `helm-bind`, `helm-eviden
 ### 1.1 Precedence used by this plan
 
 When two sources conflict, the higher row wins. The conflict is recorded in section 4, and the
-older document is **not** edited.
+older document is **not** edited. ADR-0024 is the one exception: the owner review of 2026-09-16
+ordered it revised in place.
 
 | Rank | Source | Examples |
 |---|---|---|
-| 1 | Current explicit owner decisions | [DECISIONS.md](../DECISIONS.md): D-1 to D-11, the [Trial #2 postmortem decisions](../DECISIONS.md#trial-002-postmortem-decisions) (S4 policy), the [X2c disposition](../DECISIONS.md#trial-003-x2c-postmortem-owner-disposition) |
+| 1 | Current explicit owner decisions | [DECISIONS.md](../DECISIONS.md): D-1 to D-11, the [Trial #2 postmortem decisions](../DECISIONS.md#trial-002-postmortem-decisions) (S4 policy), the [X2c disposition](../DECISIONS.md#trial-003-x2c-postmortem-owner-disposition), the [owner review of this plan](../DECISIONS.md#helm-launch-productization-plan-owner-review) |
 | 2 | Accepted Trial #3 result review and X2c disposition | [result review](HELM-LAUNCH-EXEC-01-TRIAL-003-RESULT-REVIEW.md), [X2c postmortem](HELM-LAUNCH-EXEC-01-TRIAL-003-X2C-POSTMORTEM.md) |
 | 3 | Preserved Trial #3 evidence and frozen experiment facts | [`evidence.json`](../experiments/evidence/LAUNCH-EXEC-01-TRIAL-003-2026-09-14/evidence.json), [definition](../experiments/LAUNCH-EXEC-01-DEFINITION.md), [`launcher_spike.c`](../experiments/launch-exec-01/launcher_spike.c) at freeze `bebd8a5` |
 | 4 | Current public APIs of existing crates | `crates/helm-*/src` on this branch |
 | 5 | Accepted ADRs | [ADR-0021](../adr/ADR-0021-second-product-module.md), [ADR-0022](../adr/ADR-0022-observation-authority.md), [ADR-0023](../adr/ADR-0023-binding-authority.md) |
-| 6 | ADR-0024 while Proposed | [ADR-0024](../adr/ADR-0024-launch-authority.md) |
+| 6 | ADR-0024 while Proposed | [ADR-0024](../adr/ADR-0024-launch-authority.md), revised to this plan on 2026-09-16; section 4 cites its pre-revision text |
 | 7 | Older architecture prose and pretrial hypotheses | [HELM-LAUNCH-ARCHITECTURE.md](../research/HELM-LAUNCH-ARCHITECTURE.md), proposed [ADR-0005](../adr/ADR-0005-sandbox-boundary.md) |
 
 ### 1.2 The Trial #3 environment the evidence comes from
@@ -62,7 +75,7 @@ Read directly from `evidence.json` (`cases.*.status` and `cases.*.record.outcome
 | T1–T6 | PASS | timeout, grace, observed ordering |
 | N1, N2 | PASS | `NoNewPrivs` set, and controlled |
 | **N3** | **BLOCKED** `unprivileged_runner` | real privilege transition untested |
-| P1–P4 | PASS; P1 `descendant_died`, P2 and P4 `descendant_survived`, P3 `sweep_issued` | no containment; the sweep reaches same-group descendants |
+| P1–P4 | PASS; P1 `descendant_died`, P2 and P4 `descendant_survived`, P3 `sweep_issued` | no containment; a same-group descendant was recorded `descendant_died` under the spike's every-path sweep, which is no descendant-killed claim |
 | S1–S7 | PASS; S4 and S5 `ExecStatusIndeterminate`, S6 `ExecStatusIndeterminate:PreExecTimeout` | conservative exec evidence |
 | M1–M5 | PASS; M5 recorded `waitid_echild` | child window, multi-threaded parent, `clone3(CLONE_PIDFD)` |
 
@@ -70,11 +83,13 @@ Read directly from `evidence.json` (`cases.*.status` and `cases.*.record.outcome
 
 ### 2.1 Goal
 
-> `helm-launch` 0.1 executes **exactly one** already-open, explicitly authorised, regular ELF
-> x86_64 object on Linux x86_64. It uses a caller-declared UTF-8 argv, an exactly empty
-> environment, an explicit working-directory capability, exactly descriptors 0, 1 and 2 in the
-> executed image, bounded stdout/stderr measurement, a monotonic timeout and direct-child
-> lifecycle only. It returns a deterministic, non-verdict `LaunchReceipt`.
+> `helm-launch` 0.1 authorises and **attempts** execution of **exactly one** already-open,
+> admitted, regular ELF64 x86_64 object on Linux x86_64, through the exact authorised descriptor.
+> It uses a caller-declared UTF-8 argv, an exactly empty environment, an explicit
+> working-directory capability, exactly descriptors 0, 1 and 2 in the executed image, bounded
+> stdout/stderr measurement, a monotonic timeout and direct-child lifecycle only. It returns a
+> deterministic, non-verdict `LaunchReceipt`, which never states that the attempt succeeded or
+> that the measured image ran (section 10).
 
 ### 2.2 What the crate owns
 
@@ -105,6 +120,14 @@ Read directly from `evidence.json` (`cases.*.status` and `cases.*.record.outcome
 * **No process-tree containment.** Descendants may outlive the launch (P2, P4).
 * **No positive exec proof.** Clean exec-status EOF alone is not positive exec proof.
 * **The measurement is not the executed bytes.** It covers the main file body before exec only.
+* **No stability proof.** Admission refuses when its measurement protocol *detects* instability.
+  Detecting none does not prove the absence of concurrent mutation, immutability or a snapshot
+  (T51).
+* **No receipt authenticity.** A serialised receipt carries zero authority, is not signed, can be
+  copied or fabricated outside the crate, and is not proof of provenance by itself (T52).
+* **The group sweep is cleanup, not containment.** Once group authority is established, a
+  same-group background process may be terminated when `launch` completes, even after a normal exit
+  (T30, T31).
 * **An empty environment does not pin loaded code.** `PT_INTERP` and libraries resolve by name (E7).
 * **No real privilege transition is validated** (N3 BLOCKED).
 * **Exit code 0 means only that the direct child exited with status 0.**
@@ -117,7 +140,9 @@ not touch it. `OWNER_POLICY`: an explicit owner decision. `DOCUMENTATION_DERIVED
 documentation or architecture reasoning, with no repository evidence. `CURRENT_IMPLEMENTATION_PRECEDENT`:
 an existing HELM crate already does it. `UNVALIDATED`: nothing in the repository establishes it yet.
 Each row has one primary class. An `EXPERIMENTALLY_SUPPORTED` row is evidence about the C spike on
-the Trial #3 runner, subject to the transfer gap of section 1.2.
+the Trial #3 runner, subject to the transfer gap of section 1.2. An owner approval from the review
+of 2026-09-16 is named in the authority column. It makes the rule a binding 0.1 design obligation,
+leaves the row's class unchanged, and is never evidence.
 
 Component names refer to section 5 and section 7.
 
@@ -130,7 +155,7 @@ Component names refer to section 5 and section 7.
 | T05 | `#!` scripts are refused at admission | X2 PASS; X2b `ENOENT` PASS; X2c non-implicating by owner disposition | EXPERIMENTALLY_SUPPORTED | admission (`NotElf`) | script fixture refused; no child, no receipt | script execution is unsupported, not demonstrated impossible |
 | T06 | `S_ISUID`/`S_ISGID` objects are refused | X7 PASS; D-9 | EXPERIMENTALLY_SUPPORTED | admission | `u+s` and `g+s` fixtures owned by the test user | file capabilities are not read; see T16/T17 |
 | T07 | `O_PATH` executable descriptors are refused | X6 PASS | EXPERIMENTALLY_SUPPORTED | admission access-mode check | `O_PATH` descriptor → `DescriptorModeUnsuitable` | execute-only objects are inadmissible |
-| T08 | Writable (`O_WRONLY`/`O_RDWR`) executable descriptors are refused | new product rule; E5 shows a held writer yields `ETXTBSY` | UNVALIDATED | admission access-mode check | both writable modes refused before measurement | a writer elsewhere is not detected |
+| T08 | Writable (`O_WRONLY`/`O_RDWR`) executable descriptors are refused | new product rule; E5 shows a held writer yields `ETXTBSY`; owner-approved (Q2) | UNVALIDATED | admission access-mode check | both writable modes refused before measurement | a writer elsewhere is not detected |
 | T09 | Size, SHA-256 and mode bits are measured through the same descriptor before the attempt | E1 digest equals oracle; E6d and X1 record pre-change mode | EXPERIMENTALLY_SUPPORTED | admission measurement | digest equals an independent hash; `fchmod` after admission leaves recorded bits unchanged | reading updates atime and page cache |
 | T10 | The measurement is never presented as the executed bytes | E6 mutated body ran; E6b safe set; E5b no `ETXTBSY`; E6c recorded | EXPERIMENTALLY_SUPPORTED | receipt field names `pre_exec_body_*`; docs | length-preserving mutation after admission runs the mutated body; receipt keeps the old digest | the measure-to-exec window is uncovered; memfd sealing not adopted |
 | T11 | No `binfmt_misc` entry can route an in-cohort object to a pathname interpreter | architecture §6 | DOCUMENTATION_DERIVED | admission header check | none possible unprivileged | an entry matching native x86_64 ELF still routes; host precondition |
@@ -141,9 +166,9 @@ Component names refer to section 5 and section 7.
 | T16 | `PR_SET_NO_NEW_PRIVS = 1` is set before exec | N1 PASS; N2 control PASS; D-11 | EXPERIMENTALLY_SUPPORTED | child stage `NO_NEW_PRIVS` | child observes `NoNewPrivs: 1` when the test process has 0 | not isolation, not privilege reduction |
 | T17 | A real set-ID or file-capability transition is suppressed | N3 BLOCKED `unprivileged_runner` | UNVALIDATED | D-9 + D-11 together | none unprivileged; privileged environment deferred | rests on kernel documentation only |
 | T18 | Exactly 0, 1, 2 survive; unrelated host descriptors never do, `CLOEXEC` or not | F1, F2, F3, F4, F6, F7 PASS; D-1 arm (i) | EXPERIMENTALLY_SUPPORTED | parent fd layout + child `close_range` | non-`CLOEXEC` host fd, `CLOEXEC` host fd, host 0–2 closed, adjacent numbers | none claimed beyond the executed image |
-| T19 | Every child-needed descriptor is duplicated `F_DUPFD_CLOEXEC ≥ 3` in the parent, unconditionally | refinement of spike `move_above_2`, which moved only 0–2 | UNVALIDATED | fd-layout planner | property test over layouts; caller-supplied non-`CLOEXEC` exec fd does not reach the image | none |
+| T19 | Every child-side preserved descriptor is relocated `F_DUPFD_CLOEXEC ≥ 3` in the parent before the final stdio mapping, unconditionally | refinement of spike `move_above_2`, which moved only 0–2; owner-approved (Q2) | UNVALIDATED | fd-layout planner | property test over layouts; caller-supplied non-`CLOEXEC` exec fd does not reach the image | none |
 | T20 | Child signal mask is emptied and every disposition reset to default | F5, T6 PASS | EXPERIMENTALLY_SUPPORTED | child stages `SIGACTION`, `SIGMASK` | host blocks `SIGTERM`, ignores `SIGPIPE`; child masks clean; T6-shaped timeout | none |
-| T21 | The calling thread blocks all signals across `clone3`; the child resets dispositions before unmasking | refinement; not in the frozen stage order | UNVALIDATED | parent pre-clone; child stage order | host handler installed; signal delivered in the window does not run host code in the child | `SIGKILL`/`SIGSTOP` cannot be blocked |
+| T21 | The calling thread blocks every blockable signal across `clone3` with a raw full-set `rt_sigprocmask` and restores its saved mask after; the child resets dispositions while delivery is blocked and sets the final mask only then | refinement; not in the frozen stage order; owner-approved (Q2) | UNVALIDATED | parent pre-clone; child stage order | host handler installed; the traced parent mask includes glibc's internal real-time signals; a signal sent in the window does not run host code in the child | `SIGKILL`/`SIGSTOP` are not blockable; controls the calling thread and the child's inheritance only, never process-wide delivery in a multithreaded caller |
 | T22 | stdin is a pipe whose write end the parent closes, so the child reads EOF | `pipe(7)`; architecture §18 | DOCUMENTATION_DERIVED | parent pipe setup | fixture reads stdin and reports immediate EOF | no interactive input in 0.1 |
 | T23 | stdout and stderr drain concurrently without deadlock, spin or unbounded memory | O1–O5, O8 PASS | EXPERIMENTALLY_SUPPORTED | parent poll loop | 8 MiB both streams; early close; `POLLIN`+`POLLHUP` 200 repetitions; poll-return bound | timing depends on host load |
 | T24 | Raw output bytes stay in memory; the receipt holds counts, digests and completeness only | helm-observe/helm-bind artifacts carry no payload; experiment `PRE-D7-B1` kept prefixes internal | CURRENT_IMPLEMENTATION_PRECEDENT | `LaunchOutcome` vs `LaunchReceipt` | receipt bytes never contain a canary the child printed; `Debug` of outcome redacts | hashing does not stop the child reading secrets |
@@ -152,18 +177,18 @@ Component names refer to section 5 and section 7.
 | T27 | The pidfd comes from the same `clone3(CLONE_PIDFD)` that creates the child, from a multi-threaded parent | M3 traced direct form PASS (bounded claim); M2 PASS; M5 recorded `waitid_echild` | EXPERIMENTALLY_SUPPORTED | backend `clone3` | traced test: one process `clone3` with `CLONE_PIDFD`, no `pidfd_open`; run from the multi-threaded test harness | M3 claim covers one traced execution only |
 | T28 | The Rust child window issues only the closed syscall set: no allocation, lock, formatting or panic | M1/M4 evidence is for the C spike | UNVALIDATED | unsafe backend child path | traced window vs closed set; source-token scan; `needs_drop` assertion | proof is per build configuration |
 | T29 | Timeout sends the plan's `SIGTERM` by pidfd, waits `grace_ms`, then `SIGKILL` | T1, T2, T3, T6 PASS | EXPERIMENTALLY_SUPPORTED | lifecycle loop | sleeper, `SIGTERM`-ignoring child, exit during grace | `waitid` gives a signal number, not a sender |
-| T30 | One `SIGKILL` process-group sweep is issued on every path while the child is unreaped, strictly before the reap | P3 PASS; P1 `descendant_died`; spike line 988 | EXPERIMENTALLY_SUPPORTED | lifecycle loop | traced order sweep < `waitid`; same-group descendant ends; `setsid` descendant survives | best effort; `setsid`/`setpgid` escape |
-| T31 | The sweep is skipped if the direct child is no longer an unreaped zombie | refinement enforcing architecture §24's "only while unreaped" | UNVALIDATED | lifecycle loop (`waitid WNOWAIT`) | host `SIGCHLD = SIG_IGN` → sweep recorded not issued | a foreign thread reaping between check and sweep |
+| T30 | With group authority established (T31), exactly one `SIGKILL` process-group sweep is issued on every completion path, including a normal exit, strictly before the reap | P3 PASS; P1 `descendant_died`; spike line 988; owner-approved (Q3) | EXPERIMENTALLY_SUPPORTED | lifecycle loop | traced order sweep < `waitid`; same-group descendant of a normally exiting child ends; `setsid` descendant survives | best-effort cleanup; `setsid`/`setpgid` escape |
+| T31 | No sweep without positively established group authority: only the launcher's own successful `setpgid(child, child)` establishes it, no group id is inferred, and a child observed already reaped elsewhere gets no sweep | architecture §24 "only while unreaped"; owner-approved guard (Q2, Q3) | UNVALIDATED | spawn step `setpgid`; lifecycle loop (`waitid WNOWAIT`) | test-only parent delay past exec → `EACCES`, sweep not issued, no `kill` in the trace; host `SIGCHLD = SIG_IGN` → sweep not issued | a parent `setpgid` that loses the race to exec leaves the image in its dedicated group but grants no sweep authority; a foreign reaper acting between the probe and the sweep |
 | T32 | After the direct child ends, draining stops after `POST_EXIT_DRAIN_MS`, recorded `WriterRetainedAfterChildExit` | O6, O7, P4, T5 PASS | EXPERIMENTALLY_SUPPORTED | lifecycle loop | descendant holds 1 and 2 for 30 s; launch returns within bound | closing the read end may `SIGPIPE` the descendant |
 | T33 | The run timeout is monotonic and starts at exec-status EOF | T1–T5 PASS; spike `deadline = now + timeout_ms` at EOF | EXPERIMENTALLY_SUPPORTED | lifecycle loop | T4-shaped schedule | EOF is not exec proof (T36) |
-| T34 | The pre-exec phase is bounded; on expiry the child is `SIGKILL`ed, swept and reaped | S6 PASS | EXPERIMENTALLY_SUPPORTED | lifecycle loop | test-only stall before exec → `pre_exec_status_timeout`, no zombie | exec may have happened just after the bound |
+| T34 | The pre-exec phase is bounded; on expiry the child is `SIGKILL`ed with the bounded kill wait (T40), swept only under group authority (T31), and reaped once its end is observed | S6 PASS | EXPERIMENTALLY_SUPPORTED | lifecycle loop | test-only stall before exec → `pre_exec_status_timeout`, no zombie | exec may have happened just after the bound |
 | T35 | A structured pre-exec failure carries stage and errno and is never an exit status | X1, X3, X4, X8, E5, E6d, S2, S7 PASS; S3 `Exited:127` distinct | EXPERIMENTALLY_SUPPORTED | exec-status record | `EACCES`, `ENOEXEC`, `ETXTBSY`, `CHDIR:EACCES`; helper exiting 127 is `Exited` | errno is host-kernel specific |
 | T36 | Clean exec-status EOF alone is not positive exec proof | Trial #2 owner decision 2; X2c disposition | OWNER_POLICY | outcome model | no public API or receipt field maps EOF to exec success | 0.1 cannot say "the image ran" |
 | T37 | Death before exec or a short record is `indeterminate`, never success | S5 PASS; S4 launcher claim | EXPERIMENTALLY_SUPPORTED | outcome model | test-only death before exec → `indeterminate`, byte-identical status view to a normal run | — |
 | T38 | Exit status and signal termination stay distinct, including `CLD_DUMPED` | R1, R2, R3 PASS; S3 PASS | EXPERIMENTALLY_SUPPORTED | `waitid` classification | exit 0, exit 42, `SIGSEGV` with and without core, `SIGABRT` | none |
 | T39 | A child reaped elsewhere yields an unobservable end, never a guessed status | R4 recorded `ExitStatusUnobservable`; M5 `waitid_echild` | EXPERIMENTALLY_SUPPORTED | `waitid` classification | host `SIGCHLD = SIG_IGN` | caller precondition, not enforced |
-| T40 | After `SIGKILL` the reap wait is bounded; a child that does not end is recorded, and `launch` still returns | architecture falsifier 21; spike `waitid` blocks | UNVALIDATED | lifecycle loop | simulated backend only; no unprivileged way to force an unkillable child | an unreaped child is left to the host |
-| T41 | A stream read failure is its own completeness value, never EOF | architecture §30; spike treated read errors as EOF | UNVALIDATED | lifecycle loop | simulated backend injects `EIO` | — |
+| T40 | Every `SIGKILL` the launcher sends to the direct child by pidfd starts a wait bounded by `POST_KILL_REAP_MS`; a child whose end is still not observed is recorded as `end_not_observed` and left unreaped, and `launch` still returns | architecture falsifier 21; spike `waitid` blocks; owner-approved (Q2) | UNVALIDATED | lifecycle loop | simulated backend only; no unprivileged way to force an unkillable child | an unreaped child is left to the host; no claim that it is still running later |
+| T41 | A stream read failure is its own completeness value, never EOF | architecture §30; spike treated read errors as EOF; owner-approved (Q2) | UNVALIDATED | lifecycle loop | simulated backend injects `EIO` | — |
 | T42 | A dynamically linked ELF launches, and the empty environment does not pin its loaded code | E7 PASS | EXPERIMENTALLY_SUPPORTED | none beyond T02/T15 | dynamic fixture (every Rust fixture is dynamic) | loaded-code closure unmeasured |
 | T43 | The durable receipt has no timestamp and no elapsed duration | D-8 | OWNER_POLICY | receipt serializer | schema test; field list closed | elapsed time exists only in memory |
 | T44 | No term the crate emits is a verdict word | helm-bind vocabulary tests; ADR-0023 | CURRENT_IMPLEMENTATION_PRECEDENT | model enums, serializer | exhaustive vocabulary scan | caller-chosen ids are data |
@@ -173,20 +198,30 @@ Component names refer to section 5 and section 7.
 | T48 | Any integrity digest meant for independent recomputation commits to published bytes | X2c disposition §7 (R3-M1) | OWNER_POLICY | receipt serializer | `sha256(exact_bytes) == sha256()`; no withheld field exists | — |
 | T49 | Kernel floor is 5.9 (`close_range`) | architecture §5 | DOCUMENTATION_DERIVED | cohort statement | none; CI runs one kernel | evidence exists only for `6.17.0-1022-azure` |
 | T50 | A test that reads a fixture report must prove the executed fixture can emit it | X2c disposition §8 | OWNER_POLICY | test harness | producer self-test before any consumer assertion | applies to tests, not to the product |
+| T51 | Admission is refused when the measurement protocol **detects** instability: the second metadata sample differs from the first in size, `st_mtime` or `st_ctime`, or the byte count read differs from the first sample's size. Detecting none is never reported as stability | owner amendment 1 (2026-09-16); `helm-observe` before/after sampling (`changed_during_read`) | CURRENT_IMPLEMENTATION_PRECEDENT | admission measurement | test-only hook between the read loop and the second sample changes the size, or rewrites content with a timestamp change → refused; no test asserts that every concurrent change is detected | a change that moves no sampled field between the samples is not detected; no immutability, snapshot or measured-equals-executed claim |
+| T52 | No receipt-authenticity claim: a serialised receipt carries zero authority, is not signed, can be copied or fabricated outside the crate, and is not proof of provenance by itself | owner amendment 2 (2026-09-16) | OWNER_POLICY | receipt docs, README, vocabulary | no API turns receipt bytes into a `LaunchReceipt` value; documentation and vocabulary scan finds no authenticity, signature or provenance claim | provenance and bundle validation belong above `helm-launch` |
 
-**Counts:** EXPERIMENTALLY_SUPPORTED **26**, OWNER_POLICY **9**, DOCUMENTATION_DERIVED **3**,
-CURRENT_IMPLEMENTATION_PRECEDENT **4**, UNVALIDATED **8**.
+**Counts:** EXPERIMENTALLY_SUPPORTED **26**, OWNER_POLICY **10**, DOCUMENTATION_DERIVED **3**,
+CURRENT_IMPLEMENTATION_PRECEDENT **5**, UNVALIDATED **8**. T51 and T52 were added by the owner
+review of 2026-09-16; no existing row changed class.
 
 **Load-bearing UNVALIDATED rows.** T28 (Rust child window) and T21 (signal blocking across
 `clone3`) carry the safety of the unsafe backend. T19, T31, T40 and T41 are product refinements
-that close gaps the spike left open. T08 is a new admission rule. T17 (N3) stays a non-claim and
-is not made load-bearing: no product text may rely on a demonstrated privilege suppression.
+that close gaps the spike left open. T08 is a new admission rule. The owner approved T08, T19, T21,
+T31, T40 and T41 as 0.1 design obligations on 2026-09-16. Approval does not validate them: product
+tests must. T17 (N3) stays a non-claim and is not made load-bearing: no product text may rely on a
+demonstrated privilege suppression.
 
 ## 4. Superseded or refined pretrial assumptions
 
-None of the documents named here is edited. The product follows the right-hand column.
-"Superseded" means a higher-ranked source contradicts the statement. "Refined" means the statement
-still holds but is narrower or more specific than its wording.
+None of the documents named here is edited by this plan. The product follows the right-hand
+column. "Superseded" means a higher-ranked source contradicts the statement. "Refined" means the
+statement still holds but is narrower or more specific than its wording.
+
+**ADR-0024 citations below are to its pre-revision Proposed text.** The owner review of 2026-09-16
+had ADR-0024 revised in place to this plan. The cited text is the one the Trial #3 freeze bound by
+SHA-256 `c1f3cce88438439aab6632a9c56450ae98d1c64adb31b13c742e2febb1476351`; it remains at freeze
+commit `bebd8a5` and is unchanged through `930ec14`.
 
 | # | Pretrial statement and location | Later authority | Status | Product rule |
 |---|---|---|---|---|
@@ -197,15 +232,15 @@ still holds but is narrower or more specific than its wording.
 | S-05 | Exec success can be evidenced — architecture §3 "`execveat` on that exact object succeeded" | the only positive evidence in Trial #3 came from test fixtures (helper report, recipe payload, FIFO signal), never from the launcher | **Superseded for the product** | the receipt has no exec-success field; test fixtures may supply evidence in tests only |
 | S-06 | `Signaled { signal }` from `waitid` — architecture §30 | Trial #2 R3 lost the signal under `CLD_DUMPED`; Trial #3 R3 PASS after the fix | **Refined** | `CLD_KILLED` and `CLD_DUMPED` both carry `si_status` as the signal; `core_dumped` recorded separately |
 | S-07 | Relocate preserved descriptors above 2 "if any of them is 0, 1 or 2" — architecture §17 step 0; spike `move_above_2` | F6, F7 PASS for that rule. The spike opened its own exec fd `O_CLOEXEC`; a product receives caller descriptors of unknown `CLOEXEC` state, and X2c shows a non-`CLOEXEC` exec fd reaches the executed image | **Refined** | unconditional `F_DUPFD_CLOEXEC ≥ 3` for every child-needed descriptor (T19) |
-| S-08 | Stage order `SIGMASK` then `SIGACTION` — definition §2; M4 PASS | M4 proves the spike matched the frozen order. It does not consider host handlers running in the child before `SIGACTION` | **Refined, owner approval required** | parent blocks all signals across `clone3`; child runs `SIGACTION` then `SIGMASK` (section 8.3, question Q2) |
-| S-09 | The group sweep is "a best-effort sweep target" — ADR-0024 lifecycle limit; architecture §24 | spike issues `kill(-child, SIGKILL)` on **every** return path, including a normal exit; P1 records `descendant_died` for a same-group descendant | **Refined** | the sweep is `SIGKILL` and runs on every path; a same-group background process left by a normally exiting program is killed. Stated as behaviour, never as containment (question Q3) |
-| S-10 | The sweep is safe because it precedes the reap — architecture §24 | true only while the child is an unreaped zombie; under a foreign reaper (R4) the group id may already be free | **Refined** | guard with `waitid(P_PIDFD, WEXITED | WNOWAIT | WNOHANG)` (T31) |
-| S-11 | Pre-exec timeout: "termination signal, `grace_ms`, `SIGKILL`" — architecture §23 | spike and S6 use immediate `SIGKILL` by pidfd | **Superseded** | immediate `SIGKILL`. Before `SIGACTION` the child may still carry host handlers, so a catchable signal is unsafe there |
+| S-08 | Stage order `SIGMASK` then `SIGACTION` — definition §2; M4 PASS | M4 proves the spike matched the frozen order. It does not consider host handlers running in the child before `SIGACTION` | **Refined, owner-approved (Q2)** | parent blocks every blockable signal across `clone3`; child runs `SIGACTION` then `SIGMASK` (section 8.3, section 8.4) |
+| S-09 | The group sweep is "a best-effort sweep target" — ADR-0024 lifecycle limit; architecture §24 | spike issues `kill(-child, SIGKILL)` on **every** return path, including a normal exit; P1 records `descendant_died` for a same-group descendant | **Refined, owner-approved with a group-authority guard (Q3)** | with group authority established, the one sweep is `SIGKILL` and runs on every completion path before the reap; a same-group background process left by a normally exiting program may be terminated. Best-effort cleanup, never containment (T30, T31) |
+| S-10 | The sweep is safe because it precedes the reap — architecture §24 | true only while the child is an unreaped zombie; under a foreign reaper (R4) the group id may already be free. The spike ignored its own `setpgid` result | **Refined, owner-approved (Q2, Q3)** | sweep authority comes only from the launcher's own successful `setpgid(child, child)`; a non-blocking `WNOWAIT` `waitid(P_PIDFD)` probe runs just before the sweep, and `ECHILD` means no sweep (T31) |
+| S-11 | Pre-exec timeout: "termination signal, `grace_ms`, `SIGKILL`" — architecture §23 | spike and S6 use immediate `SIGKILL` by pidfd | **Superseded** | immediate `SIGKILL`, then the bounded kill wait (T40). Before `SIGACTION` the child may still carry host handlers; blocked delivery keeps them from running (T21), and `SIGKILL` involves no handler at all |
 | S-12 | The timeout "starts after confirmed exec" — ADR-0024; architecture §23 | it starts at clean exec-status EOF, which is not exec confirmation (S-04) | **Refined** | name the event `exec_status_eof`, never "exec confirmed" |
-| S-13 | Timeout sub-disposition `KilledByLauncher { signal }` — architecture §23, §30 | architecture §23 itself says it does not attest causation; falsifier 20 | **Refined** | record `deadline_expired`, which signals were sent, and the observed end separately; no causal name (section 10) |
+| S-13 | Timeout sub-disposition `KilledByLauncher { signal }` — architecture §23, §30 | architecture §23 itself says it does not attest causation; falsifier 20 | **Refined, owner-approved (Q2)** | record `deadline_expired`, which signals were sent, and the observed end separately; no causal name (section 10) |
 | S-14 | "Admission pins the cohort in the ELF header, so no `binfmt_misc` entry … can route a HELM capability" — ADR-0024; architecture §6 | holds only for entries that do not match in-cohort x86_64 ELF bytes. A root-registered entry matching native x86_64 still routes | **Refined** | host precondition, stated; no `/proc/sys/fs/binfmt_misc` read in 0.1 (T11) |
 | S-15 | `execve("/proc/self/fd/N")` retained as a documented fallback "only if LAUNCH-EXEC-01 falsifies the primary" — ADR-0024; architecture §7 | the primary was not implicated (X2c disposition); scripts stay refused | **Superseded** | no procfs fallback exists in 0.1 |
-| S-16 | Stream completeness `DeadlineTruncated` and `CaptureFailed { errno_class }` — architecture §30; ADR-0024 | the spike emits neither; a read error became EOF. O7's "capture failure" was operationalised as `WriterRetainedAfterChildExit` (definition §9.6) | **Refined, UNVALIDATED** | closed product vocabulary in section 11.3; read failure distinct from EOF (T41) |
+| S-16 | Stream completeness `DeadlineTruncated` and `CaptureFailed { errno_class }` — architecture §30; ADR-0024 | the spike emits neither; a read error became EOF. O7's "capture failure" was operationalised as `WriterRetainedAfterChildExit` (definition §9.6) | **Refined, owner-approved (Q2), UNVALIDATED** | closed product vocabulary in section 11.3; read failure distinct from EOF (T41) |
 | S-17 | `environment_mode` from `{empty, explicit}`; `LD_` refusal; environment bounds — architecture §15, §29, §33, §34 | D-10 | **Superseded** | `{empty}` only; no environment bounds or name rules exist in 0.1 |
 | S-18 | Per-stream plan modes `discard` / `measure` / `capture_prefix` — architecture §19 | the spike always counted and hashed; prefix retention is the only variable | **Refined** | every stream is always counted and hashed; the plan chooses only `capture_prefix_bytes` |
 | S-19 | "Static posability" proves a case can be observed — definition `driver.unposable_cases` | X2c disposition: transport availability is not producer capability | **Superseded for tests** | product tests prove the executed fixture can emit the evidence a test reads (T50) |
@@ -213,6 +248,8 @@ still holds but is narrower or more specific than its wording.
 | S-21 | "`crates/helm-launch` must not be created before [LAUNCH-EXEC-01] has run and been reviewed" — ADR-0024 | Trial #3 ran and was reviewed; the X2c disposition closed the trial line | **Precondition met; authority still absent** | creating the crate still needs the owner gate of section 18 |
 | S-22 | Supported cohort "kernel 5.9 or newer" — ADR-0024; architecture §5 | evidence exists for `6.17.0-1022-azure` only | **Refined** | state the floor as documentation-derived and the evidenced kernel separately (T49) |
 | S-23 | A C spike's M1 child-window evidence stands in for the product — definition §1 | the definition itself calls the spike disposable and not transferable as code | **Refined** | the Rust child window is re-established by product tests (T28) |
+| S-24 | `helm-launch` "executes **exactly one**" authorised object — architecture §4 recommendation box; ADR-0024 *Proposed decision* | owner amendment 3 (2026-09-16); Trial #2 decision 2 (S4 policy) | **Refined** | authorises and **attempts** execution of exactly one admitted object through the exact authorised descriptor; nothing states that the attempt succeeded or that the measured image ran (section 10) |
+| S-25 | The receipt is "an exact identity-bearing artifact" — architecture §29; ADR-0024 receipt semantics | owner amendment 2 (2026-09-16) | **Refined** | the digest identifies receipt bytes, not their origin; a receipt carries zero authority and no authenticity claim (T52) |
 
 ## 5. Public API boundary
 
@@ -229,8 +266,8 @@ OBSERVED    LaunchOutcome::receipt() ──────────────�
 ```
 
 > **CAN PARSING UNTRUSTED BYTES EVER PRODUCE EXECUTION AUTHORITY? NO.**
-> No function takes bytes, a string, a path, a `ValidatedAppSpec`, a `BindingReport`, an
-> `ObservationArtifact` or any `serde` input and returns an `ExecutableCapability`,
+> No function turns bytes, a string, a path, a `ValidatedAppSpec`, a `BindingReport`, an
+> `ObservationArtifact` or any `serde` input into an `ExecutableCapability`,
 > `WorkingDirectoryCapability` or `AuthorizedLaunch`. The only inputs that carry authority are
 > owned descriptors a trusted caller moves in.
 
@@ -305,7 +342,7 @@ It is not async, not re-entrant from a signal handler, and not `Sync`-shared.
 | `WorkingDirectoryCapability` | `admit_working_directory` only | `fcntl(F_GETFL)`, `fstat` | **yes** | selects the cwd; cannot run alone | **no** | no | no | Linux x86_64 only | no |
 | `AuthorizedLaunch` | `authorize` only | none | **yes**, both | **the only executable value** | **no** | no | caller argv | Linux x86_64 only | yes, once, through `launch` |
 | `LaunchOutcome` | `launch` only | — | no (every descriptor closed before return) | none | **no** | **no**; `Debug` prints prefix lengths, never bytes | **yes**: output prefixes | Linux x86_64 only | no |
-| `LaunchReceipt` | `launch` only | — | no | none | yes | exact bytes | **no** by construction | model is portable | no |
+| `LaunchReceipt` | `launch` only, as a Rust value; receipt **bytes** are data anyone can write (T52) | — | no | none | yes | exact bytes | **no** by construction | model is portable | no |
 | `ReceiptRecord` and fact enums | the serializer's input | — | no | none | yes | via the receipt only | no | yes | no |
 | `LaunchPlanErrors`, `AdmissionError`, `AuthorizationRefusal`, `LaunchError` | the crate | — | no | none | yes | fixed codes, no host strings | no | yes (Linux-only variants inert elsewhere) | no |
 
@@ -315,6 +352,13 @@ constructor, `Default`, `Deserialize`, `From`, setter or `Clone`. A refused `aut
 capabilities and closes their descriptors, as `helm_observe::authorize` drops its roots; errors
 never carry authority-bearing values.
 
+**Non-constructibility is an in-process API property, not authenticity.** It stops a caller of the
+safe API from building an authority-bearing value from data. It says nothing about serialised
+receipt bytes. A durable receipt is deterministic data with zero execution authority. It may be
+copied, it may be fabricated outside the crate, it is not cryptographically signed, and it is not
+proof of provenance by itself. `helm-launch` makes **no receipt-authenticity claim**. Provenance
+and bundle validation belong above it (section 11.5, T52).
+
 ### 5.4 Misuse made inexpressible
 
 | Misuse | Why it cannot be written | Guard test |
@@ -322,7 +366,8 @@ never carry authority-bearing values.
 | Authorise executable A, execute B | `authorize` consumes the capability; `launch` takes no executable | `compile_fail` |
 | Authorise plan A, execute plan B | `launch` takes no plan | `compile_fail` |
 | Replay one authorisation | `launch` takes `AuthorizedLaunch` by value; not `Clone` | `compile_fail` |
-| Forge a capability or receipt from data | private fields, no constructor, no `Deserialize` | `compile_fail` per type |
+| Forge a capability or authorisation from data | private fields, no constructor, no `Deserialize` | `compile_fail` per type |
+| Obtain an in-memory `LaunchReceipt` from bytes | no constructor, no `Deserialize`. This does **not** make receipt bytes authentic (T52) | `compile_fail` |
 | Use a binding or observation as permission | no HELM crate is linked, so no such type is nameable (section 12) | dependency test on `cargo metadata` |
 | Obtain authority on an unsupported platform | the types and functions do not exist off Linux x86_64 | cross-platform build |
 | Map an outcome to success | no `is_success`, `ok()`, `bool` conversion or verdict enum exists | source scan for verdict names and `-> bool` on outcome types |
@@ -378,20 +423,31 @@ condition or predicate, and any Wine, prefix or runtime field.
 Performed in this order, on the descriptor the caller moved in, with no name resolved at any step:
 
 1. **Access mode.** `fcntl(F_GETFL)`. `O_PATH` → `DescriptorModeUnsuitable` (X6).
-   `O_WRONLY` or `O_RDWR` → `DescriptorModeUnsuitable` (T08): a writable capability is also a
-   mutation authority, and a writer held at exec time yields `ETXTBSY` (E5). Only `O_RDONLY`
-   passes.
-2. **Regular file.** `fstat`; not `S_IFREG` → `NotRegularFile` (X5).
+   `O_WRONLY` or `O_RDWR` → `DescriptorModeUnsuitable` (T08, owner-approved): a writable
+   capability is also a mutation authority, and on the evidenced kernel a writer held at exec time
+   yielded `ETXTBSY` (E5), a kernel behaviour the refusal does not rely on.
+   Only `O_RDONLY` passes.
+2. **Regular file.** `fstat`; not `S_IFREG` → `NotRegularFile` (X5). This is the first metadata
+   sample.
 3. **Set-ID.** `S_ISUID` or `S_ISGID` → `SetIdBitsPresent` (X7, D-9).
-4. **Size bound.** `st_size > MAX_EXECUTABLE_BYTES` → `ExecutableTooLarge`, before any read.
+4. **Size bound.** `st_size > MAX_EXECUTABLE_BYTES` (512 MiB, the owner-approved initial 0.1
+   bound) → `ExecutableTooLarge`, before any read.
 5. **Header.** `pread` 64 bytes at offset 0. Fewer than 64 bytes or wrong magic →
    `NotElf`; this is where `#!` scripts stop (X2). Magic present but not
    `ELFCLASS64`/`ELFDATA2LSB`/`EM_X86_64`/`ET_EXEC|ET_DYN` → `ElfNotInCohort` (E8).
-6. **Measurement.** `pread` loop with a fixed 64 KiB buffer from offset 0 to EOF, SHA-256 over
-   every byte read. No shared file offset is used.
-7. **Consistency.** `fstat` again. If size, `st_mtime` or `st_ctime` changed, or the byte count
-   differs from the size → `ChangedDuringMeasurement`. This follows `helm-observe`'s
-   before/after sampling; it detects only changes that move those fields.
+6. **Measurement.** `pread` loop with a fixed 64 KiB buffer from offset 0 until EOF or one byte
+   beyond the step 2 size, whichever comes first, so growth is seen without an unbounded read.
+   SHA-256 over every byte read. No shared file offset is used.
+7. **Detected instability (owner amendment 1, T51).** `fstat` again and compare this second sample
+   with the step 2 sample: `st_size`, `st_mtime` and `st_ctime`, with nanoseconds. If any differs,
+   or the byte count read differs from the step 2 size, the measurement protocol has **detected
+   instability** → `MeasurementInstabilityDetected`. This is `helm-observe`'s before/after
+   sampling. It observes those fields and that count, and nothing else. A change that moves none of
+   them between the two samples is not detected, for example one the filesystem's timestamp
+   resolution does not distinguish, or a write through a shared writable mapping whose timestamp
+   update is deferred. **Not detecting instability does not prove** that no concurrent mutation
+   occurred, that the object is immutable, that a snapshot was taken, or that the measured bytes
+   are the bytes later executed.
 8. **Result.** `ExecutableCapability { fd, pre_exec_body_size, pre_exec_body_sha256,
    pre_exec_mode_bits (st_mode & 0o7777), elf_type }`.
 
@@ -414,8 +470,9 @@ constraint.
 cache. `O_NOATIME` is not used, because it needs ownership or `CAP_FOWNER`.
 
 **What the capability asserts, verbatim for the README.** *These bytes were read through this
-descriptor before the execution attempt, and this descriptor is the exec target.* It never
-asserts that these bytes are the bytes the kernel executed (E6, E6b), nor anything about the ELF
+descriptor before the execution attempt, the measurement protocol detected no instability while
+reading them, and this descriptor is the exec target.* It never asserts that these bytes are the
+bytes the kernel executed (E6, E6b), that the object was stable (T51), nor anything about the ELF
 interpreter, shared libraries or loaded-code closure (E7).
 
 ### 6.3 Working-directory admission: `admit_working_directory(id, fd)`
@@ -504,18 +561,19 @@ it to real descriptors.
 | **`clone3(CLONE_PIDFD)` + child setup + `execveat(fd, "", …, AT_EMPTY_PATH)`** | yes (E2–E4) | yes, same syscall (M3) | none: raw syscall, no atfork (M2) | no | **Recommended for 0.1** |
 | `fork` + `pidfd_open` | yes | no: three caller preconditions; M5 `waitid_echild` under `SIGCHLD = SIG_IGN` | glibc atfork handlers | no | rejected (S-01) |
 | `std::process::Command` | no: path-based `execvp`. Calling `execveat` from `pre_exec` hijacks std's unenumerated child path and its status pipe | only via unstable API | std's own child code before `pre_exec` | no | rejected |
-| `posix_spawn` | no: takes a pathname | no | glibc's `clone(CLONE_VM | CLONE_VFORK)` path | no | rejected |
+| `posix_spawn` | no: takes a pathname | no | glibc's `clone(CLONE_VM \| CLONE_VFORK)` path | no | rejected |
 | helper or trampoline binary | yes, if the helper is found | depends | a second program | discovery or memfd | rejected: reintroduces discovery and a second product language |
 | `execve("/proc/self/fd/N")` | yes | — | — | **yes** | rejected (S-15) |
 
 **Why `clone3(CLONE_PIDFD)`, and not convenience.** It is the only candidate that (a) executes the
 admitted descriptor, (b) obtains the pidfd in the syscall that creates the child, so no PID is
-ever used as authority for signalling or waiting, and (c) runs no userspace code in the child that
+ever used as authority for signalling or waiting on the direct child individually (the guarded
+group sweep of T31 is the one pid-valued signal), and (c) runs no userspace code in the child that
 this crate does not write. All three are the mechanism Trial #3 exercised: M3 traced direct form,
 M2 multi-threaded parent, E1–E4 pinning.
 
 **Exact use.** `clone_args { flags: CLONE_PIDFD, pidfd: &mut pidfd, exit_signal: SIGCHLD,
-stack: 0, … }` through `libc::syscall(SYS_clone3, &args, size_of::<clone_args>())`. There is no
+stack: 0, … }` through the `raw_syscall6` shim of section 7.6, never `libc::syscall`. There is no
 `CLONE_VM`, `CLONE_VFORK`, `CLONE_FILES` or `CLONE_THREAD`, so the child gets a copy-on-write
 address space and its own descriptor table, as in the spike.
 
@@ -558,8 +616,8 @@ multiple_unsafe_ops_per_block = "deny"
 
 | Operation | Where | Why no safe wrapper suffices |
 |---|---|---|
-| `pthread_sigmask(SIG_SETMASK, full)` and restore | parent, around `clone3` | not exposed safely by rustix 1.1.4 (`runtime::kernel_sigprocmask` is `unsafe` and `doc(hidden)`) |
-| `syscall(SYS_clone3, …)` | parent | no safe wrapper exists |
+| raw `rt_sigprocmask(SIG_SETMASK, full kernel set)` and the restore, through the syscall shim | parent, around `clone3` | glibc cannot express the mask: `sigfillset` omits, and `pthread_sigmask` strips, its internal signals `SIGCANCEL` (`__SIGRTMIN`) and `SIGSETXID` (`__SIGRTMIN + 1`) (glibc 2.39 `signal/sigfillset.c`, `nptl/pthread_sigmask.c`); rustix 1.1.4 has only the `unsafe`, `doc(hidden)` `runtime::kernel_sigprocmask` |
+| raw `clone3` through the syscall shim | parent | no safe wrapper exists |
 | `OwnedFd::from_raw_fd(pidfd)` | parent, immediately after `clone3` returns | kernel-returned integer |
 | calling the `-> !` child entry with a pointer to the prepared plan | child | crosses into the post-clone path |
 | raw syscalls of section 8.4 | child only | rustix has no `close_range`; `execveat` is `unsafe` and `doc(hidden)`; std/rustix wrappers are not reviewed for the post-clone state |
@@ -594,7 +652,8 @@ the call cannot allocate, lock or unwind, and the only exits: `execveat` success
   `raw_syscall6` shim written with `core::arch::asm!` for the x86_64 syscall ABI. The kernel returns
   `-errno` in `rax`, and the child reads that value directly. `libc::syscall` is not used on this
   path, because its stub writes glibc's thread-local `errno` and would put glibc code in the child
-  window. The `libc` crate supplies constants and the parent's `pthread_sigmask` only.
+  window. The `libc` crate supplies constants only. The parent's two `rt_sigprocmask` calls use the
+  same shim, because glibc's wrappers cannot block every blockable signal (section 7.5).
 * **A fixed syscall sequence.** The stage list of section 8.4 is a `const` array. The child walks
   it in order and has no configuration branch other than the gap arithmetic. Test-only fault
   injection is compiled only under a non-default feature, and a release-build test proves the
@@ -608,12 +667,12 @@ the call cannot allocate, lock or unwind, and the only exits: `execveat` success
 |---|---|---|
 | `SPAWN_CONFIRM_TIMEOUT_MS` | 5 000 | frozen; S6 |
 | `POST_EXIT_DRAIN_MS` | 2 000 | frozen; O6, O7, P4, T5 |
-| `POST_KILL_REAP_MS` | 5 000 | **new** (T40); bounds the wait after `SIGKILL` |
+| `POST_KILL_REAP_MS` | 5 000 | **new** (T40); bounds the wait after every `SIGKILL`; owner-approved initial 0.1 bound |
 | `MAX_CAPTURE_BYTES` per stream | 65 536 | frozen; O4 |
 | `MAX_PLAN_BYTES` | 32 768 | architecture §33 |
 | `MAX_ARGS` / `MAX_ARG_BYTES` / `MAX_ARGV_TOTAL_BYTES` | 64 / 4 096 / 131 072 | architecture §33; A4 at 4 096 |
 | `timeout_ms` range / `grace_ms` range | 1–600 000 / 0–60 000 | architecture §23 |
-| `MAX_EXECUTABLE_BYTES` | 536 870 912 (512 MiB) | **new**; mirrors `helm_observe::MAX_FILE_BYTES` |
+| `MAX_EXECUTABLE_BYTES` | 536 870 912 (512 MiB) | **new**; mirrors `helm_observe::MAX_FILE_BYTES`; owner-approved initial 0.1 product bound |
 | `MAX_RECEIPT_BYTES` | 8 192 | architecture §33; proven by a widest-receipt test |
 | `READ_BUFFER_BYTES` | 65 536 | spike and `helm-observe` |
 
@@ -635,18 +694,31 @@ child exists and no receipt exists, and every descriptor created so far closes b
 
 ### 8.3 Spawn
 
-1. `pthread_sigmask(SIG_SETMASK, all signals, &saved)` on the calling thread (T21). Only this
-   thread's mask changes, and only for the duration of the syscall.
-2. `clone3(CLONE_PIDFD, exit_signal = SIGCHLD)` through the shim.
+1. **Block every blockable signal on the calling thread (T21, owner-approved).** One raw
+   `rt_sigprocmask(SIG_SETMASK, full set, &saved)` through the shim saves the current mask and
+   blocks every blockable signal. glibc's `sigfillset` and `pthread_sigmask` cannot do this,
+   because they exclude glibc's two internal real-time signals from the mask (section 7.5). The kernel leaves `SIGKILL` and
+   `SIGSTOP` unblocked: they are not blockable. Only this thread's mask changes, and only until
+   step 3. Other host threads keep their masks and may still receive process-directed signals, so
+   no process-wide signal control is claimed. A glibc `set*id` call in another host thread, or a
+   cancellation of this thread, waits until the mask is restored.
+2. `clone3(CLONE_PIDFD, exit_signal = SIGCHLD)` through the shim. The child inherits the blocked
+   mask.
    * `== 0`: call `child_main(&plan)`, which never returns (8.4).
-   * `< 0`: restore the mask. `ENOSYS`/`EPERM` → `ProcessCreationUnavailable`; anything else →
-     `ProcessCreationFailed`. No child, no receipt.
-   * `> 0`: continue.
-3. Restore the saved mask. Wrap the pidfd in `OwnedFd` at once. From here on
-   **`launch` always returns `Ok` with a receipt** (section 13).
-4. `setpgid(child, child)`, ignoring `EACCES` (the child already exec'd) and `ESRCH`. The child
-   also calls `setpgid(0, 0)`, so the group exists before any sweep, whichever runs first.
-5. Close the parent's copies of the six child-side descriptors, then the stdin write end. The
+   * `< 0`: restore the saved mask. `ENOSYS`/`EPERM` → `ProcessCreationUnavailable`; anything else
+     → `ProcessCreationFailed`. No child, no receipt.
+   * `> 0`: wrap the pidfd in `OwnedFd` at once. From here on **`launch` always returns `Ok` with a
+     receipt** (section 13).
+3. **Establish group-sweep authority, or record that it was not established (T31, owner-approved
+   guard).** `setpgid(child, child)` is the first system call after `clone3` returns. **A return
+   of 0 is the only event that establishes group-sweep authority**: the launcher itself has then
+   placed the direct child in a dedicated process group whose id is the child's pid. `EACCES` (the
+   child has already exec'd), `ESRCH`, `EPERM` or any other error establishes nothing. It is not
+   retried and not interpreted further, and no group id is ever inferred from the child's own
+   `setpgid(0, 0)` stage, from a later pre-exec failure record or from the pid value alone. The child's
+   stage still puts the executed image in a dedicated group whichever call runs first, but only
+   the launcher's own successful call grants sweep authority. Then restore the saved mask.
+4. Close the parent's copies of the six child-side descriptors, then the stdin write end. The
    child now reads immediate EOF on 0 (T22). Every pipe can now reach EOF, which fixes the
    pre-execution-review defect in which the parent kept write ends open.
 
@@ -658,12 +730,12 @@ listed syscalls. On any failure the child writes one record and exits; there is 
 | # | Stage | Syscalls (through the shim) | Failure record |
 |---|---|---|---|
 | 1 | `DUP2` | `dup2(stdin_r, 0)`, `dup2(stdout_w, 1)`, `dup2(stderr_w, 2)` | `DUP2` + errno |
-| 2 | `CLEAR_CLOEXEC` | `fcntl(0, F_SETFD, 0)`, `fcntl(1, …)`, `fcntl(2, …)` — required, not defensive, because `dup2(fd, fd)` is a no-op | `CLEAR_CLOEXEC` + errno |
+| 2 | `CLEAR_CLOEXEC` | `fcntl(0, F_SETFD, 0)`, `fcntl(1, …)`, `fcntl(2, …)` — a backstop: `dup2(fd, fd)` would be a no-op that keeps the flag, but the unconditional relocation (T19) makes that case unreachable, and a `dup2` to a different number already clears the flag | `CLEAR_CLOEXEC` + errno |
 | 3 | `CHDIR` | `fchdir(dir)` — **before** `close_range`, because the directory descriptor is not preserved | `CHDIR` + errno |
 | 4 | `CLOSE_RANGE` | up to three `close_range(first, last, 0)` over the gaps around the exec descriptor and status write end, skipping `first > last` | `CLOSE_RANGE` + errno |
 | 5 | `SETPGID` | `setpgid(0, 0)` | `SETPGID` + errno |
-| 6 | `SIGACTION` | `rt_sigaction(sig, SIG_DFL, NULL, 8)` for every signal 1–64 except `SIGKILL` and `SIGSTOP` | `SIGACTION` + errno |
-| 7 | `SIGMASK` | `rt_sigprocmask(SIG_SETMASK, empty, NULL, 8)` — only now can signals arrive, and every disposition is already default | `SIGMASK` + errno |
+| 6 | `SIGACTION` | `rt_sigaction(sig, SIG_DFL, NULL, 8)` for every signal 1–64 except `SIGKILL` and `SIGSTOP`, while delivery is still blocked | `SIGACTION` + errno |
+| 7 | `SIGMASK` | `rt_sigprocmask(SIG_SETMASK, empty, NULL, 8)`, the intended final mask for the executed image — only now can blockable signals arrive, and every disposition is already default | `SIGMASK` + errno |
 | 8 | `NO_NEW_PRIVS` | `prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0)` (D-11) | `NO_NEW_PRIVS` + errno |
 | 9 | `EXEC` | `execveat(exec_fd, "", argv, envp, AT_EMPTY_PATH)` | `EXEC` + errno |
 | — | failure exit | `write(status_w, record, 8)` retried on `EINTR` only, then `exit_group(127)` | — |
@@ -675,12 +747,13 @@ listed syscalls. On any failure the child writes one record and exits; there is 
   between the `clone3` return and `execveat` is a test failure. Examples: `brk`, `mmap`, `munmap`,
   `mprotect`, `futex`, `openat`, `set_robust_list`, `getrandom`, `rt_sigreturn`, `clone`, `clone3`,
   `getpid`, `kill`.
-* **Deviation from the frozen M4 order, for owner approval (Q2).** The frozen order was
+* **Deviation from the frozen M4 order, owner-approved (Q2, 2026-09-16).** The frozen order was
   `… SETPGID, SIGMASK, SIGACTION, NO_NEW_PRIVS, EXEC`, and the frozen vocabulary had a child-side
-  `RELOCATE`. The product blocks every signal across `clone3` (8.3 step 1), so stages 6 and 7 swap:
-  no host handler can run in the child between the clone and the reset. Relocation is parent-only
-  (8.2 step 3) and never produces a child record. The executed image's end state is identical to
-  the evidenced one.
+  `RELOCATE`. The product blocks every blockable signal across `clone3` (8.3 step 1), so stages 6
+  and 7 swap: no host handler can run in the child between the clone and the reset. `SIGKILL` and
+  `SIGSTOP` still act on the child with their default actions, because they can be neither blocked
+  nor caught. Relocation is parent-only (8.2 step 3) and never produces a child record. The executed
+  image's end state is identical to the evidenced one.
 * **Independent testing.** Section 14.2: traced syscall window, stage-order match, source-token
   allowlist, `needs_drop` assertion, release-build injection absence. Section 14.3: every stage's
   failure provoked through real kernel state where one exists (`CHDIR` by mode `0000`; `EXEC` by
@@ -701,18 +774,23 @@ spike behaviour except where marked.
 * **`EINTR`** is retried without consuming a deadline.
 * **Streams.** Every drained byte is counted and hashed. The first `capture_prefix_bytes` are kept
   in a buffer allocated once at that size, and excess bytes are discarded, never withheld (O4).
-* **Read error, new (T41).** A read error on a stream sets `ReadFailed { errno }` and stops reading
-  that stream. On the status channel it sets `Indeterminate(StatusReadFailed)`. A read error is
-  never treated as EOF.
+* **Read error, new (T41, owner-approved).** A read error on a stream sets `ReadFailed { errno }`
+  and stops reading that stream. On the status channel it sets `Indeterminate(StatusReadFailed)`. A
+  read error is never treated as EOF.
+* **Bounded kill wait, new (T40, owner-approved).** Every `SIGKILL` the launcher sends by pidfd sets
+  a kill deadline `now + POST_KILL_REAP_MS`. The loop keeps polling the pidfd and draining the
+  streams until the pidfd is readable or that deadline passes. If it passes, the child end is
+  `EndNotObserved`: no end was observed within the bound. That is not a claim that the child is
+  still running at any later moment.
 
 **Phase A — exec status**, deadline `spawn + SPAWN_CONFIRM_TIMEOUT_MS`. Streams drain throughout.
 
 | Observation | Exec status | Next |
 |---|---|---|
-| 8 record bytes, then EOF | `PreExecFailure { stage, errno }` | termination (Phase C) |
-| 1–7 bytes, then EOF; or more than 8 bytes | `Indeterminate(StatusRecordMalformed)` | termination |
+| 8 record bytes, then EOF | `PreExecFailure { stage, errno }` | wait for the pidfd until the Phase A deadline; if it is still not readable, `SIGKILL` and the kill wait; then Phase C |
+| 1–7 bytes, then EOF; or more than 8 bytes | `Indeterminate(StatusRecordMalformed)` | as for a record |
 | EOF with no byte | `Indeterminate(StatusEofWithoutRecord)` | Phase B; run deadline `= now + timeout_ms` |
-| deadline, neither | `Indeterminate(PreExecStatusTimeout)` | immediate `SIGKILL` by pidfd (S-11), then Phase C |
+| deadline, neither | `Indeterminate(PreExecStatusTimeout)` | immediate `SIGKILL` by pidfd (S-11) and the kill wait, then Phase C |
 
 A pidfd that becomes readable in Phase A is recorded, and the loop keeps reading the status channel
 to EOF within the Phase A deadline.
@@ -726,42 +804,57 @@ to EOF within the Phase A deadline.
    `pidfd_send_signal(SIGTERM)`, grace deadline `now + grace_ms` (T1, T3).
 3. **Grace deadline passes, pidfd not readable.** `pidfd_send_signal(SIGKILL)`, kill deadline
    `now + POST_KILL_REAP_MS` (T2, T6).
-4. **Kill deadline passes, pidfd not readable (new, T40).** Child end `NotEnded`; streams still open
-   become `ReadStoppedChildNotEnded`.
+4. **Kill deadline passes, pidfd not readable (new, T40).** Child end `EndNotObserved`; streams
+   still open become `ReadStoppedChildEndNotObserved`.
 
 The classification is from what was observed. A pidfd readable before the run deadline is never
 `deadline_expired`, even if a later signal reaches a zombie (T4, T5).
 
-**Phase C — sweep and reap** (P3; T31 new):
+**Phase C — sweep and reap** (P3; T30; T31, owner-approved guard):
 
-1. If the child ended: `waitid(P_PIDFD, WEXITED | WNOHANG | WNOWAIT)`.
-   * An unreaped zombie is present → issue **one** `kill(-child_pid, SIGKILL)` group sweep.
-   * `ECHILD` → sweep **not issued** (`child_already_reaped`); child end `EndUnobservable` (R4).
-2. If the child did not end (`NotEnded`): the live leader holds its group id, so issue the one sweep.
+1. **No authority, no sweep.** If 8.3 step 3 did not establish group-sweep authority, no sweep is
+   issued on any path (`not_issued_group_not_established`). No group id is inferred, and the
+   remaining steps run unchanged.
+2. **With authority,** run `waitid(P_PIDFD, WEXITED | WNOHANG | WNOWAIT)` immediately before the
+   sweep.
+   * `ECHILD` → the child was reaped elsewhere (R4). The sweep can no longer precede the reap, so
+     it is **not issued** (`not_issued_child_already_reaped`); child end `EndUnobservable`.
+   * Otherwise → issue exactly **one** `kill(-child_pid, SIGKILL)` group sweep. The child is still
+     unreaped: an ended child is a zombie the probe did not consume, and a child whose end was not
+     observed still leads its group.
 3. Reap with `waitid(P_PIDFD, WEXITED | WNOHANG)`. It cannot block: the zombie is present, or the
-   child is `NotEnded` and is left unreaped, stated in the receipt.
+   child is `EndNotObserved` and is left unreaped, stated in the receipt.
 4. Classify: `CLD_EXITED` → `Exited { code }`; `CLD_KILLED` → `Signaled { signal, core_dumped:
    false }`; `CLD_DUMPED` → `Signaled { signal, core_dumped: true }` (R3); anything else →
    `EndUnobservable`.
 5. Close every remaining descriptor, serialise the receipt and return `Ok(LaunchOutcome)`.
 
+`issued` records that the one `kill` call was made. It records nothing about which processes, if
+any, received the signal, so neither a descendant-killed claim nor a containment claim follows.
+
 Phase C runs on **every** path in which a child exists: normal exit, exec failure, indeterminate
-status, pre-exec timeout, run timeout and termination failure. That is what makes the `SIGKILL`
-group sweep an every-path behaviour (S-09, question Q3).
+status, pre-exec timeout, run timeout and an end that was not observed. With group-sweep authority
+established, that makes the `SIGKILL` group sweep an every-path behaviour, **including after a
+normal direct-child exit** (S-09, Q3). A same-group background process left by a program that
+exited normally may therefore be terminated when `launch` completes. That is intentional 0.1
+cleanup policy.
 
 ### 8.6 Total bound
 
 `launch()` returns within `SPAWN_CONFIRM_TIMEOUT_MS + timeout_ms + grace_ms + POST_KILL_REAP_MS +
-POST_EXIT_DRAIN_MS` plus scheduling slack. That is 14 s beyond `timeout_ms + grace_ms`, and it is
+POST_EXIT_DRAIN_MS` plus scheduling slack. That is 12 s beyond `timeout_ms + grace_ms`, and it is
 a tested property (O6-shaped and T2-shaped tests assert it). The one unbounded wait the spike had,
-a blocking `waitid` after `SIGKILL`, does not exist in the product.
+a blocking `waitid` after `SIGKILL`, does not exist in the product: every `SIGKILL` sent to the
+direct child by pidfd, on the pre-exec and the run path alike, is followed only by the bounded kill
+wait of 8.5.
 
 ### 8.7 Caller preconditions (documented, not attested, not enforced)
 
 * The host does not ignore `SIGCHLD`, does not set `SA_NOCLDWAIT`, and runs no thread that reaps
   children it did not create (for example `waitpid(-1, …)`). Violation makes the exit status
-  unobservable (R4) and can suppress the sweep. It never causes a wrong process to be signalled
-  through the pidfd.
+  unobservable (R4) and can suppress the sweep, and a foreign reaper acting between the Phase C
+  probe and the sweep can defeat the group-authority guard (T31). It never causes a wrong process
+  to be signalled through the pidfd.
 * The host's `SIGCHLD` handler, if any, will see this child's exit (`exit_signal = SIGCHLD`).
 * No seccomp or LSM policy denies `clone3`, `close_range`, `execveat` or `prctl`.
 * No `binfmt_misc` registration matches in-cohort x86_64 ELF.
@@ -771,11 +864,13 @@ a blocking `waitid` after `SIGKILL`, does not exist in the product.
 
 > **NO PROCESS-TREE CONTAINMENT CLAIM.**
 
-The sweep reaches only processes still in the child's group at that instant. A descendant that
-called `setsid` or `setpgid`, daemonised, or handed work to an existing service survives (P2, P4).
-A same-group descendant does not (P1), and that is behaviour, not containment. Closing the read
-ends after the drain may deliver `SIGPIPE`/`EPIPE` to a surviving writer. cgroup v2 delegation is
-the named future path and is out of scope. **Wine remains blocked on a future multi-process
+The sweep, issued only under established group-sweep authority (T31), reaches only processes still
+in the child's group at that instant. A descendant that called `setsid` or `setpgid`, daemonised,
+or handed work to an existing service survives (P2, P4). A same-group descendant is in the sweep's
+target group even after a normal direct-child exit (P1 recorded `descendant_died`), and that is
+best-effort cleanup behaviour, not containment. Closing the read ends after the drain may deliver
+`SIGPIPE`/`EPIPE` to a surviving writer. cgroup v2 delegation is the named future path and is out of
+scope. **Wine remains blocked on a future multi-process
 lifecycle model:** `wineserver` outlives its starter, so one direct child is not an application
 session.
 
@@ -806,8 +901,9 @@ the launch; F2 is the evidence that they do not survive.
 | pidfd | `OwnedFd` (`CLOEXEC`), closed at return | returned to the parent only; any copy would be closed by `CLOSE_RANGE` | absent |
 
 **Collisions.** A host with 0, 1 or 2 closed makes `pipe2` return low numbers (F6). The
-unconditional relocation to `≥ 3` means no `dup2` source equals its target. The explicit flag clear
-of stage 2 still covers any case where one would. Adjacent exec and status descriptors are covered
+unconditional relocation to `≥ 3` before the final stdio mapping (T19, owner-approved) means no
+`dup2` source equals its target. The explicit flag clear of stage 2 still covers any case where one
+would. Adjacent exec and status descriptors are covered
 by the gap rule, which skips inverted ranges (F7).
 
 **Cleanup order.** (1) child-side copies close in the parent right after `clone3`; (2) the stdin
@@ -843,7 +939,7 @@ inside a range.
 ### 9.3 argv
 
 * **Validation at parse** (D-6): a JSON array of strings, so UTF-8 is guaranteed by the decoder.
-  Each element has no NUL, including the ` ` escape, which decodes to a NUL and is refused.
+  Each element has no NUL, including the `\u0000` escape, which decodes to a NUL and is refused.
   Element count is 1 to 64, each element at most 4 096 bytes, total at most 131 072 bytes.
   `argv[0]` is caller data with no default and no rewriting.
 * **Materialisation before the child exists.** `Vec<CString>` plus
@@ -890,15 +986,17 @@ exec_status        what the exec-status channel established
            | pre_exec_status_timeout      (S6)
            | status_read_failed { errno } (T41)
 
-child_end          what waitid on the pidfd established
+child_end          what the pidfd and waitid established
   exited { code }
   signaled { signal, core_dumped }
   end_unobservable                        reaped elsewhere (R4) or classification unavailable
-  not_ended                               still not ended POST_KILL_REAP_MS after SIGKILL (T40)
+  end_not_observed                        no end observed within POST_KILL_REAP_MS after SIGKILL (T40)
 
 deadline           run_deadline_expired: bool   (only when the pidfd was not readable first)
 termination        sigterm_sent: bool, sigkill_sent: bool,
-                   group_sweep: issued | not_issued_child_already_reaped
+                   group_sweep: issued
+                              | not_issued_group_not_established      (T31)
+                              | not_issued_child_already_reaped       (T31, R4)
 ```
 
 Every requested outcome is expressible without an exec-success claim:
@@ -913,7 +1011,8 @@ Every requested outcome is expressible without an exec-success claim:
 | exit status unobservable | `child_end = end_unobservable` (R4) |
 | timed out | `run_deadline_expired = true` plus whatever `child_end` was observed (T1–T3) |
 | killed during launcher termination | `sigkill_sent = true` and `child_end = signaled { SIGKILL }`. No causal claim: `waitid` reports a number, not a sender (S-13) |
-| termination failure | `child_end = not_ended` (T40) |
+| no end observed after `SIGKILL` | `child_end = end_not_observed` (T40); no claim that the child is still running |
+| group sweep | `group_sweep = issued` records that the one call was made; `not_issued_*` records why not. Neither says which processes received a signal (T30, T31) |
 
 The two axes are orthogonal. `pre_exec_failure` beside `child_end = exited { 127 }` is two true
 facts: the child's own failure path exits 127, and the record says why. A reader that wants
@@ -939,7 +1038,8 @@ effects, under its own policy, outside `helm-launch`.
 
 * Every emitted token is lowercase snake case from closed `#[non_exhaustive]` enums.
 * Forbidden anywhere the crate emits: `pass`, `fail`, `ok`, `success`, `succeeded`, `ready`,
-  `compatible`, `verified`, `worked`, `launched`, `sandboxed`, `contained`, `safe`.
+  `compatible`, `verified`, `worked`, `launched`, `sandboxed`, `contained`, `safe`, `authentic`,
+  `signed` (T52).
 * No function maps an outcome to `bool`, `Result<(), _>` or an ordering.
 * **Exit code 0 means only that the direct child exited with status 0.**
 
@@ -949,7 +1049,7 @@ effects, under its own policy, outside `helm-launch`.
 
 | | `LaunchReceipt` — public, durable | `LaunchOutcome` — private, in memory |
 |---|---|---|
-| Purpose | an identity-bearing artifact another layer may reference by digest | what the caller needs right now |
+| Purpose | an identity-bearing artifact another layer may reference by digest; the digest identifies these bytes, not their origin (11.5) | what the caller needs right now |
 | Stream content | `bytes_drained`, `drained_sha256` over exactly those bytes, `completeness` | the retained prefix bytes, up to `capture_prefix_bytes` (at most 64 KiB per stream), and whether the prefix was truncated |
 | Timing | none (D-8) | `elapsed`, monotonic |
 | Serialisable | exact bytes plus SHA-256 | **no** `Serialize`; `Debug` prints lengths only |
@@ -962,7 +1062,7 @@ It is not a confidentiality control.
 **Relation to `helm-evidence` discipline.** `helm-evidence` reports use fixed codes and carry no
 host paths, timestamps or raw evidence strings. The receipt follows the same rule. `helm-evidence`
 gains no permission role: it may later check a receipt's bytes and digest as a declared artifact,
-and that confers nothing on a launch (section 12.5).
+and that confers neither launch authority nor authenticity (sections 11.5 and 12.5).
 
 ### 11.2 Receipt contents
 
@@ -1004,7 +1104,7 @@ the receipt never contains its own digest.
 | direct-child creation | implied: a receipt exists only if `clone3` succeeded | numeric pid, pidfd number |
 | exec/setup observation | `exec_status` | exec success |
 | process disposition | `child_end`, `run_deadline_expired` | cause of death |
-| termination | signals sent, sweep issued or not | which processes the sweep reached |
+| termination | signals sent; sweep issued, or not issued with its reason | which processes the sweep reached |
 | streams | count, digest, completeness | bytes, prefix length, truncation flag |
 | backend | one closed mechanism identifier | kernel release, glibc, hostname |
 | non-claims | carried by schema name and version, documented in the README; not repeated per receipt | — |
@@ -1018,8 +1118,8 @@ stable identity, and mild host information. The Trial #3 evidence path withheld 
 |---|---|---|
 | `complete_at_eof` | the pipe reached EOF and every byte was drained | O1–O5, O8 |
 | `writer_retained_after_child_exit` | the direct child ended, another process still held a write end when `POST_EXIT_DRAIN_MS` expired | O6, O7, P4 |
-| `read_stopped_child_not_ended` | reading stopped because the direct child never ended (`not_ended`) | UNVALIDATED (T40) |
-| `read_failed` with `errno` | a read failed; bytes before it are counted | UNVALIDATED (T41) |
+| `read_stopped_child_end_not_observed` | reading stopped because no end of the direct child was observed within the kill bound (`end_not_observed`) | UNVALIDATED (T40), owner-approved |
+| `read_failed` with `errno` | a read failed; bytes before it are counted | UNVALIDATED (T41), owner-approved |
 
 **What `writer_retained_after_child_exit` claims, verbatim.** The direct child ended with the
 recorded end. For this stream, `bytes_drained` bytes were read before reading stopped, and
@@ -1037,6 +1137,16 @@ still running, or containment.
   against the prefix only when the stream fit the capture bound, and the documentation says so
   instead of presenting it as independently recomputable.
 * A test recomputes `sha256(exact_bytes)` for every receipt the suite produces.
+
+### 11.5 No receipt-authenticity claim (owner amendment 2)
+
+A durable `LaunchReceipt` is deterministic data. It **carries zero execution authority**, it may be
+copied, it may be fabricated outside the crate, it is not cryptographically signed, and it is not
+proof of provenance by itself. `helm-launch` makes **no receipt-authenticity claim**. Recomputing a
+receipt's digest shows only that the bytes are the bytes the digest names, never which process
+produced them. The safe API's refusal to construct authority-bearing values (5.3) does not extend
+to receipt bytes. Provenance and bundle validation belong above `helm-launch`, and `helm-evidence`
+does not become launch authority by checking a receipt (T52).
 
 ## 12. Existing-crate integration and dependency graph
 
@@ -1097,7 +1207,8 @@ inert metadata; **C** stay independent and compose above both. **C is chosen.**
   define or link an execution crate would put launch code in a read-only verifier.
 * **What works today without code change.** A bundle can already list a receipt file as an
   `artifact` (`id`, `path`, `sha256`), and `helm-evidence` will check its presence and byte
-  identity. It will not interpret the receipt.
+  identity. It will not interpret the receipt. Byte identity is not authenticity: a fabricated
+  receipt listed with its own digest passes the same check (11.5).
 * **Later, not in 0.1.** Semantic receipt checks in `helm-evidence` would need a new evidence
   contract version and a receipt schema document, and ideally portable receipt test vectors rather
   than a Cargo dependency on `helm-launch`. That is backlog B-02.
@@ -1120,7 +1231,7 @@ helm-bind ──────▶ helm-app-spec
 helm-launch ────(no HELM crate)
    external: serde =1.0.228, serde_json =1.0.149, sha2 =0.10.9,
              rustix =1.1.4  (features std, fs, process, pipe, event — Linux only),
-             libc  =0.2.189 (constants and pthread_sigmask — Linux only)
+             libc  =0.2.189 (constants only — Linux only)
 ```
 
 `rustix 1.1.4` and `libc 0.2.189` are already in `Cargo.lock`; `libc` is pulled today through
@@ -1159,7 +1270,7 @@ behind an error value while a live or unreaped child exists.
 | Family | Type | Returned by | Examples | Receipt |
 |---|---|---|---|---|
 | API misuse / invalid plan | `LaunchPlanErrors` (ordered, capped like `helm-observe`'s `PlanErrors`) | `parse_launch_plan` | `InputTooLarge`, `MalformedJson`, `DuplicateKey`, `NestingTooDeep`, `UnknownField`, `MissingField`, `TypeMismatch`, `UnknownSchema`, `UnknownVersion`, `ExecutionKindUnsupported`, `ArgvEmpty`, `ArgvTooMany`, `ArgTooLong`, `ArgvTooLarge`, `ArgContainsNul`, `EnvironmentModeUnsupported`, `StdinModeUnsupported`, `CaptureBoundOutOfRange`, `TimeoutOutOfRange`, `GraceOutOfRange`, `TerminationSignalUnsupported`, `IdGrammar`, `DigestGrammar` | none |
-| capability admission refusal | `AdmissionError { code, errno: Option<Errno> }` | `admit_executable`, `admit_working_directory` | `DescriptorModeUnsuitable`, `NotRegularFile`, `NotDirectory`, `SetIdBitsPresent`, `ExecutableTooLarge`, `NotElf`, `ElfNotInCohort`, `ChangedDuringMeasurement`, `MetadataUnavailable`, `ReadFailed`, `WorkingDirectoryIdInvalid` | none |
+| capability admission refusal | `AdmissionError { code, errno: Option<Errno> }` | `admit_executable`, `admit_working_directory` | `DescriptorModeUnsuitable`, `NotRegularFile`, `NotDirectory`, `SetIdBitsPresent`, `ExecutableTooLarge`, `NotElf`, `ElfNotInCohort`, `MeasurementInstabilityDetected`, `MetadataUnavailable`, `ReadFailed`, `WorkingDirectoryIdInvalid` | none |
 | unsupported platform or cohort | *not a runtime error* | — | off Linux x86_64 the capability and launch APIs do not exist; a kernel without `clone3` is `ProcessCreationUnavailable` below | none |
 | authorisation refusal | `AuthorizationRefusal` | `authorize` | `WorkingDirectoryIdMismatch` | none |
 | process-creation failure | `LaunchError` | `launch`, before a child exists | `PreparationFailed { step, errno }` (pipe, dup, sigmask), `ProcessCreationFailed { errno }` (`EAGAIN`, `ENOMEM`), `ProcessCreationUnavailable { errno }` (`ENOSYS`, `EPERM`) | none |
@@ -1168,8 +1279,8 @@ behind an error value while a live or unreaped child exists.
 | exec failure | receipt `pre_exec_failure { stage: EXEC, errno }` | `launch` → `Ok` | `EACCES`, `ENOEXEC`, `ETXTBSY`, `E2BIG`, `ENOMEM` | **yes** |
 | observation indeterminacy | receipt `exec_status = indeterminate { reason }`; `child_end = end_unobservable`; stream `read_failed` | `launch` → `Ok` | S5, R4, a poll or read error after the child exists | **yes** |
 | timeout | receipt `run_deadline_expired`, signals sent | `launch` → `Ok` | T1–T3 | **yes** |
-| termination failure | receipt `child_end = not_ended` | `launch` → `Ok` | T40 | **yes** |
-| internal invariant violation, after a child | receipt fact, never `Err`: the loop stops observing, then kills, sweeps under the guard, reaps without blocking, and records the indeterminate state | `launch` → `Ok` | an impossible poll result | **yes** |
+| no end observed after `SIGKILL` | receipt `child_end = end_not_observed` | `launch` → `Ok` | T40 | **yes** |
+| internal invariant violation, after a child | receipt fact, never `Err`: the loop stops observing, then kills with the bounded kill wait, sweeps only under established group authority, reaps without blocking, and records the indeterminate state | `launch` → `Ok` | an impossible poll result | **yes** |
 
 ### 13.3 Rules shared with the existing crates
 
@@ -1192,14 +1303,14 @@ trial result.
 
 | Area | Tests |
 |---|---|
-| plan parsing | every field rule and bound at its edge; duplicate decoded keys at every depth, including escaped spellings; nesting; unknown fields; ` ` in argv; exact-byte identity changes with whitespace |
+| plan parsing | every field rule and bound at its edge; duplicate decoded keys at every depth, including escaped spellings; nesting; unknown fields; `\u0000` in argv; exact-byte identity changes with whitespace |
 | error vocabulary | codes stable and ordered; no host strings; error cap |
 | receipt serialisation | a fixed record produces a fixed byte string and digest on all three platforms, like `helm-bind`'s determinism anchor; widest possible receipt stays under `MAX_RECEIPT_BYTES`; injectivity over the fact enums; no timestamp or duration field |
 | authority from data | `compile_fail` doctests: construct `ExecutableCapability`, `WorkingDirectoryCapability`, `AuthorizedLaunch` or `LaunchReceipt` from fields; clone an `AuthorizedLaunch`; call `launch` twice; pass a plan to `launch` |
 | verdict vocabulary | every `as_str` of every enum and every schema key against the forbidden list of section 10.4 |
 | no success mapping | source scan: no `fn … -> bool` on outcome types, no `is_success`/`ok`-style helpers |
 | fd layout (`layout.rs`) | property test over random distinct descriptor sets `≥ 3`: ranges cover everything except the two preserved numbers, never inverted, never containing a preserved number; the F7 adjacent case and a 0/1/2-closed host case as fixed vectors |
-| lifecycle state machine (`lifecycle.rs`) | event scripts for S5 (status EOF, then `SIGKILL` end → `indeterminate`, never success); T4/T5 (pidfd readable before deadline → no `run_deadline_expired`); T1–T3; S6; O6 drain expiry; read error → `read_failed` (T41); no pidfd readiness after kill → `not_ended` (T40); sweep action always precedes reap action; `ECHILD` on the `WNOWAIT` probe → sweep not issued (T31); POLLIN+POLLHUP in one event → data read before EOF |
+| lifecycle state machine (`lifecycle.rs`) | event scripts for S5 (status EOF, then `SIGKILL` end → `indeterminate`, never success); T4/T5 (pidfd readable before deadline → no `run_deadline_expired`); T1–T3; S6; O6 drain expiry; read error → `read_failed` (T41); no pidfd readiness within the kill wait after any `SIGKILL`, pre-exec or run path → `end_not_observed` (T40); sweep action always precedes reap action; no group authority → no sweep action on any path; with authority, exactly one sweep action on every path, including a normal exit (T30, T31); `ECHILD` on the `WNOWAIT` probe → sweep not issued (T31); POLLIN+POLLHUP in one event → data read before EOF |
 | deterministic serialisation | the same record serialises byte-identically across runs and platforms |
 
 ### 14.2 Level 2 — Linux backend structure (Linux x86_64)
@@ -1214,7 +1325,7 @@ trial result.
 | stage order | the same trace: `dup2 ×3`, `fcntl ×3`, `fchdir`, `close_range ≤3`, `setpgid`, `rt_sigaction …`, `rt_sigprocmask`, `prctl`, `execveat`, with `fchdir` before the first `close_range` (M4 as refined) |
 | pidfd acquisition | the trace shows one process `clone3` with `CLONE_PIDFD`, a rendered pidfd, no `pidfd_open`, and `waitid(P_PIDFD)` on that descriptor. The process clone is selected by excluding `CLONE_THREAD` records, because the cargo test harness is multi-threaded (M3; Trial #2 M2 regression) |
 | injection absent in release | build without the `test-fault-injection` feature; assert the injection code paths are not compiled (a `cfg` compile test plus a symbol check on the release artifact) |
-| signal blocking across clone3 | trace shows `rt_sigprocmask(SIG_SETMASK, ~[…])` in the parent immediately before `clone3` and the restore right after |
+| signal blocking across clone3 | trace shows the parent's raw `rt_sigprocmask(SIG_SETMASK, …)` with the full set, including glibc's internal real-time signals, immediately before `clone3`; the parent `setpgid` as the first call after it; then the restore (T21, T31) |
 
 A tracer-based test declares `strace` as a requirement and fails with an explicit message if it is
 absent, never silently skipping. The GitHub `ubuntu-24.04` image has `strace`, observed in
@@ -1256,7 +1367,8 @@ stdout. Before any launcher test consumes that report:
 | signal termination | `SIGSEGV` with `RLIMIT_CORE = 0` and with a core allowed where possible; `SIGABRT`; exit 127 after a successful start stays `exited` | R3, S3 |
 | pidfd lifecycle | test process sets `SIGCHLD = SIG_IGN` → `end_unobservable`, sweep not issued, `launch` returns | R4, T31 |
 | descendant-held stdio | descendant keeps 1 and 2 for 30 s → `writer_retained_after_child_exit`, return within the total bound | O6, O7, P4 |
-| sweep and descendants | same-group descendant ends; `setsid` descendant survives; recorded, not failed | P1, P2 |
+| sweep and descendants | same-group background process of a normally exiting child ends; `setsid` descendant survives; recorded, not failed. Test-only parent delay past exec → no group authority, sweep not issued | P1, P2, T30, T31 |
+| measurement instability | test-only hook between the read loop and the second sample changes the size, or rewrites content with a timestamp change → `MeasurementInstabilityDetected`, no capability; no test asserts that every concurrent change is detected | T51 |
 | pre-exec timeout and death before exec | `test-fault-injection` stall → `pre_exec_status_timeout`, no zombie; injection kill before exec → `indeterminate(status_eof_without_record)` | S6, S5 |
 | set-ID refusal | `u+s` and `g+s` fixtures owned by the test user → `SetIdBitsPresent`, no child | X7 |
 | script refusal | `#!` fixture with mode `0755` → `NotElf`, no child | X2 |
@@ -1278,8 +1390,10 @@ stdout. Before any launcher test consumes that report:
 | report producer vs evidence consumer | Trial #3 X2c | producer self-tests and the typed fixture registry of 14.3 |
 | digest not recomputable from published bytes | Trial #3 R3-M1 | every receipt: `sha256(exact_bytes) == sha256()`; any digest in a future published test artifact is recomputed from that artifact in CI |
 | read error treated as EOF | spike drain loop | simulated `EIO` in the state machine → `read_failed` |
-| blocking reap after `SIGKILL` | spike `waitid` | state machine: kill deadline without pidfd readiness → `not_ended`, no blocking call |
+| blocking reap after `SIGKILL` | spike `waitid` | state machine: kill deadline without pidfd readiness → `end_not_observed`, no blocking call |
 | sweep after a lost reap | R4 plus architecture §24 | `SIGCHLD = SIG_IGN` integration test: sweep not issued |
+| sweep from an unestablished group | spike ignored its `setpgid` result and swept unconditionally | test-only parent delay past exec → sweep not issued, no `kill` in the trace (T31) |
+| glibc wrapper leaves signals unblocked | glibc `sigfillset`/`pthread_sigmask` keep internal signals out of any mask | traced parent mask includes glibc's internal real-time signals (T21) |
 
 ### 14.5 CI placement (for the implementation slices, not this task)
 
@@ -1297,7 +1411,7 @@ experiment file stays frozen where it is.
 
 | Asset | Classification | What carries over, and what does not |
 |---|---|---|
-| `launcher_spike.c` | **POTENTIAL PRODUCT ALGORITHM REFERENCE** | carries over as a reference only: stage order, gap arithmetic, parent-side closes, drain rules, sweep-before-reap, `CLD_DUMPED` handling. **Do not copy.** Its argument parsing, embedded SHA-256, base64 prefix emission, test flags (`--bypass-admission`, `--exec-fd-no-cloexec`, `--exec-fd-o-path`, `--skip-no-new-privs`, `--die-before-exec`, `--stall-pre-exec-ms`, `--post-fork-delay-ms`, `--extra-threads`, `--rejected-acquisition-arm`, `--post-pin-control-fd`, `--parent-*`), blocking `waitid` and read-error-as-EOF are not product behaviour |
+| `launcher_spike.c` | **POTENTIAL PRODUCT ALGORITHM REFERENCE** | carries over as a reference only: stage order, gap arithmetic, parent-side closes, drain rules, sweep-before-reap, `CLD_DUMPED` handling. **Do not copy.** Its argument parsing, embedded SHA-256, base64 prefix emission, test flags (`--bypass-admission`, `--exec-fd-no-cloexec`, `--exec-fd-o-path`, `--skip-no-new-privs`, `--die-before-exec`, `--stall-pre-exec-ms`, `--post-fork-delay-ms`, `--extra-threads`, `--rejected-acquisition-arm`, `--post-pin-control-fd`, `--parent-*`), blocking `waitid`, read-error-as-EOF and its unconditional sweep without a group-authority check are not product behaviour |
 | `driver.py` | **DO NOT COPY** | the case table, posing machinery, barrier protocol and static posability gate are trial machinery; the posability defect is the X2c lesson, carried over as T50 |
 | `checker.py` | **DO NOT COPY** | PASS/FAIL/INVALID/BLOCKED and aggregate verdicts are exactly the vocabulary the product must not have |
 | `observations.py` | **CONCEPT TO REIMPLEMENT** | carries over: exec confirmation needs positive evidence; read before hangup; the conservative S4/S5 rule. Reimplemented as the typed outcome model of section 10, not as token strings |
@@ -1323,9 +1437,9 @@ not choose.
 
 | Slice | Introduces | Adds | Explicitly absent | Required tests | Safety / privacy impact | Stop condition | ADR-0024 acceptance needed first |
 |---|---|---|---|---|---|---|---|
-| **P0 — product contract gate** | no code. An ADR-0024 revision document, and owner decisions on Q1–Q3 | the approved contract: this plan as amended by the owner | any crate, Cargo change or workflow change | `validate_docs.py` | none | owner decision recorded in `DECISIONS.md` | it **is** the ADR disposition step |
+| **P0 — product contract gate** | no code. Owner decisions on Q1–Q3 (recorded 2026-09-16) and ADR-0024 revised in place, still Proposed | the approved contract: this plan as amended by the owner | any crate, Cargo change or workflow change | `validate_docs.py` | none | owner acceptance decision on revised ADR-0024 recorded in `DECISIONS.md` | it **is** the ADR disposition step |
 | **P1 — skeleton and portable model** | `crates/helm-launch` with `Cargo.toml` (restated lints), `lib.rs`, `plan.rs`, `model.rs`, `receipt.rs`, `error.rs`, `layout.rs`, `lifecycle.rs`, README; workspace member; CI path filters and a three-platform Level 1 job | parsing, receipt model and serializer, error families, pure fd-layout planner, pure lifecycle state machine | any Linux module, any `unsafe`, any descriptor, any process | Level 1 in full; lint-drift and unsafe-confinement tests (unsafe count is zero) | none: no I/O | Level 1 green on three platforms; independent slice review | **yes** |
-| **P2 — capability admission** | `authority.rs` (safe rustix only), `authorize` | `admit_executable` measurement and refusals, `admit_working_directory`, composition | process creation, `unsafe`, `launch` | admission refusals (X2, X5, X6, X7, E8, T08, `NotElf`, `ChangedDuringMeasurement`, size bound); measurement vs an independent digest; `compile_fail` for capabilities | reads caller-supplied objects: atime and page cache, documented | refusals and measurement green on Linux; no `unsafe` yet | yes (inherited from P1) |
+| **P2 — capability admission** | `authority.rs` (safe rustix only), `authorize` | `admit_executable` measurement and refusals, `admit_working_directory`, composition | process creation, `unsafe`, `launch` | admission refusals (X2, X5, X6, X7, E8, T08, `NotElf`, `MeasurementInstabilityDetected` (T51), size bound); measurement vs an independent digest; `compile_fail` for capabilities | reads caller-supplied objects: atime and page cache, documented | refusals and measurement green on Linux; no `unsafe` yet | yes (inherited from P1) |
 | **P3 — unsafe backend and the child contract** | `backend/mod.rs`, `spawn.rs`, `child.rs`, asm syscall shim; internal non-public `launch_minimal` for tests | preparation (8.2), spawn with signal blocking (8.3), the complete post-clone contract (8.4), exec-status channel, bounded non-blocking reap | public `launch`, timeouts, drain policy, receipt | Level 2 in full (traced window, stage order, pidfd acquisition, `needs_drop`, token allowlist, injection absence); Level 3 F-series, argv, env, `NoNewPrivs`, cwd, exec failure stages, S5/S6 injection | **the unsafe surface**: needs its own independent review focused on sections 7.4–8.4 | Level 2 green; independent unsafe review has no BLOCKER | yes |
 | **P4 — lifecycle, termination and receipt** | `launch.rs`, public `launch`, `LaunchOutcome` | observation loop (8.5), deadlines, `SIGTERM`/grace/`SIGKILL`, bounded post-kill reap, drain, guarded sweep, classification, receipt emission, in-memory prefixes | anything outside section 8; any orchestration | Level 3 O, R, S, T, P series; total-bound assertions; prefix privacy canary | output bytes enter memory; receipt proven payload-free | Level 3 green; state-machine scripts agree with the real loop on shared scenarios | yes |
 | **P5 — regressions, evidence contract, documentation** | Level 4 suite; receipt schema document; README non-claims; CI hardening | adversarial regressions of 14.4; receipt digest recomputation; published schema and test vectors | `helm-evidence` changes (backlog B-02); any Wine or orchestrator code | Level 4 in full; the whole suite on Linux; Level 1 on three platforms | none new | full suite green, then an **independent review of the whole crate** before any owner merge | yes |
@@ -1338,13 +1452,31 @@ any application. No slice needs a formal trial or a D-7.
 
 ### 17.1 OWNER_DECISION_REQUIRED_BEFORE_IMPLEMENTATION
 
+**Q1–Q3 were decided by the [owner review of 2026-09-16](../DECISIONS.md#helm-launch-productization-plan-owner-review)
+and are no longer open.** The questions as proposed are kept verbatim below the dispositions.
+
+| # | Owner disposition, 2026-09-16 | Applied in |
+|---|---|---|
+| **Q1** | **APPROVED.** ADR-0024 must be revised before it can be considered for acceptance. The revision is prepared, and ADR-0024 **stays Proposed**, with no acceptance date and no approver | ADR-0024; section 16 (P0); 18.1 |
+| **Q2** | **APPROVED WITH EXACT NARROWING.** Approved as 0.1 design obligations, to be validated by normal product tests and not by another formal D-7 trial: refuse writable executable capabilities (T08); relocate all child-side preserved descriptors to `≥ 3` before final mapping (T19); block all blockable signals across `clone3` and restore or reset child signal state in the closed child sequence (T21); guard the process-group sweep on positively established group authority (T31); bound the reap after `SIGKILL` and represent a child that still cannot be observed ended honestly (T40, `end_not_observed`); distinguish read failure from EOF (T41); record timeout and termination actions as facts without unsupported causal claims (S-13); `POST_KILL_REAP_MS = 5000` as the initial 0.1 bound; a maximum admitted executable size of 512 MiB as the initial 0.1 product bound. These are product design choices, **not** claims that LAUNCH-EXEC-01 directly validated them. Two items of the proposed set are not in that list: `ChangedDuringMeasurement` is replaced by amendment 1's detected-instability rule (T51), and `capture_prefix_bytes` as the only stream option stays a detail of revised ADR-0024, settled with that ADR under the rule that raw bounded capture is in memory only | section 3 authority columns; 6.2; 7.5; 7.6; 8.1; 8.3; 8.4; 8.5; 10.2; 11.3 |
+| **Q3** | **APPROVED WITH A GROUP-AUTHORITY GUARD.** Exactly one `SIGKILL` process-group sweep is the fixed 0.1 cleanup policy on every return or completion path, including a normal direct-child exit, **after** the launcher has positively established the direct child's dedicated process group, and before the direct child is reaped. Without positive establishment the launcher infers or guesses no group id and issues no sweep. Accepted consequence: same-group descendants may be killed when `launch` completes, including after a normal exit, and a descendant that leaves the group may survive. Best-effort cleanup, never process-tree containment | T30; T31; S-09; S-10; 8.3; 8.5 Phase C; 8.8; 10.2; 14 |
+
+The three required amendments are applied as well: instability is refused only as *detected* (T51,
+6.2), no receipt-authenticity claim is made (T52, 5.3, 5.4, 11.5), and the goal reads "authorises and
+attempts execution of exactly one" (2.1, S-24).
+
+**Remaining OWNER_DECISION_REQUIRED_BEFORE_IMPLEMENTATION: none.** No unresolved product-contract
+owner question remains. The next owner decision is whether to accept revised ADR-0024 (section 18).
+
+#### Questions as proposed at `930ec14`
+
 | # | Question | Why it blocks | Recommendation |
 |---|---|---|---|
 | **Q1** | How is ADR-0024 disposed of: revised and then accepted, or accepted as written with an amendment note? | ADR-0024 as written says `fork()` is the mechanism, that clean EOF plus a normal exit concludes exec, and it retains a procfs fallback (S-01, S-04, S-15). Accepting that text would accept superseded statements | **Revise, then accept.** One bounded ADR revision that adopts `clone3(CLONE_PIDFD)`, the S4 policy, the two-axis outcome model, removal of the procfs fallback, and the S-09/S-14 refinements, followed by an owner acceptance decision |
 | **Q2** | Approve the product refinements beyond the evidenced spike and the new constants, to be validated by product tests rather than a formal trial? They are: T08 writable-descriptor refusal; T19 unconditional `F_DUPFD_CLOEXEC ≥ 3`; T21 all signals blocked across `clone3` with `SIGACTION` before `SIGMASK`; T31 guarded sweep; T40 bounded post-kill reap and `not_ended`; T41 `read_failed`; `ChangedDuringMeasurement`; causal-neutral timeout facts (S-13); `POST_KILL_REAP_MS = 5000`; `MAX_EXECUTABLE_BYTES = 512 MiB`; `capture_prefix_bytes` as the only stream option | each one changes the child sequence, the receipt vocabulary or refusal behaviour, relative to what Trial #3 exercised. An implementer must not pick them silently | **Approve as a set.** Each one closes a gap the spike left open, and each has a named product test |
 | **Q3** | Confirm that one `SIGKILL` process-group sweep is issued on **every** return path, including a normal exit | it is the evidenced behaviour (P1 `descendant_died`, spike line 988), but the user-visible consequence was never ruled on: a program that leaves a same-group background process has it killed when `launch` returns | **Confirm**, and document it as behaviour, not containment. A timeout-only sweep would leave same-group processes holding launcher pipes and is not evidenced |
 
-No other question blocks implementation.
+At proposal time, no other question blocked implementation.
 
 ### 17.2 IMPLEMENTATION_DETAIL_WITHIN_APPROVED_CONTRACT
 
@@ -1370,6 +1502,7 @@ No other question blocks implementation.
 | B-07 | a sealed-memfd execution path, the only known route to "measured bytes are executed bytes" |
 | B-08 | cgroup v2 delegated containment |
 | B-09 | an async or non-blocking `launch` API |
+| B-10 | receipt provenance or authenticity (for example signing) at a layer above `helm-launch`, under its own decision; `helm-launch` makes no such claim (T52) |
 
 Wine, PWA, MicroVM, custom shell and GUI change no 0.1 API choice and are not listed.
 
@@ -1377,8 +1510,9 @@ Wine, PWA, MicroVM, custom shell and GUI change no 0.1 API choice and are not li
 
 ### 18.1 What must the owner approve before `crates/helm-launch` may be created?
 
-1. **ADR-0024 disposition (Q1).** A revised ADR-0024 accepted by the owner. The plan recommends
-   revision first, because the Proposed text contains superseded statements.
+1. **ADR-0024 acceptance.** Q1 is decided: revise, then consider for acceptance. The revision is
+   prepared (2026-09-16) and ADR-0024 stays Proposed. Accepting the revised ADR is the next owner
+   decision.
 2. **The unsafe-backend exception as concretely scoped.** D-1 arm (i) was decided in principle.
    The owner should confirm this plan's concrete form: restated lint table, one
    `src/backend/` module, asm syscall shim, `#[no_implicit_prelude]` child, the closed syscall set,
@@ -1386,13 +1520,14 @@ Wine, PWA, MicroVM, custom shell and GUI change no 0.1 API choice and are not li
 3. **The public API boundary** of section 5: types, consumption rules, platform gating, and the
    rule that parsing never yields authority.
 4. **Supported and unsupported 0.1 semantics** of sections 2 and 6–11, including the refinements
-   (Q2) and the every-path sweep (Q3).
+   approved under Q2 and the guarded every-path sweep approved under Q3.
 5. **Dependency direction** of section 12: zero HELM crate dependencies, and `LaunchReceipt` not a
    `helm-evidence` type.
 6. **Implementation authorisation** for P1–P5 as sliced in section 16, including the independent
    review at P3 and at P5 before any merge.
 
-This task approves none of these.
+The proposal approved none of these. The owner review of 2026-09-16 decided Q1–Q3 only; items 1–6
+remain open.
 
 ### 18.2 What must be tested before ADR-0024 could be accepted?
 
@@ -1401,17 +1536,61 @@ Architecture acceptance and product acceptance are separate, following the `helm
 
 * **Before ADR-0024 acceptance: no new execution and no formal trial.** The mechanism's kernel
   semantics rest on the Trial #3 evidence and the accepted X2c disposition. What acceptance needs
-  is an **independent review of the revised ADR text** against section 4, so that no superseded
-  statement is accepted and no UNVALIDATED row of section 3 is presented as established.
+  is a **review of the revised ADR text** against section 4, so that no superseded statement is
+  accepted and no UNVALIDATED row of section 3 is presented as established. On 2026-09-16 the owner
+  set that gate as **owner review of revised ADR-0024**.
 * **Before any product merge:** Levels 1–4 green, including the traced child-window test that
   closes T28 for the Rust implementation, then an independent crate review and an owner merge
   decision.
 
 ### 18.3 Boundary of this plan
 
-It created only this document. It changed no crate, Cargo file, workflow, ADR, architecture
-document, decision record, project state, experiment file or evidence. It ran no launcher, helper
-ELF, trial, workflow dispatch or case.
+The proposal (`930ec14`) created only this document. It changed no crate, Cargo file, workflow,
+ADR, architecture document, decision record, project state, experiment file or evidence. It ran no
+launcher, helper ELF, trial, workflow dispatch or case.
 
-> **OWNER REVIEW OF THE HELM-LAUNCH PRODUCTIZATION PLAN IS REQUIRED BEFORE ADR-0024 DISPOSITION OR
-> CREATION OF `crates/helm-launch`.**
+The owner-review amendment of 2026-09-16 changed only this document, ADR-0024, `DECISIONS.md` and
+`PROJECT_STATE.md`. It changed no crate, Cargo file, workflow, architecture document, experiment
+file, freeze manifest or evidence, and it ran no launcher, helper ELF, trial, workflow dispatch or
+case.
+
+## 19. Owner review amendments, 2026-09-16
+
+The owner review recorded
+**`HELM_LAUNCH_PRODUCTIZATION_PLAN_OWNER_REVIEW_PASSED_WITH_BOUNDED_AMENDMENTS`**. This section is
+the change log against the proposal at `930ec14b940da9b136c7d2ad024b441d47ceba6c`. Section 1's
+evidence hierarchy is unchanged, no row of section 3 changed class, and T51 and T52 are added rows.
+Trial #3's frozen result, every experiment file and every evidence file are unchanged.
+
+| # | Owner amendment | Applied in | How |
+|---|---|---|---|
+| 1 | Q1 approved: revise ADR-0024 before acceptance | header; 1.1; 4 (intro); 16 (P0); 17.1; 18 | ADR-0024 revised in place, still Proposed; section 4 keeps citing its pre-revision text |
+| 2 | Q2 approved with exact narrowing | section 3 intro, counts and load-bearing note; T08, T19, T21, T31, T40, T41; S-08, S-13, S-16; 6.2; 8.1; 8.3; 8.4 (stage 2, deviation note); 8.5; 9.1; 11.3; 17.1 | owner approval named in the authority columns; the evidence class is unchanged; stage 2's close-on-exec clear is described as a backstop, since relocation makes `dup2(fd, fd)` unreachable |
+| 3 | Q3 approved with a group-authority guard | 1.3 (P1–P4 row); 2.4; T30; T31; S-09; S-10; 7.3 (pid-valued signal); 8.3 step 3; 8.5 Phase C; 8.7; 8.8; 10.2; 11.2 (termination row); 13.2; 14.1–14.4; 15 | see the two applied specifications below; no text claims that the sweep reached or killed a descendant |
+| 4 | Measurement instability: refuse only what the protocol **detects** | 2.4; T51; 6.2 steps 2, 6 and 7; the capability assertion; 13.2; 14.3; 16 (P2) | `ChangedDuringMeasurement` renamed `MeasurementInstabilityDetected`; the protocol is described by what it observes; the measurement read stops one byte past the sampled size |
+| 5 | Receipt authenticity: none claimed | 2.4; T52; S-25; 5.1; 5.3; 5.4; 10.4; 11.1; 11.5; 12.5; B-10 | "forge a receipt" split from "forge a capability"; the receipt is data without authenticity |
+| 6 | "Executes exactly one" made precise | 2.1; S-24 | "authorises and attempts execution of exactly one admitted object through the exact authorised descriptor" |
+| 7 | Signal contract | T21; S-08; S-11; 7.3 (exact use); 7.5; 7.6; 8.3 steps 1–3; 8.4 stages 6–7; 12.6; 14.2; 14.4 | raw full-set `rt_sigprocmask`, because glibc's `sigfillset` and `pthread_sigmask` exclude its two internal real-time signals from the mask (glibc 2.39 source); `clone3` and both mask calls go through the shim, never `libc::syscall`; `SIGKILL`/`SIGSTOP` never described as blockable; no process-wide claim |
+| 8 | A child that cannot be observed ended, represented honestly; reap bounded after `SIGKILL` | T34; T40; 8.5 (common rules, Phase A rows, Phase B, Phase C); 8.6; 10.2; 11.3; 13.2; 14.1; 14.4 | `not_ended` renamed `end_not_observed`; every `SIGKILL` sent to the direct child by pidfd, including the pre-exec one, is followed by the bounded kill wait; after a status record the loop waits for the pidfd until the Phase A deadline, then kills if needed, so a child exiting by itself is not misrecorded as `end_not_observed` |
+
+**Two applied specifications for the owner's ADR review.** The review fixed the rule. These are how
+this plan and revised ADR-0024 apply it, and neither is presented as a separate owner decision:
+
+* **What "positively established" means.** Only the launcher's own `setpgid(child, child)` returning
+  0, issued as the first system call after `clone3` (8.3 step 3). If the child execs first, the
+  parent's call fails `EACCES`. The executed image is still in its dedicated group, through the
+  child's own stage, but the launcher holds no sweep authority and records
+  `not_issued_group_not_established`.
+* **Why an established authority can still yield no sweep.** If the probe just before the sweep
+  shows that the child was already reaped elsewhere (R4), the owner's rule that the sweep precede
+  the reap can no longer be met, and the numeric group id no longer positively denotes the
+  dedicated group. The sweep is then recorded as `not_issued_child_already_reaped` (8.5 Phase C).
+
+**Editorial corrections made with the amendment.** Two literal NUL bytes that `930ec14` committed in
+place of the JSON escape `\u0000` (9.3, 14.1) are restored as text. Section 8.6's "14 s beyond
+`timeout_ms + grace_ms`" is corrected to 12 s, which the section's own constants give (5 000 +
+5 000 + 2 000 ms). An unescaped `|` that split a 7.3 table row is escaped. Admission step 1 now
+scopes `ETXTBSY` to the evidenced kernel, because the refusal does not rely on that kernel behaviour.
+
+> **OWNER REVIEW OF REVISED ADR-0024 IS REQUIRED BEFORE ACCEPTANCE OR CREATION OF
+> `crates/helm-launch`.**
