@@ -1,0 +1,71 @@
+name: helm-launch P1 portable model cross-platform purity
+
+# helm-launch P1 is a portable, pure model: plan parsing, the receipt model and
+# serializer, the error vocabulary, and pure descriptor-layout and lifecycle
+# models. No execution backend exists, and nothing here can create a process.
+# Its platform-identical semantics are tested on three operating systems rather
+# than asserted. This workflow runs only Cargo's own build and test processes:
+# no launcher, no LAUNCH-EXEC-01 asset, no helper, no Wine, no privilege.
+
+on:
+  pull_request:
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'crates/helm-launch/**'
+      - '.github/workflows/helm-launch.yml'
+  push:
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'crates/helm-launch/**'
+      - '.github/workflows/helm-launch.yml'
+
+  # Re-test an exact branch or ref on purpose, without a no-op source commit.
+  workflow_dispatch:
+
+# A newer run for the same workflow and ref makes an older, still-running one
+# stale, so cancel it instead of consuming runners for a result nobody reads.
+# This cancels only overlapping runs; it never relaxes a check or a failure.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  purity:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: Install Rust 1.95.0
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal --component rustfmt,clippy
+          rustup default 1.95.0
+
+      - name: Record the runner
+        run: |
+          rustc -vV
+          cargo -V
+
+      - run: cargo fmt --check
+      - run: cargo clippy -p helm-launch --all-targets --all-features --locked -- -D warnings
+      - run: cargo test -p helm-launch --locked
+
+      # The determinism anchors. Exact bytes and digests are asserted inside the
+      # tests, so a platform-dependent serializer or parser fails above rather than
+      # producing per-platform "expected" values. These steps print the identities
+      # so the three runs can also be compared by eye in the logs.
+      - name: Print the deterministic receipt and plan identities
+        run: |
+          cargo test -p helm-launch --locked --lib -- --nocapture one_platform_independent_identity
+          cargo test -p helm-launch --locked --test plan_contract -- --nocapture a_fixed_plan_has_one_exact_byte_identity
