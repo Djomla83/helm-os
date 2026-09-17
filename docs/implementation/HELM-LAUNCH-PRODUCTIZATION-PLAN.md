@@ -1,10 +1,31 @@
 # helm-launch 0.1 — productization plan
 
-> **PLAN ONLY.**
-> **NO PRODUCT CRATE EXISTS.**
-> **ADR-0024 REMAINS PROPOSED.**
-> **NO TRIAL #4 IS AUTHORISED.**
-> **OWNER-REVIEWED 2026-09-16: `HELM_LAUNCH_PRODUCTIZATION_PLAN_OWNER_REVIEW_PASSED_WITH_BOUNDED_AMENDMENTS`.**
+> **ADR-0024: ACCEPTED 2026-09-17.**
+> **PRODUCTIZATION PLAN: OWNER-REVIEWED** (2026-09-16: `HELM_LAUNCH_PRODUCTIZATION_PLAN_OWNER_REVIEW_PASSED_WITH_BOUNDED_AMENDMENTS`).
+> **IMPLEMENTATION AUTHORITY: P1 ONLY.**
+> **`crates/helm-launch`: MAY NOW BE CREATED UNDER P1** (not yet created).
+> **P2+: NOT AUTHORISED.**
+> **NO TRIAL #4 IS AUTHORISED** (authorised = false).
+
+<a id="current-authority-2026-09-17"></a>
+
+**Current authority, 2026-09-17.** The owner
+[accepted revised ADR-0024 and authorised P1 only](../DECISIONS.md#adr-0024-accepted-helm-launch-p1-authorised).
+This status block and the notes marked 2026-09-17 in sections 1.1, 16 and 18 are the only changes;
+the plan's contract, slices, traceability and evidence classes are unchanged, and acceptance
+promotes no row of section 3 to a stronger class. Under the P1 authority `crates/helm-launch` may be
+created with a crate skeleton and portable, pure surfaces only — the validated plan model and its
+deterministic parsing, the digest value type, the portable receipt model, closed non-verdict enums,
+the public error vocabulary, the pure fd-layout planner, a pure lifecycle state model that performs
+no OS operation, the serialisation the contract requires, compile-fail and type-boundary tests,
+portable unit and property tests, and the crate README. P1 has **no process execution, no `unsafe`,
+no host privilege and no experiment execution**: no `clone3`, `execveat`, syscall shim, Linux
+backend, pidfd acquisition or signalling, `waitid`, `close_range`, `fchdir`, process-group or signal
+manipulation, `PR_SET_NO_NEW_PRIVS` call, executable or working-directory admission, ELF or
+measurement I/O, `launch`, anything that can cause a child process to exist, or reuse of the
+experimental runner. Where section 16's P1 row and that boundary differ, the owner's boundary
+governs. The sections below that say "Proposed" or "not authorised" record the state at 2026-09-16
+and are left as written.
 
 This plan turns the closed LAUNCH-EXEC-01 experiment line into an implementation-ready product
 design for `helm-launch` 0.1. It creates no crate, changes no code, accepts no ADR and authorises
@@ -45,7 +66,7 @@ ordered it revised in place.
 | 3 | Preserved Trial #3 evidence and frozen experiment facts | [`evidence.json`](../experiments/evidence/LAUNCH-EXEC-01-TRIAL-003-2026-09-14/evidence.json), [definition](../experiments/LAUNCH-EXEC-01-DEFINITION.md), [`launcher_spike.c`](../experiments/launch-exec-01/launcher_spike.c) at freeze `bebd8a5` |
 | 4 | Current public APIs of existing crates | `crates/helm-*/src` on this branch |
 | 5 | Accepted ADRs | [ADR-0021](../adr/ADR-0021-second-product-module.md), [ADR-0022](../adr/ADR-0022-observation-authority.md), [ADR-0023](../adr/ADR-0023-binding-authority.md) |
-| 6 | ADR-0024 while Proposed | [ADR-0024](../adr/ADR-0024-launch-authority.md), revised to this plan on 2026-09-16; section 4 cites its pre-revision text |
+| 6 | ADR-0024 while Proposed | [ADR-0024](../adr/ADR-0024-launch-authority.md), revised to this plan on 2026-09-16; section 4 cites its pre-revision text. **2026-09-17:** revised ADR-0024 is Accepted and now ranks with the accepted ADRs of row 5 |
 | 7 | Older architecture prose and pretrial hypotheses | [HELM-LAUNCH-ARCHITECTURE.md](../research/HELM-LAUNCH-ARCHITECTURE.md), proposed [ADR-0005](../adr/ADR-0005-sandbox-boundary.md) |
 
 ### 1.2 The Trial #3 environment the evidence comes from
@@ -1444,6 +1465,11 @@ not choose.
 | **P4 — lifecycle, termination and receipt** | `launch.rs`, public `launch`, `LaunchOutcome` | observation loop (8.5), deadlines, `SIGTERM`/grace/`SIGKILL`, bounded post-kill reap, drain, guarded sweep, classification, receipt emission, in-memory prefixes | anything outside section 8; any orchestration | Level 3 O, R, S, T, P series; total-bound assertions; prefix privacy canary | output bytes enter memory; receipt proven payload-free | Level 3 green; state-machine scripts agree with the real loop on shared scenarios | yes |
 | **P5 — regressions, evidence contract, documentation** | Level 4 suite; receipt schema document; README non-claims; CI hardening | adversarial regressions of 14.4; receipt digest recomputation; published schema and test vectors | `helm-evidence` changes (backlog B-02); any Wine or orchestrator code | Level 4 in full; the whole suite on Linux; Level 1 on three platforms | none new | full suite green, then an **independent review of the whole crate** before any owner merge | yes |
 
+**Authority, 2026-09-17.** P0 is complete: the owner's acceptance of revised ADR-0024 is recorded in
+[`DECISIONS.md`](../DECISIONS.md#adr-0024-accepted-helm-launch-p1-authorised). **P1 is authorised**,
+within the boundary stated in the [current authority note](#current-authority-2026-09-17). **P2, P3,
+P4 and P5 are not authorised**, and each needs a new explicit owner decision.
+
 **After P5.** An independent product review, then an owner acceptance and merge decision, as for
 `helm-observe` and `helm-bind`. Merging would be a product-module acceptance, not a verdict about
 any application. No slice needs a formal trial or a D-7.
@@ -1529,6 +1555,11 @@ Wine, PWA, MicroVM, custom shell and GUI change no 0.1 API choice and are not li
 The proposal approved none of these. The owner review of 2026-09-16 decided Q1–Q3 only; items 1–6
 remain open.
 
+**Update 2026-09-17.** The owner accepted revised ADR-0024. That decides item 1, settles the
+architecture behind items 3, 4 and 5 without stabilising any schema or API, and accepts the scoped
+Linux unsafe backend of item 2 as architecture for a later implementation slice. Item 6 is decided
+for **P1 only**. Implementing the unsafe backend, and P2–P5 generally, stay **not authorised**.
+
 ### 18.2 What must be tested before ADR-0024 could be accepted?
 
 Architecture acceptance and product acceptance are separate, following the `helm-observe` and
@@ -1593,4 +1624,7 @@ place of the JSON escape `\u0000` (9.3, 14.1) are restored as text. Section 8.6'
 scopes `ETXTBSY` to the evidenced kernel, because the refusal does not rely on that kernel behaviour.
 
 > **OWNER REVIEW OF REVISED ADR-0024 IS REQUIRED BEFORE ACCEPTANCE OR CREATION OF
-> `crates/helm-launch`.**
+> `crates/helm-launch`.** *(State at 2026-09-16.)*
+
+> **2026-09-17: ADR-0024 IS ACCEPTED. HELM-LAUNCH P1 IS AUTHORISED; P2+ IS NOT.
+> `crates/helm-launch` MAY NOW BE CREATED ONLY WITHIN P1 SCOPE. NO TRIAL #4 IS AUTHORISED.**

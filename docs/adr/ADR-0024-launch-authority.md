@@ -1,12 +1,16 @@
 # ADR-0024: Execute one explicitly authorized object without granting authority from comparison
 
-**Status:** **Proposed — not Accepted, and authorising no implementation**\
+**Status:** **Accepted — 2026-09-17**\
 **Draft date:** 2026-09-09\
 **Revised:** 2026-09-16, in place, after the owner review of the productization plan\
-**Approver:** not entered\
-**Acceptance date:** not entered\
+**Approver:** Djomla83 (repository owner), by explicit written instruction of 2026-09-17\
+**Acceptance date:** 2026-09-17\
 **Authoritative base:** `5cc56384257a2ec1f2a2a9c64f7f4328da6cef2e`; revision base
-`930ec14b940da9b136c7d2ad024b441d47ceba6c`\
+`930ec14b940da9b136c7d2ad024b441d47ceba6c`; acceptance base
+`03285d9d13f53c2d97d78bd4f50552c201941c8f`\
+**Implementation authority:** **HELM-LAUNCH P1 only** (crate skeleton and portable, pure model), by
+the [owner decision of 2026-09-17](../DECISIONS.md#adr-0024-accepted-helm-launch-p1-authorised).
+P2 and every later slice are **not authorised**.\
 **Design basis:** the [helm-launch 0.1 productization plan](../implementation/HELM-LAUNCH-PRODUCTIZATION-PLAN.md),
 as amended by the [owner review of 2026-09-16](../DECISIONS.md#helm-launch-productization-plan-owner-review).
 The [architecture and falsification plan](../research/HELM-LAUNCH-ARCHITECTURE.md) is historical
@@ -25,6 +29,32 @@ authorised**.
 > `930ec14`. Every historical record that cites this ADR by line or section refers to them. This
 > revision changes no freeze manifest, experiment source, LAUNCH-EXEC-01 definition or evidence
 > file.
+
+<a id="acceptance-2026-09-17"></a>
+
+> **Accepted 2026-09-17 by the repository owner, Djomla83.** What is accepted is **this revised
+> text**, as carried by the chain `174caad` → `930ec14` → `a810f50` → `03285d9`, read together with
+> the owner-reviewed [productization plan](../implementation/HELM-LAUNCH-PRODUCTIZATION-PLAN.md).
+> It is not a retroactive approval of the stale Proposed text of 2026-09-09, and every historical
+> section below — the earlier Proposed state, the pre-execution review, the trial history, the
+> formal `MECHANISM_REJECTED` result, the X2c postmortem, unvalidated N3 and the absence of a
+> Trial #4 — is kept as written.
+>
+> - **Scope.** The helm-launch 0.1 architecture boundary of sections A to N. Nothing more.
+> - **Trial history is unchanged.** The Trial #3 frozen result remains **`MECHANISM_REJECTED`**, its
+>   D-7 is **consumed**, its valid trial count is **one**, it **must not be rerun**, and **no Trial #4
+>   is authorised**. The engineering disposition remains `PRODUCT_MECHANISM:
+>   MECHANISM_NOT_IMPLICATED` by X2c. Acceptance does not rewrite Trial #3 as `MECHANISM_ACCEPTED`.
+> - **Evidence classes are kept.** Acceptance does not claim that every post-experiment product
+>   refinement was experimentally validated. Each rule keeps the class the plan's
+>   [section 3](../implementation/HELM-LAUNCH-PRODUCTIZATION-PLAN.md#3-experiment-to-product-traceability)
+>   gives it: `EXPERIMENTALLY_SUPPORTED` (for the C spike on one kernel), `OWNER_POLICY`,
+>   `DOCUMENTATION_DERIVED`, or `UNVALIDATED` — a product obligation to be validated by ordinary
+>   product tests (section N). Acceptance promotes no row to a stronger class.
+> - **Implementation.** Acceptance by itself authorises no implementation. The owner separately
+>   authorised **P1 only**: the crate skeleton and a portable, pure model, with no process execution,
+>   no `unsafe`, no host privilege and no experiment execution. P2 and later need a new owner
+>   decision.
 
 ## Context
 
@@ -53,7 +83,8 @@ every claim the previous four were built to avoid.
 Since the first draft, the LAUNCH-EXEC-01 formal trial line ran and closed (section N), and the
 productization plan translated its evidence into a product contract. On 2026-09-16 the owner
 reviewed that plan, passed it with bounded amendments, and required this ADR to be revised to the
-current intended contract before it can be considered for acceptance.
+current intended contract before it could be considered for acceptance. The owner accepted the
+revised text on 2026-09-17.
 
 ## Options
 
@@ -72,7 +103,7 @@ for exactly the authority confusion this ADR exists to prevent. E fails because 
 none of the kernel semantics that make the module dangerous. The process-creation alternatives
 are compared in section D.
 
-## Proposed decision
+## Accepted decision, 2026-09-17
 
 > Build `helm-launch` 0.1 as a **single-crate, Linux x86_64, capability-driven** launcher that
 > **authorises and attempts execution of exactly one** admitted, already-open, regular ELF64
@@ -80,9 +111,11 @@ are compared in section D.
 > compatibility, readiness or success verdict of any kind**. Nothing it returns states that the
 > attempt succeeded or that the measured image ran.
 
-Every rule in sections A to N is part of this **proposed** decision. The productization plan
-carries the algorithms, constants and product tests it relies on, cited as "plan §". A difference
-between this ADR and the plan is a defect to correct before acceptance.
+Every rule in sections A to N is part of this decision, proposed on 2026-09-09, revised on
+2026-09-16 and **accepted on 2026-09-17**. The productization plan carries the algorithms, constants
+and product tests it relies on, cited as "plan §". A difference between this ADR and the plan is a
+defect, to be corrected by an owner-reviewed amendment and never resolved by an implementation
+slice on its own.
 
 ### A. Authority
 
@@ -574,13 +607,14 @@ after a normal exit. Its receipt is data without authenticity. And it cannot run
 desired specification actually describes, because that entry point is a Windows path inside a Wine
 prefix, and Wine is deliberately out of scope.
 
-This ADR, if accepted, would settle the execution-authority boundary, the 0.1 scope and admission
+This ADR settles the execution-authority boundary, the 0.1 scope and admission
 contract, the `clone3(CLONE_PIDFD)` and `execveat` mechanism, the scoped unsafe exception, the
 descriptor, signal and `no_new_privs` contract, the conservative exec-confirmation policy, the
 direct-child lifecycle with its guarded cleanup sweep, the output, privacy and receipt semantics,
-and the relation to the other modules. It stabilises no schema or API. **Accepting it would not by
+and the relation to the other modules. It stabilises no schema or API. **Accepting it does not by
 itself authorise creating `crates/helm-launch` or any implementation.** That needs a separate owner
-authorisation of the implementation slices.
+authorisation of the implementation slices. On 2026-09-17 the owner authorised **P1 only**; P2 and
+every later slice still need their own owner decision.
 
 ## Falsification and approval boundary
 
@@ -607,10 +641,11 @@ five more. Reject any design in which:
 - blocking the calling thread's signals is described as blocking `SIGKILL` or `SIGSTOP`, or as
   process-wide signal control.
 
-**No new formal trial is required for acceptance.** The mechanism's kernel semantics rest on the
-Trial #3 evidence as bounded in section N. What acceptance needs is **owner review of this revised
-text**, so that no superseded statement is accepted and no unvalidated refinement is presented as
-established. Before any product merge, the plan's product tests must pass, including the traced Rust
+**No new formal trial was required for acceptance, and none was run.** The mechanism's kernel
+semantics rest on the Trial #3 evidence as bounded in section N. What acceptance needed was **owner
+review of this revised text**, so that no superseded statement is accepted and no unvalidated
+refinement is presented as established; that review was completed and the text accepted on
+2026-09-17. Before any product merge, the plan's product tests must pass, including the traced Rust
 child window, followed by an independent crate review and an owner merge decision.
 
 This ADR accepts no licence, production release, privileges, receipt infrastructure, launcher
@@ -655,5 +690,17 @@ exists for a Trial #4.
 | **Q3** | **Approved with a group-authority guard** — section J, whose establishing event and already-reaped case are this revision's applied specification, for owner review |
 | **Amendments** | detected-instability wording (section C); no receipt-authenticity claim (section L); "authorises and attempts execution of exactly one" (the decision statement) |
 
-**None of this accepts this ADR.** It stays **Proposed**. `crates/helm-launch` is not created, no
-implementation is authorised, and the next gate is **owner review of this revised ADR**.
+**None of that accepted this ADR.** At the review of 2026-09-16 it stayed **Proposed**,
+`crates/helm-launch` was not created, no implementation was authorised, and the next gate was
+**owner review of this revised ADR**.
+
+**Recorded 2026-09-17**, the
+[owner acceptance decision](../DECISIONS.md#adr-0024-accepted-helm-launch-p1-authorised):
+
+| # | Ruling |
+|---|---|
+| **ADR-0024** | **Accepted 2026-09-17** — this revised text, read with the owner-reviewed productization plan; approver Djomla83 |
+| **Product contract** | **Accepted** — the helm-launch 0.1 architecture boundary only; evidence classes unchanged |
+| **LAUNCH-EXEC-01** | Formal trial line **closed**; Trial #3 frozen result remains **`MECHANISM_REJECTED`**; D-7 consumed; no rerun; **no Trial #4** |
+| **P1** | **Authorised** — crate skeleton and portable, pure model: no `unsafe`, no process creation or execution, no syscall shim, no descriptor admission, no filesystem I/O, no `launch` |
+| **P2+** | **Not authorised** — each needs a new owner decision |

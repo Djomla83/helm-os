@@ -43,7 +43,11 @@ experiment sources are committed and hashed. **ADR-0024 stays Proposed**, no imp
 `crates/helm-launch` is authorised, **D-7 (execution) is not granted**, and **LAUNCH-EXEC-01
 remains NOT_RUN**: deciding the design questions an ADR depends on is not accepting the ADR.
 ADR-0001 through ADR-0019 remain Proposed. No other architecture acceptance follows from this
-decision.
+decision. On 2026-09-17, after the LAUNCH-EXEC-01 trial line had closed and the owner had reviewed
+the productization plan, the owner **accepted the revised ADR-0024** for the helm-launch 0.1
+architecture only and authorised **HELM-LAUNCH P1 only**, a portable, pure model with no process
+execution and no `unsafe`; see the
+[decision of 2026-09-17](#adr-0024-accepted-helm-launch-p1-authorised).
 
 | ID | Odluka | Status |
 |---|---|---|
@@ -88,7 +92,7 @@ Proces je u [master planu](../HELM_MASTER_PLAN.md#s31). Licencna odluka ostaje z
 | ADR-0021 | [Make the second product module an inert application contract](adr/ADR-0021-second-product-module.md) — [selection analysis and owner refinements](research/SECOND-PRODUCT-MODULE-SELECTION.md); bounded architectural authority, with experimental helm-app-spec 0.1 now accepted on main | **Accepted 2026-09-08** |
 | ADR-0022 | [Observe explicit targets without interpreting desired state](adr/ADR-0022-observation-authority.md) — [architecture analysis](research/HELM-OBSERVE-ARCHITECTURE.md), [independent review with Amendment 1](implementation/HELM-OBSERVE-INDEPENDENT-REVIEW.md), [execution definition](experiments/obs-fs-01/) and [OBS-FS-01 PASS](experiments/OBS-FS-01-EXECUTION-REPORT.md). **Bounded acceptance**: Linux x86_64 and ext4 cohort only; descendant bind mounts excluded and unverified; three implementation-binding obligations, all met and independently verified on the review branch. [Owner clarification 2026-09-09](adr/ADR-0022-observation-authority.md#cohort-attestation-clarification): cohort membership is a caller precondition, not an observer attestation; `0xEF53` is a necessary ext-family guard only; no new authority added; scope unchanged. **Experimental helm-observe 0.1 is implemented, independently reviewed and owner-merged to main on 2026-09-09** at reviewed tip `626de914000263cc3206d28479db692ad0b40724`; schema and API unstabilised, `publish = false`, not a release | **Accepted 2026-09-08, clarified 2026-09-09** |
 | ADR-0023 | [Compare desired claims with actual observations without producing a satisfaction verdict](adr/ADR-0023-binding-authority.md) — [design report](research/HELM-BIND-ARCHITECTURE.md). A pure, authority-free `helm-bind` 0.1 with no satisfaction, compatibility or readiness verdict, a two-axis result whose coverage can never be complete in 0.1, an explicit identity-bearing binding plan instead of target-ID heuristics, and no change to any existing crate. Owner corrections of 2026-09-09: both entry-point comparators require `regular_file_sha256` and bind the desired path byte for byte; the caller assertion is named `asserted_prefix_root_id` and is conditional; the claim universe excludes contextual metadata and selector keys; the coverage theorem is at least four unsupported claims. **Experimental helm-bind 0.1 is implemented, [independently reviewed](implementation/HELM-BIND-INDEPENDENT-REVIEW-0.1.md) and owner-merged to main on 2026-09-09** at reviewed tip `4f51c1b2bc7e59b8142ccc4c328e2641c89327d3`, product-code tip `78e26de4ca952b7125032e5c9fa468e6dc85af7c`; no BLOCKER and no unresolved IMPORTANT; unsupported coverage stays at least four; `asserted_prefix_root_id` stays an assertion, never an attestation; schema and API unstabilised, `publish = false`, not a release | **Accepted 2026-09-09** |
-| ADR-0024 | [Execute one explicitly authorized object without granting authority from comparison](adr/ADR-0024-launch-authority.md) — [design report and falsification plan](research/HELM-LAUNCH-ARCHITECTURE.md), [LAUNCH-EXEC-01 preregistered definition](experiments/LAUNCH-EXEC-01-DEFINITION.md), **NOT_RUN**. A single-crate, Linux x86_64, capability-driven launcher for exactly one already-open regular ELF object, with no satisfaction, compatibility, readiness or success verdict. Parsing a LaunchPlan and holding a BindingReport both grant **zero** execution authority; `NoClaimContradicted` is never permission. Direct-child lifecycle only, **no process-tree containment**, and **not a sandbox** — the child runs with the caller's own credentials. Depends on no HELM crate; context travels as opaque digests. Requires a scoped `unsafe` backend or a weaker descriptor claim (owner decision D-1), because the workspace `forbid(unsafe_code)` cannot be locally relaxed and rustix provides no `close_range`. **Narrowed on 2026-09-09 by the [three-workstream pre-execution review](implementation/HELM-LAUNCH-PRE-EXECUTION-REVIEW.md)**, sixteen BLOCKERs among 53 findings, classification NEEDS_ARCHITECTURE_OWNER_REVIEW: the executable digest is a pre-execution measurement of the main file body (`pre_exec_body_sha256`) and never the identity of the body that ran, `ETXTBSY` does not cover the measure-to-exec window, the child runs with the caller's credentials **except** for a set-user-ID or capability-bearing object, clean EOF does not prove exec, direct-child lifecycle does not imply direct-child liveness, and the receipt becomes a product of one process disposition and one per-stream completeness. LAUNCH-EXEC-01 re-frozen at **71 cases** with a total aggregate precedence. **Owner decisions of 2026-09-09**: D-1 **arm (i)** (scoped unsafe backend; FD isolation not weakened to keep crate-wide `forbid`), D-2 to D-6 and D-8 accepted (D-4 as corrected), **D-9** refuse `S_ISUID`/`S_ISGID` at admission, **D-10** environment **exactly empty** with `explicit` removed from 0.1, and new **D-11** `PR_SET_NO_NEW_PRIVS` before exec because D-9 does not cover file capabilities. Definition re-frozen at **72 cases** (56 mandatory / 9 conditional / 7 recorded) against a machine-readable manifest, with the disposable [experiment sources](experiments/launch-exec-01/) committed and hashed. **Pre-trial implementation only: D-7 is NOT granted, LAUNCH-EXEC-01 remains NOT_RUN, and `crates/helm-launch` must not be created before it has run and been reviewed** | **Proposed 2026-09-09** |
+| ADR-0024 | [Execute one explicitly authorized object without granting authority from comparison](adr/ADR-0024-launch-authority.md) — [design report and falsification plan](research/HELM-LAUNCH-ARCHITECTURE.md), [LAUNCH-EXEC-01 preregistered definition](experiments/LAUNCH-EXEC-01-DEFINITION.md), **NOT_RUN**. A single-crate, Linux x86_64, capability-driven launcher for exactly one already-open regular ELF object, with no satisfaction, compatibility, readiness or success verdict. Parsing a LaunchPlan and holding a BindingReport both grant **zero** execution authority; `NoClaimContradicted` is never permission. Direct-child lifecycle only, **no process-tree containment**, and **not a sandbox** — the child runs with the caller's own credentials. Depends on no HELM crate; context travels as opaque digests. Requires a scoped `unsafe` backend or a weaker descriptor claim (owner decision D-1), because the workspace `forbid(unsafe_code)` cannot be locally relaxed and rustix provides no `close_range`. **Narrowed on 2026-09-09 by the [three-workstream pre-execution review](implementation/HELM-LAUNCH-PRE-EXECUTION-REVIEW.md)**, sixteen BLOCKERs among 53 findings, classification NEEDS_ARCHITECTURE_OWNER_REVIEW: the executable digest is a pre-execution measurement of the main file body (`pre_exec_body_sha256`) and never the identity of the body that ran, `ETXTBSY` does not cover the measure-to-exec window, the child runs with the caller's credentials **except** for a set-user-ID or capability-bearing object, clean EOF does not prove exec, direct-child lifecycle does not imply direct-child liveness, and the receipt becomes a product of one process disposition and one per-stream completeness. LAUNCH-EXEC-01 re-frozen at **71 cases** with a total aggregate precedence. **Owner decisions of 2026-09-09**: D-1 **arm (i)** (scoped unsafe backend; FD isolation not weakened to keep crate-wide `forbid`), D-2 to D-6 and D-8 accepted (D-4 as corrected), **D-9** refuse `S_ISUID`/`S_ISGID` at admission, **D-10** environment **exactly empty** with `explicit` removed from 0.1, and new **D-11** `PR_SET_NO_NEW_PRIVS` before exec because D-9 does not cover file capabilities. Definition re-frozen at **72 cases** (56 mandatory / 9 conditional / 7 recorded) against a machine-readable manifest, with the disposable [experiment sources](experiments/launch-exec-01/) committed and hashed. **Pre-trial implementation only: D-7 is NOT granted, LAUNCH-EXEC-01 remains NOT_RUN, and `crates/helm-launch` must not be created before it has run and been reviewed**. The text of this row up to here records the state of 2026-09-09. **[Owner decision 2026-09-17](#adr-0024-accepted-helm-launch-p1-authorised): the revised ADR-0024 is Accepted** for the helm-launch 0.1 architecture only; Trial #3 remains `MECHANISM_REJECTED`, no Trial #4; **HELM-LAUNCH P1 only** is authorised, P2+ is not | **Proposed 2026-09-09; revised 2026-09-16; Accepted 2026-09-17** |
 
 
 <a id="d-7-authorised"></a>
@@ -662,3 +666,95 @@ transition. R3-M1 is future evidence-contract work. The LAUNCH-EXEC-01 formal tr
 **TRIAL #3 FROZEN RESULT REMAINS MECHANISM_REJECTED.**
 
 **NO TRIAL #4 IS AUTHORISED.**
+
+<a id="adr-0024-accepted-helm-launch-p1-authorised"></a>
+
+### Owner decision 2026-09-17 — **ADR-0024 ACCEPTED**; **HELM-LAUNCH P1 AUTHORISED**, P2+ not authorised
+
+The repository owner, Djomla83, completed the final architecture review of the revised
+[ADR-0024](adr/ADR-0024-launch-authority.md) carried by the chain
+`174caad1a3980a35b2ea841f49e05555753710b5` → `930ec14b940da9b136c7d2ad024b441d47ceba6c` →
+`a810f50f3ef12177d5bdcc2825dd81fc124ccb9b` → `03285d9d13f53c2d97d78bd4f50552c201941c8f`. This
+decision changes no frozen experiment source, LAUNCH-EXEC-01 definition, freeze manifest,
+`SOURCE-HASHES.json`, test, workflow, evidence file, review or postmortem. Every earlier section is
+left as written, including every D-7 record and every Trial #1, #2 and #3 record.
+
+#### 1. ADR-0024: **ACCEPTED 2026-09-17**
+
+* **Approver:** repository owner Djomla83. **Acceptance date:** 2026-09-17.
+* What is accepted is the **revised** ADR-0024, interpreted together with the
+  [owner-reviewed productization plan](implementation/HELM-LAUNCH-PRODUCTIZATION-PLAN.md). It is not a
+  retroactive approval of the stale Proposed text of 2026-09-09.
+* **Scope: the helm-launch 0.1 architecture boundary only.** That boundary is: Linux x86_64 product
+  backend only; an already-open descriptor as the sole execution authority; no authority from a
+  plan, AppSpec, observation, binding or evidence; `NoClaimContradicted` never permission; one
+  regular admitted ELF64 x86_64 object only; scripts refused; no `PATH`, no shell, no pathname
+  execution, no `/proc` fallback; no Wine, PWA, MicroVM or prefix orchestration in 0.1;
+  `clone3(CLONE_PIDFD)` as the planned process-creation primitive; `execveat(fd, "", …,
+  AT_EMPTY_PATH)`; an explicit working-directory capability; UTF-8 argv; an exactly empty
+  environment; `PR_SET_NO_NEW_PRIVS`; the exact descriptor-inheritance contract; the conservative
+  exec-confirmation model, in which **clean exec-status EOF alone is not positive exec proof** and
+  `ExecStatusIndeterminate` is first-class; direct-child lifecycle only, with a guarded exactly-once
+  process-group sweep before the reap; no process-tree containment; no sandbox claim; a durable
+  receipt with no verdict vocabulary and no authenticity claim; zero HELM crate dependencies; and a
+  scoped Linux `unsafe` backend in a later implementation slice.
+* **Evidence classes are unchanged.** Acceptance does not claim that every post-experiment product
+  refinement was experimentally validated. The distinction between `EXPERIMENTALLY_SUPPORTED`,
+  `OWNER_POLICY`, `DOCUMENTATION_DERIVED` and `UNVALIDATED` product obligations stays as the plan's
+  section 3 records it.
+* **HELM-LAUNCH 0.1 product contract: ACCEPTED**, as architecture. No schema or API is stabilised.
+
+#### 2. Trial history: unchanged
+
+* **Trial #3 frozen result remains `MECHANISM_REJECTED`** (70 PASS / 1 FAIL / 1 BLOCKED). It is not
+  rewritten as `MECHANISM_ACCEPTED`.
+* The engineering disposition remains `PRODUCT_MECHANISM: MECHANISM_NOT_IMPLICATED` by X2c.
+* Trial #3 D-7 is **consumed**; the valid Trial #3 count is **one**; **Trial #3 must not be rerun**.
+* **No Trial #4 is authorised.** The LAUNCH-EXEC-01 formal trial line is **closed**.
+* The test correction at `03285d9d13f53c2d97d78bd4f50552c201941c8f` is accepted: the 17 frozen
+  experiment source files are bound to the current tree, and the 3 Trial #3 definition files to the
+  historical freeze at `bebd8a5`. The freeze and its manifest are unchanged.
+
+#### 3. Implementation authority: **HELM-LAUNCH P1 ONLY**
+
+**P1 purpose: create the product crate skeleton and the portable, pure model.** P1 may create
+`crates/helm-launch`, add it to the workspace, and implement only portable, pure surfaces such as the
+validated launch-plan model; deterministic parsing and validation; the `Digest` value type; the
+portable receipt data model; closed non-verdict enums; the public error vocabulary; pure fd-layout
+planning; a pure lifecycle state-transition model that performs no OS operation; the serialisation
+and deserialisation the accepted contract requires; compile-fail and type-boundary tests; portable
+unit and property tests; and a crate README documenting scope. P1 may use ordinary safe dependencies
+already approved by the plan where these surfaces need them.
+
+**P1 must not implement:** `unsafe` code; `clone3`; `execveat`; raw syscall shims; the Linux execution
+backend; process creation or execution; pidfd acquisition; `pidfd_send_signal`; `waitid`;
+`close_range`; `fchdir`; process-group signalling; signal manipulation; the `PR_SET_NO_NEW_PRIVS`
+call; executable descriptor admission; working-directory descriptor admission; ELF filesystem I/O;
+executable measurement I/O; `launch()`; any function that can cause a child process to exist; or any
+reuse of the experimental runner as product code.
+
+| P1 property | Value |
+|---|---|
+| Process execution | **NONE** |
+| Unsafe | **NONE** |
+| Host privilege | **NONE** |
+| Experiment execution | **NONE** |
+
+**P2, P3, P4, P5 and any equivalent later slice are NOT authorised.** A later explicit owner decision
+is required before moving beyond P1.
+
+#### 4. Boundary and next gate
+
+* This decision is recorded in documentation only. `crates/helm-launch` is **not yet created**;
+  `Cargo.toml`, `Cargo.lock`, tests, experiments, evidence and workflows are unchanged. `main` is
+  unchanged.
+
+**Next gate: IMPLEMENT HELM-LAUNCH P1 — PORTABLE MODEL ONLY.**
+
+**ADR-0024 IS ACCEPTED.**
+
+**TRIAL #3 FROZEN RESULT REMAINS MECHANISM_REJECTED. TRIAL #3 MUST NOT BE RERUN.**
+
+**NO TRIAL #4 IS AUTHORISED.**
+
+**HELM-LAUNCH P1 IS AUTHORISED. HELM-LAUNCH P2+ IS NOT AUTHORISED.**

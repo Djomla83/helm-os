@@ -1,5 +1,44 @@
 # Stanje projekta
 
+<a id="adr-0024-accepted-helm-launch-p1-authorised"></a>
+
+## ADR-0024 accepted, 2026-09-17 — HELM-LAUNCH P1 authorised, P2+ not authorised
+
+The owner [accepted the revised ADR-0024 and authorised HELM-LAUNCH P1 only](DECISIONS.md#adr-0024-accepted-helm-launch-p1-authorised).
+[ADR-0024](adr/ADR-0024-launch-authority.md) is Accepted as revised, read together with the
+owner-reviewed [productization plan](implementation/HELM-LAUNCH-PRODUCTIZATION-PLAN.md). This
+supersedes the "next gate" and the ADR-0024 status of the 2026-09-16 section below, which is left as
+written.
+
+| Item | State |
+|---|---|
+| ADR-0024 | **ACCEPTED 2026-09-17** (approver Djomla83) |
+| HELM-LAUNCH PRODUCT CONTRACT | **ACCEPTED** (helm-launch 0.1 architecture only; evidence classes unchanged) |
+| LAUNCH-EXEC-01 | **FORMAL TRIAL LINE CLOSED** |
+| Trial #3 | **COMPLETED / `MECHANISM_REJECTED` / immutable history** — D-7 consumed, valid count one, must not be rerun |
+| Trial #4 | **NOT AUTHORISED** |
+| helm-launch implementation — P1 | **AUTHORISED** — crate skeleton and portable, pure model |
+| helm-launch implementation — P2+ | **NOT AUTHORISED** |
+| crates/helm-launch | **NOT YET CREATED** — may be created only within P1 scope |
+| Next gate | **IMPLEMENT HELM-LAUNCH P1 — PORTABLE MODEL ONLY** |
+
+* **P1 boundary.** Validated plan model, deterministic parsing and validation, the `Digest` value
+  type, the portable receipt model, closed non-verdict enums, the public error vocabulary, pure
+  fd-layout planning, a pure lifecycle state model, the serialisation the contract requires,
+  compile-fail/type-boundary tests, portable unit and property tests, and the crate README.
+  **Process execution: none. Unsafe: none. Host privilege: none. Experiment execution: none.**
+  No `clone3`, `execveat`, syscall shim, Linux backend, pidfd, `waitid`, `close_range`, `fchdir`,
+  signal or process-group manipulation, `PR_SET_NO_NEW_PRIVS` call, descriptor admission, ELF or
+  measurement I/O, `launch()`, or reuse of the experimental runner.
+* **Trial history unchanged.** The X2c engineering disposition stays `PRODUCT_MECHANISM:
+  MECHANISM_NOT_IMPLICATED`, and Trial #3 is not rewritten as `MECHANISM_ACCEPTED`.
+* **Freeze test conflict resolved.** The open validation conflict recorded on 2026-09-16 is closed by
+  the accepted test correction `03285d9d13f53c2d97d78bd4f50552c201941c8f`: the 17 frozen experiment
+  sources bind to the current tree, and the 3 Trial #3 definition inputs bind to their historical
+  bytes at freeze commit `bebd8a5`. `SOURCE-HASHES.json` and the Trial #3 freeze are unchanged.
+
+**TRIAL #3 MUST NOT BE RERUN. NO TRIAL #4 IS AUTHORISED. HELM-LAUNCH P2+ IS NOT AUTHORISED.**
+
 <a id="helm-launch-productization-plan-owner-review"></a>
 
 ## helm-launch productization plan owner-reviewed, 2026-09-16 — ADR-0024 revision prepared, still PROPOSED
