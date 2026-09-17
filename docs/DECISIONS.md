@@ -758,3 +758,81 @@ is required before moving beyond P1.
 **NO TRIAL #4 IS AUTHORISED.**
 
 **HELM-LAUNCH P1 IS AUTHORISED. HELM-LAUNCH P2+ IS NOT AUTHORISED.**
+
+
+<a id="helm-launch-p1-accepted"></a>
+
+### Owner decision 2026-09-17 — **HELM-LAUNCH P1 ACCEPTED**; P2+ not authorised
+
+**`HELM_LAUNCH_P1_ACCEPTED`.** The repository owner, Djomla83, accepts HELM-LAUNCH P1 as the
+**first helm-launch product implementation slice**, under Accepted
+[ADR-0024](adr/ADR-0024-launch-authority.md) and the
+[P1-only authorisation](#adr-0024-accepted-helm-launch-p1-authorised). This is **not** product
+acceptance of the complete helm-launch 0.1 module. Every earlier section, including every ADR, D-7
+and Trial #1, #2 and #3 record, is left as written.
+
+| Item | Value |
+|---|---|
+| Accepted implementation | `427b1af092db29c619b7f7a4c0d40b72efaacc65` |
+| Accepted correction | `d3914ab95fb253abd8ac10462a4e2de1cb2185de` |
+| Independent review | `e32b2e1768b0b0d11f9b02115b107b6a40f60ecb` — [review](implementation/HELM-LAUNCH-P1-INDEPENDENT-REVIEW.md) |
+| Independent review findings | **0 BLOCKER**, **0 IMPORTANT** |
+| Publication CI | **PASSED** — HELM Rust workspace Linux run `35244879485`; helm-launch P1 portable model cross-platform purity run `35244879475`; helm-bind cross-platform purity run `35244879552`; all SUCCESS |
+| P1 cross-platform matrix | **PASSED ON LINUX / WINDOWS / MACOS** (`ubuntu-24.04`, `windows-2025`, `macos-15`) |
+| helm-launch 0.1 complete module | **NOT YET PRODUCT-ACCEPTED** |
+
+#### 1. Accepted P1 boundary
+
+Accepted P1 contains only: portable launch-plan parsing and validation; `ValidatedLaunchPlan`;
+`Digest`; the portable receipt and fact model; deterministic receipt serialisation; the launch-plan
+error vocabulary; pure fd-layout planning; pure lifecycle state modelling; portable tests; and the
+P1 CI plumbing.
+
+| P1 property | Value |
+|---|---|
+| Process execution | **NONE** |
+| Unsafe | **NONE** |
+| Host privilege | **NONE** |
+| Experiment execution | **NONE** |
+| P2+ implementation | **NONE** |
+
+No executable or working-directory capability exists in accepted P1. No `launch()` exists. No
+process can be created by accepted P1.
+
+#### 2. Authority
+
+| Slice | Authority |
+|---|---|
+| P2 | **NOT AUTHORISED** |
+| P3 | **NOT AUTHORISED** |
+| P4 | **NOT AUTHORISED** |
+| P5 | **NOT AUTHORISED** |
+
+P1 acceptance does **not** authorise the next slice. The next owner decision is whether to authorise
+the bounded P2 capability-admission slice defined by the accepted
+[productization plan](implementation/HELM-LAUNCH-PRODUCTIZATION-PLAN.md). That decision is not made
+here.
+
+#### 3. Independent-review findings
+
+None blocks P1 acceptance.
+
+| Finding | Severity | Disposition |
+|---|---|---|
+| P1-DOC-01 | MINOR | **RESOLVED BY OWNER-ACCEPTANCE SYNC**: the productization plan's T40 wording (section 8.5 and the T40 row) now states that `EndNotObserved` is latched once `POST_KILL_REAP_MS` expires without an observed end, and no later `Exited`, `Signaled`, core-dumped result or `ECHILD` changes it; `not_issued_child_already_reaped` may still be recorded. `EndNotObserved` means the end was not observed within the approved bound, not that the child never ended |
+| P1-DOC-02 | MINOR | **open, nonblocking**; crate README not edited |
+| P1-TEST-01 | MINOR | **open, nonblocking**; tests not edited |
+| P1-PARSE-01, P1-PARSE-02, P1-LIFE-01, P1-SER-01, P1-CI-01, P1-TEST-02 | BACKLOG_NONBLOCKING | unchanged |
+
+#### 4. Historical authority and next gate
+
+This decision changes no product code, test, workflow, Cargo file, ADR, experiment, evidence or
+the independent review, and does not touch `main`.
+
+**TRIAL #3 FROZEN RESULT REMAINS MECHANISM_REJECTED. TRIAL #3 MUST NOT BE RERUN.**
+
+**NO TRIAL #4 IS AUTHORISED.**
+
+**HELM-LAUNCH P1 IS ACCEPTED. HELM-LAUNCH P2+ IS NOT AUTHORISED.**
+
+**Next gate: OWNER DECISION ON WHETHER TO AUTHORISE HELM-LAUNCH P2 CAPABILITY ADMISSION.**

@@ -3,7 +3,7 @@
 > **ADR-0024: ACCEPTED 2026-09-17.**
 > **PRODUCTIZATION PLAN: OWNER-REVIEWED** (2026-09-16: `HELM_LAUNCH_PRODUCTIZATION_PLAN_OWNER_REVIEW_PASSED_WITH_BOUNDED_AMENDMENTS`).
 > **IMPLEMENTATION AUTHORITY: P1 ONLY.**
-> **`crates/helm-launch`: MAY NOW BE CREATED UNDER P1** (not yet created).
+> **HELM-LAUNCH P1: ACCEPTED 2026-09-17** as the first product slice (portable model only); the complete 0.1 module is **not yet product-accepted**.
 > **P2+: NOT AUTHORISED.**
 > **NO TRIAL #4 IS AUTHORISED** (authorised = false).
 
@@ -26,6 +26,17 @@ measurement I/O, `launch`, anything that can cause a child process to exist, or 
 experimental runner. Where section 16's P1 row and that boundary differ, the owner's boundary
 governs. The sections below that say "Proposed" or "not authorised" record the state at 2026-09-16
 and are left as written.
+
+<a id="p1-acceptance-sync-2026-09-17"></a>
+
+**P1 acceptance sync, 2026-09-17.** The owner
+[accepted HELM-LAUNCH P1](../DECISIONS.md#helm-launch-p1-accepted). With that decision this plan's
+status block and the T40 wording are synced to the owner's clarification that `EndNotObserved`,
+once the post-`SIGKILL` bound expires without an observed end, is latched as the receipt-facing
+child-end fact: the section 8.5 bounded-kill-wait rule, Phase B step 4, Phase C steps 2 to 4, and
+the T40 row of section 3. This resolves independent-review finding P1-DOC-01. No other contract
+rule, slice, evidence class or traceability row changed. P2 and every later slice remain **not
+authorised**.
 
 This plan turns the closed LAUNCH-EXEC-01 experiment line into an implementation-ready product
 design for `helm-launch` 0.1. It creates no crate, changes no code, accepts no ADR and authorises
@@ -208,7 +219,7 @@ Component names refer to section 5 and section 7.
 | T37 | Death before exec or a short record is `indeterminate`, never success | S5 PASS; S4 launcher claim | EXPERIMENTALLY_SUPPORTED | outcome model | test-only death before exec → `indeterminate`, byte-identical status view to a normal run | — |
 | T38 | Exit status and signal termination stay distinct, including `CLD_DUMPED` | R1, R2, R3 PASS; S3 PASS | EXPERIMENTALLY_SUPPORTED | `waitid` classification | exit 0, exit 42, `SIGSEGV` with and without core, `SIGABRT` | none |
 | T39 | A child reaped elsewhere yields an unobservable end, never a guessed status | R4 recorded `ExitStatusUnobservable`; M5 `waitid_echild` | EXPERIMENTALLY_SUPPORTED | `waitid` classification | host `SIGCHLD = SIG_IGN` | caller precondition, not enforced |
-| T40 | Every `SIGKILL` the launcher sends to the direct child by pidfd starts a wait bounded by `POST_KILL_REAP_MS`; a child whose end is still not observed is recorded as `end_not_observed` and left unreaped, and `launch` still returns | architecture falsifier 21; spike `waitid` blocks; owner-approved (Q2) | UNVALIDATED | lifecycle loop | simulated backend only; no unprivileged way to force an unkillable child | an unreaped child is left to the host; no claim that it is still running later |
+| T40 | Every `SIGKILL` the launcher sends to the direct child by pidfd starts a wait bounded by `POST_KILL_REAP_MS`; a child whose end is still not observed is recorded as `end_not_observed`, latched against any later reap result or `ECHILD` (8.5), and left unreaped if nothing is collected, and `launch` still returns | architecture falsifier 21; spike `waitid` blocks; owner-approved (Q2) | UNVALIDATED | lifecycle loop | simulated backend only; no unprivileged way to force an unkillable child | an unreaped child is left to the host; no claim that it is still running later |
 | T41 | A stream read failure is its own completeness value, never EOF | architecture §30; spike treated read errors as EOF; owner-approved (Q2) | UNVALIDATED | lifecycle loop | simulated backend injects `EIO` | — |
 | T42 | A dynamically linked ELF launches, and the empty environment does not pin its loaded code | E7 PASS | EXPERIMENTALLY_SUPPORTED | none beyond T02/T15 | dynamic fixture (every Rust fixture is dynamic) | loaded-code closure unmeasured |
 | T43 | The durable receipt has no timestamp and no elapsed duration | D-8 | OWNER_POLICY | receipt serializer | schema test; field list closed | elapsed time exists only in memory |
@@ -802,7 +813,12 @@ spike behaviour except where marked.
   a kill deadline `now + POST_KILL_REAP_MS`. The loop keeps polling the pidfd and draining the
   streams until the pidfd is readable or that deadline passes. If it passes, the child end is
   `EndNotObserved`: no end was observed within the bound. That is not a claim that the child is
-  still running at any later moment.
+  still running at any later moment, nor that it never ended. **`EndNotObserved` is latched at that
+  deadline as the receipt-facing child-end fact** (owner clarification, synced at P1 acceptance,
+  2026-09-17): no later observation or Phase C event changes it — not a late pidfd readiness, a late
+  `Exited`, `Signaled` or core-dumped result, nor an `ECHILD` showing that another actor already
+  reaped the child. A later, independent cleanup fact such as `not_issued_child_already_reaped`
+  may still be recorded.
 
 **Phase A — exec status**, deadline `spawn + SPAWN_CONFIRM_TIMEOUT_MS`. Streams drain throughout.
 
@@ -825,8 +841,8 @@ to EOF within the Phase A deadline.
    `pidfd_send_signal(SIGTERM)`, grace deadline `now + grace_ms` (T1, T3).
 3. **Grace deadline passes, pidfd not readable.** `pidfd_send_signal(SIGKILL)`, kill deadline
    `now + POST_KILL_REAP_MS` (T2, T6).
-4. **Kill deadline passes, pidfd not readable (new, T40).** Child end `EndNotObserved`; streams
-   still open become `ReadStoppedChildEndNotObserved`.
+4. **Kill deadline passes, pidfd not readable (new, T40).** Child end `EndNotObserved`, latched;
+   streams still open become `ReadStoppedChildEndNotObserved`.
 
 The classification is from what was observed. A pidfd readable before the run deadline is never
 `deadline_expired`, even if a later signal reaches a zombie (T4, T5).
@@ -839,14 +855,18 @@ The classification is from what was observed. A pidfd readable before the run de
 2. **With authority,** run `waitid(P_PIDFD, WEXITED | WNOHANG | WNOWAIT)` immediately before the
    sweep.
    * `ECHILD` → the child was reaped elsewhere (R4). The sweep can no longer precede the reap, so
-     it is **not issued** (`not_issued_child_already_reaped`); child end `EndUnobservable`.
+     it is **not issued** (`not_issued_child_already_reaped`); child end `EndUnobservable`, unless
+     `EndNotObserved` is already latched, in which case the child end stays `EndNotObserved` and
+     only the sweep disposition is recorded.
    * Otherwise → issue exactly **one** `kill(-child_pid, SIGKILL)` group sweep. The child is still
      unreaped: an ended child is a zombie the probe did not consume, and a child whose end was not
      observed still leads its group.
 3. Reap with `waitid(P_PIDFD, WEXITED | WNOHANG)`. It cannot block: the zombie is present, or the
-   child is `EndNotObserved` and is left unreaped, stated in the receipt.
-4. Classify: `CLD_EXITED` → `Exited { code }`; `CLD_KILLED` → `Signaled { signal, core_dumped:
-   false }`; `CLD_DUMPED` → `Signaled { signal, core_dumped: true }` (R3); anything else →
+   child is `EndNotObserved`; then the reap is cleanup only, and if it collects nothing the child is
+   left unreaped, stated in the receipt.
+4. Classify: a latched `EndNotObserved` is kept whatever the reap collects. Otherwise
+   `CLD_EXITED` → `Exited { code }`; `CLD_KILLED` → `Signaled { signal, core_dumped: false }`;
+   `CLD_DUMPED` → `Signaled { signal, core_dumped: true }` (R3); anything else →
    `EndUnobservable`.
 5. Close every remaining descriptor, serialise the receipt and return `Ok(LaunchOutcome)`.
 

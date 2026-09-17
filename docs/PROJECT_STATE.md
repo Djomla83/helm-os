@@ -1,5 +1,42 @@
 # Stanje projekta
 
+<a id="helm-launch-p1-accepted"></a>
+
+## HELM-LAUNCH P1 accepted, 2026-09-17 — portable model only, P2+ not authorised
+
+The owner [accepted HELM-LAUNCH P1](DECISIONS.md#helm-launch-p1-accepted) as the first helm-launch
+product implementation slice, after the
+[independent review](implementation/HELM-LAUNCH-P1-INDEPENDENT-REVIEW.md) (0 BLOCKER, 0 IMPORTANT)
+and green publication CI. This supersedes the "next gate" and the `crates/helm-launch` state of the
+2026-09-17 authorisation section below, which is left as written.
+
+| Item | State |
+|---|---|
+| ADR-0024 | **ACCEPTED** |
+| HELM-LAUNCH P1 | **PRODUCT SLICE ACCEPTED** |
+| Accepted implementation | `427b1af092db29c619b7f7a4c0d40b72efaacc65` |
+| Accepted correction | `d3914ab95fb253abd8ac10462a4e2de1cb2185de` |
+| Independent review | `e32b2e1768b0b0d11f9b02115b107b6a40f60ecb` |
+| Cross-platform CI | **PASSED LINUX / WINDOWS / MACOS** (runs `35244879485`, `35244879475`, `35244879552`) |
+| helm-launch complete module | **NOT YET PRODUCT-ACCEPTED** |
+| P2+ | **NOT AUTHORISED** |
+| Current helm-launch capability | **PORTABLE MODEL ONLY** |
+| Process execution | **NONE** |
+| LAUNCH-EXEC-01 | **FORMAL TRIAL LINE CLOSED**; Trial #3 remains `MECHANISM_REJECTED` |
+| Trial #4 | **NOT AUTHORISED** |
+| Next gate | **OWNER DECISION ON HELM-LAUNCH P2 AUTHORITY** |
+
+* **Accepted P1 contents.** Portable launch-plan parsing and validation, `ValidatedLaunchPlan`,
+  `Digest`, the portable receipt and fact model, deterministic receipt serialisation, the plan
+  error vocabulary, pure fd-layout planning, pure lifecycle state modelling, portable tests and the
+  P1 CI plumbing. **Unsafe: none. Host privilege: none. Experiment execution: none.** No executable
+  or working-directory capability and no `launch()` exist; accepted P1 cannot create a process.
+* **Review findings.** P1-DOC-01 is resolved by syncing the productization plan's T40 wording
+  (`EndNotObserved` is latched). P1-DOC-02 and P1-TEST-01 remain MINOR, open and nonblocking; the
+  other findings are backlog.
+
+**TRIAL #3 MUST NOT BE RERUN. NO TRIAL #4 IS AUTHORISED. HELM-LAUNCH P2+ IS NOT AUTHORISED.**
+
 <a id="adr-0024-accepted-helm-launch-p1-authorised"></a>
 
 ## ADR-0024 accepted, 2026-09-17 — HELM-LAUNCH P1 authorised, P2+ not authorised
