@@ -8,7 +8,8 @@
 >
 > **NO EXECUTABLE OR WORKING-DIRECTORY CAPABILITY EXISTS YET.**
 >
-> **NO `unsafe` CODE.** The source forbids it outright (`#![forbid(unsafe_code)]`).
+> **NO `unsafe` CODE.** The crate root denies it (`#![deny(unsafe_code, unsafe_op_in_unsafe_fn)]`),
+> and no `allow` of either lint exists.
 
 This crate is the first, owner-authorised implementation slice of `helm-launch`, under Accepted
 [ADR-0024](../../docs/adr/ADR-0024-launch-authority.md) and the owner-reviewed
@@ -125,11 +126,15 @@ The crate does **not** inherit the workspace lint table (plan section 7.4, ADR-0
 Its manifest restates every workspace lint — `clippy::unwrap_used`, `clippy::expect_used` and
 `clippy::panic` as `deny` — and adds `unsafe_op_in_unsafe_fn`,
 `clippy::undocumented_unsafe_blocks` and `clippy::multiple_unsafe_ops_per_block`. The one
-accepted difference is `unsafe_code = "deny"` in the manifest instead of `forbid`, which a later,
-separately authorised backend slice would need; in P1 the source still forbids it.
-`tests/p1_boundary.rs` fails on any drift of either table, on any other workspace member that
-stops inheriting the workspace lints, on any `unsafe` token in `src/`, on any module beyond the
-six P1 modules, and on operating-system, execution or later-slice identifiers used as code.
+accepted difference is `unsafe_code = "deny"` instead of `forbid`, in the manifest and restated at
+the crate root as `#![deny(unsafe_code, unsafe_op_in_unsafe_fn)]`, because only `deny` leaves room
+for the one scoped `allow` that a later, separately authorised backend slice may need. P1
+authorises no such slice and contains no such `allow`.
+`tests/p1_boundary.rs` fails on any drift of either table, on a crate root that does not deny
+both lints or that forbids, on either lint named anywhere else in `src/`, on any other workspace
+member that stops inheriting the workspace lints, on any `unsafe` token in `src/`, on any module
+beyond the six P1 modules, and on operating-system, execution or later-slice identifiers used as
+code.
 
 ## Accepted future behaviour — NOT IMPLEMENTED
 

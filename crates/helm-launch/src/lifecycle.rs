@@ -15,7 +15,8 @@
 //! * deadline, `SIGTERM`, grace, `SIGKILL` (T1–T3, T29);
 //! * pre-exec bound with immediate `SIGKILL` (S6, T34);
 //! * bounded post-exit drain (O6, T32);
-//! * bounded wait after every `SIGKILL`, ending in `end_not_observed` (T40);
+//! * bounded wait after every `SIGKILL`, ending in `end_not_observed`, which is
+//!   latched: no later probe or reap revises it (T40);
 //! * a read error is its own fact and never EOF (T41);
 //! * no group cleanup without established authority; with it, exactly one,
 //!   always before the reap, on every completion path, and none once the child
@@ -434,6 +435,10 @@ impl Lifecycle {
             && now >= deadline
         {
             self.end_not_observed = true;
+            // Latched: no end was observed within the bound. A later probe or
+            // reap may still collect the child for cleanup, but never revises
+            // this fact, not even to an exit or a signal it collects.
+            self.child_end = Some(ChildEnd::EndNotObserved);
             for stream in [Stream::Stdout, Stream::Stderr] {
                 let slot = self.stream_slot(stream);
                 if slot.is_none() {
@@ -484,7 +489,8 @@ impl Lifecycle {
             }
             Probe::AlreadyReaped => {
                 self.group_sweep = Some(GroupSweep::NotIssuedChildAlreadyReaped);
-                self.child_end = Some(ChildEnd::EndUnobservable);
+                // A latched `EndNotObserved` stands (T40).
+                self.child_end.get_or_insert(ChildEnd::EndUnobservable);
             }
         }
         actions.push(Action::Reap);
@@ -505,11 +511,13 @@ impl Lifecycle {
             Reap::NothingAvailable | Reap::Unclassifiable => None,
         };
         let end = match (self.child_end, observed) {
-            // Reaped elsewhere: nothing collected here can be this child's end.
-            (Some(ChildEnd::EndUnobservable), _) => ChildEnd::EndUnobservable,
-            (_, Some(end)) => end,
-            (_, None) if self.end_not_observed => ChildEnd::EndNotObserved,
-            (_, None) => ChildEnd::EndUnobservable,
+            // Latched before the reap, which is then cleanup only. Reaped
+            // elsewhere: nothing collected here can be this child's end. No end
+            // within the post-kill bound (T40): whatever is collected now was
+            // not observed within that bound.
+            (Some(latched), _) => latched,
+            (None, Some(end)) => end,
+            (None, None) => ChildEnd::EndUnobservable,
         };
         self.child_end = Some(end);
         self.phase = Phase::Finished;
@@ -926,6 +934,96 @@ mod tests {
         assert_eq!(r.lc.next_deadline(), None);
     }
 
+    /// An exit or a signal a final reap may collect, and its end fact.
+    const COLLECTED: [(Reap, ChildEnd); 3] = [
+        (Reap::Exited { code: 0 }, ChildEnd::Exited { code: 0 }),
+        (
+            Reap::Killed { signal: 9 },
+            ChildEnd::Signaled {
+                signal: 9,
+                core_dumped: false,
+            },
+        ),
+        (
+            Reap::Dumped { signal: 6 },
+            ChildEnd::Signaled {
+                signal: 6,
+                core_dumped: true,
+            },
+        ),
+    ];
+
+    /// Drives to the one `SIGKILL` on the run or the pre-exec path, and returns
+    /// when it was sent.
+    fn drive_to_sigkill(r: &mut Run, pre_exec: bool) -> u64 {
+        if !pre_exec {
+            r.at(0, Event::StatusEof);
+            assert_eq!(r.deadline(), vec![Action::SendSigterm]);
+        }
+        assert_eq!(r.deadline(), vec![Action::SendSigkill]);
+        r.now
+    }
+
+    #[test]
+    fn t40_end_not_observed_is_latched_and_a_later_reap_never_revises_it() {
+        for authority in [GroupAuthority::NotEstablished, GroupAuthority::Established] {
+            for pre_exec in [false, true] {
+                for (late, _) in COLLECTED {
+                    let case = format!("{authority:?} pre_exec={pre_exec} {late:?}");
+                    let mut r = Run::new(authority);
+                    let kill_at = drive_to_sigkill(&mut r, pre_exec);
+                    // 1. No end is observed through the post-kill deadline.
+                    assert_eq!(r.lc.next_deadline(), Some(kill_at + POST_KILL_REAP_MS));
+                    let cleanup = r.deadline();
+                    assert!(
+                        cleanup == vec![Action::ProbeReaped] || cleanup == vec![Action::Reap],
+                        "{case}"
+                    );
+                    // 2. The fact is latched at the bound, before any cleanup event.
+                    assert_eq!(r.lc.child_end, Some(ChildEnd::EndNotObserved), "{case}");
+                    assert_eq!(r.lc.facts(), None, "{case}");
+                    // A late end readiness is no observation within the bound.
+                    assert_eq!(r.at(r.now + 1, Event::ChildEndReadable), vec![], "{case}");
+                    // 3. The final non-blocking reap collects an exit or a signal.
+                    let f = r.cleanup(Probe::Unreaped, late);
+                    // 4. That collection is cleanup only: the bound miss stands.
+                    assert_eq!(f.child_end, ChildEnd::EndNotObserved, "{case}");
+                    assert!(f.sigkill_sent, "{case}");
+                    assert_eq!(r.at(r.now, Event::Reaped(late)), vec![], "{case}");
+                    assert_eq!(r.lc.facts(), Some(f), "{case}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn t40_an_end_observed_within_the_kill_bound_keeps_its_exit_or_signal() {
+        for authority in [GroupAuthority::NotEstablished, GroupAuthority::Established] {
+            for pre_exec in [false, true] {
+                for (reap, end) in COLLECTED {
+                    let case = format!("{authority:?} pre_exec={pre_exec} {reap:?}");
+                    let mut r = Run::new(authority);
+                    let bound = drive_to_sigkill(&mut r, pre_exec) + POST_KILL_REAP_MS;
+                    // Observed on the last instant inside the bound, while a writer
+                    // keeps both streams open past it.
+                    r.at(bound - 1, Event::ChildEndReadable);
+                    // The stale kill deadline, delivered anyway, latches nothing.
+                    assert_eq!(r.at(bound, Event::DeadlineReached), vec![], "{case}");
+                    assert_eq!(r.lc.child_end, None, "{case}");
+                    r.deadline();
+                    let f = r.cleanup(Probe::Unreaped, reap);
+                    assert_eq!(f.child_end, end, "{case}");
+                    assert_eq!(
+                        f.stdout,
+                        Completeness::WriterRetainedAfterChildExit,
+                        "{case}"
+                    );
+                    assert!(f.sigkill_sent, "{case}");
+                }
+            }
+        }
+    }
+
     #[test]
     fn t41_read_errors_are_their_own_facts_and_never_eof() {
         let mut r = Run::new(GroupAuthority::NotEstablished);
@@ -1041,7 +1139,13 @@ mod tests {
                 GroupSweep::NotIssuedChildAlreadyReaped,
                 "path {path}"
             );
-            assert_eq!(f.child_end, ChildEnd::EndUnobservable, "path {path}");
+            // A missed post-kill bound (path 5) stays latched (T40).
+            let end = if path == 5 {
+                ChildEnd::EndNotObserved
+            } else {
+                ChildEnd::EndUnobservable
+            };
+            assert_eq!(f.child_end, end, "path {path}");
             assert_eq!(r.count(Action::SweepGroup), 0);
         }
     }
@@ -1202,6 +1306,13 @@ mod tests {
             if matches!(f.child_end, ChildEnd::EndNotObserved) {
                 assert!(f.sigkill_sent, "end_not_observed only follows a SIGKILL");
             }
+            // A missed post-kill bound is the receipt's end, whatever was
+            // probed or reaped afterwards (T40).
+            assert_eq!(
+                r.lc.end_not_observed,
+                f.child_end == ChildEnd::EndNotObserved,
+                "{f:?}"
+            );
         }
     }
 }

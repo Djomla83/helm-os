@@ -269,8 +269,8 @@ fn lint_policy_restates_every_workspace_lint_without_weakening() {
                 .get(lint)
                 .unwrap_or_else(|| panic!("workspace lint {group}::{lint} not restated"));
             if group == "rust" && lint == "unsafe_code" {
-                // The one accepted exception: `deny` in the manifest (plan 7.4),
-                // while P1 source forbids it outright.
+                // The one accepted exception (plan 7.4): `deny` in the manifest,
+                // restated as `deny` at the crate root (tested below).
                 assert_eq!(level, "forbid");
                 assert_eq!(mine, "deny");
             } else {
@@ -310,13 +310,39 @@ fn lint_policy_restates_every_workspace_lint_without_weakening() {
         }
     }
     assert_eq!(found, expected.len());
+}
 
-    let lib = SOURCES[0].1;
+#[test]
+fn the_crate_root_denies_rather_than_forbids_the_unsafe_lints() {
+    // Plan 7.4 restates the policy in source as `deny`, not `forbid`: only
+    // `deny` leaves room for a scoped `allow` in a later, separately authorised
+    // slice. P1 authorises none, so no `allow` may exist, and with no `unsafe`
+    // token in `src/` (`the_source_contains_no_unsafe_token_anywhere`) P1 has
+    // zero such code.
+    let root: String = strip(SOURCES[0].1).split_whitespace().collect();
     assert!(
-        lib.contains("#![forbid(unsafe_code)]"),
-        "P1 source must forbid it"
+        root.contains("#![deny(unsafe_code,unsafe_op_in_unsafe_fn)]"),
+        "the crate root must deny both lints"
     );
-    assert!(lib.contains("#![deny(unsafe_op_in_unsafe_fn)]"));
+    assert!(
+        !code_tokens(SOURCES[0].1).iter().any(|t| t == "forbid"),
+        "the crate root must deny, not forbid"
+    );
+    // Each lint is named as code exactly once in all of `src/`: in that root
+    // `deny`. No `forbid`, `allow`, `expect` or `warn` of either exists, even
+    // through `cfg_attr`.
+    for lint in ["unsafe_code", "unsafe_op_in_unsafe_fn"] {
+        let named: Vec<&str> = SOURCES
+            .iter()
+            .flat_map(|(name, source)| {
+                code_tokens(source)
+                    .into_iter()
+                    .filter(|t| t == lint)
+                    .map(|_| *name)
+            })
+            .collect();
+        assert_eq!(named, ["src/lib.rs"], "{lint} named as code: {named:?}");
+    }
 }
 
 #[test]

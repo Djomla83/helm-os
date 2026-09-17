@@ -18,8 +18,9 @@ sha2 = "=0.10.9"
 # Every workspace lint is therefore restated here, none weaker except the one
 # accepted `unsafe_code` exception, and the unsafe-discipline lints are added.
 #
-# P1 contains no unsafe code at all: `src/lib.rs` additionally forbids it in
-# source, and `tests/p1_boundary.rs` fails on any drift of this table.
+# P1 contains no unsafe code at all: `src/lib.rs` restates this `deny` in source
+# (not `forbid`, for the same reason), and `tests/p1_boundary.rs` fails on any
+# drift of this table or of that attribute.
 [lints.rust]
 unsafe_code = "deny"
 unsafe_op_in_unsafe_fn = "deny"

@@ -75,11 +75,12 @@
 //! no authority from parsing; no receipt authenticity. A digest identifies bytes
 //! and nothing more.
 
-// P1 has no scoped backend, so the source forbids the construct outright. The
-// manifest carries the accepted `deny` from plan section 7.4, which a later,
-// separately authorised backend slice would rely on.
-#![forbid(unsafe_code)]
-#![deny(unsafe_op_in_unsafe_fn)]
+// The accepted policy of plan section 7.4, restated in source as in the
+// manifest: `deny`, not `forbid`, because only `deny` leaves room for the one
+// scoped `allow` that a later, separately authorised backend slice may need.
+// No such slice is authorised: P1 contains no code either lint would reject and
+// no `allow` of either, and `tests/p1_boundary.rs` fails on any.
+#![deny(unsafe_code, unsafe_op_in_unsafe_fn)]
 #![deny(missing_docs)]
 
 mod error;
