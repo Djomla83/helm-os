@@ -4,9 +4,10 @@ Scope, and nothing else: X2b/X2c/X4, T1, S4, M2, E4, E6/E6c, O6/O7 and R3, plus
 the liveness revalidation support P1/P2/P4 need. N3 stays conditional.
 
 The reviewed candidate is now the Trial #3 freeze (trial-003): FROZEN and NOT_RUN,
-with no Trial #3 D-7. The Trial3Freeze tests bind the working tree directly to
-the Trial #3 SOURCE-HASHES.json; the superseded NOT_FROZEN record is provenance
-only. Nothing here poses a
+with no Trial #3 D-7. The Trial3Freeze tests bind the 17 experiment sources in
+the current tree directly to the Trial #3 SOURCE-HASHES.json, and the 3 definition
+inputs to their exact historical bytes at the Trial #3 freeze commit; the
+superseded NOT_FROZEN record is provenance only. Nothing here poses a
 LAUNCH-EXEC case, runs launcher_spike, or executes a helper or a generated ELF.
 Observations are fabricated in-process. The POSIX-only tests use scratch FIFOs
 and symlinks, Python stand-ins and isolated fork/waitid probes that are not
@@ -34,6 +35,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
@@ -175,7 +177,7 @@ sys.stdout.write(json.dumps({
 def git_show(revision, path):
     git = shutil.which("git")
     if git is None:
-        raise unittest.SkipTest("git is needed to read the frozen Trial #2 sources")
+        raise unittest.SkipTest("git is needed to read historical frozen sources")
     root = str(ROOT).replace("\\", "/")
     proc = subprocess.run([git, "-C", str(ROOT), "-c", "safe.directory=" + root,
                            "show", "%s:%s" % (revision, path)],
@@ -2180,9 +2182,13 @@ class UnchangedByTheCorrection(unittest.TestCase):
 
 
 # ============================================ Trial #3 freeze (trial-003)
-# Active freeze validation binds the working tree to the Trial #3 manifest
-# DIRECTLY. The expected paths and states below are literals of this freeze,
-# and every expected hash comes from the manifest, never from the file under test.
+# Active freeze validation binds the 17 experiment sources in the current tree
+# to the Trial #3 manifest DIRECTLY. The 3 definition inputs are historical: their
+# manifest digests bind the exact bytes at TRIAL3_FREEZE, read through git, and
+# the current documents may evolve after the trial. The expected paths and states
+# below are literals of this freeze, and every expected hash comes from the
+# manifest, never from the file under test.
+TRIAL3_FREEZE = "bebd8a5f83d4d0daebe9b068050cb5436289c75e"
 TRIAL3_SOURCES = ["README.md", "checker.py", "driver.py", "evidence.py",
                   "frozen_cases.py", "harness.py", "helper_alt.c", "helper_dynamic.c",
                   "helper_fork.c", "helper_report.c", "helper_setid.c", "journal.py",
@@ -2212,6 +2218,15 @@ def definition_drift(root, manifest):
     return sorted(path for path, digest in manifest["definition_sha256"].items()
                   if not (root / path).is_file()
                   or sha256((root / path).read_bytes()) != digest)
+
+
+def historical_definition_drift(revision, manifest):
+    """Definition inputs whose bytes at `revision` miss the manifest digest.
+
+    Reads git history only, never the current definition documents; a path
+    absent at `revision` fails in git_show."""
+    return sorted(path for path, digest in manifest["definition_sha256"].items()
+                  if sha256(git_show(revision, path)) != digest)
 
 
 def frozen_input_names(exp_dir):
@@ -2259,19 +2274,45 @@ class Trial3Freeze(unittest.TestCase):
             self.assertRegex(digest, r"\A[0-9a-f]{64}\Z")
 
     def test_the_exact_frozen_bytes_verify(self):
+        # Sources: the current tree. Definitions: the bytes at the freeze commit.
         self.assertEqual(source_drift(EXP, MANIFEST), [])
-        self.assertEqual(definition_drift(ROOT, MANIFEST), [])
+        self.assertEqual(historical_definition_drift(TRIAL3_FREEZE, MANIFEST), [])
         ok, detail = runner.verify_freeze()
         self.assertIs(ok, True, detail)
+
+    def test_current_definitions_are_not_the_historical_authority(self):
+        # Post-trial evolution of a definition document (ADR-0024) is allowed.
+        # The binding is the authority source, not a required inequality.
+        adr = "docs/adr/ADR-0024-launch-authority.md"
+        self.assertTrue((ROOT / adr).is_file())
+        self.assertEqual(sha256(git_show(TRIAL3_FREEZE, adr)),
+                         MANIFEST["definition_sha256"][adr])
+        guard = AssertionError("historical validation read a current document")
+        with unittest.mock.patch.object(pathlib.Path, "read_bytes", side_effect=guard), \
+                unittest.mock.patch.object(pathlib.Path, "read_text", side_effect=guard):
+            self.assertEqual(historical_definition_drift(TRIAL3_FREEZE, MANIFEST), [])
+        tmp = pathlib.Path(tempfile.mkdtemp(prefix="trial3-definitions-"))
+        try:
+            for path in TRIAL3_DEFINITIONS:
+                (tmp / path).parent.mkdir(parents=True, exist_ok=True)
+                (tmp / path).write_bytes(git_show(TRIAL3_FREEZE, path))
+            self.assertEqual(definition_drift(tmp, MANIFEST), [])
+            (tmp / adr).write_bytes((tmp / adr).read_bytes() + b"\nevolved\n")
+            self.assertEqual(definition_drift(tmp, MANIFEST), [adr])
+            self.assertEqual(historical_definition_drift(TRIAL3_FREEZE, MANIFEST), [])
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
 
     def test_drift_fails_on_a_disposable_copy(self):
         tmp = pathlib.Path(tempfile.mkdtemp(prefix="trial3-freeze-"))
         try:
             exp = tmp / "docs" / "experiments" / "launch-exec-01"
             shutil.copytree(EXP, exp, ignore=shutil.ignore_patterns("__pycache__"))
+            # The 17 sources stay frozen in the current tree; the definitions
+            # are the historical bytes at the Trial #3 freeze commit.
             for path in TRIAL3_DEFINITIONS:
                 (tmp / path).parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(ROOT / path, tmp / path)
+                (tmp / path).write_bytes(git_show(TRIAL3_FREEZE, path))
 
             def verify():
                 proc = subprocess.run([sys.executable, "-I", "-B", "-c", VERIFY_FREEZE,
@@ -2293,6 +2334,7 @@ class Trial3Freeze(unittest.TestCase):
             self.assertIs(verify(), False)
             self.assertEqual(source_drift(exp, MANIFEST), ["driver.py"])
             driver_py.write_bytes(original)
+            self.assertEqual(source_drift(exp, MANIFEST), [])
 
             alt = exp / "helper_alt.c"
             kept = alt.read_bytes()
@@ -2300,6 +2342,7 @@ class Trial3Freeze(unittest.TestCase):
             self.assertIs(verify(), False)
             self.assertEqual(source_drift(exp, MANIFEST), ["helper_alt.c"])
             alt.write_bytes(kept)
+            self.assertEqual(source_drift(exp, MANIFEST), [])
 
             definition = tmp / "docs" / "experiments" / "LAUNCH-EXEC-01-DEFINITION.md"
             text = definition.read_bytes()
@@ -2310,6 +2353,7 @@ class Trial3Freeze(unittest.TestCase):
             # hash contract above is what catches this drift.
             self.assertIs(verify(), True)
             definition.write_bytes(text)
+            self.assertEqual(definition_drift(tmp, MANIFEST), [])
 
             (exp / "undeclared.py").write_text("X = 1\n", encoding="utf-8")
             self.assertNotEqual(frozen_input_names(exp), TRIAL3_SOURCES)
