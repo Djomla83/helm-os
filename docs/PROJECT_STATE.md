@@ -1,5 +1,57 @@
 # Stanje projekta
 
+<a id="helm-launch-p2-accepted"></a>
+
+## HELM-LAUNCH P2 accepted, 2026-09-18 — capability admission accepted, P3+ not authorised
+
+The owner [accepted HELM-LAUNCH P2](DECISIONS.md#helm-launch-p2-accepted) as the second helm-launch
+product implementation slice, after an independent review with **0 BLOCKER and 0 IMPORTANT** and a
+green publication CI gate whose Linux jobs **actually executed** the cohort-gated admission tests.
+This supersedes the "next gate" and the P2 status rows of the sections below, which are left as
+written. P1 stays **accepted**; P3, P4 and P5 stay **not authorised**.
+
+| Item | State |
+|---|---|
+| ADR-0024 | **ACCEPTED** |
+| HELM-LAUNCH P1 | **ACCEPTED** |
+| HELM-LAUNCH P2 | **ACCEPTED** |
+| P2 accepted authority record | `a3a8d999a6bfa59ce27b1515525e6a7578dad7fe` |
+| P2 accepted implementation | `c74e9064f4a852688b1a13dc3d3d31b93b61b0aa` |
+| P2 independent review | `94ce8dd34cd6694ea3b528a9dad95d2a71b4ad70` (0 BLOCKER, 0 IMPORTANT) |
+| P2 Linux runtime CI | **PASSED** — `tests/linux_admission.rs` 28 passed, `authority.rs` Linux-specific unit tests 13 passed, cohort doctests executed and passed |
+| Portable model | **PASSED LINUX / WINDOWS / MACOS** |
+| P2 authority API off the cohort | **ABSENT** |
+| HELM-LAUNCH P3 / P4 / P5 | **NOT AUTHORISED** |
+| Process creation | **NONE** |
+| Process execution | **NONE** |
+| Unsafe | **NONE** |
+| Host privilege | **NONE** |
+| Experiment execution | **NONE** |
+| helm-launch complete 0.1 module | **NOT YET PRODUCT-ACCEPTED** |
+| LAUNCH-EXEC-01 | **FORMAL TRIAL LINE CLOSED**; Trial #3 remains `MECHANISM_REJECTED` |
+| Trial #4 | **NOT AUTHORISED** |
+| Next gate | **OWNER DECISION ON HELM-LAUNCH P3 AUTHORITY — UNSAFE BACKEND AND CHILD CONTRACT** |
+
+* **Current helm-launch capability.** Portable plan, receipt and lifecycle model **plus** safe
+  Linux x86_64 capability admission **plus** single-use authorisation composition. Concretely:
+  `parse_launch_plan` and the portable receipt model everywhere; and on the Linux x86_64 cohort
+  only, `admit_executable`, `admit_working_directory`, `authorize`, `ExecutableCapability`,
+  `WorkingDirectoryCapability` and `AuthorizedLaunch`, with pre-execution executable measurement,
+  ELF64 x86_64 cohort admission and detected-instability refusal.
+* **`AuthorizedLaunch` has no consumer that can create a process.** `launch()` does not exist on any
+  platform, so the edge from an authorisation to a process does not exist.
+* **P2 acceptance authorises nothing further.** It does **not** authorise process creation and does
+  **not** activate the ADR-0024 section E `unsafe` exception, which stays reserved and inactive. No
+  `clone3`, `execveat`, `backend/`, syscall shim, inline assembly, pidfd, signal manipulation or
+  child creation is authorised.
+* **CI success is not execution evidence.** The P2 admission tests execute no admitted program.
+* **Non-claims carried forward.** Measurement is a pre-execution measurement of the pinned object,
+  never executed-body identity. Detected instability means only that the protocol detected
+  instability; not detecting it proves nothing. `NoClaimContradicted` is not permission, and
+  `asserted_context` digests stay inert caller assertions that `authorize` does not inspect.
+
+**TRIAL #3 MUST NOT BE RERUN. NO TRIAL #4 IS AUTHORISED. HELM-LAUNCH P3+ IS NOT AUTHORISED.**
+
 <a id="helm-launch-p2-authorised"></a>
 
 ## HELM-LAUNCH P2 authorised, 2026-09-18 — capability admission only, P3+ not authorised

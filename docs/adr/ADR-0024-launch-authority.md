@@ -8,9 +8,16 @@
 **Authoritative base:** `5cc56384257a2ec1f2a2a9c64f7f4328da6cef2e`; revision base
 `930ec14b940da9b136c7d2ad024b441d47ceba6c`; acceptance base
 `03285d9d13f53c2d97d78bd4f50552c201941c8f`\
-**Implementation authority:** **HELM-LAUNCH P1 only** (crate skeleton and portable, pure model), by
-the [owner decision of 2026-09-17](../DECISIONS.md#adr-0024-accepted-helm-launch-p1-authorised).
-P2 and every later slice are **not authorised**.\
+**Implementation authority:** **HELM-LAUNCH P1 and P2, both accepted.** P1 — the crate skeleton and
+the portable, pure model — was authorised by the
+[owner decision of 2026-09-17](../DECISIONS.md#adr-0024-accepted-helm-launch-p1-authorised) and
+[accepted the same day](../DECISIONS.md#helm-launch-p1-accepted). P2 — safe Linux x86_64 capability
+admission and the single-use authorisation composition — was
+[authorised on 2026-09-18](../DECISIONS.md#helm-launch-p2-authorised) and
+[accepted on 2026-09-18](../DECISIONS.md#helm-launch-p2-accepted). **P3, P4 and P5 are not
+authorised**, and each needs a new explicit owner decision. Neither acceptance authorises process
+creation or process execution, and neither activates the scoped `unsafe` exception of section E,
+which stays reserved for a P3 that is not authorised.\
 **Design basis:** the [helm-launch 0.1 productization plan](../implementation/HELM-LAUNCH-PRODUCTIZATION-PLAN.md),
 as amended by the [owner review of 2026-09-16](../DECISIONS.md#helm-launch-productization-plan-owner-review).
 The [architecture and falsification plan](../research/HELM-LAUNCH-ARCHITECTURE.md) is historical
@@ -613,8 +620,10 @@ descriptor, signal and `no_new_privs` contract, the conservative exec-confirmati
 direct-child lifecycle with its guarded cleanup sweep, the output, privacy and receipt semantics,
 and the relation to the other modules. It stabilises no schema or API. **Accepting it does not by
 itself authorise creating `crates/helm-launch` or any implementation.** That needs a separate owner
-authorisation of the implementation slices. On 2026-09-17 the owner authorised **P1 only**; P2 and
-every later slice still need their own owner decision.
+authorisation of the implementation slices. On 2026-09-17 the owner authorised and then accepted
+**P1**, and on 2026-09-18 authorised and then accepted **P2**; **P3, P4 and P5 still need their own
+owner decision.** Neither acceptance authorises process creation, and the complete 0.1 module is not
+yet product-accepted.
 
 ## Falsification and approval boundary
 
@@ -704,3 +713,16 @@ exists for a Trial #4.
 | **LAUNCH-EXEC-01** | Formal trial line **closed**; Trial #3 frozen result remains **`MECHANISM_REJECTED`**; D-7 consumed; no rerun; **no Trial #4** |
 | **P1** | **Authorised** — crate skeleton and portable, pure model: no `unsafe`, no process creation or execution, no syscall shim, no descriptor admission, no filesystem I/O, no `launch` |
 | **P2+** | **Not authorised** — each needs a new owner decision |
+
+**Recorded 2026-09-18**, the P2 [authorisation](../DECISIONS.md#helm-launch-p2-authorised) and
+[acceptance](../DECISIONS.md#helm-launch-p2-accepted) decisions. The 2026-09-17 table above is left
+as written and records the state at that date; these rows state the current implementation
+authority:
+
+| # | Ruling |
+|---|---|
+| **P1** | **Accepted 2026-09-17** as the first product implementation slice |
+| **P2** | **Authorised and accepted 2026-09-18** — safe Linux x86_64 capability admission and single-use authorisation composition: `ExecutableCapability`, `WorkingDirectoryCapability`, `AuthorizedLaunch`, `admit_executable`, `admit_working_directory`, `authorize`. Still **no** process creation, process execution, `unsafe`, host privilege or experiment execution, and no `launch` |
+| **P3, P4, P5** | **Not authorised** — each needs a new owner decision. P2 acceptance does not activate the section E `unsafe` exception, and authorises no `clone3`, `execveat`, `backend/`, syscall shim, `asm`, pidfd, signal manipulation or child creation |
+| **helm-launch 0.1 complete module** | **Not yet product-accepted** |
+| **LAUNCH-EXEC-01** | unchanged: formal trial line **closed**; Trial #3 frozen result remains **`MECHANISM_REJECTED`**; D-7 consumed; no rerun; **no Trial #4** |

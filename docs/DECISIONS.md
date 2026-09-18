@@ -52,7 +52,9 @@ independently reviewed and [accepted the same day](#helm-launch-p1-accepted). On
 owner authorised the bounded **HELM-LAUNCH P2** slice — safe Linux x86_64 capability admission and
 authorisation composition, with no process creation, no process execution and no `unsafe` — while
 **P3, P4 and P5 remain not authorised**; see the
-[decision of 2026-09-18](#helm-launch-p2-authorised).
+[decision of 2026-09-18](#helm-launch-p2-authorised). P2 was implemented, independently reviewed,
+published against hosted CI and [accepted the same day](#helm-launch-p2-accepted). **P3, P4 and P5
+are still not authorised**, and the complete helm-launch 0.1 module is **not yet product-accepted**.
 
 | ID | Odluka | Status |
 |---|---|---|
@@ -952,3 +954,115 @@ file, ADR, experiment, evidence or independent review, and does not touch `main`
 
 **Next gate: IMPLEMENT HELM-LAUNCH P2 — CAPABILITY ADMISSION AND AUTHORISATION COMPOSITION ONLY,
 then ONE FRESH INDEPENDENT REVIEW OF THE P2 CANDIDATE.**
+
+
+<a id="helm-launch-p2-accepted"></a>
+
+### Owner decision 2026-09-18 — **HELM-LAUNCH P2 ACCEPTED**; P3+ not authorised
+
+**`HELM_LAUNCH_P2_ACCEPTED`.** The repository owner, Djomla83, accepts HELM-LAUNCH P2 as the
+**second helm-launch product implementation slice**, under Accepted
+[ADR-0024](adr/ADR-0024-launch-authority.md), the
+[P2 authorisation of 2026-09-18](#helm-launch-p2-authorised) and the
+[P1 acceptance of 2026-09-17](#helm-launch-p1-accepted). **P1 remains accepted.** This is **not**
+product acceptance of the complete helm-launch 0.1 module. Every earlier section, including every
+ADR, D-7 and Trial #1, #2 and #3 record, is left as written.
+
+| Item | Value |
+|---|---|
+| Accepted P2 authority record | `a3a8d999a6bfa59ce27b1515525e6a7578dad7fe` |
+| Accepted P2 implementation | `c74e9064f4a852688b1a13dc3d3d31b93b61b0aa` |
+| Independent review | `94ce8dd34cd6694ea3b528a9dad95d2a71b4ad70` — [review](implementation/HELM-LAUNCH-P2-INDEPENDENT-REVIEW.md) |
+| Independent review findings | **0 BLOCKER**, **0 IMPORTANT** |
+| Accepted P1 base | `cd5db27964dc10593bd8856d2d331b907a4b608e` |
+| Publication CI | **PASSED** — HELM Rust workspace Linux run `35323497391`; helm-launch matrix run `35323497452`; helm-bind cross-platform purity run `35323497482`; all SUCCESS, all `push`, all attempt 1 |
+| P2 Linux runtime gate | **PASSED** — `ubuntu-24.04`: `tests/linux_admission.rs` **28 passed**, `authority.rs` Linux-specific unit tests **13 passed**, the Linux cohort doctest surface executed and passed |
+| Cross-platform matrix | **PASSED ON LINUX / WINDOWS / MACOS** (`ubuntu-24.04`, `windows-2025`, `macos-15`) |
+| P2 authority API off the cohort | **ABSENT** — Windows and macOS report `0 tests` for the admission suite and run the off-cohort `compile_fail` absence proofs |
+| helm-launch 0.1 complete module | **NOT YET PRODUCT-ACCEPTED** |
+
+#### 1. Accepted P2 capability
+
+Accepted P2 adds `ExecutableCapability`, `WorkingDirectoryCapability`, `AuthorizedLaunch`,
+`admit_executable`, `admit_working_directory`, `authorize`, safe Linux x86_64 descriptor admission,
+pre-execution executable measurement, ELF64 x86_64 cohort admission, detected-instability refusal,
+working-directory capability admission, and zero-I/O composition into a single-use authorisation.
+These exist only under `cfg(all(target_os = "linux", target_arch = "x86_64"))`.
+
+Accepted authority flow:
+
+```text
+caller-owned executable fd    --admit_executable--------▶ ExecutableCapability
+caller-owned cwd fd + id      --admit_working_directory-▶ WorkingDirectoryCapability
+plan + executable + cwd       --authorize---------------▶ AuthorizedLaunch
+AuthorizedLaunch              --╳-----------------------▶ process
+```
+
+**The last edge does not exist.** `AuthorizedLaunch` still has no consumer that can create a
+process, because `launch()` does not exist on any platform.
+
+| P2 property | Value |
+|---|---|
+| Process creation | **NONE** |
+| Process execution | **NONE** |
+| Unsafe | **NONE** |
+| Host privilege | **NONE** |
+| Experiment execution | **NONE** |
+
+The P2 admission tests execute no admitted program. Publication CI success is **not** evidence of
+process execution, and none occurred.
+
+#### 2. Authority after this acceptance
+
+| Slice | Authority |
+|---|---|
+| P3 | **NOT AUTHORISED** |
+| P4 | **NOT AUTHORISED** |
+| P5 | **NOT AUTHORISED** |
+
+P2 acceptance does **not** authorise process creation and does **not** activate the ADR-0024
+section E `unsafe` exception, which stays reserved and inactive. It authorises no `clone3`, no
+`execveat`, no `backend/` directory, no syscall shim, no inline assembly, no pidfd, no signal
+manipulation and no child creation. The next owner decision is whether to authorise the P3 unsafe
+backend and child contract. **That decision is not made here.**
+
+#### 3. Verification gates
+
+| Gate | State | Evidence |
+|---|---|---|
+| **P2-VERIFY-01** | **CLOSED — PASSED** | hosted Linux x86_64 execution: `tests/linux_admission.rs` 28 passed; `authority.rs` Linux-specific unit tests 13 passed; the Linux cohort doctest surface executed and passed. The suite ran in both the helm-launch `ubuntu-24.04` job and the workspace Linux job |
+| **P2-VERIFY-02** | **CLOSED — PASSED** | hosted `macos-15` portable matrix passed |
+| Windows portable matrix | **PASSED** | `windows-2025` |
+| Off-cohort P2 authority absence | **PASSED** | `0 tests` for the admission suite on Windows and macOS; the crate root's off-cohort `compile_fail` doctests ran there |
+
+#### 4. Independent-review findings
+
+None blocks P2 acceptance.
+
+| Finding | Severity | Disposition |
+|---|---|---|
+| P2-DOC-01 | MINOR | **RESOLVED BY P2 ACCEPTANCE SYNC**: ADR-0024's "Implementation authority" header, its Consequences paragraph and its owner-decision tables now state P1 **accepted**, P2 **accepted** and P3+ **not authorised**, and reference this decision. The accepted architectural contract of sections A to N is unchanged, and no historical text was rewritten |
+| P2-RISK-01, P2-MIN-03, P2-MIN-04, P2-MIN-05, P2-MIN-06, P2-MIN-07 | MINOR | **open, nonblocking**; no crate, test or workflow file edited |
+| P2-BL-01, P2-BL-02, P2-BL-03 | BACKLOG_NONBLOCKING | unchanged |
+| P1-DOC-02 | MINOR | **RESOLVED** by the P2 implementation's README edition |
+| P1-TEST-01 | MINOR | **open, nonblocking**; P2 does not touch the plan parser |
+| P1-PARSE-01, P1-PARSE-02, P1-LIFE-01, P1-SER-01, P1-CI-01, P1-TEST-02 | BACKLOG_NONBLOCKING | unchanged |
+
+One documentation-only hygiene item is carried for a later authorised touch: the comment above
+`helm-evidence.yml`'s `cargo test -p helm-launch` step still reads "Portable P1 model only", which
+is now stale because that step also executes the P2 admission suite. No workflow was edited during
+owner acceptance.
+
+#### 5. Historical authority and next gate
+
+This decision changes no product code, test, workflow, Cargo file, experiment, evidence or the
+independent review, and does not touch `main`.
+
+**TRIAL #3 FROZEN RESULT REMAINS MECHANISM_REJECTED. TRIAL #3 MUST NOT BE RERUN.**
+
+**NO TRIAL #4 IS AUTHORISED.**
+
+**HELM-LAUNCH P1 IS ACCEPTED. HELM-LAUNCH P2 IS ACCEPTED. HELM-LAUNCH P3+ IS NOT AUTHORISED.**
+
+**Next gate: OWNER DECISION ON WHETHER TO AUTHORISE HELM-LAUNCH P3 — UNSAFE BACKEND AND CHILD
+CONTRACT.**

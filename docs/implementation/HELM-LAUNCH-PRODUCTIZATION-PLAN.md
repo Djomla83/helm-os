@@ -2,9 +2,9 @@
 
 > **ADR-0024: ACCEPTED 2026-09-17.**
 > **PRODUCTIZATION PLAN: OWNER-REVIEWED** (2026-09-16: `HELM_LAUNCH_PRODUCTIZATION_PLAN_OWNER_REVIEW_PASSED_WITH_BOUNDED_AMENDMENTS`).
-> **IMPLEMENTATION AUTHORITY: P1 AND P2.**
+> **IMPLEMENTATION AUTHORITY: P1 AND P2, BOTH ACCEPTED.**
 > **HELM-LAUNCH P1: ACCEPTED 2026-09-17** as the first product slice (portable model only); the complete 0.1 module is **not yet product-accepted**.
-> **HELM-LAUNCH P2: AUTHORISED 2026-09-18** — capability admission and authorisation composition only, with no process creation, no process execution and no `unsafe`.
+> **HELM-LAUNCH P2: ACCEPTED 2026-09-18** as the second product slice — capability admission and authorisation composition only, with no process creation, no process execution and no `unsafe`. Its **stop condition is SATISFIED**: admission, refusal and measurement are **green on hosted Linux x86_64**, the independent review **PASSED with 0 BLOCKER and 0 IMPORTANT**, and portable compatibility is **green on Windows and macOS**.
 > **P3, P4, P5: NOT AUTHORISED.**
 > **NO TRIAL #4 IS AUTHORISED** (authorised = false).
 
@@ -1521,6 +1521,22 @@ P4 and P5 are not authorised**, and each needs a new explicit owner decision.
 **Authority, 2026-09-18.** P1 is **accepted** and **P2 is authorised**, within the boundary stated
 in the [P2 authority note](#p2-authority-2026-09-18). **P3, P4 and P5 remain not authorised**, and
 each needs a new explicit owner decision.
+
+<a id="p2-acceptance-sync-2026-09-18"></a>
+
+**P2 acceptance, 2026-09-18.** The owner
+[accepted HELM-LAUNCH P2](../DECISIONS.md#helm-launch-p2-accepted) as the second product
+implementation slice. **P1 is accepted, P2 is accepted, and P3, P4 and P5 remain not authorised.**
+The P2 row's **stop condition is satisfied**: the admission refusals and the measurement are green
+on a hosted Linux x86_64 runner, where `tests/linux_admission.rs` ran **28 tests** and the
+`authority.rs` Linux-specific unit tests ran **13**, with the cohort doctest surface executed and
+passed; the independent review recorded **0 BLOCKER and 0 IMPORTANT**; and portable compatibility is
+green on `windows-2025` and `macos-15`, where the P2 authority API is proven **absent off the
+cohort**. Accepted P2 still has **no process creation, no process execution, no `unsafe`, no host
+privilege and no experiment execution**, and `AuthorizedLaunch` has no consumer that can create a
+process. **This acceptance changes no P3 implementation detail and authorises no part of P3**: the
+section 7.4 `unsafe` exception stays reserved and inactive. The next gate is an owner decision on
+whether to authorise the **P3 unsafe backend and child contract**.
 
 **After P5.** An independent product review, then an owner acceptance and merge decision, as for
 `helm-observe` and `helm-bind`. Merging would be a product-module acceptance, not a verdict about
