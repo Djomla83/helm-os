@@ -4,12 +4,33 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.95"
 publish = false
-description = "Experimental portable launch-plan and receipt model; P1 only, no execution backend"
+description = "Experimental portable launch-plan and receipt model with Linux x86_64 capability admission; P1 and P2 only, no execution backend"
 
 [dependencies]
 serde = "=1.0.228"
 serde_json = "=1.0.149"
 sha2 = "=0.10.9"
+
+# P2 (owner decision 2026-09-18) admits caller-supplied descriptors on the Linux
+# x86_64 cohort only, so the dependency is gated to exactly that cohort: off it,
+# `src/authority.rs` is not compiled and the crate is the portable P1 model.
+#
+# The repository-vetted pin, identical to the one `helm-observe` already uses.
+# `default-features = false` with only `std` and `fs` enabled: `fs` carries
+# `fcntl_getfl`, `fstat`, `OFlags`, `FileType` and `Mode`, and `rustix::io`,
+# which carries `pread` and `retry_on_intr`, needs no feature. `process`,
+# `pipe`, `event` and `thread` are deliberately NOT enabled — later slices are
+# not authorised, and a feature is not enabled before the slice that needs it.
+# There is no direct `libc` dependency.
+[target.'cfg(all(target_os = "linux", target_arch = "x86_64"))'.dependencies]
+rustix = { version = "=1.1.4", default-features = false, features = ["std", "fs"] }
+
+# The Linux admission tests are the trusted caller: they build fixtures, open
+# descriptors in each mode the contract names, and clear close-on-exec so the
+# "admission never inspects that flag" case is a real test rather than a claim.
+# Same pin, same features, same cohort gate, so no package or version is added.
+[target.'cfg(all(target_os = "linux", target_arch = "x86_64"))'.dev-dependencies]
+rustix = { version = "=1.1.4", default-features = false, features = ["std", "fs"] }
 
 # The workspace lint table is deliberately NOT inherited (productization plan
 # section 7.4, ADR-0024 section E). Cargo cannot combine `workspace = true` with a
@@ -18,9 +39,9 @@ sha2 = "=0.10.9"
 # Every workspace lint is therefore restated here, none weaker except the one
 # accepted `unsafe_code` exception, and the unsafe-discipline lints are added.
 #
-# P1 contains no unsafe code at all: `src/lib.rs` restates this `deny` in source
-# (not `forbid`, for the same reason), and `tests/p1_boundary.rs` fails on any
-# drift of this table or of that attribute.
+# P1 and P2 contain no such code at all: `src/lib.rs` restates this `deny` in
+# source (not `forbid`, for the same reason), and `tests/p2_boundary.rs` fails on
+# any drift of this table or of that attribute.
 [lints.rust]
 unsafe_code = "deny"
 unsafe_op_in_unsafe_fn = "deny"

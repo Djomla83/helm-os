@@ -1,11 +1,23 @@
-name: helm-launch P1 portable model cross-platform purity
+name: helm-launch portable model and Linux capability admission
 
-# helm-launch P1 is a portable, pure model: plan parsing, the receipt model and
-# serializer, the error vocabulary, and pure descriptor-layout and lifecycle
-# models. No execution backend exists, and nothing here can create a process.
-# Its platform-identical semantics are tested on three operating systems rather
-# than asserted. This workflow runs only Cargo's own build and test processes:
-# no launcher, no LAUNCH-EXEC-01 asset, no helper, no Wine, no privilege.
+# helm-launch implements two owner-authorised slices. P1 is a portable, pure
+# model: plan parsing, the receipt model and serializer, the error vocabulary,
+# and pure descriptor-layout and lifecycle models. P2 adds Linux x86_64
+# capability admission and authorisation composition: safe descriptor
+# inspection, positional reads and pre-execution executable measurement through
+# a descriptor the caller moves in.
+#
+# No execution backend exists, and nothing here can create or execute a process:
+# there is no `launch`, no `LaunchOutcome` and no unsafe code. The portable
+# semantics are tested on three operating systems rather than asserted, and off
+# the Linux x86_64 cohort the P2 APIs must not exist at all — `compile_fail`
+# doctests in the crate root prove that on Windows and macOS.
+#
+# This workflow runs only Cargo's own build and test processes. It runs no
+# launcher, no LAUNCH-EXEC-01 asset, no helper and no admitted fixture; it
+# dispatches nothing, needs no root and changes no privilege. The Linux
+# admission tests read and measure fixtures they create themselves, which may
+# update atime and populate the page cache, and execute nothing.
 
 on:
   pull_request:
@@ -60,6 +72,22 @@ jobs:
       - run: cargo fmt --check
       - run: cargo clippy -p helm-launch --all-targets --all-features --locked -- -D warnings
       - run: cargo test -p helm-launch --locked
+
+      # The Linux capability-admission suite is part of the run above; this step
+      # names it, so the log shows which cases the cohort actually exercised and
+      # a silently empty suite cannot pass unnoticed. It executes nothing.
+      - name: Name the Linux x86_64 capability-admission cases
+        if: runner.os == 'Linux'
+        run: |
+          cargo test -p helm-launch --locked --test linux_admission -- --nocapture --list
+          cargo test -p helm-launch --locked --test linux_admission
+
+      # Off the cohort the P2 APIs must be absent, which the crate root's
+      # `compile_fail` doctests assert; `cargo test` above runs them. This step
+      # states the expectation in the log.
+      - name: Confirm the admission suite is empty off the cohort
+        if: runner.os != 'Linux'
+        run: cargo test -p helm-launch --locked --test linux_admission -- --list
 
       # The determinism anchors. Exact bytes and digests are asserted inside the
       # tests, so a platform-dependent serializer or parser fails above rather than
