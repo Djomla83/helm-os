@@ -1066,3 +1066,175 @@ independent review, and does not touch `main`.
 
 **Next gate: OWNER DECISION ON WHETHER TO AUTHORISE HELM-LAUNCH P3 — UNSAFE BACKEND AND CHILD
 CONTRACT.**
+
+
+<a id="helm-launch-p3-authorised"></a>
+
+### Owner decision 2026-09-18 — **HELM-LAUNCH P3 AUTHORISED**: unsafe Linux x86_64 backend and the closed child contract; P4/P5 not authorised
+
+**`HELM_LAUNCH_P3_AUTHORISED`.** The repository owner, Djomla83, authorises HELM-LAUNCH P3 as the
+**third helm-launch product implementation slice**, under Accepted
+[ADR-0024](adr/ADR-0024-launch-authority.md), the
+[P1 acceptance of 2026-09-17](#helm-launch-p1-accepted) and the
+[P2 acceptance of 2026-09-18](#helm-launch-p2-accepted). **P1 and P2 remain accepted.** This is an
+**implementation authorisation only**: it is not acceptance of P3, and not product acceptance of the
+complete helm-launch 0.1 module. Every earlier section, including every ADR, D-7 and Trial #1, #2
+and #3 record, is left as written.
+
+| Item | Value |
+|---|---|
+| Accepted P2 implementation base | `c74e9064f4a852688b1a13dc3d3d31b93b61b0aa` |
+| P2 acceptance record | `9fb0f8cabd5b7dd4f8df3ee5d15cf127702fcb5b` |
+| ADR-0024 | **ACCEPTED** |
+| HELM-LAUNCH P1 | **ACCEPTED** |
+| HELM-LAUNCH P2 | **ACCEPTED** |
+| HELM-LAUNCH P3 | **AUTHORISED** by this decision |
+| HELM-LAUNCH P4 / P5 | **NOT AUTHORISED** |
+| Trial #4 | **NOT AUTHORISED** |
+| helm-launch 0.1 complete module | **NOT YET PRODUCT-ACCEPTED** |
+
+#### 1. The safety transition this decision makes
+
+P2 ended at an `AuthorizedLaunch` **with no consumer**: no function in the crate could turn an
+authorisation into a process. P3 authorises the **first crate-private consumer** of that value, on
+the Linux x86_64 cohort only. After P3 the crate can create **one direct child** and attempt to
+execute the **exact descriptor the caller admitted**, internally.
+
+| Property | After P2 | Authorised in P3 |
+|---|---|---|
+| **Process creation** | none | **AUTHORISED INTERNALLY IN P3** |
+| **Process execution attempt** | none | **AUTHORISED INTERNALLY IN P3** |
+| **Public process-execution API** | none | **NONE** — unchanged |
+| **Unsafe** | none | **AUTHORISED ONLY UNDER `crates/helm-launch/src/backend/`** |
+| **Host privilege acquisition** | none | **NONE** |
+| **Process-group sweep** | none | **NOT AUTHORISED IN P3** |
+
+External callers still have **no way at all** to make `helm-launch` create a process: no public
+`launch`, no public spawn, no public process handle, no public pidfd, child pid or raw descriptor.
+
+#### 2. P3 scope — what may be implemented
+
+Unsafe Linux x86_64 process creation, the closed post-clone child contract, and a **crate-private,
+test-only minimal execution path**:
+
+* `src/backend/mod.rs`, `src/backend/spawn.rs`, `src/backend/child.rs`, and — if it makes the unsafe
+  boundary smaller and clearer — one private `src/backend/syscall.rs`. There must still be **one**
+  reviewed raw syscall implementation;
+* one raw x86_64 `core::arch::asm!` syscall shim, decoding `-errno` without host errno or TLS;
+* parent preparation from a consumed `AuthorizedLaunch` (plan section 8.2);
+* raw `rt_sigprocmask` signal blocking around `clone3`, and the restore;
+* `clone3(CLONE_PIDFD)` with `exit_signal = SIGCHLD`, and immediate pidfd ownership;
+* parent-side `setpgid(child, child)` as the first system call after `clone3`;
+* the complete accepted post-clone child sequence (plan section 8.4);
+* the exec-status pipe and its fixed 8-byte failure record;
+* crate-private minimal spawn and result structures;
+* bounded, non-blocking direct-child reap;
+* direct-child pidfd `SIGKILL` **only** for the fixed pre-exec timeout and for bounded P3 test
+  cleanup that must not leak a child;
+* an internal, non-public `launch_minimal` for P3 tests;
+* P3 structural, trace and Linux integration tests;
+* a non-default `test-fault-injection` feature.
+
+#### 3. P3 scope — what must not be implemented
+
+Public `launch()`; `LaunchOutcome`; any public execution entry point or process handle; receipt
+emission from a real launch; the P4 observation loop; plan-driven run timeouts; `SIGTERM`/grace
+lifecycle; general stdout/stderr drain policy; the process-group `SIGKILL` sweep; process-tree
+containment; Wine; orchestration; sandboxing.
+
+**No new public execution API.** `launch`, `launch_minimal`, `spawn`, `SpawnedChild`,
+`PreparedLaunch`, `Backend`, `LaunchOutcome`, pidfd access, child pid access and raw descriptor
+values must **not** be exported. `backend` stays a **private, `cfg`-gated module**, and no backend
+item is publicly re-exported. If the implementation appears to require a new **public** process or
+error API it must **stop and return `OWNER DECISION REQUIRED`**, not silently enter P4.
+
+#### 4. P3 versus P4 — group authority without a sweep
+
+P3 **establishes** potential group-sweep authority and **must not use it**.
+
+* The parent's `setpgid(child_pid, child_pid)` returning success is the **only** positive
+  group-authority event. It is recorded internally as a boolean so P4 can later consume it.
+* The child still performs `setpgid(0, 0)` as stage 5 of its closed sequence.
+* P3 **must not** issue `kill(-child_pid, SIGKILL)` or any other negative-pid group signal. The
+  guarded every-path group sweep belongs to **P4**.
+
+#### 5. Fixed internal bounds, not run-timeout semantics
+
+The slice table's "timeouts absent" means the **P4 application run lifecycle**. P3 is authorised to
+implement exactly the two fixed internal bounds its own contract requires:
+
+| Constant | Value | Why P3 needs it |
+|---|---|---|
+| `SPAWN_CONFIRM_TIMEOUT_MS` | 5 000 | S6 pre-exec stall handling and exec-status observation |
+| `POST_KILL_REAP_MS` | 5 000 | bounded non-blocking reap after a direct-child `SIGKILL` |
+
+These are **not** public run-timeout semantics. `plan.timeout_ms` execution, `SIGTERM`, `grace_ms`
+execution, `POST_EXIT_DRAIN_MS` lifecycle and general run deadlines stay with **P4**.
+
+#### 6. Unsafe confinement
+
+The crate root stays `#![deny(unsafe_code, unsafe_op_in_unsafe_fn)]`. Exactly `src/backend/mod.rs`
+may carry the scoped `#![allow(unsafe_code)]`, covering only its backend descendants. No other
+source module and no Rust test source may relax `unsafe_code`. The backend additionally denies
+`clippy::indexing_slicing`, `clippy::arithmetic_side_effects`, `clippy::as_conversions` and
+`clippy::missing_safety_doc`, and keeps `clippy::undocumented_unsafe_blocks`,
+`clippy::multiple_unsafe_ops_per_block` and `unsafe_op_in_unsafe_fn` at `deny`. Every unsafe block
+carries a specific `// SAFETY:` comment describing the actual invariant; one giant block is refused.
+
+**Closed list of authorised unsafe operations.** (1) raw `rt_sigprocmask` around `clone3` in the
+parent; (2) raw `clone3`; (3) immediate `OwnedFd::from_raw_fd(pidfd)` after a successful `clone3`;
+(4) crossing into the child entry with the prepared `ChildPlan` pointer; (5) raw child syscalls of
+the closed post-clone sequence; (6) the x86_64 `asm!` syscall shim itself. **Anything else stops and
+returns `OWNER DECISION REQUIRED`.** In particular, parent-side operations that safe `rustix` can
+perform must not be reimplemented as raw unsafe.
+
+**Forbidden even inside the backend:** additional FFI; `libc::syscall`; `fork`; `vfork`;
+`CLONE_VM`; `CLONE_VFORK`; `CLONE_FILES`; `CLONE_THREAD`; `pidfd_open`; `mmap`; `transmute`;
+`static mut`; unchecked slice or string construction; arbitrary raw pointer arithmetic; and
+allocation, locks, formatting, printing, panic or unwind, destructor-dependent state, `std`, `alloc`
+or `rustix` calls **in the child**. No `/proc/self/fd` execution. No `std::process::Command` in
+product backend code.
+
+#### 7. Dependencies
+
+`rustix` stays pinned at `=1.1.4` on the Linux x86_64 cohort and may expand only as P3 genuinely
+requires — expected `std`, `fs`, `process`, `pipe`. The `event` feature must **not** be enabled
+unless a concrete P3 requirement proves it unavoidable; P4 owns the poll and event observation loop.
+A target-specific `libc = "=0.2.189"` — the already locked, vetted version — may be added **for
+constants only**: product Rust must not call `libc::syscall`, any `libc` function or any `extern`
+`libc` function. No direct `linux-raw-sys` without a prior owner decision. No `build.rs`. No new
+dependency version unless unavoidable and reviewed.
+
+#### 8. Platform boundary
+
+All P3 implementation exists only under
+`cfg(all(target_os = "linux", target_arch = "x86_64"))`. Windows, macOS and other architectures keep
+the portable P1 model and, where P2 policy already defines it, **no authority or backend API off the
+cohort**. There is no generic Unix backend, no Linux aarch64 backend and no fallback.
+
+#### 9. Test-process execution is expected in P3
+
+Unlike P1 and P2, P3 Linux tests **are** expected to create and execute purpose-built test
+processes. That is ordinary product validation of the newly authorised backend. It is **not**
+LAUNCH-EXEC-01, Trial #3, Trial #4 or D-7 activity. `launcher_spike`, the frozen Python runner and
+the frozen helper ELFs must not be used; test ideas are reimplemented independently. A report
+fixture must pass a **producer self-test** before any launcher test consumes its report (the
+Trial #3 X2c rule). A tiny, newly written, test-only C host-condition helper is permitted only where
+Rust cannot express the host condition without adding unsafe outside `src/backend` — for example
+`pthread_atfork` host setup — and never as a C implementation of the launcher.
+
+#### 10. Boundary and next gate
+
+This decision is recorded in documentation only. The authority commit changes no product code, test,
+workflow, Cargo file, ADR contract, experiment, evidence or independent review, and does not touch
+`main`.
+
+**TRIAL #3 FROZEN RESULT REMAINS MECHANISM_REJECTED. TRIAL #3 MUST NOT BE RERUN.**
+
+**NO TRIAL #4 IS AUTHORISED.**
+
+**HELM-LAUNCH P1 IS ACCEPTED. HELM-LAUNCH P2 IS ACCEPTED. HELM-LAUNCH P3 IS AUTHORISED.
+HELM-LAUNCH P4 AND P5 ARE NOT AUTHORISED.**
+
+**Next gate: IMPLEMENT HELM-LAUNCH P3 — UNSAFE LINUX X86_64 BACKEND AND THE CLOSED CHILD CONTRACT
+ONLY, then ONE FRESH INDEPENDENT UNSAFE REVIEW OF THE P3 CANDIDATE.**

@@ -1,5 +1,64 @@
 # Stanje projekta
 
+<a id="helm-launch-p3-authorised"></a>
+
+## HELM-LAUNCH P3 authorised, 2026-09-18 — unsafe Linux x86_64 backend and the closed child contract; P4/P5 not authorised
+
+The owner [authorised HELM-LAUNCH P3](DECISIONS.md#helm-launch-p3-authorised), the unsafe Linux
+x86_64 process-creation backend and the closed post-clone child contract, as the third product
+implementation slice of the accepted [ADR-0024](adr/ADR-0024-launch-authority.md). This supersedes
+the "next gate" and the P3 authority rows of the sections below, which are left as written. P1 and
+P2 stay **accepted**; P4 and P5 stay **not authorised**.
+
+| Item | State |
+|---|---|
+| ADR-0024 | **ACCEPTED** |
+| HELM-LAUNCH P1 | **ACCEPTED** |
+| HELM-LAUNCH P2 | **ACCEPTED** |
+| HELM-LAUNCH P3 | **AUTHORISED** |
+| HELM-LAUNCH P4 / P5 | **NOT AUTHORISED** |
+| Process creation | **AUTHORISED INTERNALLY IN P3** |
+| Process execution attempt | **AUTHORISED INTERNALLY IN P3** |
+| Public process-execution API | **NONE** |
+| Unsafe | **AUTHORISED ONLY UNDER `crates/helm-launch/src/backend/`** |
+| Host privilege acquisition | **NONE** |
+| Process-group sweep | **NOT AUTHORISED IN P3** |
+| helm-launch 0.1 complete module | **NOT YET PRODUCT-ACCEPTED** |
+| LAUNCH-EXEC-01 | **FORMAL TRIAL LINE CLOSED**; Trial #3 remains `MECHANISM_REJECTED` |
+| Trial #4 | **NOT AUTHORISED** |
+| Next gate | **IMPLEMENT P3, THEN ONE FRESH INDEPENDENT UNSAFE REVIEW OF THE P3 CANDIDATE** |
+
+* **The safety transition.** P2 ended at an `AuthorizedLaunch` with **no consumer**. P3 authorises a
+  **crate-private** Linux x86_64 consumer that may create **one direct child** and attempt to
+  execute through the authorised descriptor. There is still **no public `launch()`**, no public
+  process handle and no public pidfd, child pid or raw descriptor: an external caller has no way to
+  make the crate create a process.
+* **P3 may implement** `src/backend/{mod,spawn,child}.rs` and one private syscall module, one raw
+  x86_64 `asm!` syscall shim, parent preparation from a consumed `AuthorizedLaunch`, raw
+  `rt_sigprocmask` around `clone3`, `clone3(CLONE_PIDFD)`, parent-side `setpgid(child, child)`,
+  pidfd ownership, the complete accepted child stage sequence, the exec-status pipe, crate-private
+  spawn and result structures, a bounded non-blocking direct-child reap, direct-child pidfd
+  `SIGKILL` only for the fixed pre-exec timeout and bounded test cleanup, an internal
+  `launch_minimal` for tests, P3 structural, trace and Linux integration tests, and a non-default
+  `test-fault-injection` feature.
+* **P3 must not implement** public `launch()`, `LaunchOutcome`, any public execution entry point or
+  process handle, receipt emission from a real launch, the P4 observation loop, plan-driven run
+  timeouts, the `SIGTERM`/grace lifecycle, general stream drain policy, the process-group `SIGKILL`
+  sweep, process-tree containment, Wine, orchestration or sandboxing.
+* **Group authority without a sweep.** A successful parent `setpgid(child, child)` is the only
+  positive group-authority event, recorded internally for a later P4. P3 issues **no**
+  `kill(-child_pid, …)` and no other negative-pid group signal.
+* **Fixed internal bounds only.** `SPAWN_CONFIRM_TIMEOUT_MS = 5000` and `POST_KILL_REAP_MS = 5000`
+  are the two bounds P3's own contract requires. They are not public run-timeout semantics.
+* **Unsafe confinement.** The crate root stays `#![deny(unsafe_code, unsafe_op_in_unsafe_fn)]`;
+  exactly `src/backend/mod.rs` may carry the scoped `#![allow(unsafe_code)]`. Six operations are on
+  the closed authorised list; anything beyond it stops and returns `OWNER DECISION REQUIRED`.
+* **Test-process execution is expected in P3** and is ordinary product validation, **not**
+  LAUNCH-EXEC-01, Trial #3, Trial #4 or D-7 activity. The frozen spike, runner and helper ELFs are
+  not used.
+
+**TRIAL #3 MUST NOT BE RERUN. NO TRIAL #4 IS AUTHORISED. HELM-LAUNCH P4 AND P5 ARE NOT AUTHORISED.**
+
 <a id="helm-launch-p2-accepted"></a>
 
 ## HELM-LAUNCH P2 accepted, 2026-09-18 — capability admission accepted, P3+ not authorised

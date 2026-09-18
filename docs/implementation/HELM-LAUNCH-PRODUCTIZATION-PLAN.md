@@ -2,10 +2,11 @@
 
 > **ADR-0024: ACCEPTED 2026-09-17.**
 > **PRODUCTIZATION PLAN: OWNER-REVIEWED** (2026-09-16: `HELM_LAUNCH_PRODUCTIZATION_PLAN_OWNER_REVIEW_PASSED_WITH_BOUNDED_AMENDMENTS`).
-> **IMPLEMENTATION AUTHORITY: P1 AND P2, BOTH ACCEPTED.**
+> **IMPLEMENTATION AUTHORITY: P1 AND P2 ACCEPTED; P3 AUTHORISED.**
 > **HELM-LAUNCH P1: ACCEPTED 2026-09-17** as the first product slice (portable model only); the complete 0.1 module is **not yet product-accepted**.
 > **HELM-LAUNCH P2: ACCEPTED 2026-09-18** as the second product slice — capability admission and authorisation composition only, with no process creation, no process execution and no `unsafe`. Its **stop condition is SATISFIED**: admission, refusal and measurement are **green on hosted Linux x86_64**, the independent review **PASSED with 0 BLOCKER and 0 IMPORTANT**, and portable compatibility is **green on Windows and macOS**.
-> **P3, P4, P5: NOT AUTHORISED.**
+> **HELM-LAUNCH P3: AUTHORISED 2026-09-18** as the third product slice — the unsafe Linux x86_64 process-creation backend and the closed post-clone child contract, **internally only**: no public `launch()`, no public process handle, no process-group sweep and no host privilege. **Not yet accepted**; see the [P3 authority note](#p3-authority-2026-09-18).
+> **P4, P5: NOT AUTHORISED.**
 > **NO TRIAL #4 IS AUTHORISED** (authorised = false).
 
 <a id="current-authority-2026-09-17"></a>
@@ -1537,6 +1538,65 @@ privilege and no experiment execution**, and `AuthorizedLaunch` has no consumer 
 process. **This acceptance changes no P3 implementation detail and authorises no part of P3**: the
 section 7.4 `unsafe` exception stays reserved and inactive. The next gate is an owner decision on
 whether to authorise the **P3 unsafe backend and child contract**.
+
+<a id="p3-authority-2026-09-18"></a>
+
+**P3 authority, 2026-09-18.** The owner
+[authorised HELM-LAUNCH P3](../DECISIONS.md#helm-launch-p3-authorised) as the third product
+implementation slice. **P1 and P2 stay accepted, P3 is authorised and not yet accepted, and P4 and
+P5 remain not authorised.** This note syncs current implementation authority only; the plan's
+accepted contract, slices, traceability and evidence classes are unchanged, and no row of section 3
+is promoted to a stronger class.
+
+Under the P3 authority the **section 7.4 `unsafe` exception becomes active, scoped to
+`src/backend/` alone**. The slice may add `src/backend/mod.rs`, `src/backend/spawn.rs`,
+`src/backend/child.rs` and one private syscall module; one raw x86_64 `core::arch::asm!` syscall
+shim; the parent preparation of section 8.2 from a **consumed** `AuthorizedLaunch`; the raw
+`rt_sigprocmask` block and restore of section 8.3 step 1; `clone3(CLONE_PIDFD)` with
+`exit_signal = SIGCHLD`; the parent-side `setpgid(child, child)` of section 8.3 step 3 as the first
+system call after `clone3`; immediate pidfd ownership; the complete closed child contract of
+section 8.4; the exec-status channel and its 8-byte record; crate-private spawn and result
+structures; a bounded, **non-blocking** direct-child reap; direct-child pidfd `SIGKILL` **only** for
+the fixed pre-exec timeout and for bounded test cleanup that must not leak a child; an internal,
+non-public `launch_minimal` for P3 tests; the Level 2 suite and the P3-authorised subset of Level 3;
+and a non-default `test-fault-injection` feature.
+
+**The safety transition.** P2 ended at an `AuthorizedLaunch` with **no consumer**. P3 authorises the
+first **crate-private** consumer:
+
+| Property | Authority after P3 |
+|---|---|
+| Process creation | **AUTHORISED INTERNALLY IN P3** |
+| Process execution attempt | **AUTHORISED INTERNALLY IN P3** |
+| Public process-execution API | **NONE** |
+| `unsafe` | **AUTHORISED ONLY UNDER `src/backend/`** |
+| Host privilege acquisition | **NONE** |
+| Process-group sweep | **NOT AUTHORISED IN P3** |
+
+**Two owner clarifications bound the P3 row of the table above.** First, P3 **establishes** potential
+group-sweep authority — a successful parent `setpgid(child, child)`, recorded internally as a
+boolean — and **must not use it**: no `kill(-child_pid, SIGKILL)` and no other negative-pid group
+signal exists in P3, and the guarded every-path sweep of section 8.5 Phase C stays with P4. Second,
+the row's "timeouts absent" means the **P4 application run lifecycle**; P3 still implements the two
+fixed internal bounds its own contract requires, `SPAWN_CONFIRM_TIMEOUT_MS = 5000` and
+`POST_KILL_REAP_MS = 5000`, which are not public run-timeout semantics. `plan.timeout_ms` execution,
+`SIGTERM`, `grace_ms` execution, `POST_EXIT_DRAIN_MS` and general run deadlines stay with P4.
+
+**Not in P3**: public `launch()`, `LaunchOutcome`, any public execution entry point or process
+handle, receipt emission from a real launch, the section 8.5 observation loop, plan-driven run
+timeouts, the `SIGTERM`/grace lifecycle, general stream drain policy, the process-group sweep,
+process-tree containment, Wine, orchestration and sandboxing. `launch`, `launch_minimal`, `spawn`,
+`SpawnedChild`, `PreparedLaunch`, `Backend`, `LaunchOutcome`, pidfd access, child pid access and raw
+descriptor values are **not exported**, and `backend` stays a private `cfg`-gated module. An
+implementation that appears to need a new **public** process or error API stops and returns
+`OWNER DECISION REQUIRED` rather than entering P4.
+
+**P3 test-process execution.** Unlike P1 and P2, the P3 Linux tests **are** expected to create and
+execute purpose-built test processes (section 14.2, section 14.3). That is ordinary product
+validation of the newly authorised backend and is **not** LAUNCH-EXEC-01, Trial #3, Trial #4 or D-7
+activity. Section 15 is unchanged: `launcher_spike`, `driver.py`, the frozen runner and the frozen
+helper ELFs are not used, and every test idea is reimplemented independently, under the section 14.3
+X2c producer self-test rule.
 
 **After P5.** An independent product review, then an owner acceptance and merge decision, as for
 `helm-observe` and `helm-bind`. Merging would be a product-module acceptance, not a verdict about

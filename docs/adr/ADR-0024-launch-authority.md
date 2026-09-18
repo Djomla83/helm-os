@@ -8,16 +8,20 @@
 **Authoritative base:** `5cc56384257a2ec1f2a2a9c64f7f4328da6cef2e`; revision base
 `930ec14b940da9b136c7d2ad024b441d47ceba6c`; acceptance base
 `03285d9d13f53c2d97d78bd4f50552c201941c8f`\
-**Implementation authority:** **HELM-LAUNCH P1 and P2, both accepted.** P1 — the crate skeleton and
-the portable, pure model — was authorised by the
+**Implementation authority:** **HELM-LAUNCH P1 and P2 accepted; P3 authorised.** P1 — the crate
+skeleton and the portable, pure model — was authorised by the
 [owner decision of 2026-09-17](../DECISIONS.md#adr-0024-accepted-helm-launch-p1-authorised) and
 [accepted the same day](../DECISIONS.md#helm-launch-p1-accepted). P2 — safe Linux x86_64 capability
 admission and the single-use authorisation composition — was
 [authorised on 2026-09-18](../DECISIONS.md#helm-launch-p2-authorised) and
-[accepted on 2026-09-18](../DECISIONS.md#helm-launch-p2-accepted). **P3, P4 and P5 are not
-authorised**, and each needs a new explicit owner decision. Neither acceptance authorises process
-creation or process execution, and neither activates the scoped `unsafe` exception of section E,
-which stays reserved for a P3 that is not authorised.\
+[accepted on 2026-09-18](../DECISIONS.md#helm-launch-p2-accepted). P3 — the unsafe Linux x86_64
+process-creation backend and the closed post-clone child contract — was
+[authorised on 2026-09-18](../DECISIONS.md#helm-launch-p3-authorised) and is **not yet accepted**.
+**P4 and P5 are not authorised**, and each needs a new explicit owner decision. The P3
+authorisation activates the scoped `unsafe` exception of section E **only under
+`crates/helm-launch/src/backend/`**, and authorises process creation and an execution attempt
+**only internally**: it adds **no public execution API**, no process-group sweep and no host
+privilege acquisition.\
 **Design basis:** the [helm-launch 0.1 productization plan](../implementation/HELM-LAUNCH-PRODUCTIZATION-PLAN.md),
 as amended by the [owner review of 2026-09-16](../DECISIONS.md#helm-launch-productization-plan-owner-review).
 The [architecture and falsification plan](../research/HELM-LAUNCH-ARCHITECTURE.md) is historical
@@ -621,9 +625,11 @@ direct-child lifecycle with its guarded cleanup sweep, the output, privacy and r
 and the relation to the other modules. It stabilises no schema or API. **Accepting it does not by
 itself authorise creating `crates/helm-launch` or any implementation.** That needs a separate owner
 authorisation of the implementation slices. On 2026-09-17 the owner authorised and then accepted
-**P1**, and on 2026-09-18 authorised and then accepted **P2**; **P3, P4 and P5 still need their own
-owner decision.** Neither acceptance authorises process creation, and the complete 0.1 module is not
-yet product-accepted.
+**P1**; on 2026-09-18 authorised and then accepted **P2**; and on 2026-09-18 authorised **P3**, the
+unsafe backend and closed child contract, which is not yet accepted. **P4 and P5 still need their
+own owner decision.** The P1 and P2 acceptances authorise no process creation; the P3 authorisation
+authorises process creation and an execution attempt **internally only**, with no public execution
+API and no process-group sweep. The complete 0.1 module is not yet product-accepted.
 
 ## Falsification and approval boundary
 
@@ -724,5 +730,21 @@ authority:
 | **P1** | **Accepted 2026-09-17** as the first product implementation slice |
 | **P2** | **Authorised and accepted 2026-09-18** — safe Linux x86_64 capability admission and single-use authorisation composition: `ExecutableCapability`, `WorkingDirectoryCapability`, `AuthorizedLaunch`, `admit_executable`, `admit_working_directory`, `authorize`. Still **no** process creation, process execution, `unsafe`, host privilege or experiment execution, and no `launch` |
 | **P3, P4, P5** | **Not authorised** — each needs a new owner decision. P2 acceptance does not activate the section E `unsafe` exception, and authorises no `clone3`, `execveat`, `backend/`, syscall shim, `asm`, pidfd, signal manipulation or child creation |
+| **helm-launch 0.1 complete module** | **Not yet product-accepted** |
+| **LAUNCH-EXEC-01** | unchanged: formal trial line **closed**; Trial #3 frozen result remains **`MECHANISM_REJECTED`**; D-7 consumed; no rerun; **no Trial #4** |
+
+**Recorded 2026-09-18**, the P3 [authorisation](../DECISIONS.md#helm-launch-p3-authorised)
+decision. The two tables above are left as written and record the state at their dates; these rows
+state the **current** implementation authority. The accepted architectural contract of sections A to
+N is unchanged by this sync:
+
+| # | Ruling |
+|---|---|
+| **P1** | **Accepted 2026-09-17** |
+| **P2** | **Accepted 2026-09-18** |
+| **P3** | **Authorised 2026-09-18, not yet accepted** — the unsafe Linux x86_64 process-creation backend and the closed post-clone child contract: `src/backend/{mod,spawn,child}.rs` and one private syscall module, one raw x86_64 `asm!` syscall shim, parent preparation from a consumed `AuthorizedLaunch`, raw `rt_sigprocmask` around `clone3`, `clone3(CLONE_PIDFD)` with `exit_signal = SIGCHLD`, parent-side `setpgid(child, child)`, pidfd ownership, the section 8.4 child sequence, the exec-status pipe, crate-private spawn and result structures, a bounded non-blocking direct-child reap, direct-child pidfd `SIGKILL` only for the fixed pre-exec timeout and bounded test cleanup, an internal non-public `launch_minimal` for tests, and a non-default `test-fault-injection` feature |
+| **P3 safety transition** | **Process creation: authorised internally. Process execution attempt: authorised internally. Public process-execution API: none. Unsafe: authorised only under `crates/helm-launch/src/backend/`. Host privilege acquisition: none. Process-group sweep: not authorised in P3** |
+| **P3 exclusions** | public `launch()`, `LaunchOutcome`, any public execution entry point or process handle, receipt emission from a real launch, the P4 observation loop, plan-driven run timeouts, `SIGTERM`/grace lifecycle, general stream drain policy, the process-group sweep, process-tree containment, Wine, orchestration, sandboxing |
+| **P4, P5** | **Not authorised** — each needs a new owner decision |
 | **helm-launch 0.1 complete module** | **Not yet product-accepted** |
 | **LAUNCH-EXEC-01** | unchanged: formal trial line **closed**; Trial #3 frozen result remains **`MECHANISM_REJECTED`**; D-7 consumed; no rerun; **no Trial #4** |
