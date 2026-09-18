@@ -1,5 +1,54 @@
 # Stanje projekta
 
+<a id="helm-launch-p3-correction-required"></a>
+
+## HELM-LAUNCH P3 author-review dispositioned, 2026-09-18 — correction required, publication blocked, independent review still owed
+
+The owner [dispositioned the author self-review findings](DECISIONS.md#helm-launch-p3-author-review-disposition)
+for the HELM-LAUNCH P3 implementation candidate. This supersedes the "next gate" of the sections
+below, which are left as written. P1 and P2 stay **accepted**; P3 stays **authorised**; P4 and P5
+stay **not authorised**.
+
+| Item | State |
+|---|---|
+| ADR-0024 | **ACCEPTED** (unchanged by this disposition) |
+| HELM-LAUNCH P1 | **ACCEPTED** |
+| HELM-LAUNCH P2 | **ACCEPTED** |
+| HELM-LAUNCH P3 | **AUTHORISED / IMPLEMENTED CANDIDATE / CORRECTION REQUIRED** |
+| P3 authority record | `7bb016f5597c91a2aeb53ee0fb6c3eb38c3abe60` |
+| P3 implementation candidate | `afe8922bebd0c85ead7e58d146b738b84141f096` |
+| P3 **author self-review** | `168fe1339dd20bdecc8d5c0f111ef5f185493e9f` — **NOT INDEPENDENT** |
+| P3 independent unsafe review | **STILL OWED** |
+| Publication | **BLOCKED** pending the bounded correction |
+| HELM-LAUNCH P4 / P5 | **NOT AUTHORISED** |
+| Trial #4 | **NOT AUTHORISED** |
+| Next gate | **BOUNDED P3 CORRECTION, THEN ONE GENUINELY FRESH INDEPENDENT UNSAFE REVIEW** |
+
+* **The review that exists is an author self-review.** The agent session that produced the P3
+  authority and implementation commits also produced `168fe133`, so the independence precondition was
+  not met and the required independent P3 unsafe-review gate is **not satisfied**. The artifact is
+  named `HELM-LAUNCH-P3-AUTHOR-UNSAFE-REVIEW.md` so it cannot be mistaken for that gate. Its
+  technical work is accepted as **diagnostic evidence only**.
+* **Two IMPORTANT findings are accepted.** **P3R-01**: the committed release injection-absence CI
+  proof is defective — it selects no real cargo artifact and would fail the publication run with a
+  misleading message. **P3R-02**: the actual test and debug child machine code contains a
+  `memcpy@PLT` call and compiler-emitted panic paths.
+* **P3R-02 is not resolved by documentation, and no contract is weakened.** ADR-0024 and the
+  productization plan are **not amended**. The required target is that normal P3 child machine code
+  must call no glibc, libstd, allocator, panic/unwind or other external runtime helper between child
+  entry and `execveat` / `exit_group`; internal helm-launch child helpers and the raw syscall shim are
+  acceptable if their own closures satisfy the same contract.
+* **Two independent gates, neither substituting for the other.** A **machine-code gate** (no
+  forbidden userspace runtime helper in the child closure) and a **`strace` gate** (no forbidden
+  syscall in the runtime child window). `strace` cannot see `memcpy`, panic helpers or allocator
+  calls that issue no syscall.
+* **S6 needs no correction.** The deliberately retained parent stdin writer makes the pre-exec stall
+  deterministic rather than race-dependent.
+* **P3R-03 stays open and no numeric-PID fallback is authorised.** P3R-04 to P3R-08 stay open and are
+  out of scope for the bounded correction. The Linux runtime and `strace` gates stay **pending**.
+
+**TRIAL #3 MUST NOT BE RERUN. NO TRIAL #4 IS AUTHORISED. HELM-LAUNCH P4 AND P5 ARE NOT AUTHORISED.**
+
 <a id="helm-launch-p3-authorised"></a>
 
 ## HELM-LAUNCH P3 authorised, 2026-09-18 — unsafe Linux x86_64 backend and the closed child contract; P4/P5 not authorised

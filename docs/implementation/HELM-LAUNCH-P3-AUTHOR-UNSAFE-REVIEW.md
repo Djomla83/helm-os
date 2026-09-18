@@ -1,6 +1,29 @@
-# HELM-LAUNCH P3 — unsafe review of the implementation candidate
+# HELM-LAUNCH P3 — AUTHOR SELF-REVIEW of the implementation candidate
 
-> **THIS IS AN UNSAFE REVIEW OF THE HELM-LAUNCH P3 CANDIDATE.**
+> # ⚠ AUTHOR SELF-REVIEW — NOT INDEPENDENT
+>
+> # THIS DOCUMENT DOES NOT SATISFY THE P3 INDEPENDENT REVIEW GATE.
+>
+> **The same agent session authored the P3 authority commit
+> `7bb016f5597c91a2aeb53ee0fb6c3eb38c3abe60`, the P3 implementation commit
+> `afe8922bebd0c85ead7e58d146b738b84141f096`, and this review.** The independence precondition the
+> owner set — *"the reviewer MUST NOT have authored"* those commits — was **not met**.
+>
+> `AGENTS.md` states that the author of a patch is not the sole author of the reference expectation
+> and the final approver of its release. Recording a self-review as independent would falsify a
+> provenance property that the P3 gate exists to provide, so it is not recorded as one.
+>
+> **Owner disposition, 2026-09-18** ([P3R-00 accepted](../DECISIONS.md#helm-launch-p3-author-review-disposition)):
+> this document is **useful diagnostic evidence only**. A genuinely fresh independent unsafe review
+> remains **mandatory** before publication, and must be performed **after** the bounded correction
+> the same disposition requires.
+>
+> **What this document is:** a full adversarial self-audit at the technical depth the review
+> instruction specified, with machine-level evidence. It found **two IMPORTANT defects** that the
+> implementation handoff did not report, both of which the owner accepted and required to be
+> corrected. That makes it useful; it does not make it independent.
+
+> **THE SUBJECT OF THIS REVIEW IS THE HELM-LAUNCH P3 CANDIDATE.**
 >
 > **P3 IS THE FIRST SLICE WITH INTERNAL PROCESS CREATION, AN INTERNAL EXECUTION ATTEMPT AND SCOPED
 > `unsafe`.**
@@ -11,25 +34,19 @@
 
 <a id="independence-not-satisfied"></a>
 
-> ## ⚠ INDEPENDENCE PRECONDITION NOT SATISFIED — READ FIRST
->
-> The owner instruction for this review states: *"The reviewer MUST NOT have authored
-> `7bb016f5597c91a2aeb53ee0fb6c3eb38c3abe60` or `afe8922bebd0c85ead7e58d146b738b84141f096`."*
->
-> **The same agent session that produced both commits produced this review.** The independence
-> precondition is therefore **not met**, and this document must not be recorded as the fresh
-> independent unsafe review that ADR-0024 and the P3 authority decision require.
->
-> `AGENTS.md` states that the author of a patch is not the sole author of the reference expectation
-> and the final approver of its release. Recording a self-review as independent would falsify a
-> provenance property that the P3 gate exists to provide.
->
-> **What this document is:** a full adversarial self-audit, carried out to the technical depth the
-> instruction specifies, with machine-level evidence. It found **two IMPORTANT defects** that the
-> implementation handoff did not report. That makes it useful, and it does not make it independent.
->
-> **What is still owed:** one genuinely independent unsafe review, by a reviewer who did not author
-> the candidate, **after** the findings below are dispositioned.
+## 0. Status of this artifact
+
+| Property | Value |
+|---|---|
+| Review type | **AUTHOR SELF-REVIEW** |
+| Independent | **NO** |
+| Satisfies the P3 independent-review gate | **NO** |
+| Owner disposition | [accepted as diagnostic evidence only](../DECISIONS.md#helm-launch-p3-author-review-disposition) |
+| Independent review | **STILL OWED**, after the bounded correction |
+| Subject commit | `afe8922bebd0c85ead7e58d146b738b84141f096` |
+
+The technical sections below are unchanged from the form in which they were first recorded, except
+for this status block and the disposition note appended at the end.
 
 | Item | Value |
 |---|---|
@@ -39,7 +56,7 @@
 | Review base | `afe8922bebd0c85ead7e58d146b738b84141f096` |
 | Branch | `docs/helm-launch-architecture`, 2 ahead / 0 behind `origin` |
 | `origin/main` | `501a7fa95c4884da4fec9a20a512c2d63f2b30cc`, untouched |
-| Independence | **NOT SATISFIED** — see above |
+| Independence | **NOT SATISFIED** — this is an author self-review |
 | Review type | source, type, ABI and **machine-level** audit; no runtime Linux execution |
 | Findings | **0 BLOCKER**, **2 IMPORTANT**, **6 MINOR**, **2 GATE_PENDING** |
 
@@ -814,3 +831,32 @@ findings, the fresh independent unsafe review that ADR-0024 and the P3 authority
 independent unsafe review that section P3R-00 records as still owed.
 
 Trial #3 remains `MECHANISM_REJECTED` and must not be rerun. **No Trial #4 is authorised.**
+
+
+---
+
+<a id="owner-disposition"></a>
+
+## 28. Owner disposition of these findings, 2026-09-18
+
+Recorded after this document was written; the sections above are left as they were.
+
+| Finding | Owner disposition |
+|---|---|
+| **P3R-00** | **ACCEPTED.** The independence precondition was not met. This document does **not** satisfy the required independent P3 unsafe-review gate; its technical work is diagnostic evidence only. A genuinely fresh independent unsafe review remains mandatory after the correction. |
+| **P3R-01** | **ACCEPTED.** The committed release injection-absence CI proof is defective and must be corrected before publication. |
+| **P3R-02** | **ACCEPTED.** The actual test/debug child machine code contains `memcpy@PLT` and compiler-emitted panic paths. This does **not** satisfy the intended closed child contract merely because those paths are believed safe or unreachable. **ADR-0024 and the productization contract are not weakened to allow it, and documentation alone does not resolve it**: the implementation is corrected and machine-code evidence is added. |
+| **P3R-03** | **ACCEPTED AS OPEN**, MINOR. No numeric-PID fallback is authorised. |
+| **P3R-04 … P3R-08** | remain **MINOR / OPEN**, carried forward. |
+| **P3R-G1 / P3R-G2** | remain **GATE_PENDING**. |
+
+The owner's required target for P3R-02:
+
+> **NORMAL P3 CHILD MACHINE CODE MUST NOT CALL GLIBC, LIBSTD, ALLOCATOR, PANIC/UNWIND OR OTHER
+> EXTERNAL RUNTIME HELPERS BETWEEN CHILD ENTRY AND `execveat` / `exit_group`.**
+>
+> Internal helm-launch child helpers and the raw syscall shim are acceptable if they themselves
+> satisfy the same closed contract.
+
+P3 authority remains valid. The candidate is **not ready for publication**. P4 and P5 remain **not
+authorised**, and **no Trial #4 is authorised**.
