@@ -1,5 +1,58 @@
 # Stanje projekta
 
+<a id="helm-launch-p2-authorised"></a>
+
+## HELM-LAUNCH P2 authorised, 2026-09-18 — capability admission only, P3+ not authorised
+
+The owner [authorised HELM-LAUNCH P2](DECISIONS.md#helm-launch-p2-authorised), the bounded
+capability-admission and authorisation-composition slice of the accepted
+[productization plan](implementation/HELM-LAUNCH-PRODUCTIZATION-PLAN.md). This supersedes the "next
+gate" and the P2 authority rows of the sections below, which are left as written. P1 stays
+**accepted**; P3, P4 and P5 stay **not authorised**.
+
+| Item | State |
+|---|---|
+| ADR-0024 | **ACCEPTED** |
+| HELM-LAUNCH P1 | **ACCEPTED** (`cd5db27964dc10593bd8856d2d331b907a4b608e`) |
+| HELM-LAUNCH P2 | **AUTHORISED** |
+| HELM-LAUNCH P3 / P4 / P5 | **NOT AUTHORISED** |
+| Current helm-launch capability before P2 implementation | **PORTABLE MODEL ONLY** |
+| P2 authorised capability | **SAFE LINUX X86_64 CAPABILITY ADMISSION AND COMPOSITION** |
+| Process creation | **NONE** |
+| Process execution | **NONE** |
+| Unsafe | **NONE** |
+| Host privilege | **NONE** |
+| Experiment execution | **NONE** |
+| helm-launch complete module | **NOT YET PRODUCT-ACCEPTED** |
+| LAUNCH-EXEC-01 | **FORMAL TRIAL LINE CLOSED**; Trial #3 remains `MECHANISM_REJECTED` |
+| Trial #4 | **NOT AUTHORISED** |
+| Next gate | **IMPLEMENT P2, THEN ONE FRESH INDEPENDENT REVIEW OF THE P2 CANDIDATE** |
+
+* **P2 boundary.** `ExecutableCapability`, `WorkingDirectoryCapability`, `AuthorizedLaunch`, the
+  admission error and authorisation refusal vocabularies, `admit_executable`,
+  `admit_working_directory`, `authorize`, safe Linux x86_64 descriptor inspection and positional
+  reads, pre-execution executable measurement, ELF cohort admission, and the admission, refusal,
+  capability and type-boundary tests. Nothing else.
+* **Not in P2.** `LaunchOutcome`, `launch()`, process creation, process execution, `clone3`,
+  `execveat`, pidfd acquisition or signalling, `waitid`, `pidfd_send_signal`, `close_range`,
+  `fchdir` execution, signal or process-group manipulation, the `PR_SET_NO_NEW_PRIVS` call, child
+  pipes, polling lifecycle, timeout execution, `backend/`, a syscall shim, inline assembly, libc
+  calls and `unsafe` code.
+* **P2 may perform read-only I/O through caller-supplied descriptors.** Executable measurement may
+  update atime and populate the page cache; `O_NOATIME` is not used.
+* **P2 creates authority-bearing in-process values, but no function can execute them.**
+  `AuthorizedLaunch` exists and is inert, because `launch()` does not exist. **P2 does not
+  authorise process creation.**
+* **Platform.** The P2 APIs exist only under `cfg(all(target_os = "linux", target_arch = "x86_64"))`
+  and must not exist in the public API elsewhere; portable P1 stays available on Linux x86_64, other
+  Linux architectures, Windows and macOS.
+* **Non-claims carried forward.** Measurement is a pre-execution measurement of the pinned object,
+  never executed-body identity. Detected instability means only that the protocol detected
+  instability; not detecting it proves nothing. `NoClaimContradicted` is not permission, and
+  `asserted_context` digests stay inert caller assertions that `authorize` must not inspect.
+
+**TRIAL #3 MUST NOT BE RERUN. NO TRIAL #4 IS AUTHORISED. HELM-LAUNCH P3+ IS NOT AUTHORISED.**
+
 <a id="helm-launch-p1-accepted"></a>
 
 ## HELM-LAUNCH P1 accepted, 2026-09-17 — portable model only, P2+ not authorised

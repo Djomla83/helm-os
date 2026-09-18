@@ -2,9 +2,10 @@
 
 > **ADR-0024: ACCEPTED 2026-09-17.**
 > **PRODUCTIZATION PLAN: OWNER-REVIEWED** (2026-09-16: `HELM_LAUNCH_PRODUCTIZATION_PLAN_OWNER_REVIEW_PASSED_WITH_BOUNDED_AMENDMENTS`).
-> **IMPLEMENTATION AUTHORITY: P1 ONLY.**
+> **IMPLEMENTATION AUTHORITY: P1 AND P2.**
 > **HELM-LAUNCH P1: ACCEPTED 2026-09-17** as the first product slice (portable model only); the complete 0.1 module is **not yet product-accepted**.
-> **P2+: NOT AUTHORISED.**
+> **HELM-LAUNCH P2: AUTHORISED 2026-09-18** — capability admission and authorisation composition only, with no process creation, no process execution and no `unsafe`.
+> **P3, P4, P5: NOT AUTHORISED.**
 > **NO TRIAL #4 IS AUTHORISED** (authorised = false).
 
 <a id="current-authority-2026-09-17"></a>
@@ -26,6 +27,33 @@ measurement I/O, `launch`, anything that can cause a child process to exist, or 
 experimental runner. Where section 16's P1 row and that boundary differ, the owner's boundary
 governs. The sections below that say "Proposed" or "not authorised" record the state at 2026-09-16
 and are left as written.
+
+<a id="p2-authority-2026-09-18"></a>
+
+**P2 authority, 2026-09-18.** The owner
+[authorised HELM-LAUNCH P2](../DECISIONS.md#helm-launch-p2-authorised), the bounded
+capability-admission slice of [section 16](#16-implementation-slices). Under that authority the
+crate may add the `authority.rs` module of section 7.2 with safe `rustix` only: the executable
+admission of [section 6.2](#62-executable-admission-admit_executablefd-ownedfd) in its accepted
+order, the working-directory admission of
+[section 6.3](#63-working-directory-admission-admit_working_directoryid-fd), the composition of
+[section 6.4](#64-composition-authorizeplan-executable-working_directory), the
+`ExecutableCapability`, `WorkingDirectoryCapability` and `AuthorizedLaunch` types with the
+properties of [section 5.3](#53-per-type-properties), the bounded `AdmissionError` and
+`AuthorizationRefusal` vocabularies of [section 13.2](#132-families), the admission and refusal
+tests, and the capability and type-boundary tests. The APIs exist only under
+`cfg(all(target_os = "linux", target_arch = "x86_64"))`.
+
+**P2 has no process creation, no process execution, no `unsafe`, no host privilege and no
+experiment execution**: no `LaunchOutcome`, `launch`, `clone3`, `execveat`, pidfd acquisition or
+signalling, `waitid`, `pidfd_send_signal`, `close_range`, `fchdir` execution, signal or
+process-group manipulation, `PR_SET_NO_NEW_PRIVS` call, child pipe, polling lifecycle, timeout
+execution, `backend/` directory, syscall shim, inline assembly, libc call or `unsafe` operation.
+**P2 may perform read-only I/O through caller-supplied descriptors**, and executable measurement
+may update atime and populate the page cache. **P2 creates authority-bearing in-process values but
+no function that can execute them**, because `launch` does not exist; **P2 does not authorise
+process creation.** Where section 16's P2 row and this boundary differ, the owner's boundary
+governs. **P3, P4 and P5 remain not authorised**, and each needs a new explicit owner decision.
 
 <a id="p1-acceptance-sync-2026-09-17"></a>
 
@@ -1489,6 +1517,10 @@ not choose.
 [`DECISIONS.md`](../DECISIONS.md#adr-0024-accepted-helm-launch-p1-authorised). **P1 is authorised**,
 within the boundary stated in the [current authority note](#current-authority-2026-09-17). **P2, P3,
 P4 and P5 are not authorised**, and each needs a new explicit owner decision.
+
+**Authority, 2026-09-18.** P1 is **accepted** and **P2 is authorised**, within the boundary stated
+in the [P2 authority note](#p2-authority-2026-09-18). **P3, P4 and P5 remain not authorised**, and
+each needs a new explicit owner decision.
 
 **After P5.** An independent product review, then an owner acceptance and merge decision, as for
 `helm-observe` and `helm-bind`. Merging would be a product-module acceptance, not a verdict about

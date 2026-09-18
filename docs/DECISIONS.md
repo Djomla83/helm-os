@@ -47,7 +47,12 @@ decision. On 2026-09-17, after the LAUNCH-EXEC-01 trial line had closed and the 
 the productization plan, the owner **accepted the revised ADR-0024** for the helm-launch 0.1
 architecture only and authorised **HELM-LAUNCH P1 only**, a portable, pure model with no process
 execution and no `unsafe`; see the
-[decision of 2026-09-17](#adr-0024-accepted-helm-launch-p1-authorised).
+[decision of 2026-09-17](#adr-0024-accepted-helm-launch-p1-authorised). P1 was implemented,
+independently reviewed and [accepted the same day](#helm-launch-p1-accepted). On 2026-09-18 the
+owner authorised the bounded **HELM-LAUNCH P2** slice — safe Linux x86_64 capability admission and
+authorisation composition, with no process creation, no process execution and no `unsafe` — while
+**P3, P4 and P5 remain not authorised**; see the
+[decision of 2026-09-18](#helm-launch-p2-authorised).
 
 | ID | Odluka | Status |
 |---|---|---|
@@ -836,3 +841,114 @@ the independent review, and does not touch `main`.
 **HELM-LAUNCH P1 IS ACCEPTED. HELM-LAUNCH P2+ IS NOT AUTHORISED.**
 
 **Next gate: OWNER DECISION ON WHETHER TO AUTHORISE HELM-LAUNCH P2 CAPABILITY ADMISSION.**
+
+
+<a id="helm-launch-p2-authorised"></a>
+
+### Owner decision 2026-09-18 — **HELM-LAUNCH P2 AUTHORISED**: capability admission and authorisation composition only; P3+ not authorised
+
+**`HELM_LAUNCH_P2_AUTHORISED`.** The repository owner, Djomla83, authorises the **bounded P2
+capability-admission slice** of `helm-launch`, under Accepted
+[ADR-0024](adr/ADR-0024-launch-authority.md), the owner-reviewed
+[productization plan](implementation/HELM-LAUNCH-PRODUCTIZATION-PLAN.md) section 16 P2 row, and the
+[P1 acceptance of 2026-09-17](#helm-launch-p1-accepted). This is **not** product acceptance of
+P2 and **not** product acceptance of the complete helm-launch 0.1 module. Every earlier section,
+including every ADR, D-7 and Trial #1, #2 and #3 record, is left as written.
+
+| Item | Value |
+|---|---|
+| ADR-0024 | **ACCEPTED 2026-09-17** |
+| HELM-LAUNCH P1 | **ACCEPTED** (`cd5db27964dc10593bd8856d2d331b907a4b608e`) |
+| HELM-LAUNCH P2 | **AUTHORISED BY THIS DECISION** |
+| HELM-LAUNCH P3, P4, P5 | **NOT AUTHORISED** |
+| Current capability before P2 implementation | **PORTABLE MODEL ONLY** |
+| P2 authorised capability | **SAFE LINUX X86_64 CAPABILITY ADMISSION AND COMPOSITION** |
+| Trial #4 | **NOT AUTHORISED** |
+| Starting state | branch `docs/helm-launch-architecture` at `cd5db27964dc10593bd8856d2d331b907a4b608e`; `main` at `501a7fa95c4884da4fec9a20a512c2d63f2b30cc` |
+
+#### 1. P2 scope
+
+**Capability admission and authorisation composition only.** P2 may introduce
+`ExecutableCapability`, `WorkingDirectoryCapability`, `AuthorizedLaunch`,
+`AdmissionError`/`AdmissionErrorCode`, `AuthorizationRefusal` with a refusal code vocabulary if a
+separate enum is useful, `admit_executable`, `admit_working_directory`, `authorize`, safe Linux
+x86_64 descriptor inspection and positional reads, pre-execution executable measurement, ELF cohort
+admission, admission and refusal tests, and capability and type-boundary tests.
+
+**P2 must not introduce** `LaunchOutcome`; `launch()`; process creation; process execution;
+`clone3`; `execveat`; pidfd acquisition or signalling; `waitid`; `pidfd_send_signal`;
+`close_range`; `fchdir` execution; signal manipulation; process-group manipulation; the
+`PR_SET_NO_NEW_PRIVS` call; pipes for a child; polling lifecycle; timeout execution; a `backend/`
+directory; a syscall shim; inline assembly; libc calls; or `unsafe` code.
+
+| P2 property | Value |
+|---|---|
+| Process creation | **NONE** |
+| Process execution | **NONE** |
+| Unsafe | **NONE** |
+| Host privilege | **NONE** |
+| Experiment execution | **NONE** |
+| P3+ implementation | **NONE** |
+
+#### 2. What P2 may do to the host, stated
+
+* **P2 may perform read-only I/O through caller-supplied descriptors.** Admission inspects
+  descriptor flags, samples metadata twice and reads the object's bytes positionally, all through
+  the one descriptor the trusted caller moved in. It resolves no pathname and opens nothing.
+* **Executable measurement may update atime and populate the page cache.** `O_NOATIME` is not used,
+  because it requires file ownership or `CAP_FOWNER` (ADR-0024 section C).
+* **P2 creates authority-bearing in-process Rust values, but there is still no function that can
+  execute them.** `AuthorizedLaunch` exists after P2 and is inert: `launch()` does not exist, so no
+  P2 code path can create a process.
+* **P2 does not authorise process creation.**
+
+#### 3. Product boundary after P2
+
+```text
+untrusted plan bytes ──▶ ValidatedLaunchPlan          no authority
+caller-owned executable fd ──admit_executable──▶ ExecutableCapability
+caller-owned cwd fd + logical id ──admit_working_directory──▶ WorkingDirectoryCapability
+plan + executable + working directory ──authorize──▶ AuthorizedLaunch
+AuthorizedLaunch ──╳──▶ process        no edge exists: launch() does not exist in P2
+```
+
+The capability, authorisation and admission APIs exist only under
+`cfg(all(target_os = "linux", target_arch = "x86_64"))`. The portable P1 model stays available on
+Linux x86_64, other Linux architectures, Windows and macOS, and off the cohort the P2 types and
+functions must not exist in the public API. No support for another platform is advertised.
+
+`NoClaimContradicted` remains **not permission**, plan `asserted_context` digests remain **inert
+caller assertions** that `authorize` must not inspect, and no function may turn bytes, a string, a
+path, a `ValidatedAppSpec`, an `ObservationArtifact`, a `RootCapability`, a `BindingReport`, a
+`Contradiction`, a `Coverage`, any `serde` input, receipt bytes or a `LaunchReceipt` into a
+capability or an authorisation. `helm-launch` keeps **zero HELM crate dependencies**.
+
+#### 4. Measurement is not an attestation
+
+The second metadata sample may only ever support the statement **the measurement protocol detected
+instability**, or that it did not. It must never be described as proof that no mutation occurred,
+that the inode is immutable, that a snapshot exists, or that the measured bytes are the bytes later
+executed. Measurement is a **pre-execution measurement of the pinned object**, never executed-body
+identity.
+
+#### 5. Dependencies and safety
+
+`rustix` may become a direct `helm-launch` dependency on the Linux x86_64 cohort at the
+repository-vetted pin `=1.1.4`, with `default-features = false` and only the safe features P2
+actually needs. No direct `libc` dependency, no new package version, and no unrelated `Cargo.lock`
+change. P2 contains **zero** `unsafe` operations; the accepted future `unsafe` exception stays
+reserved for P3 and is **not active**, and no `backend` directory may exist.
+
+#### 6. Boundary and next gate
+
+This decision is recorded in documentation only and changes no product code, test, workflow, Cargo
+file, ADR, experiment, evidence or independent review, and does not touch `main`.
+
+**TRIAL #3 FROZEN RESULT REMAINS MECHANISM_REJECTED. TRIAL #3 MUST NOT BE RERUN.**
+
+**NO TRIAL #4 IS AUTHORISED.**
+
+**HELM-LAUNCH P1 IS ACCEPTED. HELM-LAUNCH P2 IS AUTHORISED. HELM-LAUNCH P3+ IS NOT AUTHORISED.**
+
+**Next gate: IMPLEMENT HELM-LAUNCH P2 — CAPABILITY ADMISSION AND AUTHORISATION COMPOSITION ONLY,
+then ONE FRESH INDEPENDENT REVIEW OF THE P2 CANDIDATE.**
