@@ -463,7 +463,6 @@ pub(super) fn spawn(prepared: &PreparedLaunch, fault: Fault) -> Result<SpawnedCh
 #[inline(never)]
 unsafe fn clone_and_dispatch(args: &mut syscall::CloneArgs, plan: &ChildPlan) -> i64 {
     let args_address = address_of_mut(args);
-    let plan_pointer: *const ChildPlan = std::ptr::from_ref(plan);
     // SAFETY: the second argument is the size of the record the first argument
     // points at, which is the `clone3` ABI's own versioning contract; the
     // record is live for the call. The flag word is exactly `CLONE_PIDFD`, so
@@ -480,11 +479,13 @@ unsafe fn clone_and_dispatch(args: &mut syscall::CloneArgs, plan: &ChildPlan) ->
         )
     };
     if result == 0 {
-        // SAFETY: a zero return from `clone3` is the child. `plan_pointer`
-        // names this frame's `ChildPlan`, which the child reaches in its own
-        // copy-on-write copy of the frame. `child_main` never returns, so no
-        // value of any parent frame is dropped in the child.
-        unsafe { child::child_main(plan_pointer) }
+        // SAFETY: a zero return from `clone3` is the child. `plan` borrows this
+        // frame's `ChildPlan`, which the child reaches at the same address in
+        // its own copy-on-write copy of the frame, so the reference stays
+        // non-null, aligned, initialised and unmutated for the whole child
+        // window. `child_main` never returns, so no value of any parent frame
+        // is dropped in the child.
+        unsafe { child::child_main(plan) }
     }
     result
 }

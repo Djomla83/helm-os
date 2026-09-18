@@ -577,7 +577,7 @@ fn the_child_file_has_no_implicit_prelude_and_a_closed_vocabulary() {
     // calls three times in place.
     let code = compact(child);
     let entry_at = code
-        .find("unsafefnchild_main(plan:*constChildPlan)->!")
+        .find("unsafefnchild_main(plan:&ChildPlan)->!")
         .expect("the child entry point");
     let entry_end = code[entry_at..]
         .find("unsafefnissue(")
@@ -587,7 +587,7 @@ fn the_child_file_has_no_implicit_prelude_and_a_closed_vocabulary() {
         "stage::DUP2",
         "stage::CLEAR_CLOEXEC",
         "stage::CHDIR",
-        "close_span(&plan,first)",
+        "close_span(plan,first)",
         "stage::SETPGID",
         "stage::SIGACTION",
         "stage::SIGMASK",
@@ -605,7 +605,7 @@ fn the_child_file_has_no_implicit_prelude_and_a_closed_vocabulary() {
     // only stage the entry point delegates.
     assert_eq!(entry.matches("stage::DUP2").count(), 3);
     assert_eq!(entry.matches("stage::CLEAR_CLOEXEC").count(), 3);
-    assert_eq!(entry.matches("close_span(&plan,").count(), 3);
+    assert_eq!(entry.matches("close_span(plan,").count(), 3);
     assert!(
         code[entry_end..].contains("stage::CLOSE_RANGE"),
         "close_span does not report the CLOSE_RANGE stage"
@@ -650,10 +650,34 @@ fn the_child_file_has_no_implicit_prelude_and_a_closed_vocabulary() {
 fn the_child_exits_only_by_exec_or_by_one_record_and_exit_group() {
     let sources = rust_files("src");
     let child = compact(&sources["src/backend/child.rs"]);
-    assert!(child.contains("fnchild_main(plan:*constChildPlan)->!"));
+    assert!(
+        child.contains("fnchild_main(plan:&ChildPlan)->!"),
+        "the child entry point must borrow the plan, never dereference a raw pointer: a raw \
+         dereference emits compiler null and alignment checks that call the panic runtime"
+    );
+    assert!(
+        child.contains("#[inline(never)]"),
+        "the child entry point must stay out of line so the machine-code gate always has a root"
+    );
+    // No whole-plan copy: a by-value read of the record lowers to a `memcpy`
+    // call into libc in an unoptimised build, which the closed child contract
+    // forbids (owner disposition of P3R-02).
+    assert!(
+        !child.contains("letplan:ChildPlan="),
+        "the child copies the whole plan, which lowers to a memcpy call"
+    );
+    assert!(
+        !child.contains("*constChildPlan"),
+        "a raw plan pointer reappeared in the child"
+    );
+    assert!(
+        child.contains("let[first,second,third]=&plan.close_ranges;"),
+        "the close ranges must be borrowed, not copied out as a 72-byte aggregate"
+    );
     assert!(child.contains("fnfail(plan:&ChildPlan,stage:u8,errno:i32)->!"));
     // The record is built by destructuring, never by indexing or formatting.
     assert!(child.contains("letrecord:[u8;8]=[stage,pad1,pad2,pad3,e0,e1,e2,e3];"));
+    assert!(child.contains("fnclose_span(plan:&ChildPlan,span:&CloseSpan)"));
     assert!(child.contains("errno.to_le_bytes()"));
     // The failure write retries on EINTR and on nothing else.
     assert!(child.contains("syscall::EINTR"));
@@ -863,6 +887,23 @@ fn every_fault_injection_site_is_gated_on_the_feature_and_on_debug_assertions() 
         sources["src/backend/injection.rs"].contains("helm_launch_p3_fault_injection_present"),
         "the release-absence marker changed; the CI check must change with it"
     );
+    // S6 reconfirmation (owner disposition, 2026-09-18). The pre-exec stall is
+    // deterministic rather than race-dependent because the parent deliberately
+    // retains the stdin write end for the duration, so the child's blocking
+    // read on 0 cannot reach end-of-file. That retention must be unable to
+    // affect a normal product build: outside an injection build it is a
+    // compile-time `false` constant, not a runtime branch.
+    assert!(
+        root.contains(&format!(
+            "#[cfg({GATE})]letretain_stdin_writer=fault.mode==injection::MODE_STALL_BEFORE_EXEC;"
+        )),
+        "the retained stdin writer is not behind the two-condition gate"
+    );
+    assert!(
+        root.contains(&format!("#[cfg(not({GATE}))]letretain_stdin_writer=false;")),
+        "a normal build must define the retained stdin writer as a constant false"
+    );
+
     // The feature is declared, non-default and enables nothing else.
     assert!(CRATE_MANIFEST.contains("test-fault-injection = []"));
     assert!(

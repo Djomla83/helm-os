@@ -27,6 +27,15 @@ name: helm-launch portable model, Linux capability admission and Linux backend
 # Off the Linux x86_64 cohort the P2 authority API and the P3 backend must not
 # exist at all — `compile_fail` doctests in the crate root prove that on Windows
 # and macOS, and neither runs any backend test.
+#
+# The P3 evidence model has **two** gates, and neither replaces the other
+# (owner disposition of P3R-02, 2026-09-18):
+#
+#   MACHINE-CODE GATE  no forbidden userspace runtime helper in the child's
+#                      emitted call closure. `strace` cannot see `memcpy`, a
+#                      panic helper or an allocator call that issues no syscall.
+#   STRACE GATE        no forbidden syscall in the runtime child window. The
+#                      machine-code gate cannot see what the kernel was asked.
 
 on:
   pull_request:
@@ -35,6 +44,9 @@ on:
       - 'Cargo.lock'
       - 'crates/helm-launch/**'
       - 'tools/tests/test_helm_launch_confinement.py'
+      - 'tools/tests/test_helm_launch_machine_proofs.py'
+      - 'tools/helm_launch_child_closure.py'
+      - 'tools/helm_launch_injection_proof.py'
       - '.github/workflows/helm-launch.yml'
   push:
     paths:
@@ -42,6 +54,9 @@ on:
       - 'Cargo.lock'
       - 'crates/helm-launch/**'
       - 'tools/tests/test_helm_launch_confinement.py'
+      - 'tools/tests/test_helm_launch_machine_proofs.py'
+      - 'tools/helm_launch_child_closure.py'
+      - 'tools/helm_launch_injection_proof.py'
       - '.github/workflows/helm-launch.yml'
 
   # Re-test an exact branch or ref on purpose, without a no-op source commit.
@@ -104,34 +119,70 @@ jobs:
       # provoke. It is gated on the feature AND on `debug_assertions`.
       - run: cargo test -p helm-launch --locked --features test-fault-injection
 
-      # The default release build, and the proof that no release artifact
-      # contains the injection even when the feature is enabled. The marker is a
-      # `#[used]` static in `src/backend/injection.rs`, so its presence in the
-      # debug build and absence from the release build are properties of the
-      # built objects, not claims about source.
       - run: cargo build -p helm-launch --release --locked
 
-      - name: Prove the fault injection is absent from a release artifact
+      # THE MACHINE-CODE GATE. Source scanning cannot see code the compiler
+      # inserts, and the earlier candidate's child window did call `memcpy` and
+      # two panic helpers without any source token saying so. This reads the
+      # assembly the compiler actually emits for the Linux x86_64 child path,
+      # walks the call closure from `child_main` transitively, and fails on any
+      # external runtime helper. It fails loudly on a missing root, an empty
+      # body, an unresolved indirect call, a missing syscall or a failed
+      # positive control, so "no findings" can never mean "found nothing".
+      - name: Child machine-code closure — debug/test profile
+        if: runner.os == 'Linux'
+        run: |
+          python3 tools/helm_launch_child_closure.py \
+            --target-dir "${RUNNER_TEMP}/p3-closure-debug" \
+            --profile test \
+            --label "debug/test profile (the profile the P3 tests execute)"
+
+      # The same contract under production codegen. A plain release library
+      # build discards the whole backend, so release codegen settings are
+      # applied to the profile that does instantiate the child.
+      - name: Child machine-code closure — release codegen
+        if: runner.os == 'Linux'
+        run: |
+          python3 tools/helm_launch_child_closure.py \
+            --target-dir "${RUNNER_TEMP}/p3-closure-release" \
+            --profile test \
+            --rustc-flag=-Copt-level=3 \
+            --rustc-flag=-Cdebug-assertions=off \
+            --label "release codegen (opt-level=3, debug-assertions=off)"
+
+      # THE INJECTION PROOF. Fresh build roots, the exact artifact taken from
+      # cargo's own compiler-artifact record rather than a wildcard, every
+      # archive member inspected, and a positive control so that ABSENT cannot
+      # mean "looked at the wrong file".
+      - name: Fault-injection positive control and release absence proof
+        if: runner.os == 'Linux'
+        run: |
+          python3 tools/helm_launch_injection_proof.py \
+            --root "${RUNNER_TEMP}/p3-injection" \
+            --target x86_64-unknown-linux-gnu
+
+      # A release library contains no backend at all, because P3 adds no public
+      # consumer for it. Stated as its own check so the fact is visible rather
+      # than inferred from the absence of a symbol nobody looked for.
+      - name: Confirm a release library instantiates no backend
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          set -eux
-          marker='helm_launch_p3_fault_injection_present'
-          cargo build -p helm-launch --locked --features test-fault-injection
-          debug_lib=$(ls target/debug/libhelm_launch-*.rlib | head -n 1)
-          if ! grep -a -q "$marker" "$debug_lib"; then
-            echo "TEST ENVIRONMENT FAILURE: the marker is absent from the debug build, so the"
-            echo "release check below would pass for the wrong reason."
+          set -euo pipefail
+          out="${RUNNER_TEMP}/p3-release-lib"
+          rm -rf "$out"
+          cargo rustc -p helm-launch --lib --locked --release --all-features \
+            --target x86_64-unknown-linux-gnu --target-dir "$out" -- --emit=asm
+          asm=$(find "$out" -name 'helm_launch-*.s' -print -quit)
+          if [ -z "$asm" ]; then
+            echo "TEST ENVIRONMENT FAILURE: no assembly was emitted for the release library."
             exit 1
           fi
-          cargo build -p helm-launch --release --locked --all-features
-          release_lib=$(ls target/release/libhelm_launch-*.rlib | head -n 1)
-          if grep -a -q "$marker" "$release_lib"; then
-            echo "FAILURE: a release artifact built with --all-features contains the test-only"
-            echo "fault injection."
+          if grep -q 'backend5child10child_main' "$asm"; then
+            echo "FAILURE: a release library instantiated the P3 child entry point."
             exit 1
           fi
-          echo "release artifact is free of the fault injection"
+          echo "release library instantiates no backend, as expected: $asm"
 
       # The Linux backend suite, named so the log shows which cases the cohort
       # actually exercised and a silently empty suite cannot pass unnoticed.
@@ -184,7 +235,9 @@ jobs:
       # `tools/tests` discovery.
       - name: Repository-level confinement checks, independent of cargo
         if: runner.os == 'Linux'
-        run: python3 -m unittest tools.tests.test_helm_launch_confinement -v
+        run: |
+          python3 -m unittest tools.tests.test_helm_launch_confinement -v
+          python3 -m unittest tools.tests.test_helm_launch_machine_proofs -v
 
       # The determinism anchors. Exact bytes and digests are asserted inside the
       # tests, so a platform-dependent serializer or parser fails above rather than

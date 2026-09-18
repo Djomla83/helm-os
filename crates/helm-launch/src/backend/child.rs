@@ -46,24 +46,34 @@ use super::{ChildPlan, CloseSpan, stage};
 /// the cloning frame, so that no value of the parent's frame is dropped in the
 /// child.
 ///
+/// # The plan arrives by shared reference, and is never copied
+///
+/// The plan is **borrowed**, not dereferenced from a raw pointer and not copied
+/// into a local. That is a machine-code requirement, not a style choice
+/// (owner disposition of P3R-02): a raw-pointer dereference emits compiler
+/// null and alignment checks that call into the panic runtime, and copying the
+/// whole record out emits a `memcpy` call into libc. Borrowing emits neither,
+/// so every field read below is a plain load and the child's machine-code
+/// closure reaches no external runtime helper at all.
+///
+/// It also narrows the unsafe surface: the authorised "crossing into the child
+/// entry with the prepared `ChildPlan`" operation is now only the call to this
+/// function, with no raw pointer dereference of its own.
+///
 /// # Safety
 ///
 /// The caller must be the child returned by a successful `clone3`, on the
-/// `== 0` branch, with `plan` pointing at a fully initialised [`ChildPlan`]
-/// that lives in the parent frame which issued the clone. Every descriptor
-/// number in that plan must name a descriptor the parent opened and did not
-/// close before the clone, every address in it must be an address of parent
-/// memory that is live at the clone, and the close ranges must preserve the
-/// executable and the exec-status write end. The caller must not rely on this
-/// function returning: it replaces the image or ends the process.
-pub(super) unsafe fn child_main(plan: *const ChildPlan) -> ! {
-    // SAFETY: `plan` is the address of the caller's `ChildPlan`, taken in the
-    // frame that issued `clone3` and therefore live in this child's
-    // copy-on-write copy of that frame. `ChildPlan` is `Copy` plain-old data
-    // with no padding invariants and no destructor, so this reads one value out
-    // and leaves nothing to drop.
-    let plan: ChildPlan = unsafe { *plan };
-
+/// `== 0` branch, with `plan` borrowing a fully initialised [`ChildPlan`] that
+/// lives in the parent frame which issued the clone — so that the reference is
+/// non-null, aligned, dereferenceable and immutable for the whole child window
+/// in the child's copy-on-write copy of that frame. Every descriptor number in
+/// that plan must name a descriptor the parent opened and did not close before
+/// the clone, every address in it must be an address of parent memory that is
+/// live at the clone, and the close ranges must preserve the executable and the
+/// exec-status write end. The caller must not rely on this function returning:
+/// it replaces the image or ends the process.
+#[inline(never)]
+pub(super) unsafe fn child_main(plan: &ChildPlan) -> ! {
     // ---------------------------------------------------------- 1. DUP2
     //
     // The final stdio mapping. Every source was relocated to at least 3 in the
@@ -75,7 +85,7 @@ pub(super) unsafe fn child_main(plan: *const ChildPlan) -> ! {
     // number. `dup2` takes two descriptor numbers and no pointer.
     unsafe {
         issue(
-            &plan,
+            plan,
             stage::DUP2,
             syscall::NR_DUP2,
             plan.stdin_source,
@@ -89,7 +99,7 @@ pub(super) unsafe fn child_main(plan: *const ChildPlan) -> ! {
     // SAFETY: as above, for the relocated stdout write end onto 1.
     unsafe {
         issue(
-            &plan,
+            plan,
             stage::DUP2,
             syscall::NR_DUP2,
             plan.stdout_source,
@@ -103,7 +113,7 @@ pub(super) unsafe fn child_main(plan: *const ChildPlan) -> ! {
     // SAFETY: as above, for the relocated stderr write end onto 2.
     unsafe {
         issue(
-            &plan,
+            plan,
             stage::DUP2,
             syscall::NR_DUP2,
             plan.stderr_source,
@@ -126,7 +136,7 @@ pub(super) unsafe fn child_main(plan: *const ChildPlan) -> ! {
     // third argument is a flag word, not a pointer.
     unsafe {
         issue(
-            &plan,
+            plan,
             stage::CLEAR_CLOEXEC,
             syscall::NR_FCNTL,
             0,
@@ -140,7 +150,7 @@ pub(super) unsafe fn child_main(plan: *const ChildPlan) -> ! {
     // SAFETY: as above, for 1.
     unsafe {
         issue(
-            &plan,
+            plan,
             stage::CLEAR_CLOEXEC,
             syscall::NR_FCNTL,
             1,
@@ -154,7 +164,7 @@ pub(super) unsafe fn child_main(plan: *const ChildPlan) -> ! {
     // SAFETY: as above, for 2.
     unsafe {
         issue(
-            &plan,
+            plan,
             stage::CLEAR_CLOEXEC,
             syscall::NR_FCNTL,
             2,
@@ -175,7 +185,7 @@ pub(super) unsafe fn child_main(plan: *const ChildPlan) -> ! {
     // known to be a directory. `fchdir` takes one descriptor number.
     unsafe {
         issue(
-            &plan,
+            plan,
             stage::CHDIR,
             syscall::NR_FCHDIR,
             plan.working_directory,
@@ -192,14 +202,17 @@ pub(super) unsafe fn child_main(plan: *const ChildPlan) -> ! {
     // Everything at or above 3 except the executable and the exec-status write
     // end. The ranges are the pure `layout.rs` plan, are ascending, are never
     // inverted, and never contain a preserved number.
-    let [first, second, third] = plan.close_ranges;
+    // Borrowed, not copied: a by-value destructuring of the three spans would
+    // be a 72-byte aggregate copy, which is exactly the shape that lowers to a
+    // `memcpy` call in an unoptimised build.
+    let [first, second, third] = &plan.close_ranges;
     // SAFETY: a close range is two descriptor numbers and a zero flag word; no
     // pointer is involved, and `close_span` skips an unused span.
-    unsafe { close_span(&plan, first) };
+    unsafe { close_span(plan, first) };
     // SAFETY: as above, for the second span.
-    unsafe { close_span(&plan, second) };
+    unsafe { close_span(plan, second) };
     // SAFETY: as above, for the third span.
-    unsafe { close_span(&plan, third) };
+    unsafe { close_span(plan, third) };
 
     // ------------------------------------------------------- 5. SETPGID
     //
@@ -210,7 +223,7 @@ pub(super) unsafe fn child_main(plan: *const ChildPlan) -> ! {
 
     // SAFETY: `setpgid(0, 0)` names this process twice by the kernel's
     // "caller" encoding and takes no pointer.
-    unsafe { issue(&plan, stage::SETPGID, syscall::NR_SETPGID, 0, 0, 0, 0, 0, 0) };
+    unsafe { issue(plan, stage::SETPGID, syscall::NR_SETPGID, 0, 0, 0, 0, 0, 0) };
 
     // ----------------------------------------------------- 6. SIGACTION
     //
@@ -232,7 +245,7 @@ pub(super) unsafe fn child_main(plan: *const ChildPlan) -> ! {
             // which the call validates.
             unsafe {
                 issue(
-                    &plan,
+                    plan,
                     stage::SIGACTION,
                     syscall::NR_RT_SIGACTION,
                     signal,
@@ -259,7 +272,7 @@ pub(super) unsafe fn child_main(plan: *const ChildPlan) -> ! {
     // pointer.
     unsafe {
         issue(
-            &plan,
+            plan,
             stage::SIGMASK,
             syscall::NR_RT_SIGPROCMASK,
             syscall::SIG_SETMASK,
@@ -280,7 +293,7 @@ pub(super) unsafe fn child_main(plan: *const ChildPlan) -> ! {
     // none of which the kernel reads as a pointer.
     unsafe {
         issue(
-            &plan,
+            plan,
             stage::NO_NEW_PRIVS,
             syscall::NR_PRCTL,
             syscall::PR_SET_NO_NEW_PRIVS,
@@ -308,7 +321,7 @@ pub(super) unsafe fn child_main(plan: *const ChildPlan) -> ! {
     // either returns or ends this process, and it is compiled only into a
     // debug build with the non-default feature enabled.
     unsafe {
-        super::injection::before_exec(&plan)
+        super::injection::before_exec(plan)
     };
 
     // SAFETY: `executable` is the parent's relocated copy of the admitted
@@ -320,7 +333,7 @@ pub(super) unsafe fn child_main(plan: *const ChildPlan) -> ! {
     // descriptor itself the executed object.
     unsafe {
         issue(
-            &plan,
+            plan,
             stage::EXEC,
             syscall::NR_EXECVEAT,
             plan.executable,
@@ -407,7 +420,7 @@ unsafe fn issue(
 ///
 /// As [`issue`].
 #[inline(always)]
-unsafe fn close_span(plan: &ChildPlan, span: CloseSpan) {
+unsafe fn close_span(plan: &ChildPlan, span: &CloseSpan) {
     if span.used == 0 {
         return;
     }
