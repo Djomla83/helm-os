@@ -1,21 +1,27 @@
-# helm-launch (experimental 0.1) — P1 portable model + P2 capability admission
+# helm-launch (experimental 0.1) — P1 portable model + P2 capability admission + P3 internal backend
 
-> **P1 AND P2 IMPLEMENTATION ONLY.**
+> **P1, P2 AND P3 IMPLEMENTATION.**
 >
-> **NO EXECUTION BACKEND EXISTS.**
+> **THERE IS NO PUBLIC `launch()` API.** No public function, type or constant of this crate can
+> create a process, on any platform.
 >
-> **NO PROCESS CAN BE CREATED OR EXECUTED BY THIS CRATE.**
+> **P3 DOES CREATE AND EXECUTE ONE PROCESS, INTERNALLY.** On Linux x86_64 a **crate-private**
+> backend consumes an `AuthorizedLaunch`, creates one direct child with `clone3(CLONE_PIDFD)` and
+> attempts `execveat` on the exact admitted descriptor. It is not reachable from outside the crate.
 >
-> **`AuthorizedLaunch` NOW EXISTS AND CANNOT BE EXECUTED**, because `launch()` does not exist.
+> **`unsafe` EXISTS, AND ONLY UNDER `src/backend/`.** The crate root still denies it
+> (`#![deny(unsafe_code, unsafe_op_in_unsafe_fn)]`); exactly one scoped `#![allow(unsafe_code)]`
+> sits at the backend module boundary.
 >
-> **NO `unsafe` CODE.** The crate root denies it (`#![deny(unsafe_code, unsafe_op_in_unsafe_fn)]`),
-> and no `allow` of either lint exists.
+> **NO PROCESS-GROUP SWEEP. NO RUN TIMEOUT, `SIGTERM` OR GRACE PERIOD. NO STREAM DRAIN POLICY.
+> NO RECEIPT FROM A REAL LAUNCH. NO SANDBOX, NO CONTAINMENT, NO WINE, NO EXEC-SUCCESS CLAIM.**
 
 | Slice | State |
 |---|---|
 | **P1 — portable model** | **ACCEPTED** 2026-09-17 ([decision](../../docs/DECISIONS.md#helm-launch-p1-accepted)), independently reviewed (0 BLOCKER, 0 IMPORTANT), green three-platform CI |
-| **P2 — capability admission** | **AUTHORISED** 2026-09-18 ([decision](../../docs/DECISIONS.md#helm-launch-p2-authorised)); this tree is an **implemented candidate, not yet product-accepted and not yet independently reviewed** |
-| **P3, P4, P5** | **NOT AUTHORISED** |
+| **P2 — capability admission** | **ACCEPTED** 2026-09-18 ([decision](../../docs/DECISIONS.md#helm-launch-p2-accepted)), independently reviewed (0 BLOCKER, 0 IMPORTANT), green Linux runtime gate |
+| **P3 — unsafe backend and child contract** | **AUTHORISED** 2026-09-18 ([decision](../../docs/DECISIONS.md#helm-launch-p3-authorised)); this tree is an **IMPLEMENTED CANDIDATE, NOT YET PRODUCT-ACCEPTED** and **not yet independently reviewed**. One fresh independent **unsafe** review is the next gate |
+| **P4, P5** | **NOT AUTHORISED** |
 | helm-launch 0.1 complete module | **NOT YET PRODUCT-ACCEPTED** |
 
 `crates/helm-launch` implements the accepted [ADR-0024](../../docs/adr/ADR-0024-launch-authority.md)
@@ -23,10 +29,8 @@ and the owner-reviewed [productization plan](../../docs/implementation/HELM-LAUN
 one owner-authorised slice at a time. Schema, API and limits are experimental and unstabilised;
 `publish = false`; this is not a release.
 
-This edition of the README resolves independent-review finding **P1-DOC-02**: the stale
-"not independently reviewed" sentence is replaced by the per-slice review state in the table above,
-and the receipt section now states per-kind field presence exactly. **P1-TEST-01 remains open**: it
-concerns the plan parser's escaped duplicate-key vector, which P2 does not touch.
+**P1-TEST-01 remains open**: it concerns the plan parser's escaped duplicate-key vector, which
+neither P2 nor P3 touches.
 
 ## What exists
 
@@ -44,6 +48,7 @@ concerns the plan parser's escaped duplicate-key vector, which P2 does not touch
 | `admit_working_directory` → `WorkingDirectoryCapability` | **Linux x86_64 only** | admits one already-open directory with a caller-supplied logical identifier |
 | `authorize` → `AuthorizedLaunch` | **Linux x86_64 only** | composes a validated plan with both capabilities, with **zero I/O** |
 | `MAX_EXECUTABLE_BYTES` | **Linux x86_64 only** | the accepted 512 MiB admission bound |
+| the process-creation backend (**crate-private**) | **Linux x86_64 only** | consumes an `AuthorizedLaunch`, creates one direct child and attempts one execution. **Not public, not re-exported, not reachable from outside the crate** |
 
 Off the Linux x86_64 cohort the six P2 names **do not exist in the public API** and are not stubbed;
 `compile_fail` doctests in the crate root prove that on every non-cohort platform, and a sibling
@@ -57,11 +62,15 @@ untrusted bytes            --parse_launch_plan-------▶ ValidatedLaunchPlan    
 caller-owned executable fd --admit_executable--------▶ ExecutableCapability
 caller-owned cwd fd + id   --admit_working_directory-▶ WorkingDirectoryCapability
 plan + executable + cwd    --authorize---------------▶ AuthorizedLaunch
-AuthorizedLaunch           --╳-----------------------▶ process
+AuthorizedLaunch           --╳-----------------------▶ process     public API
+AuthorizedLaunch           --crate-private backend---▶ process     P3, internal only
 ```
 
-**The last edge does not exist.** No function consumes an `AuthorizedLaunch`, because `launch` does
-not exist on any platform. An `AuthorizedLaunch` is an inert in-process value.
+**The public edge does not exist.** No public function consumes an `AuthorizedLaunch`: `launch`
+does not exist on any platform, and the only consumer that can turn one into a process is
+`pub(crate)`. An `AuthorizedLaunch` an external caller holds is inert, and `compile_fail` doctests
+in the crate root prove exactly that — that `helm_launch::backend::launch_minimal` is unnameable,
+that `AuthorizedLaunch::into_parts` is unreachable, and that no capability hands out a descriptor.
 
 * Execution authority is **an already-open descriptor a trusted caller moves in by value**. It is
   never a pathname, a name, a verdict or a document field. The product API takes no path, resolves
@@ -132,13 +141,61 @@ descriptors; no refused value hands authority back. On success the plan and both
 in **unchanged**: nothing is re-measured, reopened, re-resolved or stat-ed, and no binding context
 is inspected.
 
+## P3 — the internal Linux x86_64 backend
+
+`src/backend/` is compiled only under `cfg(all(target_os = "linux", target_arch = "x86_64"))`, is a
+**private** module, and is re-exported nowhere.
+
+**Parent preparation, before any child exists.** argv `CString`s and the null-terminated pointer
+array; `envp = [NULL]`; four close-on-exec pipes (stdin, stdout, stderr, exec status); unconditional
+`F_DUPFD_CLOEXEC` relocation of all six child-side descriptors to at least 3; the pure close-range
+plan; non-blocking parent read ends. A failure here creates **no child**, and every descriptor
+closes by `OwnedFd` drop.
+
+**The clone window.** One raw `rt_sigprocmask(SIG_SETMASK, full kernel set)` on the calling thread —
+the full set, including glibc's two internal real-time signals, which `sigfillset` omits and
+`pthread_sigmask` strips; then `clone3` with **exactly** `CLONE_PIDFD` and `exit_signal = SIGCHLD`;
+then, as the **first system call after the clone**, `setpgid(child, child)`; then the mask restore.
+`SIGKILL` and `SIGSTOP` are never claimed blockable — the kernel removes them from any mask.
+
+**The closed child sequence**, in this order and no other: `DUP2` ×3, `CLEAR_CLOEXEC` ×3, `CHDIR`,
+`CLOSE_RANGE` ≤3, `SETPGID`, `SIGACTION` ×62, `SIGMASK`, `NO_NEW_PRIVS`, `EXEC`. The child computes
+nothing: every number, address and byte was prepared by the parent and travels in one `repr(C)`,
+`Copy`, `needs_drop == false` `ChildPlan`. It allocates nothing, locks nothing, formats nothing,
+prints nothing, panics never and runs no destructor, and it exits only by a successful `execveat` or
+by one 8-byte record followed by `exit_group(127)`.
+
+**Exec status.** Exactly 8 bytes: `[stage, 0, 0, 0, errno little-endian]`. An explicit record is a
+`pre_exec_failure`; **a clean end-of-file with no record is `indeterminate`** — that is what a child
+killed after its last setup stage shows, so it is never read as exec success. No `ExecSucceeded`
+value exists anywhere in the crate.
+
+**Group authority without a sweep.** A successful parent `setpgid(child, child)` is recorded as a
+boolean for a future slice. P3 issues **no** `kill(-pid, …)` and no other negative-pid signal; a
+boundary test and a traced test both fail if one appears.
+
+**The only two fixed bounds** are `SPAWN_CONFIRM_TIMEOUT_MS = 5000` and `POST_KILL_REAP_MS = 5000`.
+They are the pre-exec bound and the bound on the non-blocking reap after the one direct-child
+`SIGKILL` that a pre-exec timeout or bounded cleanup may send. They are **not** run-timeout
+semantics: `plan.timeout_ms`, `SIGTERM`, `grace_ms` and a drain deadline are not executed anywhere.
+
+**The unsafe surface is six operations**, each in its own block with its own `// SAFETY:` comment:
+the two raw `rt_sigprocmask` calls, raw `clone3`, `OwnedFd::from_raw_fd(pidfd)` immediately after it,
+the crossing into the child entry with the prepared plan pointer, the raw child syscalls, and the one
+`core::arch::asm!` shim. Everything else the parent does goes through a safe `rustix` wrapper.
+Forbidden even inside the backend: any other foreign interface, `libc::syscall`, `fork`, `vfork`,
+`CLONE_VM`, `CLONE_VFORK`, `CLONE_FILES`, `CLONE_THREAD`, `pidfd_open`, `mmap`, `transmute`,
+`static mut`, `std::process::Command`, `/proc/self/fd` execution, `fexecve` and pathname `execve`.
+
 ## Non-claims
 
-* **No process creation and no process execution.** Nothing in this crate can create, signal, wait
-  for or reap a process. `LaunchOutcome`, `launch`, a `backend` directory, `clone3`, `execveat`,
-  pidfd acquisition or signalling, `waitid`, `close_range`, `fchdir`, `PR_SET_NO_NEW_PRIVS`, child
-  pipes, timeouts and a polling lifecycle all do not exist, and a boundary test fails on any of
-  their vocabulary appearing as code.
+* **No public process creation and no public process execution.** The P3 backend creates one direct
+  child internally and attempts one execution of the admitted descriptor. Nothing public reaches it:
+  `launch`, `LaunchOutcome`, a process handle, a pidfd, a child pid and a raw descriptor are all
+  absent from the public API, and boundary tests plus `compile_fail` doctests fail on any of them
+  appearing.
+* **No exec-success claim.** A clean exec-status end-of-file is `indeterminate`. Nothing in the
+  crate derives, infers or reports that a program ran.
 * **Measurement is a pre-execution measurement of the pinned object.** It is **not** the identity
   of bytes that executed, and says nothing about an ELF interpreter, a shared library or any other
   part of a loaded-code closure. The descriptor pins the inode; it does not freeze the contents.
@@ -237,51 +294,87 @@ data, not records of any launch, and not authentic.**
 
 ## Dependencies
 
-`serde`, `serde_json` and `sha2` on every platform. On the Linux x86_64 cohort only,
-`rustix = "=1.1.4"` — the pin `helm-observe` already uses — with `default-features = false` and
-only `std` and `fs` enabled. `process`, `pipe`, `event` and `thread` are deliberately **not**
-enabled: a feature is not enabled before the slice that needs it, and no such slice is authorised.
-There is **no direct `libc` dependency**, no build script and no new package or version in
-`Cargo.lock`.
+`serde`, `serde_json` and `sha2` on every platform. On the Linux x86_64 cohort only:
 
-Every operating-system call goes through a safe `rustix` wrapper — `F_GETFL`, `fstat` and `pread` —
-and no code manipulates a raw descriptor number.
+* `rustix = "=1.1.4"` — the pin `helm-observe` already uses — with `default-features = false` and
+  `std`, `fs`, `process` and `pipe` enabled. **`event` is deliberately not enabled**: the `poll`
+  observation loop that would need it belongs to P4, which is not authorised. Neither are `thread`,
+  `mm`, `net` or `runtime`.
+* `libc = "=0.2.189"` — the version already locked and vetted here — **for constants only**. Every
+  syscall number, signal number, clone flag and ABI constant is written as the literal the Linux
+  x86_64 UAPI defines and then pinned against the `libc` constant of the same name in a `const`
+  assertion, so a wrong number is a compile error rather than a wrong system call. No `libc`
+  function is called, `libc::syscall` is not used, and **no `extern` block exists anywhere in the
+  crate**.
+
+No build script, and exactly one new line in `Cargo.lock`: `libc` joining `helm-launch`'s dependency
+list. No package and no version was added.
+
+One non-default feature, `test-fault-injection`, exists for the S5 and S6 tests. It is gated on the
+feature **and** on `debug_assertions`, so no release build contains injection even if the feature is
+enabled by accident, and a CI step greps the release artifact for a marker to prove it.
+
+Outside the six authorised unsafe operations, every operating-system call goes through a safe
+`rustix` wrapper: `F_GETFL`, `F_SETFL`, `F_DUPFD_CLOEXEC`, `fstat`, `pread`, `read`, `pipe2`,
+`setpgid`, `waitid(P_PIDFD, WEXITED | WNOHANG)` and `pidfd_send_signal`.
 
 ## Lint policy
 
 The crate does **not** inherit the workspace lint table (plan section 7.4, ADR-0024 section E).
 Its manifest restates every workspace lint — `clippy::unwrap_used`, `clippy::expect_used` and
 `clippy::panic` as `deny` — and adds `unsafe_op_in_unsafe_fn`,
-`clippy::undocumented_unsafe_blocks` and `clippy::multiple_unsafe_ops_per_block`. The one
-accepted difference is `unsafe_code = "deny"` instead of `forbid`, in the manifest and restated at
-the crate root as `#![deny(unsafe_code, unsafe_op_in_unsafe_fn)]`, because only `deny` leaves room
-for the one scoped `allow` that a later, separately authorised backend slice may need. No such
-slice is authorised and no such `allow` exists.
+`clippy::undocumented_unsafe_blocks` and `clippy::multiple_unsafe_ops_per_block`. The one accepted
+difference is `unsafe_code = "deny"` instead of `forbid`, in the manifest and restated at the crate
+root as `#![deny(unsafe_code, unsafe_op_in_unsafe_fn)]`, because only `deny` leaves room for the one
+scoped `allow`.
 
-`tests/p2_boundary.rs` fails on any drift of either table, on a crate root that does not deny both
-lints or that forbids, on either lint named anywhere else in `src/`, on any other workspace member
-that stops inheriting the workspace lints, on the `unsafe` token appearing anywhere in `src/` or
-`tests/`, on any module beyond the seven, on product code that relaxes the panic-free lints, on
-process, foreign-interface or raw-descriptor vocabulary used as code, on product code naming a
-pathname API or host state, on any module other than `src/authority.rs` naming a descriptor, on a
-P2 surface not gated by exactly `cfg(all(target_os = "linux", target_arch = "x86_64"))`, on a
-changed admission constant, on a capability type gaining a derive, and on any dependency or
-lockfile drift.
+**That `allow` is now active, and only there.** `src/backend/mod.rs` carries
+`#![allow(unsafe_code)]` as an inner attribute, so it covers that module and its descendants and
+nothing else. The same module re-denies the backend discipline:
+`clippy::indexing_slicing`, `clippy::arithmetic_side_effects`, `clippy::as_conversions`,
+`clippy::missing_safety_doc`, `clippy::undocumented_unsafe_blocks`,
+`clippy::multiple_unsafe_ops_per_block` and `unsafe_op_in_unsafe_fn`. So inside the one module that
+talks to the kernel directly there is no indexing, no unchecked arithmetic, no `as` cast, no
+undocumented unsafe block and no block holding two unsafe operations.
+
+`tests/p2_boundary.rs` fails on any drift of either manifest table, on a crate root that does not
+deny both lints or that forbids, on either lint named as code in the portable or authority sources,
+on any other workspace member that stops inheriting the workspace lints, on the `unsafe` token
+appearing anywhere in those sources, on any module beyond the eight, on product code that relaxes
+the panic-free lints, on process, foreign-interface or raw-descriptor vocabulary used as code
+outside the backend, on product code naming a pathname API or host state, on any portable module
+naming a descriptor, on a P2 or P3 surface not gated by exactly
+`cfg(all(target_os = "linux", target_arch = "x86_64"))`, on a changed admission constant, on a
+capability type gaining a derive, and on any dependency or lockfile drift.
+
+`tests/p3_boundary.rs` walks the tree rather than a fixed list, so a **new** file cannot escape it.
+It fails on a source or test file the inventory does not name, on the `unsafe` token as code outside
+`src/backend/`, on a second scoped `allow` anywhere, on any test source relaxing the lint, on a
+second `asm!`, on the shim claiming `nomem`, `preserves_flags` or `readonly` or failing to declare
+`rcx` and `r11` clobbered, on the child file losing `#![no_implicit_prelude]` or naming anything
+that allocates, locks, formats, prints or panics, on the child stage order changing, on a `libc`
+mention outside a `const` assertion, on a forbidden clone flag, on a procfs path, on any `kill` or
+group signal, on `std::process::Command` in backend product code, on a fault-injection `cfg` without
+`debug_assertions`, on a bare `pub` item in the backend, and on a P4 name appearing.
+
+`tools/tests/test_helm_launch_confinement.py` asserts the same confinement facts a second time, in a
+second language, without `cargo`.
 
 ## Accepted future behaviour — NOT IMPLEMENTED
 
-ADR-0024 accepts, as architecture only, a Linux x86_64 backend that would create one direct child
-with `clone3(CLONE_PIDFD)`, execute the exact admitted descriptor with `execveat`, keep exactly
-descriptors 0–2, observe the child through a pidfd, and emit a receipt. **None of that exists in
-this crate.** The receipt vocabulary and the pure layout and lifecycle models describe that
-contract so it can be tested before any backend exists; they observe nothing and execute nothing.
-Implementing any of it needs a new explicit owner decision, and the accepted `unsafe` exception
-stays reserved for that slice and is **not active**.
+ADR-0024 also accepts, as architecture only, the lifecycle that P4 would add: a public `launch`, a
+`LaunchOutcome`, an observation loop over the status channel, the two streams and the pidfd, the
+plan-driven run deadline with `SIGTERM` and its grace period, a general drain policy, the guarded
+every-path process-group `SIGKILL` sweep, and a receipt emitted from a real launch. **None of that
+exists in this crate.** The receipt vocabulary and the pure layout and lifecycle models describe the
+contract so it can be tested before the loop exists; they observe nothing and execute nothing.
+Implementing any of it needs a new explicit owner decision. P4 and P5 are **not authorised**.
 
 ## Testing
 
 ```text
 cargo test -p helm-launch --locked
+cargo test -p helm-launch --locked --features test-fault-injection
 cargo clippy -p helm-launch --all-targets --all-features --locked -- -D warnings
 ```
 
@@ -301,6 +394,40 @@ the unchanged shared file offset; recorded mode bits; identifier grammar, `NotDi
 irrelevance; descriptor discipline across many refusals; and the detected-instability rule for each
 observed field through a `cfg(test)`-only internal seam that no release build contains.
 
-**No test executes an admitted object**, invokes `launcher_spike` or any helper ELF, or creates a
-process: the crate has no function that could. These are ordinary product tests, not LAUNCH-EXEC-01
-cases, not a formal trial and not D-7 activity.
+The P3 backend tests are **unit** tests in `src/backend/tests.rs`, because the P3 surface is
+crate-private on purpose and must stay so. On Linux x86_64 they cover: the `clone_args` and kernel
+`sigaction` ABI records, field by field; the full blocked mask, including the two signal numbers
+glibc keeps to itself; the stage vocabulary and the 8-byte record, including every malformed shape;
+descriptor isolation (an unrelated close-on-exec descriptor, an unrelated one **without**
+close-on-exec, the caller's own executable descriptor, and an executed image that holds exactly
+`{0, 1, 2}`); argv with spaces, shell metacharacters, a newline, an empty element and an arbitrary
+`argv[0]`; an executed image that observes an **empty** environment while the launcher has `PATH`
+set; the admitted working directory by `(st_dev, st_ino)`; `NoNewPrivs: 1` with a control that the
+launching process has 0; exec failures `EACCES`, `ENOEXEC` and `ETXTBSY`, and `CHDIR: EACCES`;
+execution of the admitted **descriptor** after its pathname is unlinked and replaced; the direct
+child's identity, the closed stdin pipe and the carried-through P2 measurement; and, under the
+non-default feature, S5 (death before exec with no record → indeterminate, never success), S6
+(pre-exec stall → fixed bound, one pidfd `SIGKILL`, bounded reap, no zombie) and every child stage's
+structured failure path.
+
+Two tracer tests run a purpose-built launcher test process under `strace -f` — once from a
+single-threaded parent, once from a parent with three threads actively allocating, and once with a
+registered `pthread_atfork` handler preloaded — and assert: exactly one `clone3` carrying
+`CLONE_PIDFD` and not `CLONE_THREAD` (the Rust test harness clones threads with `clone3` too, which
+is the Trial #2 M2 confusion this filter exists to avoid); no `pidfd_open`; the full-set
+`rt_sigprocmask` immediately before the clone; `setpgid(child, child)` as the **first** call after
+it; the restore after that; `waitid` by `P_PIDFD` only; **no process-group signal anywhere**; the
+child window containing only the permitted syscall set; the exact stage order with `fchdir` before
+the first `close_range`; and an `execveat` with `AT_EMPTY_PATH`, an empty pathname and no procfs.
+A missing `strace`, `rustc` or `cc` is a **test environment failure** with an explicit message,
+never a silent skip.
+
+**These tests do create and execute processes**, which is the newly authorised P3 capability and
+ordinary validation of it. Every fixture is newly written here and compiled by `rustc` at test time,
+and every report fixture passes a **producer self-test** — run directly through
+`std::process::Command`, parsed, and its marker checked to name the intended fixture — before any
+launcher test consumes its report. That is the Trial #3 X2c rule. No `launcher_spike`, no frozen
+Python runner, no frozen helper ELF and no LAUNCH-EXEC-01 asset is used or built. This is **not**
+Trial #3, **not** a Trial #4 and **not** D-7 activity.
+
+The P2 admission tests still execute nothing.

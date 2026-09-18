@@ -1,11 +1,25 @@
-//! P2 boundary inspection: lint-policy drift, source confinement, platform
-//! gating and manifest scope. Every inspected file is embedded at compile time
-//! with `include_str!`, so these tests read nothing at run time and run
-//! identically on every platform. They execute nothing.
+//! P1 and P2 boundary inspection: lint-policy drift, source confinement,
+//! platform gating and manifest scope. Every inspected file is embedded at
+//! compile time with `include_str!`, so these tests read nothing at run time and
+//! run identically on every platform. They execute nothing.
 //!
 //! The scans distinguish **product code** from the `cfg(test)` region of the
 //! same file. Product code may not name host state, a pathname API or any
 //! process vocabulary; test code is the trusted caller and may build fixtures.
+//!
+//! # Scope after P3
+//!
+//! The inspected set below is the **portable and authority** source of P1 and
+//! P2. It deliberately excludes `src/backend/`, which the owner authorised for
+//! process creation and scoped `unsafe` in P3: the claims this file makes —
+//! that the sources it scans contain no `unsafe` token at all and name no
+//! process, foreign-interface or raw-descriptor vocabulary — stay exactly as
+//! strong for them as they were.
+//!
+//! `tests/p3_boundary.rs` makes the crate-wide claims instead: that `unsafe`
+//! appears **only** under `src/backend/`, that the one scoped
+//! `#![allow(unsafe_code)]` is at that boundary and nowhere else, that the
+//! child window's vocabulary is closed, and that no backend item is public.
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -407,11 +421,10 @@ fn lint_policy_restates_every_workspace_lint_without_weakening() {
 #[test]
 fn the_crate_root_denies_rather_than_forbids_the_unsafe_lints() {
     // Plan 7.4 restates the policy in source as `deny`, not `forbid`: only
-    // `deny` leaves room for a scoped `allow` in a later, separately authorised
-    // slice. P1 and P2 authorise none, so no `allow` may exist, and with the
-    // token absent from `src/` entirely
-    // (`the_source_contains_no_unsafe_token_anywhere`) both slices have zero
-    // such code.
+    // `deny` leaves room for the one scoped `allow` the owner authorised for
+    // `src/backend/` in P3. In the portable and authority sources scanned here
+    // no `allow` may exist, and the token is absent from them entirely
+    // (`the_portable_and_authority_sources_contain_no_unsafe_token_anywhere`).
     let root: String = strip(source("src/lib.rs")).split_whitespace().collect();
     assert!(
         root.contains("#![deny(unsafe_code,unsafe_op_in_unsafe_fn)]"),
@@ -423,9 +436,10 @@ fn the_crate_root_denies_rather_than_forbids_the_unsafe_lints() {
             .any(|t| t == "forbid"),
         "the crate root must deny, not forbid"
     );
-    // Each lint is named as code exactly once in all of `src/`: in that root
-    // `deny`. No `forbid`, `allow`, `expect` or `warn` of either exists, even
-    // through `cfg_attr`.
+    // Across the portable and authority sources each lint is named as code
+    // exactly once: in that root `deny`. No `forbid`, `allow`, `expect` or
+    // `warn` of either exists in them, even through `cfg_attr`.
+    // `tests/p3_boundary.rs` bounds where the backend may name them.
     for lint in ["unsafe_code", "unsafe_op_in_unsafe_fn"] {
         let named: Vec<&str> = SOURCES
             .iter()
@@ -498,14 +512,36 @@ fn every_other_member_still_inherits_the_workspace_lints() {
 // ------------------------------------------------------------- confinement
 
 #[test]
-fn the_source_contains_no_unsafe_token_anywhere() {
+fn the_portable_and_authority_sources_contain_no_unsafe_token_anywhere() {
+    // The strongest possible form for these files: not as code, not in a
+    // string, not even in a comment.
+    //
+    // The crate root is the one exception, and only in prose: after P3 it has
+    // to say where the scoped exception lives and that nothing public reaches
+    // it. For the root the claim is therefore the code-level one, which is what
+    // actually matters. `tests/p3_boundary.rs` proves the crate-wide form:
+    // the token appears as code only under `src/backend/`.
+    // Two files describe the rule in prose and are therefore held to the
+    // code-level form of it instead: the crate root, which has to say where the
+    // scoped exception lives and that nothing public reaches it, and this file,
+    // which explains the rule it enforces.
+    const DESCRIBES_THE_RULE: [&str; 2] = ["src/lib.rs", "tests/p2_boundary.rs"];
     let word = ["un", "safe"].concat();
     for (name, source) in SOURCES.iter().chain(TESTS.iter()) {
+        if DESCRIBES_THE_RULE.contains(name) {
+            assert!(
+                !code_tokens(source).contains(&word),
+                "{name} uses the {word} token as code"
+            );
+            continue;
+        }
         assert!(
             !raw_words(source).any(|w| w == word),
             "{name} contains the {word} token (comments included)"
         );
     }
+    // The scan is real: the crate root does describe the exception in prose.
+    assert!(raw_words(source("src/lib.rs")).any(|w| w == word));
 }
 
 #[test]
@@ -519,6 +555,7 @@ fn the_crate_declares_exactly_the_p2_modules() {
         .collect();
     let expected: BTreeSet<&str> = [
         "authority",
+        "backend",
         "error",
         "layout",
         "lifecycle",
@@ -547,12 +584,38 @@ fn the_crate_declares_exactly_the_p2_modules() {
         ] {
             assert!(!code.contains(forbidden), "{name} uses {forbidden}");
         }
-        // The backend directory of a later, unauthorised slice — the one that
-        // would hold code this crate's lint table denies — is neither declared
-        // nor reachable: the module set above is exact, and no file names it.
-        assert!(!source.contains("mod backend"), "{name} declares a backend");
-        assert!(!source.contains("backend/"), "{name} names a backend path");
+        // Only the crate root may declare or reach the backend module. The
+        // check is on the module, not on the word: `Backend` is also an
+        // accepted P1 receipt fact, and `ReceiptRecord` carries it.
+        if name != "src/lib.rs" {
+            let code: String = strip(source).split_whitespace().collect();
+            assert!(
+                !code.contains("modbackend"),
+                "{name} declares the backend module"
+            );
+            assert!(
+                !code.contains("backend::"),
+                "{name} reaches into the backend module"
+            );
+            assert!(
+                !code.contains("crate::backend"),
+                "{name} names the backend module"
+            );
+        }
     }
+    // The crate root declares it exactly once, privately, and re-exports
+    // nothing from it.
+    let root: String = strip(lib).split_whitespace().collect();
+    assert_eq!(root.matches("modbackend;").count(), 1);
+    assert!(
+        !root.contains("pubmodbackend"),
+        "the backend module is public"
+    );
+    assert!(
+        !root.contains("pubusebackend"),
+        "a backend item is re-exported"
+    );
+    assert!(!root.contains("pub(crate)usebackend"));
 }
 
 // --------------------------------------------------------- platform gating
@@ -579,10 +642,10 @@ fn every_p2_surface_is_gated_by_exactly_the_linux_x86_64_cohort() {
     for (name, source) in SOURCES {
         let occurrences = source.matches("target_os").count();
         let allowed = match name {
-            // The crate root: the module gate, the re-export gate and the two
-            // `cfg_attr` documentation blocks that prove presence off and on
-            // the cohort.
-            "src/lib.rs" => 4,
+            // The crate root: the authority module gate, the backend module
+            // gate, the re-export gate and the two `cfg_attr` documentation
+            // blocks that prove presence off and on the cohort.
+            "src/lib.rs" => 5,
             // The module's own documentation states its gate in prose only.
             "src/authority.rs" => 1,
             _ => 0,
@@ -634,9 +697,13 @@ fn the_crate_root_proves_the_off_cohort_absence_of_every_p2_name() {
 
 // ------------------------------------------------------------- vocabulary
 
-/// Vocabulary that must not appear as code anywhere in the crate, product code
-/// and test code alike: foreign interfaces, raw descriptor numbers, process
-/// creation, signals, waiting, and the surfaces of later, unauthorised slices.
+/// Vocabulary that must not appear as code in the **portable and authority**
+/// sources or their tests, product code and test code alike: foreign
+/// interfaces, raw descriptor numbers, process creation, signals, waiting, and
+/// the surfaces of later, unauthorised slices.
+///
+/// `src/backend/` is authorised for exactly this vocabulary and is outside the
+/// scanned set; `tests/p3_boundary.rs` bounds it there instead.
 const FORBIDDEN_EVERYWHERE: &[&str] = &[
     // Foreign interfaces and low-level code.
     "extern",
@@ -693,7 +760,8 @@ const FORBIDDEN_EVERYWHERE: &[&str] = &[
     "pipe2",
     "poll",
     "launcher_spike",
-    // Surfaces of later slices that are not authorised.
+    // Surfaces of later slices that are not authorised, and of the one that
+    // is authorised but must stay inside `src/backend/`.
     "launch",
     "launch_minimal",
     "LaunchOutcome",
@@ -768,7 +836,7 @@ const AUTHORITY_ONLY: &[&str] = &[
 ];
 
 #[test]
-fn forbidden_vocabulary_appears_nowhere_in_the_crate() {
+fn forbidden_vocabulary_appears_nowhere_outside_the_backend() {
     for (name, source) in SOURCES.iter().chain(TESTS.iter()) {
         for token in code_tokens(source) {
             assert!(
@@ -985,7 +1053,7 @@ fn no_capability_type_derives_a_forbidden_trait() {
 // ------------------------------------------------------------ manifest scope
 
 #[test]
-fn dependencies_are_exactly_the_p2_set() {
+fn dependencies_are_exactly_the_p3_set() {
     let krate = tables(CRATE_MANIFEST);
     let deps: BTreeMap<&str, &str> = krate["dependencies"]
         .iter()
@@ -997,28 +1065,60 @@ fn dependencies_are_exactly_the_p2_set() {
             ("serde", "=1.0.228"),
             ("serde_json", "=1.0.149"),
             ("sha2", "=0.10.9")
-        ])
+        ]),
+        "the portable dependency set must not change"
     );
 
-    // P2 adds exactly one cohort-gated dependency, at the repository-vetted
-    // pin, with default features off and only the safe features it needs. The
-    // same line appears once as a dependency and once as a dev-dependency.
-    let pinned =
-        r#"rustix = { version = "=1.1.4", default-features = false, features = ["std", "fs"] }"#;
+    // Exactly two cohort-gated packages, both at the repository-vetted pins,
+    // with default features off. The same `rustix` line appears once as a
+    // dependency and once as a dev-dependency.
+    let pinned = concat!(
+        r#"rustix = { version = "=1.1.4", default-features = false, "#,
+        r#"features = ["std", "fs", "process", "pipe"] }"#
+    );
     assert_eq!(CRATE_MANIFEST.matches(pinned).count(), 2);
+    assert_eq!(
+        CRATE_MANIFEST
+            .matches(r#"libc = { version = "=0.2.189", default-features = false }"#)
+            .count(),
+        1,
+        "libc must be declared exactly once, cohort-gated, as a constants-only dependency"
+    );
     let gate = format!("[target.'{COHORT}'.dependencies]");
     let dev_gate = format!("[target.'{COHORT}'.dev-dependencies]");
     assert!(CRATE_MANIFEST.contains(&gate), "missing {gate}");
     assert!(CRATE_MANIFEST.contains(&dev_gate), "missing {dev_gate}");
-    for feature in ["process", "pipe", "event", "thread", "mm", "net", "runtime"] {
+
+    // `event` stays off: the poll observation loop that would need it is P4's,
+    // which is not authorised. So do the other unneeded feature groups.
+    for feature in ["event", "thread", "mm", "net", "runtime", "use-libc"] {
         assert!(
             !CRATE_MANIFEST.contains(&format!("\"{feature}\"")),
             "rustix feature {feature} must not be enabled"
         );
     }
 
-    // No other target table, no build script, no feature table, and no direct
-    // libc dependency.
+    // Exactly one feature, non-default and empty, and no build script.
+    let features = krate
+        .get("features")
+        .expect("the test-only injection feature must be declared");
+    assert_eq!(
+        features.keys().collect::<Vec<&String>>(),
+        vec!["test-fault-injection"],
+        "an unexpected feature was declared"
+    );
+    assert!(
+        CRATE_MANIFEST.contains("test-fault-injection = []"),
+        "the injection feature must enable nothing else"
+    );
+    assert!(
+        !CRATE_MANIFEST.contains(
+            "[features]
+default"
+        ),
+        "a default feature set appeared"
+    );
+
     let target_tables: Vec<&String> = krate
         .keys()
         .filter(|table| table.starts_with("target"))
@@ -1030,7 +1130,7 @@ fn dependencies_are_exactly_the_p2_set() {
     );
     for table in krate.keys() {
         assert!(
-            !table.contains("build-dependencies") && !table.contains("features"),
+            !table.contains("build-dependencies"),
             "unexpected manifest table [{table}]"
         );
     }
@@ -1040,47 +1140,82 @@ fn dependencies_are_exactly_the_p2_set() {
     assert_eq!(package["edition"], "2024");
     assert_eq!(package["rust-version"], "1.95");
     assert_eq!(package["publish"], "false");
-    assert!(
-        !CRATE_MANIFEST.contains("libc ="),
-        "a direct libc dependency"
-    );
     assert!(!CRATE_MANIFEST.contains("build.rs"), "a build script");
-    for (table, entries) in &krate {
-        if table.contains("dependencies") {
-            assert!(!entries.contains_key("libc"), "[{table}] declares libc");
-        }
-    }
+    // `libc` is cohort-gated only: it must never become a portable dependency.
+    assert!(
+        !krate["dependencies"].contains_key("libc"),
+        "libc became a portable dependency"
+    );
 }
 
 #[test]
-fn the_lockfile_entry_has_exactly_the_p2_dependencies() {
+fn the_lockfile_entry_has_exactly_the_p3_dependencies() {
     let start = LOCKFILE.find("name = \"helm-launch\"").unwrap();
     let entry = &LOCKFILE[start..];
-    let entry = &entry[..entry.find("\n\n").unwrap_or(entry.len())];
+    let entry = &entry[..entry
+        .find(
+            "
+
+",
+        )
+        .unwrap_or(entry.len())];
     let deps: Vec<&str> = entry
         .lines()
         .filter(|l| l.starts_with(" \""))
         .map(|l| l.trim().trim_matches([',', '"']))
         .collect();
-    assert_eq!(deps, ["rustix", "serde", "serde_json", "sha2"]);
+    assert_eq!(
+        deps,
+        ["libc", "rustix", "serde", "serde_json", "sha2"],
+        "the lockfile entry changed beyond the one constants-only addition"
+    );
     assert!(entry.contains("version = \"0.1.0\""));
     assert!(
         !entry.contains("source ="),
         "helm-launch must be a local package"
     );
 
-    // The rustix package is the one the repository already vetted for
-    // helm-observe: the same version, so no package or version was added.
+    // The two cohort packages are the ones the repository already vetted: the
+    // same versions, so no package and no version was added.
     let rustix = LOCKFILE
         .find("name = \"rustix\"")
         .map(|at| &LOCKFILE[at..])
         .unwrap();
-    let rustix = &rustix[..rustix.find("\n\n").unwrap_or(rustix.len())];
+    let rustix = &rustix[..rustix
+        .find(
+            "
+
+",
+        )
+        .unwrap_or(rustix.len())];
     assert!(rustix.contains("version = \"1.1.4\""), "{rustix}");
     assert_eq!(
         LOCKFILE.matches("name = \"rustix\"").count(),
         1,
         "a second rustix version entered the lockfile"
     );
-    assert_eq!(LOCKFILE.matches("name = \"libc\"").count(), 1);
+    let pinned_c_bindings = LOCKFILE
+        .find("name = \"libc\"")
+        .map(|at| &LOCKFILE[at..])
+        .unwrap();
+    let pinned_c_bindings = &pinned_c_bindings[..pinned_c_bindings
+        .find(
+            "
+
+",
+        )
+        .unwrap_or(pinned_c_bindings.len())];
+    assert!(
+        pinned_c_bindings.contains("version = \"0.2.189\""),
+        "{pinned_c_bindings}"
+    );
+    assert_eq!(
+        LOCKFILE.matches("name = \"libc\"").count(),
+        1,
+        "a second libc version entered the lockfile"
+    );
+    assert!(
+        !LOCKFILE.contains("name = \"cc\""),
+        "a build-time compiler dependency entered the lockfile"
+    );
 }

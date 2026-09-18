@@ -573,6 +573,73 @@ impl AuthorizedLaunch {
     }
 }
 
+/// What an [`AuthorizedLaunch`] decomposes into for the **crate-private**
+/// backend (**P3**).
+///
+/// This is the first consumer an `AuthorizedLaunch` has ever had. It is not
+/// public and cannot be made public from outside: the type, the method that
+/// produces it and the module that consumes it are all crate-private, and the
+/// backend module is not re-exported. No public function turns an
+/// authorisation into a process, here or anywhere.
+#[cfg_attr(
+    not(test),
+    allow(
+        dead_code,
+        reason = "off the Linux x86_64 cohort no backend exists to consume these parts"
+    )
+)]
+pub(crate) struct AuthorizedParts {
+    /// The validated plan, moved out unchanged.
+    pub(crate) plan: ValidatedLaunchPlan,
+    /// The pre-execution measurement admission recorded, moved out unchanged:
+    /// nothing re-measures, reopens or re-resolves the object.
+    pub(crate) measurement: ExecutableMeasurement,
+    /// The admitted executable descriptor, moved out by value.
+    pub(crate) executable: OwnedFd,
+    /// The admitted working-directory descriptor, moved out by value.
+    pub(crate) working_directory: OwnedFd,
+}
+
+impl AuthorizedLaunch {
+    /// Consume this single-use authorisation into its parts.
+    ///
+    /// Crate-private, and consuming: an authorisation cannot be decomposed
+    /// twice, and nothing is copied, cloned or re-derived. `AuthorizedLaunch`
+    /// has no `Clone`, so this is also the only way its descriptors can ever
+    /// reach a process-creation path.
+    #[cfg_attr(
+        not(test),
+        allow(
+            dead_code,
+            reason = "off the Linux x86_64 cohort no backend exists to consume these parts"
+        )
+    )]
+    pub(crate) fn into_parts(self) -> AuthorizedParts {
+        let Self {
+            plan,
+            executable,
+            working_directory,
+        } = self;
+        let measurement = executable.measurement;
+        let ExecutableCapability {
+            fd: executable,
+            measurement: _,
+            not_sync: _,
+        } = executable;
+        let WorkingDirectoryCapability {
+            fd: working_directory,
+            id: _,
+            not_sync: _,
+        } = working_directory;
+        AuthorizedParts {
+            plan,
+            measurement,
+            executable,
+            working_directory,
+        }
+    }
+}
+
 impl core::fmt::Debug for AuthorizedLaunch {
     /// Inert facts only: no descriptor, number, host path or argument byte.
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {

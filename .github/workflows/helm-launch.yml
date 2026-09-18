@@ -1,23 +1,32 @@
-name: helm-launch portable model and Linux capability admission
+name: helm-launch portable model, Linux capability admission and Linux backend
 
-# helm-launch implements two owner-authorised slices. P1 is a portable, pure
+# helm-launch implements three owner-authorised slices. P1 is a portable, pure
 # model: plan parsing, the receipt model and serializer, the error vocabulary,
 # and pure descriptor-layout and lifecycle models. P2 adds Linux x86_64
 # capability admission and authorisation composition: safe descriptor
 # inspection, positional reads and pre-execution executable measurement through
-# a descriptor the caller moves in.
+# a descriptor the caller moves in. P3 adds a **crate-private** Linux x86_64
+# process-creation backend: the one scoped `unsafe` module, a raw x86_64 syscall
+# shim, `clone3(CLONE_PIDFD)`, the closed post-clone child contract and an
+# `execveat` of the exact admitted descriptor.
 #
-# No execution backend exists, and nothing here can create or execute a process:
-# there is no `launch`, no `LaunchOutcome` and no unsafe code. The portable
-# semantics are tested on three operating systems rather than asserted, and off
-# the Linux x86_64 cohort the P2 APIs must not exist at all — `compile_fail`
-# doctests in the crate root prove that on Windows and macOS.
+# There is **no public launch API**: no `launch`, no `LaunchOutcome`, no process
+# handle, no pidfd, no child pid and no raw descriptor in the public surface, and
+# `tests/p3_boundary.rs` plus `compile_fail` doctests fail if one appears. There
+# is no process-group sweep, no run timeout, no `SIGTERM`, no grace period and no
+# stream drain policy: those are P4, which is not authorised.
 #
-# This workflow runs only Cargo's own build and test processes. It runs no
-# launcher, no LAUNCH-EXEC-01 asset, no helper and no admitted fixture; it
-# dispatches nothing, needs no root and changes no privilege. The Linux
-# admission tests read and measure fixtures they create themselves, which may
-# update atime and populate the page cache, and execute nothing.
+# **The Linux x86_64 job does create and execute processes**, which is exactly
+# the newly authorised P3 capability and ordinary validation of it. Every fixture
+# is newly written in the crate and compiled by `rustc` at test time. No
+# LAUNCH-EXEC-01 asset, no `launcher_spike`, no frozen Python runner and no
+# frozen helper ELF is built or run. This is **not** a trial, not Trial #4 and
+# not D-7 activity, it dispatches nothing, needs no root and changes no
+# privilege.
+#
+# Off the Linux x86_64 cohort the P2 authority API and the P3 backend must not
+# exist at all — `compile_fail` doctests in the crate root prove that on Windows
+# and macOS, and neither runs any backend test.
 
 on:
   pull_request:
@@ -25,12 +34,14 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'crates/helm-launch/**'
+      - 'tools/tests/test_helm_launch_confinement.py'
       - '.github/workflows/helm-launch.yml'
   push:
     paths:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'crates/helm-launch/**'
+      - 'tools/tests/test_helm_launch_confinement.py'
       - '.github/workflows/helm-launch.yml'
 
   # Re-test an exact branch or ref on purpose, without a no-op source commit.
@@ -53,7 +64,7 @@ jobs:
       matrix:
         os: [ubuntu-24.04, windows-2025, macos-15]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -69,25 +80,111 @@ jobs:
           rustc -vV
           cargo -V
 
+      # The Linux job is the load-bearing backend runner. Its tests compile
+      # fixtures with `rustc`, trace a launcher process with `strace -f`, and
+      # build one tiny test-only C helper that registers `pthread_atfork`
+      # handlers so a test can prove they do NOT run across the raw clone. A
+      # missing tool is a test environment failure with an explicit message,
+      # never a silent skip, so it is checked here first.
+      - name: Check the Linux backend test tools
+        if: runner.os == 'Linux'
+        run: |
+          set -eux
+          strace --version
+          cc --version
+          rustc --version
+
       - run: cargo fmt --check
       - run: cargo clippy -p helm-launch --all-targets --all-features --locked -- -D warnings
       - run: cargo test -p helm-launch --locked
 
-      # The Linux capability-admission suite is part of the run above; this step
-      # names it, so the log shows which cases the cohort actually exercised and
-      # a silently empty suite cannot pass unnoticed. It executes nothing.
+      # The non-default fault-injection feature. It exists only for S5 (a child
+      # that dies before exec without a record) and S6 (a child that stalls
+      # before exec), and for the child-stage failure paths no host state can
+      # provoke. It is gated on the feature AND on `debug_assertions`.
+      - run: cargo test -p helm-launch --locked --features test-fault-injection
+
+      # The default release build, and the proof that no release artifact
+      # contains the injection even when the feature is enabled. The marker is a
+      # `#[used]` static in `src/backend/injection.rs`, so its presence in the
+      # debug build and absence from the release build are properties of the
+      # built objects, not claims about source.
+      - run: cargo build -p helm-launch --release --locked
+
+      - name: Prove the fault injection is absent from a release artifact
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -eux
+          marker='helm_launch_p3_fault_injection_present'
+          cargo build -p helm-launch --locked --features test-fault-injection
+          debug_lib=$(ls target/debug/libhelm_launch-*.rlib | head -n 1)
+          if ! grep -a -q "$marker" "$debug_lib"; then
+            echo "TEST ENVIRONMENT FAILURE: the marker is absent from the debug build, so the"
+            echo "release check below would pass for the wrong reason."
+            exit 1
+          fi
+          cargo build -p helm-launch --release --locked --all-features
+          release_lib=$(ls target/release/libhelm_launch-*.rlib | head -n 1)
+          if grep -a -q "$marker" "$release_lib"; then
+            echo "FAILURE: a release artifact built with --all-features contains the test-only"
+            echo "fault injection."
+            exit 1
+          fi
+          echo "release artifact is free of the fault injection"
+
+      # The Linux backend suite, named so the log shows which cases the cohort
+      # actually exercised and a silently empty suite cannot pass unnoticed.
+      # These cases DO create and execute purpose-built test processes.
       - name: Name the Linux x86_64 capability-admission cases
         if: runner.os == 'Linux'
         run: |
           cargo test -p helm-launch --locked --test linux_admission -- --nocapture --list
           cargo test -p helm-launch --locked --test linux_admission
 
-      # Off the cohort the P2 APIs must be absent, which the crate root's
-      # `compile_fail` doctests assert; `cargo test` above runs them. This step
-      # states the expectation in the log.
+      - name: Name and run the P3 backend and traced-window cases
+        if: runner.os == 'Linux'
+        run: |
+          cargo test -p helm-launch --locked --lib -- --list
+          cargo test -p helm-launch --locked --lib -- --nocapture backend::tests::
+
+      - name: Run the P3 fault-injection cases
+        if: runner.os == 'Linux'
+        run: |
+          cargo test -p helm-launch --locked --features test-fault-injection --lib -- --nocapture backend::tests::
+
+      # Off the cohort the P2 authority API and the P3 backend must be absent,
+      # which the crate root's `compile_fail` doctests assert; `cargo test`
+      # above runs them. These steps state the expectation in the log.
       - name: Confirm the admission suite is empty off the cohort
         if: runner.os != 'Linux'
         run: cargo test -p helm-launch --locked --test linux_admission -- --list
+
+      - name: Confirm no backend test exists off the cohort
+        if: runner.os != 'Linux'
+        shell: bash
+        run: |
+          set -eux
+          if cargo test -p helm-launch --locked --lib -- --list | grep -q 'backend::'; then
+            echo "FAILURE: a backend test exists off the Linux x86_64 cohort."
+            exit 1
+          fi
+          echo "no backend test off the cohort, as the gate requires"
+
+      # The structural boundary suites run identically on all three platforms:
+      # they read the tree and the manifests and execute nothing.
+      - name: Run the unsafe-confinement and boundary suites
+        run: |
+          cargo test -p helm-launch --locked --test p3_boundary -- --nocapture
+          cargo test -p helm-launch --locked --test p2_boundary
+
+      # The runner's preinstalled interpreter, as the other workflows use. The
+      # checks read the tree and the manifests only, so one platform proves
+      # them; the Linux workspace workflow also runs them through its
+      # `tools/tests` discovery.
+      - name: Repository-level confinement checks, independent of cargo
+        if: runner.os == 'Linux'
+        run: python3 -m unittest tools.tests.test_helm_launch_confinement -v
 
       # The determinism anchors. Exact bytes and digests are asserted inside the
       # tests, so a platform-dependent serializer or parser fails above rather than

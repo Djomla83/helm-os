@@ -4,33 +4,58 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.95"
 publish = false
-description = "Experimental portable launch-plan and receipt model with Linux x86_64 capability admission; P1 and P2 only, no execution backend"
+description = "Experimental portable launch-plan and receipt model, Linux x86_64 capability admission and a crate-private Linux x86_64 process-creation backend; P1 to P3, no public launch API"
 
 [dependencies]
 serde = "=1.0.228"
 serde_json = "=1.0.149"
 sha2 = "=0.10.9"
 
-# P2 (owner decision 2026-09-18) admits caller-supplied descriptors on the Linux
-# x86_64 cohort only, so the dependency is gated to exactly that cohort: off it,
-# `src/authority.rs` is not compiled and the crate is the portable P1 model.
+# P2 (owner decision 2026-09-18) admits caller-supplied descriptors and P3
+# (owner decision 2026-09-18) creates one direct child, both on the Linux
+# x86_64 cohort only, so the dependencies are gated to exactly that cohort: off
+# it, `src/authority.rs` and `src/backend/` are not compiled and the crate is
+# the portable P1 model.
 #
 # The repository-vetted pin, identical to the one `helm-observe` already uses.
-# `default-features = false` with only `std` and `fs` enabled: `fs` carries
-# `fcntl_getfl`, `fstat`, `OFlags`, `FileType` and `Mode`, and `rustix::io`,
-# which carries `pread` and `retry_on_intr`, needs no feature. `process`,
-# `pipe`, `event` and `thread` are deliberately NOT enabled — later slices are
-# not authorised, and a feature is not enabled before the slice that needs it.
-# There is no direct `libc` dependency.
+# `default-features = false` with `std`, `fs`, `process` and `pipe`: `fs`
+# carries `fcntl_getfl`, `fcntl_setfl`, `fstat`, `OFlags`, `FileType` and
+# `Mode`; `process` carries `setpgid`, `waitid`, `WaitId::PidFd` and
+# `pidfd_send_signal`; `pipe` carries `pipe_with`; and `rustix::io`, which
+# carries `read`, `pread`, `fcntl_dupfd_cloexec` and `retry_on_intr`, needs no
+# feature.
+#
+# `event` is deliberately NOT enabled. The `poll` observation loop that would
+# need it belongs to P4, which is not authorised; P3's two fixed internal
+# bounds use non-blocking reads and non-blocking `waitid` instead. `thread`,
+# `mm`, `net` and `runtime` are not enabled either.
 [target.'cfg(all(target_os = "linux", target_arch = "x86_64"))'.dependencies]
-rustix = { version = "=1.1.4", default-features = false, features = ["std", "fs"] }
+rustix = { version = "=1.1.4", default-features = false, features = ["std", "fs", "process", "pipe"] }
 
-# The Linux admission tests are the trusted caller: they build fixtures, open
-# descriptors in each mode the contract names, and clear close-on-exec so the
-# "admission never inspects that flag" case is a real test rather than a claim.
-# Same pin, same features, same cohort gate, so no package or version is added.
+# CONSTANTS ONLY. P3 writes every syscall number, signal number, clone flag and
+# ABI constant as the literal the Linux x86_64 UAPI defines, and then pins each
+# one against the `libc` constant of the same name in a `const` assertion, so a
+# wrong number is a compile error rather than a wrong system call. No `libc`
+# function is called, `libc::syscall` is not used, and no `extern` block exists
+# anywhere in the crate: `tests/p3_boundary.rs` fails on any of those. The pin
+# is the version already locked and vetted for this workspace, so no package
+# and no version enters `Cargo.lock`.
+libc = { version = "=0.2.189", default-features = false }
+
+# The Linux admission and backend tests are the trusted caller: they build
+# fixtures, open descriptors in each mode the contract names, clear
+# close-on-exec so the "admission never inspects that flag" case is a real test,
+# and read the bounded reports of executed fixtures. Same pin, same features,
+# same cohort gate, so no package or version is added.
 [target.'cfg(all(target_os = "linux", target_arch = "x86_64"))'.dev-dependencies]
-rustix = { version = "=1.1.4", default-features = false, features = ["std", "fs"] }
+rustix = { version = "=1.1.4", default-features = false, features = ["std", "fs", "process", "pipe"] }
+
+# The one non-default feature. It compiles test-only fault injection into the
+# closed child sequence, and only together with `debug_assertions`, so no
+# release build contains injection even if the feature is enabled by accident.
+# It is not public API: nothing it enables is reachable from outside the crate.
+[features]
+test-fault-injection = []
 
 # The workspace lint table is deliberately NOT inherited (productization plan
 # section 7.4, ADR-0024 section E). Cargo cannot combine `workspace = true` with a

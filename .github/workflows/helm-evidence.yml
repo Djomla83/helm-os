@@ -75,8 +75,13 @@ jobs:
       - run: cargo test -p helm-observe --locked -- --nocapture
       # Pure comparison module; the cross-platform claim is checked by helm-bind.yml.
       - run: cargo test -p helm-bind --locked -- --nocapture
-      # Portable P1 model only: no execution backend exists. The three-platform
-      # purity claim is checked by helm-launch.yml.
+      # helm-launch P1 (portable model), P2 (Linux x86_64 capability admission)
+      # and P3 (the crate-private Linux x86_64 process-creation backend). On this
+      # Linux runner the P3 backend tests DO create and execute purpose-built
+      # test processes the crate compiles itself; that is the owner-authorised
+      # P3 capability, not a trial and not D-7 activity. There is still no public
+      # launch API. The three-platform purity claim, the traced child window and
+      # the release fault-injection absence check are in helm-launch.yml.
       - run: cargo test -p helm-launch --locked
       - run: cargo build -p helm-launch --release --locked
       - run: python3 -m unittest discover -s tools/tests -v
