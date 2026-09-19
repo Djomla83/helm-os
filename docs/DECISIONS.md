@@ -62,8 +62,11 @@ times: the [first](#helm-launch-p3-publication-failure-disposition) and
 [second](#helm-launch-p3-second-publication-failure-disposition) hosted validations **failed**, on
 `P3R-20` and then on `P3R-21`, and both failures stay as permanent evidence. The third publication,
 at `8a359ee4215b6c803dcc5b527010612dabbd110b`, passed every load-bearing hosted gate on its first
-natural run, and P3 was [accepted on 2026-09-19](#helm-launch-p3-accepted). **P4 and P5 are still
-not authorised**, and the complete helm-launch 0.1 module is **not yet product-accepted**.
+natural run, and P3 was [accepted on 2026-09-19](#helm-launch-p3-accepted). On the same day the
+owner authorised **HELM-LAUNCH P4** — the lifecycle, termination, public `launch` and real receipt
+slice; see the [decision of 2026-09-19](#helm-launch-p4-authorised). **P4 is authorised and not yet
+accepted, P5 is still not authorised**, and the complete helm-launch 0.1 module is **not yet
+product-accepted**.
 
 | ID | Odluka | Status |
 |---|---|---|
@@ -2102,3 +2105,102 @@ decision**, and it promotes no traceability row to a stronger evidence class.
 0.1 MODULE IS NOT YET PRODUCT-ACCEPTED.**
 
 **Next gate: OWNER DECISION ON WHETHER TO AUTHORISE HELM-LAUNCH P4.**
+
+<a id="helm-launch-p4-authorised"></a>
+
+### Owner decision 2026-09-19 — **HELM-LAUNCH P4 AUTHORISED**: lifecycle, termination, public launch and real receipt; P5 not authorised
+
+**`HELM_LAUNCH_P4_AUTHORISED`.** The repository owner, Djomla83, authorises HELM-LAUNCH P4 as the
+**fourth helm-launch product implementation slice**, under Accepted
+[ADR-0024](adr/ADR-0024-launch-authority.md) and the
+[P3 acceptance of 2026-09-19](#helm-launch-p3-accepted). **P1, P2 and P3 remain accepted. P4 is
+authorised and NOT accepted. P5 remains not authorised.** This decision authorises **no** formal
+trial: **no Trial #4 is authorised**, and P4 validation is ordinary product testing.
+
+| Item | Value |
+|---|---|
+| Authority token | **`HELM_LAUNCH_P4_AUTHORISED`** |
+| Accepted P3 base | `8a359ee4215b6c803dcc5b527010612dabbd110b` |
+| P4 | **AUTHORISED / NOT YET ACCEPTED** |
+| P5 | **NOT AUTHORISED** |
+| Complete helm-launch 0.1 | **NOT YET PRODUCT-ACCEPTED** |
+| Formal trial required for P4 | **NO** |
+| Trial #3 | frozen **`MECHANISM_REJECTED`**, unchanged, must not be rerun |
+| Trial #4 | **NOT AUTHORISED** |
+| `unsafe` boundary | **UNCHANGED** — `src/backend/` only; P4 adds none |
+| Closed child syscall contract | **UNCHANGED** |
+
+#### 1. What P4 may add
+
+`src/launch.rs`; the public Linux x86_64 `launch(AuthorizedLaunch) -> Result<LaunchOutcome, LaunchError>`
+and `LaunchOutcome`; the real parent observation loop; the plan-driven run deadline; the
+`SIGTERM` → grace → `SIGKILL` lifecycle with a bounded post-`SIGKILL` observation and reap;
+concurrent stdout/stderr draining with bounded in-memory prefixes; the guarded process-group
+cleanup sweep; real launch classification; deterministic `LaunchReceipt` emission from an actual
+launch; the Level 3 O/R/S/T/P product tests; and the CI those tests require.
+
+#### 2. What P4 must not add
+
+The P5 adversarial and evidence-contract slice; helm-evidence semantic receipt integration; Wine;
+Proton; orchestration; sandboxing; cgroups; process-tree containment; an async launch API; an N3
+privileged-transition claim; receipt signing, verification or provenance; any positive
+exec-success claim; and Trial #4.
+
+#### 3. The rules P4 does not get to weaken
+
+* **`Err` versus receipt.** Before a direct child exists, every failure is `Err(LaunchError)` and
+  **no receipt exists**. Once `clone3` has returned a child, `launch` returns `Ok(LaunchOutcome)`
+  **with a receipt, whatever happened** — child setup failure, `execveat` failure, indeterminate
+  exec evidence, timeout, a signal sent, a stream read failure, or an unobservable end. **A child
+  attempt is never lost behind an error.**
+* **No exec-success claim.** A clean exec-status end-of-file means
+  `ExecStatus::Indeterminate(StatusEofWithoutRecord)` and nothing else. The run deadline starts at
+  the `exec_status_eof` event, **not** at a confirmed exec. No API, receipt field, variant,
+  `Display` text or document may introduce a positive exec-success claim.
+* **`EndNotObserved` is latched.** Once the post-`SIGKILL` bound expires with no observed end, the
+  receipt-facing `child_end` is `EndNotObserved` and **no later pidfd readiness, exit, signal, core
+  dump, `ECHILD` or cleanup step may replace it**. It means only that no end was observed within the
+  bound — never that the child is definitely still running.
+* **The group sweep is guarded.** Without established group authority, **no sweep is issued** and
+  the disposition is `not_issued_group_not_established`; authority is never inferred or rediscovered
+  from an observed PGID. With authority, a **non-consuming** `waitid(P_PIDFD, WNOWAIT)` probe runs
+  first: on `ECHILD` no sweep is issued and the disposition is `not_issued_child_already_reaped`.
+  Otherwise **exactly one** `SIGKILL` group sweep is issued, **strictly before the reap**, on every
+  completion path.
+* **The sweep is not containment.** `group_sweep = issued` means only that the one call was issued.
+  It does not mean a descendant received it, died, or that the process tree was contained. An
+  escaped descendant may survive. P4 is **not** a sandbox.
+* **Direct-child identity stays pidfd-based.** No `kill` by numeric pid, no `waitpid` by numeric
+  pid, no numeric-pid fallback.
+* **The receipt carries facts, not verdicts**, no raw stream bytes, no host path, no pid, no
+  descriptor number, no timestamp, no duration and no authenticity claim. A digest identifies bytes
+  and nothing more.
+* **The `unsafe` boundary does not move.** If P4 needs new `unsafe` outside `src/backend/`, a change
+  to the closed child syscall contract, a numeric-pid lifecycle fallback, an unbounded wait, a
+  containment mechanism, a new public execution or error semantic beyond the accepted plan, or a new
+  crate dependency, the work **stops** and returns `OWNER DECISION REQUIRED`.
+
+#### 4. Acceptance gate
+
+P4 is **not** accepted by this decision. Acceptance requires, in order: **one fresh independent P4
+lifecycle and receipt review** by a reviewer who authored neither P4 commit; **real hosted Linux
+x86_64 P4 validation**; and a separate **owner acceptance decision**. The accepted P3 evidence —
+the fixture-concurrency regression, the group-test semantics, the machine-code closed-world proof,
+the injection-confinement proof, the `strace` child-window proof, S5, S6 and unsafe confinement —
+must remain green.
+
+#### 5. Boundary of this decision
+
+This decision is recorded in documentation only. It changes no product code, test, workflow, Cargo
+file, ADR contract, experiment or evidence, and does not touch `main`. Authorising P4 is status
+synchronisation against the already accepted ADR-0024 contract, not a new architecture decision, and
+it promotes no traceability row to a stronger evidence class.
+
+**TRIAL #3 FROZEN RESULT REMAINS `MECHANISM_REJECTED`. TRIAL #3 MUST NOT BE RERUN.**
+
+**NO TRIAL #4 IS AUTHORISED.**
+
+**HELM-LAUNCH P1, P2 AND P3 ARE ACCEPTED. P4 IS AUTHORISED AND NOT YET ACCEPTED. P5 IS NOT
+AUTHORISED. THE COMPLETE HELM-LAUNCH 0.1 MODULE IS NOT YET PRODUCT-ACCEPTED.**
+
+**Next gate: P4 IMPLEMENTATION, then ONE FRESH INDEPENDENT P4 LIFECYCLE / RECEIPT REVIEW.**

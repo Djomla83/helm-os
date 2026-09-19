@@ -2,11 +2,12 @@
 
 > **ADR-0024: ACCEPTED 2026-09-17.**
 > **PRODUCTIZATION PLAN: OWNER-REVIEWED** (2026-09-16: `HELM_LAUNCH_PRODUCTIZATION_PLAN_OWNER_REVIEW_PASSED_WITH_BOUNDED_AMENDMENTS`).
-> **IMPLEMENTATION AUTHORITY: P1, P2 AND P3 ACCEPTED; P4 AND P5 NOT AUTHORISED.**
+> **IMPLEMENTATION AUTHORITY: P1, P2 AND P3 ACCEPTED; P4 AUTHORISED AND NOT YET ACCEPTED; P5 NOT AUTHORISED.**
 > **HELM-LAUNCH P1: ACCEPTED 2026-09-17** as the first product slice (portable model only); the complete 0.1 module is **not yet product-accepted**.
 > **HELM-LAUNCH P2: ACCEPTED 2026-09-18** as the second product slice — capability admission and authorisation composition only, with no process creation, no process execution and no `unsafe`. Its **stop condition is SATISFIED**: admission, refusal and measurement are **green on hosted Linux x86_64**, the independent review **PASSED with 0 BLOCKER and 0 IMPORTANT**, and portable compatibility is **green on Windows and macOS**.
 > **HELM-LAUNCH P3: ACCEPTED 2026-09-19** as the third product slice — the unsafe Linux x86_64 process-creation backend and the closed post-clone child contract, **internally only**: no public `launch()`, no public process handle, no process-group sweep and no host privilege. Authorised 2026-09-18; see the [P3 authority note](#p3-authority-2026-09-18) and the [P3 acceptance sync](#p3-acceptance-sync-2026-09-19). Its **stop condition is SATISFIED**: the full independent unsafe review and four bounded independent correction reviews each returned **0 BLOCKER and 0 IMPORTANT**, and the hosted Linux x86_64 runtime, machine-code, injection-confinement, `strace` child-window, S5 and S6 gates are **all green on a single natural run of `8a359ee`**.
-> **P4, P5: NOT AUTHORISED.**
+> **HELM-LAUNCH P4: AUTHORISED 2026-09-19** as the fourth product slice — the parent observation loop, the plan-driven run deadline, the `SIGTERM`/grace/`SIGKILL` lifecycle, concurrent stream draining, the guarded process-group cleanup sweep, the public `launch` and `LaunchOutcome`, and deterministic `LaunchReceipt` emission from a real launch. **Not yet accepted**; see the [P4 authority note](#p4-authority-2026-09-19).
+> **P5: NOT AUTHORISED.**
 > **NO TRIAL #4 IS AUTHORISED** (authorised = false).
 
 <a id="current-authority-2026-09-17"></a>
@@ -1630,6 +1631,51 @@ or P5 detail and authorises no part of either**: the section 8.5 observation loo
 run deadline, `SIGTERM`, the grace period, the post-exit drain policy, the every-path process-group
 sweep and receipt emission from a real launch all stay with **P4, which is not authorised**. The
 next gate is an owner decision on whether to authorise **P4**.
+
+<a id="p4-authority-2026-09-19"></a>
+
+**P4 authority, 2026-09-19.** The owner
+[authorised HELM-LAUNCH P4](../DECISIONS.md#helm-launch-p4-authorised) as the fourth product
+implementation slice. **P1, P2 and P3 stay accepted, P4 is authorised and not yet accepted, and P5
+remains not authorised.** This note syncs current implementation authority only; the plan's accepted
+contract, slices, traceability and evidence classes are unchanged, and no row of section 3 is
+promoted to a stronger class. **No formal trial is required for P4, and no Trial #4 is authorised**:
+P4 validation is ordinary product testing.
+
+Under the P4 authority the slice may add `src/launch.rs`, the public
+`launch(AuthorizedLaunch) -> Result<LaunchOutcome, LaunchError>` and `LaunchOutcome` of section 5.2
+on the Linux x86_64 cohort, the section 8.5 observation loop, the plan-driven run deadline, the
+`SIGTERM` → grace → `SIGKILL` sequence with the bounded post-kill wait, concurrent stdout/stderr
+draining with bounded in-memory prefixes, the guarded process-group cleanup sweep of Phase C, real
+classification, deterministic `LaunchReceipt` emission from an actual launch, and the Level 3
+O/R/S/T/P families with the CI those tests need.
+
+| Property | Authority after P4 |
+|---|---|
+| Public process execution API | **AUTHORISED IN P4** — `launch` and `LaunchOutcome`, Linux x86_64 only |
+| Run deadline, `SIGTERM`, grace, `SIGKILL` | **AUTHORISED IN P4**, through the pidfd only |
+| Process-group cleanup sweep | **AUTHORISED IN P4**, guarded: established authority, one probe, at most one `SIGKILL`, strictly before the reap |
+| Real receipt emission | **AUTHORISED IN P4**, from the already accepted portable receipt model |
+| `unsafe` | **UNCHANGED** — still only under `src/backend/`; P4 adds none |
+| Closed child syscall contract | **UNCHANGED** |
+| Host privilege acquisition | **NONE** |
+| Process-tree containment | **NONE** — the sweep is best-effort cleanup, not containment |
+
+**The group sweep is not containment.** `group_sweep = issued` means only that the one group signal
+call was issued. It does not mean a descendant received it, that a descendant died, that the process
+tree was contained, or that every application process ended. A descendant that escaped by `setsid`,
+`setpgid` or a service handoff may survive, and P4 must not be described as a sandbox.
+
+**No positive exec-success claim is introduced.** A clean exec-status end-of-file stays
+`Indeterminate(StatusEofWithoutRecord)`, the run deadline starts at that `exec_status_eof` event and
+not at a confirmed exec, and no P4 API, receipt field, variant, `Display` text or document may say
+otherwise.
+
+**Not in P4**: the P5 adversarial and evidence-contract slice, helm-evidence semantic receipt
+integration, a published receipt schema document, portable published test vectors, Wine, Proton,
+orchestration, sandboxing, cgroups, process-tree containment, an async API, an N3 privileged
+transition claim, and any receipt signing, verification constructor or provenance claim. **P5
+remains not authorised.**
 
 ## 17. Open questions
 

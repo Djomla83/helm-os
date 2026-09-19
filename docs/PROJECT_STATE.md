@@ -1,5 +1,56 @@
 # Stanje projekta
 
+<a id="helm-launch-p4-authorised"></a>
+
+## HELM-LAUNCH P4 AUTHORISED, 2026-09-19 — lifecycle, termination, public launch and real receipt; P5 not authorised
+
+The owner [authorised HELM-LAUNCH P4](DECISIONS.md#helm-launch-p4-authorised) as the fourth
+helm-launch product implementation slice, on the accepted P3 base
+`8a359ee4215b6c803dcc5b527010612dabbd110b`. This supersedes the "next gate" of the sections below,
+which are left as written. **P1, P2 and P3 stay accepted; P4 is authorised and not yet accepted; P5
+stays not authorised**, and the complete helm-launch 0.1 module is **not yet product-accepted**.
+
+| Item | State |
+|---|---|
+| ADR-0024 | **ACCEPTED** (contract unchanged by this authorisation) |
+| Authority token | **`HELM_LAUNCH_P4_AUTHORISED`** |
+| Accepted P3 base | `8a359ee4215b6c803dcc5b527010612dabbd110b` |
+| HELM-LAUNCH P4 | **AUTHORISED / NOT YET ACCEPTED** |
+| HELM-LAUNCH P5 | **NOT AUTHORISED** |
+| Formal trial required for P4 | **NO** — P4 validation is ordinary product testing |
+| `unsafe` boundary | **UNCHANGED** — `src/backend/` only |
+| Closed child syscall contract | **UNCHANGED** |
+| Complete helm-launch 0.1 | **NOT YET PRODUCT-ACCEPTED** |
+| Trial #3 | frozen **`MECHANISM_REJECTED`**, unchanged, must not be rerun |
+| Trial #4 | **NOT AUTHORISED** |
+| Next gate | **P4 IMPLEMENTATION, then ONE FRESH INDEPENDENT P4 LIFECYCLE / RECEIPT REVIEW** |
+
+* **What P4 adds.** `src/launch.rs`; the public Linux x86_64
+  `launch(AuthorizedLaunch) -> Result<LaunchOutcome, LaunchError>` and `LaunchOutcome`; the real
+  parent observation loop; the plan-driven run deadline; the `SIGTERM` → grace → `SIGKILL`
+  lifecycle with a bounded post-`SIGKILL` observation and reap; concurrent stdout/stderr draining
+  with bounded in-memory prefixes; the guarded process-group cleanup sweep; real launch
+  classification; deterministic `LaunchReceipt` emission from an actual launch; and the Level 3
+  O/R/S/T/P product tests.
+
+* **What P4 does not add.** The P5 adversarial and evidence-contract slice, helm-evidence semantic
+  receipt integration, Wine, Proton, orchestration, sandboxing, cgroups, process-tree containment,
+  an async API, an N3 privileged-transition claim, receipt signing or provenance, any positive
+  exec-success claim, and Trial #4.
+
+* **The load-bearing rules are unchanged.** Before a child exists every failure is `Err` with no
+  receipt; once `clone3` returns a child, `launch` returns `Ok` **with a receipt, whatever
+  happened**. A clean exec-status end-of-file stays `Indeterminate(StatusEofWithoutRecord)` and the
+  run deadline starts at that event, not at a confirmed exec. `EndNotObserved` is **latched** and no
+  later observation may replace it. The group sweep requires established parent authority, is
+  preceded by a non-consuming `WNOWAIT` probe, is issued **at most once** and **strictly before the
+  reap**, and is **best-effort cleanup, not containment**.
+
+* **Acceptance is a separate gate.** P4 acceptance requires one fresh independent P4 lifecycle and
+  receipt review by a reviewer who authored neither P4 commit, real hosted Linux x86_64 P4
+  validation, and an owner acceptance decision. Every accepted P3 gate must stay green.
+
+
 <a id="helm-launch-p3-accepted"></a>
 
 ## HELM-LAUNCH P3 ACCEPTED, 2026-09-19 — hosted Linux validation passed on the third publication; P4 and P5 not authorised
