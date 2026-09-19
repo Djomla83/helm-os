@@ -65,17 +65,20 @@ class AssemblyParserTests(unittest.TestCase):
             self.assertTrue(self.asm.defined(symbol), symbol)
 
     def test_local_branches_are_not_call_edges(self):
-        targets, _syscalls, _indirect = self.asm.edges(CHILD)
-        self.assertNotIn(".LBB0_3", targets)
-        self.assertEqual(sorted(set(targets)), sorted({SHIM, FAIL}))
+        edges = self.asm.edges(CHILD)
+        self.assertNotIn(".LBB0_3", edges.targets)
+        self.assertEqual(sorted(set(edges.targets)), sorted({SHIM, FAIL}))
+        # The local branch is counted as intra-function control flow rather than
+        # silently discarded, so "no edges" cannot mean "nothing was read".
+        self.assertEqual(edges.local, 1)
+        self.assertEqual(edges.indirect, [])
+        self.assertEqual(edges.unresolved, [])
 
     def test_plt_and_got_suffixes_are_stripped(self):
-        targets, _s, _i = self.asm.edges(NOISY)
-        self.assertEqual(targets, ["memcpy"])
+        self.assertEqual(self.asm.edges(NOISY).targets, ["memcpy"])
 
     def test_the_syscall_instruction_is_counted(self):
-        _t, syscalls, _i = self.asm.edges(SHIM)
-        self.assertEqual(syscalls, 1)
+        self.assertEqual(self.asm.edges(SHIM).syscalls, 1)
 
     def test_symbol_resolution_is_anchored_and_rejects_ambiguity(self):
         # A compiler-generated closure sibling must not be mistaken for the
@@ -137,6 +140,114 @@ class ChildClosureGateTests(unittest.TestCase):
         self.assertTrue(
             any("indirect" in problem for problem in result["problems"]), result["problems"]
         )
+        self.assertEqual(len(result["indirect_transfer_sites"]), 1)
+
+    def test_an_unresolved_indirect_jmp_fails(self):
+        # P3R-11. An indirect tail jump escapes the function exactly as an
+        # indirect call does, so it must fail rather than be discarded.
+        for spelling in (
+            "\tjmp\t*%rax\n",
+            "\tjmpq\t*%rax\n",
+            "\tjmpq\t*(%rax)\n",
+            "\tjmpq\t*8(%rbp)\n",
+            "\tjmpq\t*.LJTI0_0(,%rax,8)\n",
+            "\tnotrack jmpq\t*%r11\n",
+        ):
+            with self.subTest(spelling=spelling.strip()):
+                asm = closure_tool.Assembly(clean_assembly(extra_child=spelling))
+                result = closure_tool.check(asm, control_needle=None)
+                self.assertEqual(
+                    len(result["indirect_transfer_sites"]),
+                    1,
+                    f"{spelling.strip()} was not recorded as an indirect transfer",
+                )
+                self.assertTrue(
+                    any("indirect" in problem for problem in result["problems"]),
+                    result["problems"],
+                )
+
+    def test_a_direct_tail_jmp_to_a_forbidden_external_symbol_fails(self):
+        # A tail jump to a runtime helper must fail exactly like a call to it.
+        for spelling in ("\tjmp\tmemcpy\n", "\tjmpq\tmemcpy@PLT\n", "\tjmp\t__rust_alloc\n"):
+            with self.subTest(spelling=spelling.strip()):
+                asm = closure_tool.Assembly(clean_assembly(extra_child=spelling))
+                result = closure_tool.check(asm, control_needle=None)
+                self.assertTrue(
+                    any(
+                        "libc string/memory helper" in problem or "allocator" in problem
+                        for problem in result["problems"]
+                    ),
+                    result["problems"],
+                )
+
+    def test_a_direct_tail_jmp_to_an_internal_helper_is_traversed(self):
+        # The other half of the same rule: a resolvable tail jump to an internal
+        # helper is a call-graph edge, so the helper enters the closure and its
+        # own closure is checked. Here the helper itself tail-jumps to `malloc`,
+        # which must therefore be found.
+        helper = "_ZN11helm_launch7backend5child6tailed17habcdE"
+        text = (
+            function(
+                CHILD,
+                f"\tcallq\t{SHIM}\n\tjmp\t{helper}\n",
+            )
+            + function(helper, "\tjmp\tmalloc@PLT\n")
+            + function(FAIL, f"\tcallq\t{SHIM}\n")
+            + function(SHIM, "\t#APP\n\tsyscall\n\t#NO_APP\n\tretq\n")
+            + function(NOISY, "\tcallq\tmemcpy@PLT\n\tretq\n")
+        )
+        asm = closure_tool.Assembly(text)
+        result = closure_tool.check(asm, control_needle=None)
+        self.assertIn(helper, result["closure"])
+        self.assertIn(
+            (CHILD, helper),
+            [tuple(edge) for edge in result["internal_edges"]],
+        )
+        self.assertTrue(
+            any("malloc" in problem for problem in result["problems"]), result["problems"]
+        )
+
+    def test_a_direct_jmp_to_a_label_the_body_does_not_define_fails(self):
+        # A local label belonging to another function is not an intra-function
+        # branch, and must not be treated as one.
+        asm = closure_tool.Assembly(clean_assembly(extra_child="\tjmp\t.LBB99_7\n"))
+        result = closure_tool.check(asm, control_needle=None)
+        self.assertEqual(len(result["unresolved_transfer_sites"]), 1)
+        self.assertTrue(
+            any("unresolved control transfer" in problem for problem in result["problems"]),
+            result["problems"],
+        )
+
+    def test_an_unknown_control_transfer_spelling_fails_closed(self):
+        # An operand form this parser does not understand may still escape the
+        # function, so it is reported rather than ignored.
+        for spelling in (
+            "\tjmpq\t0x1234(%rbx)\n",
+            "\tcallq\t(%rax)\n",
+            "\tjmp\t*\n",
+            "\tcallq\n",
+        ):
+            with self.subTest(spelling=spelling.strip()):
+                asm = closure_tool.Assembly(clean_assembly(extra_child=spelling))
+                result = closure_tool.check(asm, control_needle=None)
+                unresolved = len(result["unresolved_transfer_sites"])
+                indirect = len(result["indirect_transfer_sites"])
+                self.assertEqual(
+                    unresolved + indirect,
+                    1,
+                    f"{spelling.strip()} was neither resolved nor reported",
+                )
+                self.assertTrue(result["problems"], result)
+
+    def test_a_comment_can_neither_hide_nor_invent_a_transfer(self):
+        # The instruction is read without its comment, so a commented-out call
+        # is not an edge and a real call followed by a comment still is.
+        asm = closure_tool.Assembly(
+            clean_assembly(extra_child="\t# callq\tmemcpy@PLT\n\tcallq\tmalloc@PLT # tail\n")
+        )
+        result = closure_tool.check(asm, control_needle=None)
+        reached = {symbol for _origin, symbol, _category in result["external_edges"]}
+        self.assertEqual(reached, {"malloc"})
 
     def test_a_missing_root_fails_loudly_rather_than_passing(self):
         asm = closure_tool.Assembly(function(NOISY, "\tretq\n"))

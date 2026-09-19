@@ -27,9 +27,33 @@ identically on the Linux runner and on a cross-compiling developer host, and it
 sees helper references by name before the linker turns them into PLT stubs.
 
 The checker fails loudly rather than silently passing: a missing root, an empty
-closure, an unresolved indirect call, a missing syscall shim or a failed
-positive control are all errors, so "zero matches" can never mean "clean"
-because the parser found nothing.
+closure, a missing syscall shim, a failed positive control, and **any
+function-escaping control transfer whose target this parser cannot resolve** are
+all errors, so "zero matches" can never mean "clean" because the parser found
+nothing.
+
+Control transfers are analysed as a closed model, not as a `call` pattern
+(owner disposition of P3R-11, 2026-09-19). Both `call` and `jmp` can leave a
+function on x86_64, so both are classified, and every operand form is placed in
+exactly one of four buckets:
+
+    named target        `callq foo`, `jmp foo`, `jmp foo@PLT`,
+                        `callq *foo@GOTPCREL(%rip)`
+                        -> a call-graph edge, traversed transitively whether it
+                           is a call or a tail jump
+    local label         `jmp .LBB0_3`, where `.LBB0_3` is defined in the body
+                        being analysed
+                        -> intra-function control flow
+    indirect            `jmp *%rax`, `callq *(%rax)`, `jmpq *.LJTI0_0(,%rax,8)`
+                        -> UNRESOLVED, FAIL CLOSED
+    anything else       an operand form this parser does not understand, or a
+                        local label the body does not define
+                        -> UNRESOLVED, FAIL CLOSED
+
+No resolver for an indirect target is authorised. A tail jump to `memcpy`, a
+panic helper or an allocator therefore fails exactly as the corresponding call
+does, and a jump through a register or a jump table fails because the target is
+unknown rather than because it was recognised as forbidden.
 """
 
 from __future__ import annotations
@@ -41,6 +65,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import NamedTuple
 
 # --------------------------------------------------------------------------
 # Classification
@@ -95,10 +120,54 @@ def categorise(symbol: str) -> str:
 
 LABEL = re.compile(r"^([A-Za-z_$.][\w$.]*):\s*$")
 SIZE_DIRECTIVE = re.compile(r"^\s*\.size\s")
-# `callq  sym`, `callq  *sym@GOTPCREL(%rip)`, `jmp  sym` (tail call).
-DIRECT_CALL = re.compile(r"^\s*(?:call|callq|jmp|jmpq)\s+\*?([A-Za-z_$.][\w$.@]*)")
-INDIRECT_CALL = re.compile(r"^\s*(?:call|callq)\s+\*(?![A-Za-z_$.])")
-SYSCALL = re.compile(r"^\s*syscall\b")
+
+# Every mnemonic that can move control OUT of the current function on x86_64.
+# A conditional branch cannot: rustc emits one only to a label of the same
+# function. `call` and `jmp` both can, so both are classified here, and an
+# operand form this parser cannot resolve is a failure rather than a dropped
+# line (owner disposition of P3R-11).
+TRANSFER = re.compile(
+    r"^\s+(?:(?:bnd|notrack|rep|repz|repnz|lock|data16|rex64|ds|es|cs|ss|fs|gs)\s+)*"
+    r"(callq|calll|call|lcall|jmpq|jmpl|jmp|ljmp)\b[ \t]*(.*)$"
+)
+SYSCALL = re.compile(r"^\s*(?:syscall|sysenter)\b")
+
+# `foo`, `foo@PLT`: a target named directly.
+NAMED_TARGET = re.compile(r"^([A-Za-z_$.][\w$.@]*)$")
+# `*foo@GOTPCREL(%rip)`, `*foo(%rip)`: still a **named** target, reached through
+# the GOT rather than a relocation against the symbol itself.
+GOT_TARGET = re.compile(r"^\*([A-Za-z_$.][\w$.@]*)\(%rip\)$")
+
+
+def instruction_of(line: str) -> str:
+    """One assembly line without its end-of-line comment.
+
+    `#APP` / `#NO_APP` and ordinary `#` comments are dropped, so a comment can
+    neither hide nor invent a control transfer.
+    """
+    for marker in ("#", "//"):
+        at = line.find(marker)
+        if at >= 0:
+            line = line[:at]
+    return line.rstrip()
+
+
+class Edges(NamedTuple):
+    """Every control transfer leaving one function body, classified."""
+
+    #: Function-escaping transfers whose target is named, call and tail jump
+    #: alike. Each is followed transitively.
+    targets: list[str]
+    #: `syscall` instructions in this body.
+    syscalls: int
+    #: Transfers through a register, memory or a jump table. Never resolvable
+    #: here, so each one fails the gate.
+    indirect: list[str]
+    #: Escaping transfers this parser cannot resolve at all, including a local
+    #: label the body does not define. Each one fails the gate.
+    unresolved: list[str]
+    #: Intra-function branches to a label this body defines.
+    local: int
 
 
 class Assembly:
@@ -107,6 +176,10 @@ class Assembly:
     def __init__(self, text: str) -> None:
         self.lines = text.splitlines()
         self.bodies: dict[str, list[str]] = {}
+        # The local labels each body defines. A `jmp` to one of them is
+        # intra-function control flow; a `jmp` to a local label the body does
+        # not define is an unresolved escape, not a branch to ignore.
+        self.local_labels: dict[str, set[str]] = {}
         current: str | None = None
         for line in self.lines:
             label = LABEL.match(line)
@@ -115,10 +188,12 @@ class Assembly:
                 if not name.startswith(".L"):
                     current = name
                     self.bodies.setdefault(current, [])
+                    self.local_labels.setdefault(current, set())
                 else:
                     # A local label inside the current body.
                     if current is not None:
                         self.bodies[current].append(line)
+                        self.local_labels[current].add(name)
                 continue
             if current is None:
                 continue
@@ -130,26 +205,51 @@ class Assembly:
     def defined(self, symbol: str) -> bool:
         return symbol in self.bodies
 
-    def edges(self, symbol: str) -> tuple[list[str], int, int]:
-        """Outgoing call targets, syscall count and unresolved indirect count."""
+    def edges(self, symbol: str) -> Edges:
+        """Classify every control transfer leaving one function body."""
         targets: list[str] = []
+        indirect: list[str] = []
+        unresolved: list[str] = []
         syscalls = 0
-        indirect = 0
+        local = 0
+        labels = self.local_labels.get(symbol, set())
         for line in self.bodies.get(symbol, []):
             if SYSCALL.match(line):
                 syscalls += 1
-            if INDIRECT_CALL.match(line):
-                indirect += 1
                 continue
-            call = DIRECT_CALL.match(line)
-            if not call:
+            transfer = TRANSFER.match(instruction_of(line))
+            if not transfer:
                 continue
-            target = call.group(1)
-            if target.startswith(".L"):
-                # A local branch inside the same function.
+            operand = transfer.group(2).strip()
+            if not operand:
+                # A transfer with no operand at all. It may still escape, so it
+                # is never dropped.
+                unresolved.append(line.strip())
                 continue
-            targets.append(target.split("@")[0])
-        return targets, syscalls, indirect
+            got = GOT_TARGET.match(operand)
+            if got:
+                targets.append(got.group(1).split("@")[0])
+                continue
+            named = NAMED_TARGET.match(operand)
+            if named:
+                target = named.group(1)
+                if target.startswith(".L"):
+                    if target in labels:
+                        local += 1
+                    else:
+                        unresolved.append(line.strip())
+                    continue
+                targets.append(target.split("@")[0])
+                continue
+            # A register, memory or jump-table operand. `*` marks it indirect
+            # explicitly; any other shape is an operand form this parser does
+            # not understand. Both fail closed, and neither is authorised to be
+            # resolved here.
+            if operand.startswith("*"):
+                indirect.append(line.strip())
+            else:
+                unresolved.append(line.strip())
+        return Edges(targets, syscalls, indirect, unresolved, local)
 
     def find_unique(self, needle: str) -> str:
         """Resolve one function by name.
@@ -186,20 +286,27 @@ def closure(asm: Assembly, root: str) -> dict:
     pending = [root]
     external: list[tuple[str, str, str]] = []  # (from, symbol, category)
     indirect_sites: list[str] = []
+    unresolved_sites: list[str] = []
     syscall_sites: dict[str, int] = {}
     internal_edges: list[tuple[str, str]] = []
+    local_branches = 0
 
     while pending:
         symbol = pending.pop(0)
         if symbol in seen:
             continue
         seen.append(symbol)
-        targets, syscalls, indirect = asm.edges(symbol)
-        if syscalls:
-            syscall_sites[symbol] = syscalls
-        if indirect:
-            indirect_sites.append(f"{symbol} ({indirect} indirect call site(s))")
-        for target in targets:
+        edges = asm.edges(symbol)
+        if edges.syscalls:
+            syscall_sites[symbol] = edges.syscalls
+        local_branches += edges.local
+        for instruction in edges.indirect:
+            indirect_sites.append(f"{symbol}: {instruction}")
+        for instruction in edges.unresolved:
+            unresolved_sites.append(f"{symbol}: {instruction}")
+        # A named target is a call-graph edge whether it was reached by `call`
+        # or by a tail `jmp`, so both are followed transitively.
+        for target in edges.targets:
             if asm.defined(target):
                 internal_edges.append((symbol, target))
                 pending.append(target)
@@ -211,7 +318,9 @@ def closure(asm: Assembly, root: str) -> dict:
         "closure": seen,
         "internal_edges": sorted(set(internal_edges)),
         "external_edges": sorted(set(external)),
-        "indirect_call_sites": sorted(set(indirect_sites)),
+        "indirect_transfer_sites": sorted(set(indirect_sites)),
+        "unresolved_transfer_sites": sorted(set(unresolved_sites)),
+        "local_branches": local_branches,
         "syscall_sites": syscall_sites,
     }
 
@@ -316,10 +425,18 @@ def check(asm: Assembly, control_needle: str | None) -> dict:
                 problems.append(
                     f"{symbol} issues a syscall although the reviewed shim is out of line here"
                 )
-    if result["indirect_call_sites"]:
+    # Every function-escaping control transfer the parser could not resolve is a
+    # failure, whether it was a `call` or a tail `jmp`. No resolver is
+    # authorised, so there is no path by which one of these is accepted.
+    if result["indirect_transfer_sites"]:
         problems.append(
-            "unresolved indirect call site(s) in the child closure: "
-            + ", ".join(result["indirect_call_sites"])
+            "indirect control transfer(s) in the child closure, target unresolvable: "
+            + "; ".join(result["indirect_transfer_sites"])
+        )
+    if result["unresolved_transfer_sites"]:
+        problems.append(
+            "unresolved control transfer(s) in the child closure: "
+            + "; ".join(result["unresolved_transfer_sites"])
         )
     for origin, symbol, category in result["external_edges"]:
         problems.append(f"{origin} -> {symbol}  [{category}]")
@@ -343,8 +460,7 @@ def check(asm: Assembly, control_needle: str | None) -> dict:
             control["named_external_edge_count"] = len(named_closure["external_edges"])
 
     for symbol in sorted(asm.bodies):
-        targets, _, _ = asm.edges(symbol)
-        for target in targets:
+        for target in asm.edges(symbol).targets:
             if asm.defined(target):
                 continue
             if categorise(target) != "unclassified external reference":
@@ -426,6 +542,13 @@ def main() -> int:
         print(f"external edges : {len(result['external_edges'])}")
         for origin, target, category in result["external_edges"]:
             print(f"    {origin} -> {target}  [{category}]")
+        print(f"local branches : {result['local_branches']} intra-function")
+        print(f"indirect transfers  : {len(result['indirect_transfer_sites'])}")
+        for site in result["indirect_transfer_sites"]:
+            print(f"    {site}")
+        print(f"unresolved transfers: {len(result['unresolved_transfer_sites'])}")
+        for site in result["unresolved_transfer_sites"]:
+            print(f"    {site}")
         control = result["control"]
         print(
             f"positive control: {control['witness_count']} witness function(s) in this "
@@ -444,7 +567,10 @@ def main() -> int:
         for problem in result["problems"]:
             print(f"  {problem}", file=sys.stderr)
         return 1
-    print("\nCHILD CLOSURE CHECK PASSED: no external runtime helper is reachable.")
+    print(
+        "\nCHILD CLOSURE CHECK PASSED: every control transfer in the closure resolves, "
+        "and no external runtime helper is reachable."
+    )
     return 0
 
 

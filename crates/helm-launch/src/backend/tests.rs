@@ -46,7 +46,7 @@ use std::fs;
 use std::os::fd::{AsFd, OwnedFd};
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 
@@ -328,10 +328,18 @@ fn hex(bytes: &[u8]) -> String {
     text
 }
 
-fn unhex(text: &str) -> Vec<u8> {
-    assert_eq!(text.len() % 2, 0, "odd hex run: {text}");
+/// Decode one hexadecimal run, or refuse it. Fallible, because a producer
+/// report that is not well formed must be **refused** rather than abort the
+/// parser mid-way (owner disposition of P3R-10).
+fn try_unhex(text: &str) -> Option<Vec<u8>> {
+    if !text.len().is_multiple_of(2) {
+        return None;
+    }
     (0..text.len() / 2)
-        .map(|i| u8::from_str_radix(&text[i * 2..i * 2 + 2], 16).expect("hex"))
+        .map(|i| {
+            text.get(i * 2..i * 2 + 2)
+                .and_then(|pair| u8::from_str_radix(pair, 16).ok())
+        })
         .collect()
 }
 
@@ -394,6 +402,18 @@ fn hex(bytes: &[u8]) -> String {
         text.push_str(&format!("{:02x}", byte));
     }
     text
+}
+
+// The process group this image belongs to, from field 5 of `/proc/self/stat`.
+// The comm field is parenthesised and may itself contain spaces and
+// parentheses, so the scan starts after the LAST `)`: state, ppid, pgrp.
+fn process_group() -> Option<u32> {
+    let stat = std::fs::read_to_string("/proc/self/stat").ok()?;
+    let after_comm = stat.get(stat.rfind(')')? + 1..)?;
+    let mut fields = after_comm.split_whitespace();
+    let _state = fields.next()?;
+    let _ppid = fields.next()?;
+    fields.next()?.parse().ok()
 }
 
 fn status_field(field: &str) -> String {
@@ -463,7 +483,20 @@ fn main() {
     out.push_str(&format!("sig_blk={}\n", status_field("SigBlk")));
     out.push_str(&format!("sig_ign={}\n", status_field("SigIgn")));
     out.push_str(&format!("sig_cgt={}\n", status_field("SigCgt")));
-    out.push_str(&format!("pgid_is_self={}\n", status_field("Tgid")));
+
+    // Two DIFFERENT facts, reported separately and never conflated (owner
+    // disposition of P3R-10). `tgid` is this image's own process identity, which
+    // on Linux is the thread-group id of a single-threaded process and is what
+    // `std::process::id` returns. `pgid_is_self` is whether this image leads its
+    // own process group, which is a statement about the group and not about
+    // identity. An image that cannot determine its group reports a value the
+    // parser refuses, rather than a plausible-looking guess.
+    let identity = std::process::id();
+    out.push_str(&format!("tgid={}\n", identity));
+    match process_group() {
+        Some(group) => out.push_str(&format!("pgid_is_self={}\n", group == identity)),
+        None => out.push_str("pgid_is_self=unavailable\n"),
+    }
     out.push_str("end\n");
 
     let mut stdout = std::io::stdout();
@@ -485,7 +518,13 @@ fn report_fixture() -> PathBuf {
 }
 
 /// A parsed fixture report.
-#[derive(Debug, Default)]
+///
+/// Every field is **mandatory**, and the type derives no `Default`, so a
+/// `Report` cannot exist carrying a value the producer never sent. That is the
+/// structural fix for **P3R-10**: before it, a key the fixture emitted under one
+/// spelling and the parser read under another left a default behind, and an
+/// assertion against that default compared `0` to a real pid.
+#[derive(Debug, PartialEq, Eq)]
 struct Report {
     name: String,
     argv: Vec<Vec<u8>>,
@@ -494,53 +533,209 @@ struct Report {
     cwd_ino: u64,
     descriptors: BTreeMap<u32, String>,
     no_new_privs: String,
-    tgid: u64,
-    complete: bool,
+    /// The executed image's own process identity, which on Linux is the
+    /// thread-group id of a single-threaded process. **Not** a group id.
+    tgid: u32,
+    /// Whether the executed image leads its own process group. A different fact
+    /// from [`Report::tgid`], and asserted separately: pid, tgid and pgid are
+    /// never conflated.
+    pgid_is_self: bool,
 }
 
-fn parse_report(bytes: &[u8]) -> Report {
-    let text = String::from_utf8(bytes.to_vec()).expect("the report is ASCII by construction");
+/// Why a producer report is refused. A refused report is never partially used.
+#[derive(Debug, PartialEq, Eq)]
+enum ReportRejection {
+    /// The output was not text at all.
+    NotText,
+    /// The versioned first line is missing or is not the expected marker.
+    Marker,
+    /// The terminating `end` line never arrived.
+    Truncated,
+    /// A key the schema does not define. A producer and a parser that disagree
+    /// on a spelling therefore fail loudly instead of leaving a default behind.
+    UnknownKey(String),
+    /// A key the schema requires never appeared.
+    Missing(&'static str),
+    /// A key the schema allows once appeared more than once.
+    Duplicate(&'static str),
+    /// A value did not parse as the schema requires.
+    Malformed(&'static str),
+}
+
+/// The versioned first line of the report-capable fixture schema.
+const REPORT_MARKER: &str = "HELM-LAUNCH-P3-FIXTURE/1";
+
+/// The scalar keys the schema defines, each required **exactly once**.
+const REPORT_SCALARS: [&str; 12] = [
+    "argv_count",
+    "cwd_dev",
+    "cwd_ino",
+    "env_count",
+    "fd_count",
+    "name",
+    "no_new_privs",
+    "pgid_is_self",
+    "sig_blk",
+    "sig_cgt",
+    "sig_ign",
+    "tgid",
+];
+
+/// Keys the schema defines but does not require. `cwd_error` replaces the
+/// working-directory identity, so a report carrying it is still refused — for
+/// the missing `cwd_dev`, with the reason visible.
+const REPORT_OPTIONAL: [&str; 1] = ["cwd_error"];
+
+/// The keys that may repeat, each carrying one entry of a list.
+const REPORT_REPEATED: [&str; 3] = ["argv", "env", "fd"];
+
+fn scalar_key(key: &str) -> Option<&'static str> {
+    REPORT_SCALARS.iter().copied().find(|known| *known == key)
+}
+
+fn repeated_key(key: &str) -> Option<&'static str> {
+    REPORT_REPEATED.iter().copied().find(|known| *known == key)
+}
+
+/// Parse one producer report against the closed schema.
+///
+/// Every key must be one the schema defines, every scalar key must appear
+/// exactly once, every required value must parse, and the declared counts must
+/// agree with the entries that arrived. A report that fails any of those is
+/// **refused**, never partially used (owner disposition of P3R-10).
+fn try_parse_report(bytes: &[u8]) -> Result<Report, ReportRejection> {
+    let text = std::str::from_utf8(bytes).map_err(|_| ReportRejection::NotText)?;
     let mut lines = text.lines();
-    assert_eq!(
-        lines.next(),
-        Some("HELM-LAUNCH-P3-FIXTURE/1"),
-        "the report does not carry the expected versioned marker: {text}"
-    );
-    let mut report = Report::default();
+    if lines.next() != Some(REPORT_MARKER) {
+        return Err(ReportRejection::Marker);
+    }
+
+    let mut scalars: BTreeMap<&'static str, &str> = BTreeMap::new();
     let mut argv: BTreeMap<usize, Vec<u8>> = BTreeMap::new();
+    let mut environment: Vec<(Vec<u8>, Vec<u8>)> = Vec::new();
+    let mut descriptors: BTreeMap<u32, String> = BTreeMap::new();
+    let mut complete = false;
+
     for line in lines {
         if line == "end" {
-            report.complete = true;
+            complete = true;
             continue;
         }
-        let (key, value) = line.split_once('=').unwrap_or((line, ""));
-        match key {
-            "name" => report.name = value.to_owned(),
+        let Some((key, value)) = line.split_once('=') else {
+            return Err(ReportRejection::UnknownKey(line.to_owned()));
+        };
+        if let Some(known) = scalar_key(key) {
+            if scalars.insert(known, value).is_some() {
+                return Err(ReportRejection::Duplicate(known));
+            }
+            continue;
+        }
+        let Some(known) = repeated_key(key) else {
+            if REPORT_OPTIONAL.contains(&key) {
+                continue;
+            }
+            return Err(ReportRejection::UnknownKey(key.to_owned()));
+        };
+        let Some((left, right)) = value.split_once(':') else {
+            return Err(ReportRejection::Malformed(known));
+        };
+        match known {
             "argv" => {
-                let (index, encoded) = value.split_once(':').expect("argv entry");
-                argv.insert(index.parse().expect("argv index"), unhex(encoded));
+                let index: usize = left
+                    .parse()
+                    .map_err(|_| ReportRejection::Malformed(known))?;
+                let decoded = try_unhex(right).ok_or(ReportRejection::Malformed(known))?;
+                if argv.insert(index, decoded).is_some() {
+                    return Err(ReportRejection::Duplicate(known));
+                }
             }
             "env" => {
-                let (key, value) = value.split_once(':').expect("env entry");
-                report.environment.push((unhex(key), unhex(value)));
+                let name = try_unhex(left).ok_or(ReportRejection::Malformed(known))?;
+                let value = try_unhex(right).ok_or(ReportRejection::Malformed(known))?;
+                environment.push((name, value));
             }
-            "cwd_dev" => report.cwd_dev = value.parse().expect("cwd dev"),
-            "cwd_ino" => report.cwd_ino = value.parse().expect("cwd ino"),
-            "fd" => {
-                let (number, target) = value.split_once(':').expect("fd entry");
-                report.descriptors.insert(
-                    number.parse().expect("fd number"),
-                    String::from_utf8(unhex(target)).unwrap_or_default(),
-                );
+            // "fd"
+            _ => {
+                let number: u32 = left
+                    .parse()
+                    .map_err(|_| ReportRejection::Malformed(known))?;
+                let target = try_unhex(right).ok_or(ReportRejection::Malformed(known))?;
+                if descriptors
+                    .insert(number, String::from_utf8_lossy(&target).into_owned())
+                    .is_some()
+                {
+                    return Err(ReportRejection::Duplicate(known));
+                }
             }
-            "no_new_privs" => report.no_new_privs = value.to_owned(),
-            "tgid" => report.tgid = value.parse().expect("tgid"),
-            _ => {}
         }
     }
-    report.argv = argv.into_values().collect();
-    assert!(report.complete, "the report was truncated: {text}");
-    report
+
+    if !complete {
+        return Err(ReportRejection::Truncated);
+    }
+
+    let scalar = |key: &'static str| -> Result<&str, ReportRejection> {
+        scalars
+            .get(key)
+            .copied()
+            .ok_or(ReportRejection::Missing(key))
+    };
+    let number = |key: &'static str| -> Result<u64, ReportRejection> {
+        scalar(key)?
+            .parse()
+            .map_err(|_| ReportRejection::Malformed(key))
+    };
+    let count = |key: &'static str| -> Result<usize, ReportRejection> {
+        scalar(key)?
+            .parse()
+            .map_err(|_| ReportRejection::Malformed(key))
+    };
+
+    // The declared counts must match the entries that arrived, and the argv
+    // indices must be the complete ascending run, so a dropped or renumbered
+    // entry cannot pass as a shorter vector.
+    if count("argv_count")? != argv.len() || !argv.keys().copied().eq(0..argv.len()) {
+        return Err(ReportRejection::Malformed("argv_count"));
+    }
+    if count("env_count")? != environment.len() {
+        return Err(ReportRejection::Malformed("env_count"));
+    }
+    if count("fd_count")? != descriptors.len() {
+        return Err(ReportRejection::Malformed("fd_count"));
+    }
+
+    let tgid: u32 = scalar("tgid")?
+        .parse()
+        .map_err(|_| ReportRejection::Malformed("tgid"))?;
+    let pgid_is_self = match scalar("pgid_is_self")? {
+        "true" => true,
+        "false" => false,
+        _ => return Err(ReportRejection::Malformed("pgid_is_self")),
+    };
+
+    Ok(Report {
+        name: scalar("name")?.to_owned(),
+        argv: argv.into_values().collect(),
+        environment,
+        cwd_dev: number("cwd_dev")?,
+        cwd_ino: number("cwd_ino")?,
+        descriptors,
+        no_new_privs: scalar("no_new_privs")?.to_owned(),
+        tgid,
+        pgid_is_self,
+    })
+}
+
+/// [`try_parse_report`], failing the test with the exact reason for a refusal.
+fn parse_report(bytes: &[u8]) -> Report {
+    match try_parse_report(bytes) {
+        Ok(report) => report,
+        Err(why) => panic!(
+            "the producer report was refused as {why:?}; the fixture and this parser must agree \
+             on the report schema:\n{}",
+            String::from_utf8_lossy(bytes)
+        ),
+    }
 }
 
 /// A plan for the report fixture: the argv the test wants, the empty
@@ -657,6 +852,230 @@ fn identity(path: &Path) -> (u64, u64) {
     (metadata.dev(), metadata.ino())
 }
 
+/// One well-formed producer report, in exactly the shape the fixture emits.
+fn well_formed_report() -> Vec<String> {
+    vec![
+        REPORT_MARKER.to_owned(),
+        format!("name={REPORT_FIXTURE_NAME}"),
+        "argv_count=2".to_owned(),
+        "argv=0:61".to_owned(),
+        "argv=1:62".to_owned(),
+        "env_count=0".to_owned(),
+        "cwd_dev=7".to_owned(),
+        "cwd_ino=11".to_owned(),
+        "fd_count=3".to_owned(),
+        "fd=0:70697065".to_owned(),
+        "fd=1:70697065".to_owned(),
+        "fd=2:70697065".to_owned(),
+        "no_new_privs=1".to_owned(),
+        "sig_blk=0000000000000000".to_owned(),
+        "sig_ign=0000000000000000".to_owned(),
+        "sig_cgt=0000000000000000".to_owned(),
+        "tgid=4242".to_owned(),
+        "pgid_is_self=true".to_owned(),
+        "end".to_owned(),
+    ]
+}
+
+#[test]
+fn the_producer_report_schema_is_closed_and_a_malformed_report_is_refused() {
+    // P3R-10. The defect was a producer key and a parser key that disagreed,
+    // which left a default value behind and made an assertion compare 0 to a
+    // real pid. Both spellings are schema keys now, both are mandatory, and an
+    // unknown key is refused — so the same class of disagreement cannot recur
+    // silently.
+    let render = |lines: &[String]| lines.join("\n").into_bytes();
+    let without = |key: &str| -> Vec<String> {
+        let prefix = format!("{key}=");
+        well_formed_report()
+            .into_iter()
+            .filter(|line| !line.starts_with(&prefix))
+            .collect()
+    };
+    let replacing = |key: &str, replacement: &str| -> Vec<String> {
+        let prefix = format!("{key}=");
+        well_formed_report()
+            .into_iter()
+            .map(|line| {
+                if line.starts_with(&prefix) {
+                    replacement.to_owned()
+                } else {
+                    line
+                }
+            })
+            .collect()
+    };
+    let replacing_line = |old: &str, new: &str| -> Vec<String> {
+        let found = well_formed_report().iter().any(|line| line == old);
+        assert!(found, "the baseline report has no line `{old}`");
+        well_formed_report()
+            .into_iter()
+            .map(|line| if line == old { new.to_owned() } else { line })
+            .collect()
+    };
+    let plus = |extra: &str| -> Vec<String> {
+        let mut lines = well_formed_report();
+        lines.insert(lines.len() - 1, extra.to_owned());
+        lines
+    };
+
+    // The positive control: the baseline really parses, so every refusal below
+    // is caused by the one mutation that produced it.
+    let baseline = try_parse_report(&render(&well_formed_report())).expect("the baseline parses");
+    assert_eq!(baseline.name, REPORT_FIXTURE_NAME);
+    assert_eq!(baseline.tgid, 4242);
+    assert!(baseline.pgid_is_self);
+    assert_eq!(baseline.argv, vec![b"a".to_vec(), b"b".to_vec()]);
+    assert_eq!(
+        baseline.descriptors.keys().copied().collect::<Vec<u32>>(),
+        vec![0, 1, 2]
+    );
+    assert_eq!(baseline.cwd_dev, 7);
+    assert_eq!(baseline.cwd_ino, 11);
+
+    // A required key that never arrived.
+    for key in [
+        "tgid",
+        "pgid_is_self",
+        "name",
+        "cwd_dev",
+        "cwd_ino",
+        "no_new_privs",
+    ] {
+        assert_eq!(
+            try_parse_report(&render(&without(key))),
+            Err(ReportRejection::Missing(key)),
+            "a report without {key} was not refused"
+        );
+    }
+
+    // A required value that does not parse.
+    for (key, line) in [
+        ("tgid", "tgid=not-a-number"),
+        ("tgid", "tgid=-1"),
+        ("tgid", "tgid="),
+        ("pgid_is_self", "pgid_is_self=yes"),
+        ("pgid_is_self", "pgid_is_self=1"),
+        ("pgid_is_self", "pgid_is_self=True"),
+        // Exactly what the fixture emits when it cannot determine its group: a
+        // value the parser refuses rather than a plausible-looking guess.
+        ("pgid_is_self", "pgid_is_self=unavailable"),
+        ("cwd_dev", "cwd_dev=x"),
+    ] {
+        assert_eq!(
+            try_parse_report(&render(&replacing(key, line))),
+            Err(ReportRejection::Malformed(key)),
+            "`{line}` was not refused"
+        );
+    }
+
+    // A key the schema allows once, twice.
+    for (key, line) in [
+        ("tgid", "tgid=99"),
+        ("pgid_is_self", "pgid_is_self=false"),
+        ("name", "name=another"),
+        ("argv", "argv=0:63"),
+        ("fd", "fd=1:70697065"),
+    ] {
+        assert_eq!(
+            try_parse_report(&render(&plus(line))),
+            Err(ReportRejection::Duplicate(key)),
+            "a duplicate {key} was not refused"
+        );
+    }
+
+    // A key the schema does not define at all. This is the guard that makes a
+    // producer/parser spelling disagreement impossible to miss.
+    assert_eq!(
+        try_parse_report(&render(&plus("pgid_is_leader=true"))),
+        Err(ReportRejection::UnknownKey("pgid_is_leader".to_owned()))
+    );
+    assert_eq!(
+        try_parse_report(&render(&plus("a line with no separator"))),
+        Err(ReportRejection::UnknownKey(
+            "a line with no separator".to_owned()
+        ))
+    );
+
+    // A declared count that disagrees with the entries that arrived, and an argv
+    // run with a hole in it.
+    assert_eq!(
+        try_parse_report(&render(&replacing("argv_count", "argv_count=3"))),
+        Err(ReportRejection::Malformed("argv_count"))
+    );
+    assert_eq!(
+        try_parse_report(&render(&replacing("fd_count", "fd_count=9"))),
+        Err(ReportRejection::Malformed("fd_count"))
+    );
+    assert_eq!(
+        try_parse_report(&render(&replacing("env_count", "env_count=1"))),
+        Err(ReportRejection::Malformed("env_count"))
+    );
+    assert_eq!(
+        try_parse_report(&render(&replacing_line("argv=1:62", "argv=2:62"))),
+        Err(ReportRejection::Malformed("argv_count")),
+        "an argv run with a hole in it was not refused"
+    );
+
+    // Malformed hexadecimal, or a malformed index, in a repeated entry.
+    for line in ["argv=1:6", "argv=1:zz", "argv=one:62", "argv=1"] {
+        assert_eq!(
+            try_parse_report(&render(&replacing_line("argv=1:62", line))),
+            Err(ReportRejection::Malformed("argv")),
+            "`{line}` was not refused"
+        );
+    }
+    for line in ["fd=2:7069706", "fd=two:70697065"] {
+        assert_eq!(
+            try_parse_report(&render(&replacing_line("fd=2:70697065", line))),
+            Err(ReportRejection::Malformed("fd")),
+            "`{line}` was not refused"
+        );
+    }
+
+    // Structure: the wrong marker, no marker, no terminator, and output that is
+    // not text at all.
+    assert_eq!(
+        try_parse_report(&render(&replacing_line(
+            REPORT_MARKER,
+            "HELM-LAUNCH-P3-FIXTURE/2"
+        ))),
+        Err(ReportRejection::Marker)
+    );
+    assert_eq!(try_parse_report(b""), Err(ReportRejection::Marker));
+    assert_eq!(
+        try_parse_report(b"not a marker at all\nend"),
+        Err(ReportRejection::Marker)
+    );
+    assert_eq!(
+        try_parse_report(
+            &well_formed_report()
+                .into_iter()
+                .filter(|line| line != "end")
+                .collect::<Vec<String>>()
+                .join("\n")
+                .into_bytes()
+        ),
+        Err(ReportRejection::Truncated)
+    );
+    assert_eq!(
+        try_parse_report(&[0xff, 0xfe, 0xfd]),
+        Err(ReportRejection::NotText)
+    );
+
+    // A report that could not stat its working directory carries `cwd_error`
+    // instead of the identity, and is refused for the field it is missing.
+    let with_cwd_error: Vec<String> = without("cwd_dev")
+        .into_iter()
+        .filter(|line| !line.starts_with("cwd_ino="))
+        .chain(std::iter::once("cwd_error=denied".to_owned()))
+        .collect();
+    assert_eq!(
+        try_parse_report(&render(&with_cwd_error)),
+        Err(ReportRejection::Missing("cwd_dev"))
+    );
+}
+
 // ===========================================================================
 // 3. The X2c producer self-test
 // ===========================================================================
@@ -667,14 +1086,26 @@ fn report_fixture_reports_without_the_backend() {
     // the report parses, and that its marker names the fixture this suite
     // intends — **before** any launcher test consumes one.
     let fixture = report_fixture();
-    let output = Command::new(&fixture)
+    // Spawned rather than run through `output()`, so the harness knows the
+    // identity the fixture is expected to report. Without that, `tgid` would be
+    // "some number the producer printed" and the launcher test could not rely on
+    // it (owner disposition of P3R-10).
+    let running = Command::new(&fixture)
         .arg("self-test")
-        .output()
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
         .expect("run the fixture directly");
+    let observed_identity = running.id();
+    let output = running
+        .wait_with_output()
+        .expect("collect the fixture output");
     assert!(
         output.status.success(),
         "the fixture failed its own run: {output:?}"
     );
+    // The schema itself is validated here, before any launcher test consumes a
+    // report: a refusal fails this test with its exact reason.
     let report = parse_report(&output.stdout);
     assert_eq!(
         report.name, REPORT_FIXTURE_NAME,
@@ -686,6 +1117,21 @@ fn report_fixture_reports_without_the_backend() {
         !report.environment.is_empty(),
         "run directly, the fixture inherits this process's environment; if that were empty the \
          later empty-environment assertion would prove nothing"
+    );
+    // `tgid` is the fixture's own process identity and nothing else. Proven
+    // against the pid this harness observed, so the launcher test's
+    // direct-child assertion rests on a field that is known to be correct.
+    assert_eq!(
+        report.tgid, observed_identity,
+        "the fixture does not report its own process identity"
+    );
+    // And `pgid_is_self` really tracks the process group: run directly the
+    // fixture inherits this harness's group and is therefore NOT its own group
+    // leader. If this were true here, the launched assertion would prove
+    // nothing.
+    assert!(
+        !report.pgid_is_self,
+        "run directly the fixture must not lead its own process group"
     );
     assert!(
         String::from_utf8_lossy(&output.stderr).contains(REPORT_FIXTURE_NAME),
@@ -751,9 +1197,18 @@ fn an_authorised_object_executes_with_exactly_the_intended_descriptors() {
     // The image that reported is the direct child the backend created, not a
     // descendant of one, and descriptor 2 really is the launcher's pipe.
     assert_eq!(
-        i64::try_from(report.tgid).unwrap(),
+        i64::from(report.tgid),
         completed.launch.child.pid(),
         "the reporting image is not the direct child"
+    );
+    // A separate fact, separately asserted: the executed image leads its own
+    // process group, whichever of the parent's `setpgid(child, child)` and the
+    // child's `setpgid(0, 0)` ran first. The producer self-test proves this
+    // field is `false` when the same fixture runs outside the backend, so `true`
+    // here is a result rather than a constant.
+    assert!(
+        report.pgid_is_self,
+        "the executed image does not lead its own process group"
     );
     assert!(
         String::from_utf8_lossy(&completed.stderr).contains(REPORT_FIXTURE_NAME),
