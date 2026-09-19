@@ -301,7 +301,7 @@ fn no_release_build_compiles_the_fault_injection() {
 // ===========================================================================
 
 /// A host tool the suite genuinely needs. A missing one fails loudly.
-fn require_tool(tool: &str, why: &str) {
+pub(crate) fn require_tool(tool: &str, why: &str) {
     let found = Command::new(tool).arg("--version").output();
     match found {
         Ok(output) if output.status.success() => {}
@@ -312,7 +312,7 @@ fn require_tool(tool: &str, why: &str) {
     }
 }
 
-fn fixture_root() -> &'static Path {
+pub(crate) fn fixture_root() -> &'static Path {
     static ROOT: OnceLock<PathBuf> = OnceLock::new();
     ROOT.get_or_init(|| {
         let root = std::env::temp_dir().join("helm-launch-p3-fixtures");
@@ -378,7 +378,7 @@ static FIXTURE_BUILD_NONCE: AtomicU64 = AtomicU64::new(0);
 /// Correctness rests on the filesystem rather than on a process-local lock, so
 /// separate test processes publishing the same fixture are safe too, and no
 /// lock is held across launching anything.
-fn fixture_binary(name: &str, source: &str) -> PathBuf {
+pub(crate) fn fixture_binary(name: &str, source: &str) -> PathBuf {
     let digest = hex(&Sha256::digest(source.as_bytes()));
     let stem = format!("{name}-{}", &digest[..16]);
     let binary = fixture_root().join(&stem);
@@ -849,7 +849,7 @@ fn plan_bytes(argv: &[&[u8]]) -> Vec<u8> {
     .into_bytes()
 }
 
-fn open_read_only(path: &Path) -> OwnedFd {
+pub(crate) fn open_read_only(path: &Path) -> OwnedFd {
     OwnedFd::from(fs::File::open(path).unwrap_or_else(|error| panic!("open {path:?}: {error}")))
 }
 
@@ -916,7 +916,7 @@ fn complete(launch: MinimalLaunch) -> Completed {
     }
 }
 
-fn scratch_dir(name: &str) -> PathBuf {
+pub(crate) fn scratch_dir(name: &str) -> PathBuf {
     let dir = fixture_root().join(format!("scratch-{}-{name}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).expect("scratch directory");

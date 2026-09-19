@@ -27,7 +27,7 @@
     not(test),
     allow(
         dead_code,
-        reason = "P1 has no backend; the model is exercised by tests only"
+        reason = "off the Linux x86_64 cohort there is no observation loop to drive the model, so                   only the tests exercise it there; on the cohort `crate::launch` is its consumer"
     )
 )]
 

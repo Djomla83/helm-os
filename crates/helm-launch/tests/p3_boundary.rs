@@ -48,7 +48,7 @@ const CRATE_MANIFEST: &str = include_str!("../Cargo.toml");
 
 /// The complete expected inventory of `src/`. A file that is not here fails the
 /// inventory test, so nothing can be added outside the scans below.
-const EXPECTED_SOURCES: [&str; 14] = [
+const EXPECTED_SOURCES: [&str; 15] = [
     "src/authority.rs",
     "src/backend/child.rs",
     "src/backend/injection.rs",
@@ -57,6 +57,7 @@ const EXPECTED_SOURCES: [&str; 14] = [
     "src/backend/syscall.rs",
     "src/backend/tests.rs",
     "src/error.rs",
+    "src/launch.rs",
     "src/layout.rs",
     "src/lib.rs",
     "src/lifecycle.rs",
@@ -66,10 +67,11 @@ const EXPECTED_SOURCES: [&str; 14] = [
 ];
 
 /// The complete expected inventory of `tests/`.
-const EXPECTED_TESTS: [&str; 4] = [
+const EXPECTED_TESTS: [&str; 5] = [
     "tests/linux_admission.rs",
     "tests/p2_boundary.rs",
     "tests/p3_boundary.rs",
+    "tests/p4_boundary.rs",
     "tests/plan_contract.rs",
 ];
 
@@ -270,9 +272,18 @@ fn the_source_and_test_inventory_is_exactly_what_the_scans_cover() {
             "{name} is in a subdirectory of src/ other than backend/"
         );
     }
+    // P4 added `src/launch.rs`. It must exist, and it must be a sibling of the
+    // backend rather than a part of it: the unsafe boundary is a directory, and
+    // the public lifecycle is deliberately outside it.
     assert!(
-        !sources.contains("src/launch.rs"),
-        "src/launch.rs belongs to P4"
+        sources.contains("src/launch.rs"),
+        "the P4 launch slice is missing"
+    );
+    assert!(
+        !sources
+            .iter()
+            .any(|name| name.starts_with("src/backend/launch")),
+        "the launch slice moved inside the unsafe boundary"
     );
 }
 
@@ -982,15 +993,23 @@ fn no_backend_item_is_public() {
 }
 
 #[test]
-fn the_crate_root_proves_the_absence_of_a_public_execution_path() {
+fn the_crate_root_proves_the_narrowness_of_the_public_execution_path() {
     // The `compile_fail` doctests themselves run under `cargo test`; this pins
     // that they are the on-point ones, not an unrelated missing import.
+    //
+    // **P4 changed what is being proved, not how much.** `launch` and
+    // `LaunchOutcome` now exist on the Linux x86_64 cohort, so the proofs that
+    // they are absent moved into the off-cohort block and two new proofs were
+    // added: a `LaunchOutcome` cannot be built from its parts, and an
+    // authorisation cannot be launched twice.
     let sources = rust_files("src");
     let lib = &sources["src/lib.rs"];
     for proof in [
         "helm_launch::backend::launch_minimal",
         "a.into_parts()",
         "c.descriptor()",
+        "helm_launch::LaunchOutcome { receipt: r }",
+        "let _ = helm_launch::launch(a);",
         "use helm_launch::launch;",
         "use helm_launch::LaunchOutcome;",
         "use helm_launch::backend;",
@@ -1003,6 +1022,21 @@ fn the_crate_root_proves_the_absence_of_a_public_execution_path() {
         assert!(
             lib.contains(proof),
             "the crate root has no compile-fail proof containing `{proof}`"
+        );
+    }
+    // The two that must now be off-cohort only, so that the on-cohort build
+    // cannot silently lose `launch` and still pass this file.
+    let cohort_gate = "not(all(target_os = \"linux\", target_arch = \"x86_64\"))";
+    let (_, off_cohort) = lib
+        .split_once(cohort_gate)
+        .expect("the crate root has no off-cohort documentation block");
+    for proof in [
+        "use helm_launch::launch;",
+        "use helm_launch::LaunchOutcome;",
+    ] {
+        assert!(
+            off_cohort.contains(proof),
+            "`{proof}` is not inside the off-cohort block, so it would be a false claim on Linux"
         );
     }
 }
@@ -1037,8 +1071,8 @@ fn only_the_two_authorised_fixed_bounds_exist() {
             );
         }
     }
-    // And no `poll`: the `event` feature is not enabled, and the observation
-    // loop that would need it is P4's.
+    // And no `poll`: the observation loop that needs the `event` feature is
+    // P4's, and it lives in `src/launch.rs`, outside the unsafe boundary.
     for name in BACKEND_PRODUCT {
         let tokens = code_tokens(&sources[name]);
         for forbidden in ["poll", "PollFd", "epoll", "select"] {

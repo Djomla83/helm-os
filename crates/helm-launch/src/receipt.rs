@@ -195,10 +195,10 @@ fn serialize(record: &ReceiptRecord) -> Vec<u8> {
 
 impl LaunchReceipt {
     #[cfg_attr(
-        not(test),
+        all(not(test), not(all(target_os = "linux", target_arch = "x86_64"))),
         expect(
             dead_code,
-            reason = "P1 has no launch producer; only tests serialise deterministic test records"
+            reason = "off the Linux x86_64 cohort no launch producer exists; only tests serialise                       deterministic test records"
         )
     )]
     pub(crate) fn from_record(record: ReceiptRecord) -> Self {

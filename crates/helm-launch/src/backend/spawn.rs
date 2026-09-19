@@ -18,8 +18,9 @@
 //! No observation loop, no `poll`, no plan-driven run deadline, no `SIGTERM`,
 //! no grace period, no stream drain policy, no receipt and **no process-group
 //! sweep**. The parent's `setpgid(child, child)` result is recorded as a
-//! boolean and used for nothing: no negative-pid signal exists anywhere in this
-//! crate. Those belong to a P4 slice that is not authorised.
+//! boolean and acted on nowhere here: no negative-pid signal exists in this
+//! file. All of that belongs to the P4 lifecycle in `crate::launch`, which
+//! drives the accepted pure model from **outside** this unsafe boundary.
 
 use std::cell::Cell;
 use std::ffi::CString;
@@ -315,9 +316,18 @@ pub(super) struct SpawnedChild {
     /// The direct child, owned by its pidfd. Dropping it cannot leak a child.
     pub(super) child: ChildHandle,
     /// **Only** a successful parent-side `setpgid(child, child)` sets this. It
-    /// is recorded for a future P4 sweep and is used for nothing in P3:
-    /// no negative-pid signal exists in this crate.
+    /// is recorded here and consumed by the P4 lifecycle, which is the only
+    /// caller that may act on it; nothing in this module ever does.
     pub(super) group_authority_established: bool,
+    /// The error number of a failed mask restore, if one failed.
+    ///
+    /// This is **not** an error return, because a child already exists by the
+    /// time the restore runs, and the accepted boundary of plan section 13.1
+    /// says a child attempt is never lost behind an error value. The caller
+    /// decides: the P3 minimal launch turns it back into its historical
+    /// `SignalMaskRestoreFailed`, dropping the handle to kill and reap within
+    /// the fixed bound; the P4 lifecycle carries the child on to a receipt.
+    pub(super) mask_restore_errno: Option<i32>,
 }
 
 /// Create the direct child and attempt to execute the admitted descriptor.
@@ -434,17 +444,17 @@ pub(super) fn spawn(prepared: &PreparedLaunch, fault: Fault) -> Result<SpawnedCh
 
     // 5. Restore the mask. A failure here cannot be reported as a caller
     //    contract, and it must not leak the child: dropping `child` sends one
-    //    `SIGKILL` through the pidfd and reaps within the fixed bound.
+    //    `SIGKILL` through the pidfd and reaps within the fixed bound. It is
+    //    carried out as a fact rather than returned as an error, because a
+    //    child exists from step 4 on and the accepted boundary never loses a
+    //    child attempt behind an error value.
     let restored = restore_mask(saved_mask);
-    if syscall::is_error(restored) {
-        return Err(BackendError::SignalMaskRestoreFailed {
-            errno: syscall::errno_of(restored),
-        });
-    }
+    let mask_restore_errno = syscall::is_error(restored).then(|| syscall::errno_of(restored));
 
     Ok(SpawnedChild {
         child,
         group_authority_established,
+        mask_restore_errno,
     })
 }
 
@@ -536,6 +546,15 @@ impl ChildHandle {
     /// The direct child's process id. Recorded, never signalled.
     pub(crate) const fn pid(&self) -> i64 {
         self.pid
+    }
+
+    /// The direct child's process descriptor, borrowed.
+    ///
+    /// Direct-child identity stays descriptor-based everywhere: this is what
+    /// the P4 observation loop polls for the end, and what it signals through.
+    /// Nothing may derive a numeric-pid lifecycle operation from it.
+    pub(crate) fn pidfd(&self) -> BorrowedFd<'_> {
+        self.pidfd.as_fd()
     }
 
     /// Send one `SIGKILL` through the pidfd.

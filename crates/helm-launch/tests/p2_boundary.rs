@@ -553,10 +553,14 @@ fn the_crate_declares_exactly_the_p2_modules() {
         .filter(|w| w[0] == "mod")
         .map(|w| w[1].as_str())
         .collect();
+    // `launch` is the P4 lifecycle module. Like `backend` it is declared
+    // here and gated on the cohort; unlike `backend` it is re-exported,
+    // because P4 is the slice that publishes `launch` and `LaunchOutcome`.
     let expected: BTreeSet<&str> = [
         "authority",
         "backend",
         "error",
+        "launch",
         "layout",
         "lifecycle",
         "model",
@@ -643,11 +647,19 @@ fn every_p2_surface_is_gated_by_exactly_the_linux_x86_64_cohort() {
         let occurrences = source.matches("target_os").count();
         let allowed = match name {
             // The crate root: the authority module gate, the backend module
-            // gate, the re-export gate and the two `cfg_attr` documentation
-            // blocks that prove presence off and on the cohort.
-            "src/lib.rs" => 5,
+            // gate, the P4 launch module gate, the authority re-export gate,
+            // the P4 launch re-export gate and the two `cfg_attr`
+            // documentation blocks that prove presence off and on the cohort.
+            "src/lib.rs" => 7,
             // The module's own documentation states its gate in prose only.
             "src/authority.rs" => 1,
+            // One `cfg_attr` each that silences dead code off the cohort, where
+            // the P4 receipt producer is not compiled: `plan.rs` for the
+            // accessor it reads, `receipt.rs` for the serializer it calls.
+            "src/plan.rs" | "src/receipt.rs" => 1,
+            // The three `LaunchError` constructors: the P4 producer that calls
+            // them is not compiled off the cohort.
+            "src/error.rs" => 3,
             _ => 0,
         };
         assert_eq!(
@@ -835,15 +847,61 @@ const AUTHORITY_ONLY: &[&str] = &[
     "Errno",
 ];
 
+/// The P4 public surface is `launch` and `LaunchOutcome`, and the crate root
+/// is the only P1/P2 file allowed to name them — once to declare the gated
+/// module and once to re-export the pair. Everything else stays forbidden
+/// here, and `tests/p4_boundary.rs` makes the claims about `src/launch.rs`
+/// itself, which is not a P1/P2 source and is deliberately not in `SOURCES`.
+const P4_PUBLIC_NAMES: &[&str] = &["launch", "LaunchOutcome"];
+
 #[test]
 fn forbidden_vocabulary_appears_nowhere_outside_the_backend() {
     for (name, source) in SOURCES.iter().chain(TESTS.iter()) {
         for token in code_tokens(source) {
+            if *name == "src/lib.rs" && P4_PUBLIC_NAMES.contains(&token.as_str()) {
+                continue;
+            }
             assert!(
                 !FORBIDDEN_EVERYWHERE.contains(&token.as_str()),
                 "{name} uses `{token}` as code"
             );
         }
+    }
+}
+
+#[test]
+fn the_crate_root_names_the_p4_public_pair_exactly_as_often_as_it_must() {
+    // `mod launch;`, then `pub use launch::{LaunchOutcome, launch};`. Three
+    // `launch` tokens and one `LaunchOutcome`, and no fourth appearance that
+    // could be a second entry point or a leaked internal.
+    let tokens = code_tokens(SOURCES[0].1);
+    assert_eq!(SOURCES[0].0, "src/lib.rs");
+    assert_eq!(
+        tokens.iter().filter(|token| *token == "launch").count(),
+        3,
+        "the crate root names `launch` an unexpected number of times"
+    );
+    assert_eq!(
+        tokens
+            .iter()
+            .filter(|token| *token == "LaunchOutcome")
+            .count(),
+        1,
+        "the crate root names `LaunchOutcome` an unexpected number of times"
+    );
+    // And no other P3/P4 internal is nameable from the root.
+    for forbidden in [
+        "launch_minimal",
+        "PreparedLaunch",
+        "SpawnedChild",
+        "ChildHandle",
+        "MinimalLaunch",
+        "ChildPlan",
+    ] {
+        assert!(
+            !tokens.iter().any(|token| token == forbidden),
+            "the crate root names `{forbidden}` as code"
+        );
     }
 }
 
@@ -1072,9 +1130,11 @@ fn dependencies_are_exactly_the_p3_set() {
     // Exactly two cohort-gated packages, both at the repository-vetted pins,
     // with default features off. The same `rustix` line appears once as a
     // dependency and once as a dev-dependency.
+    // P4 adds exactly one feature, `event`, for the observation loop's
+    // `poll`. Nothing else about the pin changed.
     let pinned = concat!(
         r#"rustix = { version = "=1.1.4", default-features = false, "#,
-        r#"features = ["std", "fs", "process", "pipe"] }"#
+        r#"features = ["std", "fs", "process", "pipe", "event"] }"#
     );
     assert_eq!(CRATE_MANIFEST.matches(pinned).count(), 2);
     assert_eq!(
@@ -1089,9 +1149,10 @@ fn dependencies_are_exactly_the_p3_set() {
     assert!(CRATE_MANIFEST.contains(&gate), "missing {gate}");
     assert!(CRATE_MANIFEST.contains(&dev_gate), "missing {dev_gate}");
 
-    // `event` stays off: the poll observation loop that would need it is P4's,
-    // which is not authorised. So do the other unneeded feature groups.
-    for feature in ["event", "thread", "mm", "net", "runtime", "use-libc"] {
+    // P4 enabled `event` for the observation loop's `poll`, and nothing else.
+    // `time` in particular stays off: monotonic deadlines are
+    // `std::time::Instant`, which is `CLOCK_MONOTONIC` on Linux.
+    for feature in ["time", "thread", "mm", "net", "runtime", "use-libc"] {
         assert!(
             !CRATE_MANIFEST.contains(&format!("\"{feature}\"")),
             "rustix feature {feature} must not be enabled"

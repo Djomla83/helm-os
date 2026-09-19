@@ -78,8 +78,11 @@ class UnsafeConfinementTests(unittest.TestCase):
         self.assertEqual(found, BACKEND_FILES)
         subdirectories = [path.name for path in BACKEND.iterdir() if path.is_dir()]
         self.assertEqual(subdirectories, [], "the backend gained a subdirectory")
-        # P4 owns the public orchestration module; it must not exist yet.
-        self.assertFalse((CRATE / "src" / "launch.rs").exists())
+        # P4 owns the public lifecycle module. It must exist, and it must be a
+        # sibling of the backend rather than a member of it: the unsafe boundary
+        # is this directory, and the public launch is deliberately outside it.
+        self.assertTrue((CRATE / "src" / "launch.rs").is_file())
+        self.assertNotIn("launch.rs", found)
 
     def test_unsafe_appears_as_code_only_under_the_backend(self):
         # The product tree. The Rust boundary test covers `tests/` too, with a
@@ -180,13 +183,40 @@ class UnsafeConfinementTests(unittest.TestCase):
         self.assertIn("syscall", found)
         self.assertIn("ChildPlan", found)
 
-    def test_no_process_group_signal_exists_anywhere_in_the_crate(self):
+    def test_the_only_process_group_signal_is_the_guarded_p4_sweep(self):
+        """P4 activates one guarded group sweep; nothing else may signal a group.
+
+        Before P4 no group signal existed at all. The claim is now bounded
+        rather than absent: exactly one call site, in the launch slice, and
+        still none anywhere under the unsafe boundary.
+        """
+        sites = {}
         for name, text in self.sources.items():
-            found = words(code_only(text))
+            code = code_only(text)
+            found = words(code)
             for forbidden in ("killpg", "tgkill", "tkill"):
                 self.assertNotIn(forbidden, found, f"{name} names {forbidden}")
             if name.startswith("src/backend/") and name != "src/backend/tests.rs":
                 self.assertNotIn("kill", found, f"{name} names a pid-valued kill")
+                self.assertNotIn(
+                    "kill_process_group",
+                    found,
+                    f"{name} sweeps a process group; that belongs to src/launch.rs",
+                )
+            count = "".join(code.split()).count("kill_process_group(")
+            if count:
+                sites[name] = count
+        self.assertEqual(
+            sites,
+            {"src/launch.rs": 1},
+            "the guarded group sweep must have exactly one call site",
+        )
+        launch = "".join(code_only(self.sources["src/launch.rs"]).split())
+        self.assertIn("kill_process_group(group,Signal::KILL)", launch)
+        # It is reached only from the model's own action, after the
+        # non-consuming probe the model demands.
+        self.assertIn("Action::SweepGroup=>self.sweep_group()", launch)
+        self.assertIn("WaitIdOptions::NOWAIT", launch)
 
     def test_fault_injection_is_gated_on_the_feature_and_on_debug_assertions(self):
         gate = 'all(feature="test-fault-injection",debug_assertions)'
@@ -202,13 +232,35 @@ class UnsafeConfinementTests(unittest.TestCase):
         self.assertIn("test-fault-injection = []", manifest)
         self.assertNotIn("default = [", manifest)
 
-    def test_no_public_launch_api_exists(self):
+    def test_the_public_launch_api_is_exactly_the_authorised_pair(self):
+        """P4 publishes `launch` and `LaunchOutcome`, cohort-gated, and nothing else.
+
+        The backend stays private: no public module, no re-export, and no
+        backend type in the public surface.
+        """
         root = "".join(code_only(self.sources["src/lib.rs"]).split())
         self.assertEqual(root.count("modbackend;"), 1)
         self.assertNotIn("pubmodbackend", root)
         self.assertNotIn("pubusebackend", root)
-        for name in ("launch", "LaunchOutcome", "SpawnedChild", "PreparedLaunch"):
+        self.assertNotIn("pubmodlaunch", root)
+        for name in ("SpawnedChild", "PreparedLaunch", "ChildHandle", "MinimalLaunch"):
             self.assertNotIn(f"pubuse{name}", root)
+        # Exactly one public launch re-export, and it is cohort-gated.
+        self.assertEqual(root.count("pubuselaunch::{LaunchOutcome,launch};"), 1)
+        gate = '#[cfg(all(target_os="linux",target_arch="x86_64"))]'
+        raw = "".join(
+            line
+            for line in self.sources["src/lib.rs"].splitlines()
+            if not line.lstrip().startswith("//")
+        )
+        raw = "".join(raw.split())
+        for gated in ("modlaunch;", "pubuselaunch::{LaunchOutcome,launch};"):
+            at = raw.find(gated)
+            self.assertNotEqual(at, -1, f"{gated} is missing")
+            self.assertTrue(
+                raw[:at].endswith(gate),
+                f"{gated} is not immediately preceded by the cohort gate",
+            )
         for name, text in self.sources.items():
             if not name.startswith("src/backend/"):
                 continue
@@ -223,7 +275,17 @@ class UnsafeConfinementTests(unittest.TestCase):
         manifest = (CRATE / "Cargo.toml").read_text(encoding="utf-8")
         self.assertIn('rustix = { version = "=1.1.4"', manifest)
         self.assertIn('libc = { version = "=0.2.189"', manifest)
-        self.assertNotIn('"event"', manifest)
+        # P4 adds exactly one rustix feature, `event`, for the observation
+        # loop. `time` stays off: monotonic deadlines use std::time::Instant.
+        self.assertEqual(
+            manifest.count(
+                'features = ["std", "fs", "process", "pipe", "event"]'
+            ),
+            2,
+        )
+        self.assertNotIn('"time"', manifest)
+        self.assertNotIn('"runtime"', manifest)
+        self.assertNotIn("linux-raw-sys", manifest)
         self.assertFalse((CRATE / "build.rs").exists(), "a build script appeared")
         lockfile = (ROOT / "Cargo.lock").read_text(encoding="utf-8")
         self.assertEqual(lockfile.count('name = "libc"'), 1)

@@ -3,10 +3,10 @@
 //!
 //! This module is compiled only under
 //! `cfg(all(target_os = "linux", target_arch = "x86_64"))`, is **private**, and
-//! re-exports nothing. No item of it is reachable from outside the crate: there
-//! is no public `launch`, no public spawn, no public process handle and no
-//! public pidfd, child pid or raw descriptor. An external caller still has no
-//! way to make `helm-launch` create a process.
+//! re-exports nothing. No item of it is reachable from outside the crate: it
+//! publishes no spawn, no process handle and no pidfd, child pid or raw
+//! descriptor. The **P4** `crate::launch` is its only non-test consumer, and
+//! the public `launch` it offers hands back none of those.
 //!
 //! # What P3 does
 //!
@@ -16,18 +16,20 @@
 //! that child walk the closed sequence of [`child`] to an `execveat` of the
 //! exact descriptor the caller admitted.
 //!
-//! # What P3 deliberately does not do
+//! # What this module deliberately does not do
 //!
-//! No public `launch`, no `LaunchOutcome`, no receipt from a real launch, no
-//! observation loop, no plan-driven run timeout, no `SIGTERM`, no grace period,
-//! no general stream drain policy, **no process-group sweep**, no process-tree
-//! containment, no Wine, no orchestration and no sandbox. Those are P4 and P5,
-//! which are not authorised.
+//! No observation loop, no plan-driven run timeout, no `SIGTERM`, no grace
+//! period, no stream drain policy and **no process-group sweep**: those belong
+//! to the P4 lifecycle in `crate::launch`, which drives the accepted pure model
+//! and lives outside this `unsafe` boundary. No process-tree containment, no
+//! Wine, no orchestration and no sandbox exist in either slice.
 //!
 //! The parent's `setpgid(child, child)` result is recorded as
-//! `group_authority_established` and is used for nothing here. **No negative-pid
-//! signal exists anywhere in this crate**, and `tests/p3_boundary.rs` fails if
-//! one appears.
+//! `group_authority_established` and is acted on nowhere in this module. **No
+//! negative-pid signal exists here**, and `tests/p3_boundary.rs` fails if one
+//! appears in a backend source; the one guarded group signal the crate may
+//! issue is in `crate::launch`, and `tests/p4_boundary.rs` pins it to that one
+//! site.
 //!
 //! # The unsafe boundary
 //!
@@ -68,14 +70,16 @@
     clippy::multiple_unsafe_ops_per_block,
     unsafe_op_in_unsafe_fn
 )]
-// P3 adds no public entry point, so outside the test build nothing in the crate
-// calls this module. That is the accepted shape of the slice, not dead code
-// that should be deleted: P4 owns the public consumer.
+// `crate::launch` consumes `spawn_for_lifecycle`, `ChildHandle` and the status
+// vocabulary, but the P3 minimal launch and its fault plumbing exist for this
+// module's own tests. That is the accepted shape of the slice, not dead code to
+// delete: the two entry points are deliberately separate, so P4 cannot silently
+// change what P3 was accepted as.
 #![cfg_attr(
     not(test),
     allow(
         dead_code,
-        reason = "P3 is a crate-private backend; the public consumer belongs to a slice that is not authorised"
+        reason = "the P3 minimal launch and its fault plumbing are exercised by this module's own tests; P4 uses `spawn_for_lifecycle`"
     )
 )]
 
@@ -86,7 +90,7 @@ mod spawn;
 mod syscall;
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 
 use std::os::fd::OwnedFd;
 use std::time::{Duration, Instant};
@@ -95,6 +99,7 @@ pub(crate) use spawn::ChildHandle;
 
 use crate::authority::AuthorizedLaunch;
 use crate::model::{ChildStage, Digest, ExecStatus, ExecutableMeasurement, IndeterminateReason};
+use crate::plan::ValidatedLaunchPlan;
 
 // ------------------------------------------------------------- fixed bounds
 
@@ -408,7 +413,15 @@ fn launch_with(authorized: AuthorizedLaunch, fault: Fault) -> Result<MinimalLaun
     let spawn::SpawnedChild {
         child,
         group_authority_established,
+        mask_restore_errno,
     } = spawn::spawn(&prepared, fault)?;
+    if let Some(errno) = mask_restore_errno {
+        // P3's historical contract, unchanged: dropping `child` here sends one
+        // `SIGKILL` through the pidfd and reaps within the fixed bound, so the
+        // error is returned with no child left behind. P4 decides differently,
+        // in `spawn_for_lifecycle`.
+        return Err(BackendError::SignalMaskRestoreFailed { errno });
+    }
 
     // A child exists from here on. `child` owns it: every return path below
     // either reaps it or drops the handle, which kills and reaps it.
@@ -436,6 +449,75 @@ fn launch_with(authorized: AuthorizedLaunch, fault: Fault) -> Result<MinimalLaun
         stdin_write: ends.stdin_write,
         measurement,
         plan_sha256,
+    })
+}
+
+// ------------------------------------------------------ spawn_for_lifecycle
+
+/// One direct child, its parent-side descriptors and the facts a receipt needs,
+/// handed to the **P4** lifecycle in [`crate::launch`].
+///
+/// This is not a launch and not a receipt: nothing here has observed anything
+/// yet. It exists so that the observation loop lives outside the `unsafe`
+/// boundary, in safe code, while process creation stays inside it.
+pub(crate) struct SpawnedForLifecycle {
+    /// The direct child, owned by its pidfd. Dropping it cannot leak a child.
+    pub(crate) child: ChildHandle,
+    /// Whether the parent's own `setpgid(child, child)` succeeded. **Only** a
+    /// successful parent-side call sets this, and P4 must never infer it.
+    pub(crate) group_authority_established: bool,
+    /// The parent's exec-status read end, non-blocking.
+    pub(crate) status_read: OwnedFd,
+    /// The parent's stdout read end, non-blocking.
+    pub(crate) stdout_read: OwnedFd,
+    /// The parent's stderr read end, non-blocking.
+    pub(crate) stderr_read: OwnedFd,
+    /// The P2 measurement, carried through unchanged.
+    pub(crate) measurement: ExecutableMeasurement,
+    /// The validated plan, cloned before the prepared value was consumed.
+    pub(crate) plan: ValidatedLaunchPlan,
+}
+
+/// Prepare and create one direct child for the **P4** lifecycle.
+///
+/// Identical to the first half of [`launch_with`] — the same `prepare`, the
+/// same single `spawn`, the same descriptor release — and it differs in exactly
+/// one way: a failed mask restore is returned as a **fact** rather than as an
+/// error, because a child exists by then and the accepted boundary never loses
+/// a child attempt behind an error value.
+///
+/// Every failure this **does** return is raised **before** `clone3` created
+/// anything, so `Err` here always means no process was created.
+pub(crate) fn spawn_for_lifecycle(
+    authorized: AuthorizedLaunch,
+) -> Result<SpawnedForLifecycle, BackendError> {
+    let prepared = spawn::prepare(authorized)?;
+    let measurement = prepared.measurement();
+    let plan = prepared.plan().clone();
+
+    let spawn::SpawnedChild {
+        child,
+        group_authority_established,
+        // Deliberately dropped. A child exists by the time the restore runs, so
+        // this can never become an error return; and it changes no receipt
+        // fact, because it describes the launching thread rather than the
+        // child. The P3 minimal launch, which has no receipt to fall back on,
+        // keeps its historical error instead.
+        mask_restore_errno: _,
+    } = spawn::spawn(&prepared, Fault::default())?;
+
+    // A child exists from here on. `child` owns it: every return path below
+    // either observes it or drops the handle, which kills and reaps it.
+    let ends = prepared.release_child_side(false);
+
+    Ok(SpawnedForLifecycle {
+        child,
+        group_authority_established,
+        status_read: ends.status_read,
+        stdout_read: ends.stdout_read,
+        stderr_read: ends.stderr_read,
+        measurement,
+        plan,
     })
 }
 

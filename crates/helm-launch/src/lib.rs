@@ -1,16 +1,20 @@
-//! `helm-launch` 0.1 — **P1, P2 and P3: the portable model, Linux x86_64
-//! capability admission, and a crate-private Linux x86_64 process-creation
-//! backend.**
+//! `helm-launch` 0.1 — **P1 to P4: the portable model, Linux x86_64 capability
+//! admission, a crate-private Linux x86_64 process-creation backend, and the
+//! public Linux x86_64 launch with its real receipt.**
 //!
-//! **There is no public launch API.** No public function, type or constant of
-//! this crate can create a process: there is no `launch`, no `LaunchOutcome`,
-//! no process handle, no pidfd, no child pid and no raw descriptor in the
-//! public surface, on any platform. P1, P2 and P3 implement, under Accepted
+//! **On the Linux x86_64 cohort [`launch`] is the one public way to create a
+//! process, and it is reachable only from an `AuthorizedLaunch`.** Off that
+//! cohort neither it nor [`LaunchOutcome`] exists. **No process handle, pidfd,
+//! child pid, process group or raw descriptor appears in the public surface on
+//! any platform**, and every descriptor a launch opened is closed before
+//! `launch` returns. P1 to P4 implement, under Accepted
 //! [ADR-0024](../../../docs/adr/ADR-0024-launch-authority.md), the owner's P1
 //! authorisation and acceptance of 2026-09-17, the owner's
 //! [P2 authorisation of 2026-09-18](../../../docs/DECISIONS.md#helm-launch-p2-authorised),
+//! the owner's
+//! [P3 authorisation of 2026-09-18](../../../docs/DECISIONS.md#helm-launch-p3-authorised),
 //! and the owner's
-//! [P3 authorisation of 2026-09-18](../../../docs/DECISIONS.md#helm-launch-p3-authorised):
+//! [P4 authorisation of 2026-09-19](../../../docs/DECISIONS.md#helm-launch-p4-authorised):
 //!
 //! * **P1, portable.** [`parse_launch_plan`]: untrusted plan bytes to an inert
 //!   [`ValidatedLaunchPlan`], with exact-byte SHA-256 identity and no I/O;
@@ -30,7 +34,15 @@
 //!   that consumes an `AuthorizedLaunch`, creates **one** direct child with
 //!   `clone3(CLONE_PIDFD)` and attempts `execveat` on the exact admitted
 //!   descriptor. It is the only place in the crate where scoped `unsafe` is
-//!   allowed, it is not re-exported, and **no public item reaches it**.
+//!   allowed, it is not re-exported, and **no public item names it**.
+//! * **P4, Linux x86_64 only.** [`launch`], which consumes an
+//!   `AuthorizedLaunch`, drives the accepted observation loop — the fixed
+//!   pre-exec bound, the plan-driven run deadline, `SIGTERM`, the grace period,
+//!   `SIGKILL`, the bounded post-kill wait, concurrent stream draining and the
+//!   guarded process-group cleanup sweep — and returns a [`LaunchOutcome`]
+//!   carrying a deterministic [`LaunchReceipt`]. The policy it drives is the
+//!   same pure lifecycle model P1 tests on every platform; P4 adds **no**
+//!   `unsafe`.
 //!
 //! # Authority
 //!
@@ -39,21 +51,13 @@
 //! caller-owned executable fd --admit_executable---------▶ ExecutableCapability
 //! caller-owned cwd fd + id   --admit_working_directory--▶ WorkingDirectoryCapability
 //! plan + executable + cwd    --authorize---------------▶ AuthorizedLaunch
-//! AuthorizedLaunch           --╳------------------------▶ process   public API
-//! AuthorizedLaunch           --crate-private backend----▶ process   P3, internal
+//! AuthorizedLaunch           --launch-------------------▶ process + LaunchOutcome
 //! ```
 //!
-//! **The public edge does not exist.** An `AuthorizedLaunch` an external caller
-//! holds is inert: the only consumer that can turn it into a process is
-//! crate-private, and so is every value that consumer produces.
-//!
-//! ```compile_fail
-//! use helm_launch::launch;
-//! ```
-//!
-//! ```compile_fail
-//! use helm_launch::LaunchOutcome;
-//! ```
+//! **That last edge is the only one, it is consuming, and it is the narrowest
+//! thing that can exist.** An `AuthorizedLaunch` cannot be cloned, built from
+//! data, or launched twice; a `LaunchOutcome` cannot be constructed, cloned or
+//! deserialised; and nothing crate-private is nameable from outside:
 //!
 //! ```compile_fail
 //! use helm_launch::backend;
@@ -107,8 +111,8 @@
     doc = "reach it. These are the on-point proofs, not an unrelated missing",
     doc = "import: the module is private, and the only method that decomposes an",
     doc = "authorisation, and the only accessor of an admitted descriptor, are",
-    doc = "crate-private. An outside caller has no expressible way to turn an",
-    doc = "authorisation into a process.",
+    doc = "crate-private. The one authorised path from an authorisation to a",
+    doc = "process is `launch`, and nothing else expresses one.",
     doc = "",
     doc = "```compile_fail",
     doc = "fn execute(a: helm_launch::AuthorizedLaunch) {",
@@ -125,6 +129,22 @@
     doc = "```compile_fail",
     doc = "fn descriptor(c: &helm_launch::ExecutableCapability) {",
     doc = "    let _ = c.descriptor();",
+    doc = "}",
+    doc = "```",
+    doc = "",
+    doc = "A `LaunchOutcome` has no public constructor, and `launch` consumes",
+    doc = "its authorisation, so neither can be forged nor replayed:",
+    doc = "",
+    doc = "```compile_fail",
+    doc = "fn forge(r: helm_launch::LaunchReceipt) -> helm_launch::LaunchOutcome {",
+    doc = "    helm_launch::LaunchOutcome { receipt: r }",
+    doc = "}",
+    doc = "```",
+    doc = "",
+    doc = "```compile_fail",
+    doc = "fn twice(a: helm_launch::AuthorizedLaunch) {",
+    doc = "    let _ = helm_launch::launch(a);",
+    doc = "    let _ = helm_launch::launch(a);",
     doc = "}",
     doc = "```"
 )]
@@ -161,6 +181,14 @@
     doc = "use helm_launch::AuthorizedLaunch;",
     doc = "```",
     doc = "",
+    doc = "```compile_fail",
+    doc = "use helm_launch::launch;",
+    doc = "```",
+    doc = "",
+    doc = "```compile_fail",
+    doc = "use helm_launch::LaunchOutcome;",
+    doc = "```",
+    doc = "",
     doc = "No support for another platform is advertised, and Linux on another",
     doc = "architecture is not claimed."
 )]
@@ -193,16 +221,24 @@
 //!
 //! # Non-claims
 //!
-//! **No public process creation and no public process execution.** The P3
-//! backend creates one direct child internally and attempts one execution of
-//! the admitted descriptor; that is not reachable from outside the crate, emits
-//! no receipt, and establishes **no** exec-success fact. A clean exec-status
-//! end-of-file is indeterminate, and no `ExecSucceeded` value exists anywhere.
+//! **A launch never claims that anything executed successfully.** A clean
+//! exec-status end-of-file establishes
+//! [`IndeterminateReason::StatusEofWithoutRecord`] and nothing more, the run
+//! deadline starts at exactly that event rather than at a confirmed execution,
+//! and no `ExecSucceeded` value exists anywhere in this crate.
 //!
-//! No sandbox and no containment; no process-group sweep; no run timeout,
-//! `SIGTERM` or grace period; no stream drain policy; no Wine; no `PATH`,
-//! shell, command string or pathname launch; no authority from parsing; no
-//! receipt authenticity. A digest identifies bytes and nothing more.
+//! **The process-group sweep is best-effort cleanup, not containment.**
+//! [`GroupSweep::Issued`] says only that the one group signal call was issued.
+//! It does not say that a descendant received it, that a descendant died, that
+//! the process tree was contained, or that every application process ended; a
+//! descendant that left the group by `setsid`, `setpgid` or a service handoff
+//! survives it.
+//!
+//! No sandbox and no containment; no cgroup; no process-tree supervision; no
+//! Wine; no `PATH`, shell, command string or pathname launch; no authority from
+//! parsing; no async API; and no receipt authenticity. A receipt carries facts,
+//! never verdicts; its bytes are data anyone can write, and a matching digest
+//! proves byte identity and nothing about origin.
 //!
 //! Executable measurement is a **pre-execution measurement of the pinned
 //! object**, never the identity of bytes that executed and never a statement
@@ -233,7 +269,12 @@ mod authority;
 // it is nameable outside this crate. Off the cohort it is not compiled at all.
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 mod backend;
+// P4 (owner decision 2026-09-19): the public Linux x86_64 launch, the parent
+// observation loop and the real receipt. Off the cohort this module is not
+// compiled and neither `launch` nor `LaunchOutcome` exists.
 mod error;
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+mod launch;
 mod layout;
 mod lifecycle;
 mod model;
@@ -247,8 +288,11 @@ pub use authority::{
 };
 pub use error::{
     AdmissionError, AdmissionErrorCode, AuthorizationRefusal, AuthorizationRefusalCode,
-    LaunchPlanError, LaunchPlanErrorCode, LaunchPlanErrors, MAX_PLAN_ERRORS,
+    LaunchError, LaunchErrorCode, LaunchPlanError, LaunchPlanErrorCode, LaunchPlanErrors,
+    MAX_PLAN_ERRORS, PreparationStep,
 };
+#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+pub use launch::{LaunchOutcome, launch};
 pub use model::{
     AssertedContext, Backend, ChildEnd, ChildStage, Completeness, Digest, ElfType, EnvironmentMode,
     ExecStatus, ExecutableMeasurement, GroupSweep, IndeterminateReason, MAX_ID_BYTES,

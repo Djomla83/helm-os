@@ -1,27 +1,35 @@
-# helm-launch (experimental 0.1) — P1 portable model + P2 capability admission + P3 internal backend
+# helm-launch (experimental 0.1) — P1 portable model + P2 capability admission + P3 internal backend + P4 public launch
 
-> **P1, P2 AND P3 IMPLEMENTATION.**
+> **P1 TO P4 IMPLEMENTATION.**
 >
-> **THERE IS NO PUBLIC `launch()` API.** No public function, type or constant of this crate can
-> create a process, on any platform.
+> **`launch()` EXISTS ON LINUX x86_64 AND NOWHERE ELSE.** It consumes an `AuthorizedLaunch`,
+> which is the only value that authorises execution and cannot be cloned, built from data or
+> launched twice. Off the cohort neither `launch` nor `LaunchOutcome` exists at all.
 >
-> **P3 DOES CREATE AND EXECUTE ONE PROCESS, INTERNALLY.** On Linux x86_64 a **crate-private**
-> backend consumes an `AuthorizedLaunch`, creates one direct child with `clone3(CLONE_PIDFD)` and
-> attempts `execveat` on the exact admitted descriptor. It is not reachable from outside the crate.
+> **ONE DIRECT CHILD, CREATED INSIDE THE CRATE-PRIVATE BACKEND.** On Linux x86_64 the backend
+> creates one direct child with `clone3(CLONE_PIDFD)` and attempts `execveat` on the exact
+> admitted descriptor; P4 observes that child and returns a deterministic receipt.
+>
+> **NO PROCESS HANDLE SURVIVES.** No pid, pidfd, process group or raw descriptor appears in the
+> public API, and every descriptor a launch opened is closed before `launch` returns.
 >
 > **`unsafe` EXISTS, AND ONLY UNDER `src/backend/`.** The crate root still denies it
 > (`#![deny(unsafe_code, unsafe_op_in_unsafe_fn)]`); exactly one scoped `#![allow(unsafe_code)]`
-> sits at the backend module boundary.
+> sits at the backend module boundary. **P4 adds none**: the whole lifecycle, the `poll` loop
+> and the one group signal are safe `rustix` calls in `src/launch.rs`.
 >
-> **NO PROCESS-GROUP SWEEP. NO RUN TIMEOUT, `SIGTERM` OR GRACE PERIOD. NO STREAM DRAIN POLICY.
-> NO RECEIPT FROM A REAL LAUNCH. NO SANDBOX, NO CONTAINMENT, NO WINE, NO EXEC-SUCCESS CLAIM.**
+> **NO SANDBOX, NO CONTAINMENT, NO CGROUP, NO WINE, NO ASYNC API, NO RECEIPT AUTHENTICITY AND NO
+> EXEC-SUCCESS CLAIM.** The process-group sweep is **best-effort cleanup**: `group_sweep =
+> issued` says the one call was issued, never that a descendant received it, died, or that the
+> process tree was contained.
 
 | Slice | State |
 |---|---|
 | **P1 — portable model** | **ACCEPTED** 2026-09-17 ([decision](../../docs/DECISIONS.md#helm-launch-p1-accepted)), independently reviewed (0 BLOCKER, 0 IMPORTANT), green three-platform CI |
 | **P2 — capability admission** | **ACCEPTED** 2026-09-18 ([decision](../../docs/DECISIONS.md#helm-launch-p2-accepted)), independently reviewed (0 BLOCKER, 0 IMPORTANT), green Linux runtime gate |
-| **P3 — unsafe backend and child contract** | **AUTHORISED** 2026-09-18 ([decision](../../docs/DECISIONS.md#helm-launch-p3-authorised)); this tree is an **IMPLEMENTED CANDIDATE, NOT YET PRODUCT-ACCEPTED** and **not yet independently reviewed**. One fresh independent **unsafe** review is the next gate |
-| **P4, P5** | **NOT AUTHORISED** |
+| **P3 — unsafe backend and child contract** | **ACCEPTED** 2026-09-19 ([decision](../../docs/DECISIONS.md#helm-launch-p3-accepted)), independently reviewed four times over (0 BLOCKER, 0 IMPORTANT each), green hosted Linux runtime, machine-code, injection, `strace`, S5 and S6 gates |
+| **P4 — lifecycle, termination, public launch, real receipt** | **AUTHORISED** 2026-09-19 ([decision](../../docs/DECISIONS.md#helm-launch-p4-authorised)); this tree is an **IMPLEMENTED CANDIDATE, NOT YET PRODUCT-ACCEPTED** and **not yet independently reviewed**. One fresh independent lifecycle and receipt review is the next gate |
+| **P5** | **NOT AUTHORISED** |
 | helm-launch 0.1 complete module | **NOT YET PRODUCT-ACCEPTED** |
 
 `crates/helm-launch` implements the accepted [ADR-0024](../../docs/adr/ADR-0024-launch-authority.md)
@@ -62,12 +70,11 @@ untrusted bytes            --parse_launch_plan-------▶ ValidatedLaunchPlan    
 caller-owned executable fd --admit_executable--------▶ ExecutableCapability
 caller-owned cwd fd + id   --admit_working_directory-▶ WorkingDirectoryCapability
 plan + executable + cwd    --authorize---------------▶ AuthorizedLaunch
-AuthorizedLaunch           --╳-----------------------▶ process     public API
-AuthorizedLaunch           --crate-private backend---▶ process     P3, internal only
+AuthorizedLaunch           --launch------------------▶ process + LaunchOutcome    P4
 ```
 
-**The public edge does not exist.** No public function consumes an `AuthorizedLaunch`: `launch`
-does not exist on any platform, and the only consumer that can turn one into a process is
+**That edge is the only one, and it consumes.** `launch` is the single public function that can
+turn an authorisation into a process; the backend it drives is
 `pub(crate)`. An `AuthorizedLaunch` an external caller holds is inert, and `compile_fail` doctests
 in the crate root prove exactly that — that `helm_launch::backend::launch_minimal` is unnameable,
 that `AuthorizedLaunch::into_parts` is unreachable, and that no capability hands out a descriptor.
@@ -189,11 +196,14 @@ Forbidden even inside the backend: any other foreign interface, `libc::syscall`,
 
 ## Non-claims
 
-* **No public process creation and no public process execution.** The P3 backend creates one direct
-  child internally and attempts one execution of the admitted descriptor. Nothing public reaches it:
-  `launch`, `LaunchOutcome`, a process handle, a pidfd, a child pid and a raw descriptor are all
-  absent from the public API, and boundary tests plus `compile_fail` doctests fail on any of them
-  appearing.
+* **The public execution surface is exactly `launch` and `LaunchOutcome`, on Linux x86_64 only.**
+  A process handle, a pidfd, a child pid, a process group and a raw descriptor are all absent
+  from the public API; `LaunchOutcome` owns no descriptor and cannot be constructed, cloned or
+  deserialised; and boundary tests plus `compile_fail` doctests fail on any of that changing.
+* **The process-group sweep is cleanup, not containment.** It needs established parent authority,
+  is preceded by a non-consuming `WNOWAIT` probe, is issued at most **once** and strictly before
+  the reap, and reaches only processes still in the child's own group. A descendant that left by
+  `setsid`, `setpgid` or a service handoff survives, and nothing here claims otherwise.
 * **No exec-success claim.** A clean exec-status end-of-file is `indeterminate`. Nothing in the
   crate derives, infers or reports that a program ran.
 * **Measurement is a pre-execution measurement of the pinned object.** It is **not** the identity
@@ -297,9 +307,10 @@ data, not records of any launch, and not authentic.**
 `serde`, `serde_json` and `sha2` on every platform. On the Linux x86_64 cohort only:
 
 * `rustix = "=1.1.4"` — the pin `helm-observe` already uses — with `default-features = false` and
-  `std`, `fs`, `process` and `pipe` enabled. **`event` is deliberately not enabled**: the `poll`
-  observation loop that would need it belongs to P4, which is not authorised. Neither are `thread`,
-  `mm`, `net` or `runtime`.
+  `std`, `fs`, `process`, `pipe` and `event` enabled. **`event` is the one feature P4 added**, for
+  the observation loop's `poll`. **`time` is deliberately not enabled**: monotonic deadlines are
+  `std::time::Instant`, which is `CLOCK_MONOTONIC` on Linux. Neither are `thread`, `mm`, `net` or
+  `runtime`, and the guarded group sweep needed no new feature at all.
 * `libc = "=0.2.189"` — the version already locked and vetted here — **for constants only**. Every
   syscall number, signal number, clone flag and ABI constant is written as the literal the Linux
   x86_64 UAPI defines and then pinned against the `libc` constant of the same name in a `const`
@@ -360,15 +371,42 @@ group signal, on `std::process::Command` in backend product code, on a fault-inj
 `tools/tests/test_helm_launch_confinement.py` asserts the same confinement facts a second time, in a
 second language, without `cargo`.
 
-## Accepted future behaviour — NOT IMPLEMENTED
+## P4 — the public launch and its lifecycle
 
-ADR-0024 also accepts, as architecture only, the lifecycle that P4 would add: a public `launch`, a
-`LaunchOutcome`, an observation loop over the status channel, the two streams and the pidfd, the
-plan-driven run deadline with `SIGTERM` and its grace period, a general drain policy, the guarded
-every-path process-group `SIGKILL` sweep, and a receipt emitted from a real launch. **None of that
-exists in this crate.** The receipt vocabulary and the pure layout and lifecycle models describe the
-contract so it can be tested before the loop exists; they observe nothing and execute nothing.
-Implementing any of it needs a new explicit owner decision. P4 and P5 are **not authorised**.
+`src/launch.rs` is the whole slice, and it holds **no `unsafe`**. It drives the *same* pure
+lifecycle model `src/lifecycle.rs` has carried since P1: the loop turns `poll` results and reads
+into the model's events, hands them to `Lifecycle::step`, and performs the actions the model
+returns. **There is deliberately no second copy of the policy**, so the real loop cannot drift
+from the model that is tested on every platform.
+
+| Phase | What it does |
+|---|---|
+| **A — exec status** | Reads the status channel until a record, an end-of-file or the fixed `SPAWN_CONFIRM_TIMEOUT_MS` bound. Both streams drain throughout. A timeout means one immediate pidfd `SIGKILL`; there is no `SIGTERM` for it. |
+| **B — running** | Starts at the `exec_status_eof` event — **not** at a confirmed execution — and runs the plan's deadline, then `SIGTERM`, then the grace period, then `SIGKILL`, then the bounded post-kill wait. A child that ends first starts the fixed post-exit drain instead. |
+| **C — cleanup** | With no group authority: **no sweep**. With authority: one non-consuming `WNOWAIT` probe; `ECHILD` means the child was reaped elsewhere and **no sweep** is issued; otherwise exactly **one** `SIGKILL` group signal, strictly before the reap. Then one non-blocking, descriptor-based reap. |
+
+**`end_not_observed` is latched.** Once the post-`SIGKILL` bound expires with no observed end, the
+receipt-facing `child_end` is `end_not_observed` and no later pidfd readiness, exit, signal, core
+dump or `ECHILD` replaces it. It means only that no end was observed within the bound — never that
+the child is still running.
+
+**`Err` versus a receipt.** Before a direct child exists, every failure is `Err(LaunchError)` and
+there is no receipt. Once `clone3` has returned a child, `launch` returns `Ok(LaunchOutcome)` with
+a receipt whatever happened — a setup failure, an `execveat` failure, indeterminate evidence, a
+timeout, a signal, a read failure or an unobservable end. A child attempt is never lost behind an
+error value.
+
+**Output.** Both streams are drained concurrently; every byte is counted and SHA-256 hashed, and
+only the plan's `capture_prefix_bytes` are kept in memory. **No raw output byte ever reaches the
+receipt**, and neither `Debug` rendering prints captured bytes. The receipt carries no timestamp,
+no duration, no pid, no descriptor number, no host path and no authenticity claim.
+
+## Still not implemented
+
+P5 — the adversarial and evidence-contract slice, a published receipt schema document, portable
+published test vectors and helm-evidence semantic receipt verification — is **not authorised**.
+Neither is Wine, Proton, orchestration, sandboxing, a cgroup, process-tree containment, an async
+API or any receipt signature. Each needs a new explicit owner decision.
 
 ## Testing
 

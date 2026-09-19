@@ -6,14 +6,17 @@
 //! crate, never text taken from the document.
 //!
 //! P1 and P2 carry the plan-error, capability-admission and
-//! authorisation-refusal families. The process-creation family of the
-//! productization plan belongs to a `launch` function that does not exist, so
-//! it is not represented here.
+//! authorisation-refusal families. **P4** adds the process-creation family,
+//! [`LaunchError`], and nothing else: every one of its members is raised
+//! **before a direct child exists**. Once `clone3` has returned a child, the
+//! accepted boundary of plan section 13.1 makes every later outcome a receipt
+//! fact rather than an error, so no timeout, signal, read failure,
+//! indeterminate status or unobservable end has a spelling here.
 //!
-//! The admission and refusal vocabularies are portable data: they carry no
-//! descriptor, no platform authority and no `rustix` type, so they compile
-//! everywhere even though their only producer, `crate::authority`, exists on
-//! the Linux x86_64 cohort alone.
+//! The admission, refusal and launch vocabularies are portable data: they carry
+//! no descriptor, no platform authority and no `rustix` type, so they compile
+//! everywhere even though their only producers, `crate::authority` and
+//! `crate::launch`, exist on the Linux x86_64 cohort alone.
 
 use core::fmt;
 
@@ -512,6 +515,194 @@ impl fmt::Display for AuthorizationRefusal {
 }
 
 impl std::error::Error for AuthorizationRefusal {}
+
+// ------------------------------------------------------------------- launch
+
+/// Which parent-side preparation step failed, before any child existed.
+///
+/// Every member names a step of plan section 8.2 that runs while the caller's
+/// authorisation has been consumed but **no process has been created**.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[non_exhaustive]
+pub enum PreparationStep {
+    /// Creating one of the four close-on-exec pipes.
+    Pipe,
+    /// Relocating a child-side descriptor to at least 3.
+    Relocate,
+    /// Making a parent read end non-blocking.
+    NonBlocking,
+    /// Replacing the calling thread's signal mask before `clone3`.
+    SignalMask,
+}
+
+impl PreparationStep {
+    /// Stable machine-readable spelling.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Pipe => "PIPE",
+            Self::Relocate => "RELOCATE",
+            Self::NonBlocking => "NON_BLOCKING",
+            Self::SignalMask => "SIGNAL_MASK",
+        }
+    }
+}
+
+impl fmt::Display for PreparationStep {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+/// Why a launch could not be attempted.
+///
+/// **Every member of this vocabulary is raised before a direct child exists**
+/// (plan section 13.1). Once `clone3` has returned a child, `launch` returns
+/// `Ok` with a receipt whatever happened afterwards, so no observation
+/// outcome — an exec failure, an indeterminate status, a timeout, a signal, a
+/// read failure or an unobservable end — is ever spelled here.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[non_exhaustive]
+pub enum LaunchErrorCode {
+    /// A parent-side preparation step failed. No child exists, and every
+    /// descriptor opened so far was closed.
+    PreparationFailed,
+    /// Process creation failed for a transient or resource reason, such as
+    /// `EAGAIN` or `ENOMEM`. No child exists.
+    ProcessCreationFailed,
+    /// Process creation is not available here: `clone3` is absent (`ENOSYS`)
+    /// or a policy hides it (`EPERM`). No child exists.
+    ProcessCreationUnavailable,
+    /// A value this crate constructed was not what it constructed. No child
+    /// exists. No further detail is published, because any such detail would
+    /// be a place for host text to escape.
+    InternalInvariant,
+}
+
+impl LaunchErrorCode {
+    /// Stable machine-readable spelling.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::PreparationFailed => "PREPARATION_FAILED",
+            Self::ProcessCreationFailed => "PROCESS_CREATION_FAILED",
+            Self::ProcessCreationUnavailable => "PROCESS_CREATION_UNAVAILABLE",
+            Self::InternalInvariant => "INTERNAL_INVARIANT",
+        }
+    }
+}
+
+impl fmt::Display for LaunchErrorCode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+/// A launch that never created a process.
+///
+/// There is **no receipt** for any value of this type: a refusal produces no
+/// receipt, and an attempted launch always has one. The type is portable data
+/// — it carries no descriptor, no platform authority and no `rustix` type — so
+/// it compiles everywhere even though its only producer exists on the Linux
+/// x86_64 cohort alone.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct LaunchError {
+    code: LaunchErrorCode,
+    step: Option<PreparationStep>,
+    errno: Option<i32>,
+}
+
+impl LaunchError {
+    #[cfg_attr(
+        not(all(target_os = "linux", target_arch = "x86_64")),
+        allow(
+            dead_code,
+            reason = "off the Linux x86_64 cohort no launch producer is compiled"
+        )
+    )]
+    pub(crate) const fn new(code: LaunchErrorCode) -> Self {
+        Self {
+            code,
+            step: None,
+            errno: None,
+        }
+    }
+
+    #[cfg_attr(
+        not(all(target_os = "linux", target_arch = "x86_64")),
+        allow(
+            dead_code,
+            reason = "off the Linux x86_64 cohort no launch producer is compiled"
+        )
+    )]
+    pub(crate) const fn with_errno(code: LaunchErrorCode, errno: i32) -> Self {
+        Self {
+            code,
+            step: None,
+            errno: Some(errno),
+        }
+    }
+
+    #[cfg_attr(
+        not(all(target_os = "linux", target_arch = "x86_64")),
+        allow(
+            dead_code,
+            reason = "off the Linux x86_64 cohort no launch producer is compiled"
+        )
+    )]
+    pub(crate) const fn preparation(step: PreparationStep, errno: i32) -> Self {
+        Self {
+            code: LaunchErrorCode::PreparationFailed,
+            step: Some(step),
+            errno: Some(errno),
+        }
+    }
+
+    /// The fixed error code.
+    #[must_use]
+    pub const fn code(&self) -> LaunchErrorCode {
+        self.code
+    }
+
+    /// Which preparation step failed, for
+    /// [`LaunchErrorCode::PreparationFailed`] only.
+    #[must_use]
+    pub const fn step(&self) -> Option<PreparationStep> {
+        self.step
+    }
+
+    /// The operating-system error number, when one produced this refusal.
+    #[must_use]
+    pub const fn errno_number(&self) -> Option<i32> {
+        self.errno
+    }
+
+    /// Stable symbolic spelling of [`Self::errno_number`], from the closed
+    /// table this crate owns.
+    #[must_use]
+    pub const fn errno_name(&self) -> Option<&'static str> {
+        match self.errno {
+            Some(number) => errno_spelling(number),
+            None => None,
+        }
+    }
+}
+
+impl fmt::Display for LaunchError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.code.fmt(f)?;
+        if let Some(step) = self.step {
+            write!(f, " at {step}")?;
+        }
+        match (self.errno_name(), self.errno) {
+            (Some(name), _) => write!(f, " errno {name}"),
+            (None, Some(number)) => write!(f, " errno {number}"),
+            (None, None) => Ok(()),
+        }
+    }
+}
+
+impl std::error::Error for LaunchError {}
 
 #[cfg(test)]
 mod tests {

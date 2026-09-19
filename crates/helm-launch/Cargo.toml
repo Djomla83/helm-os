@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.95"
 publish = false
-description = "Experimental portable launch-plan and receipt model, Linux x86_64 capability admission and a crate-private Linux x86_64 process-creation backend; P1 to P3, no public launch API"
+description = "Experimental portable launch-plan and receipt model, Linux x86_64 capability admission, a crate-private Linux x86_64 process-creation backend, and a public Linux x86_64 launch with a deterministic receipt; P1 to P4"
 
 [dependencies]
 serde = "=1.0.228"
@@ -25,12 +25,18 @@ sha2 = "=0.10.9"
 # carries `read`, `pread`, `fcntl_dupfd_cloexec` and `retry_on_intr`, needs no
 # feature.
 #
-# `event` is deliberately NOT enabled. The `poll` observation loop that would
-# need it belongs to P4, which is not authorised; P3's two fixed internal
-# bounds use non-blocking reads and non-blocking `waitid` instead. `thread`,
-# `mm`, `net` and `runtime` are not enabled either.
+# `event` carries `poll`, `PollFd`, `PollFlags` and `Timespec`, which the P4
+# observation loop of plan section 8.5 needs in order to wait on the status
+# channel, the two streams and the pidfd at once. It is the only feature P4
+# adds, and it is added because that loop genuinely cannot be written without
+# it: P3's two fixed internal bounds used non-blocking reads and a non-blocking
+# `waitid` instead. `time` is NOT enabled — monotonic deadlines use
+# `std::time::Instant`, which is `CLOCK_MONOTONIC` on Linux — and neither are
+# `thread`, `mm`, `net` or `runtime`. The P4 process-group sweep needs no new
+# feature either: safe `rustix::process::kill_process_group` is already in
+# `process`.
 [target.'cfg(all(target_os = "linux", target_arch = "x86_64"))'.dependencies]
-rustix = { version = "=1.1.4", default-features = false, features = ["std", "fs", "process", "pipe"] }
+rustix = { version = "=1.1.4", default-features = false, features = ["std", "fs", "process", "pipe", "event"] }
 
 # CONSTANTS ONLY. P3 writes every syscall number, signal number, clone flag and
 # ABI constant as the literal the Linux x86_64 UAPI defines, and then pins each
@@ -48,7 +54,7 @@ libc = { version = "=0.2.189", default-features = false }
 # and read the bounded reports of executed fixtures. Same pin, same features,
 # same cohort gate, so no package or version is added.
 [target.'cfg(all(target_os = "linux", target_arch = "x86_64"))'.dev-dependencies]
-rustix = { version = "=1.1.4", default-features = false, features = ["std", "fs", "process", "pipe"] }
+rustix = { version = "=1.1.4", default-features = false, features = ["std", "fs", "process", "pipe", "event"] }
 
 # The one non-default feature. It compiles test-only fault injection into the
 # closed child sequence, and only together with `debug_assertions`, so no

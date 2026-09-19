@@ -1,4 +1,4 @@
-name: helm-launch portable model, Linux capability admission and Linux backend
+name: helm-launch portable model, Linux capability admission, Linux backend and public launch
 
 # helm-launch implements three owner-authorised slices. P1 is a portable, pure
 # model: plan parsing, the receipt model and serializer, the error vocabulary,
@@ -10,11 +10,17 @@ name: helm-launch portable model, Linux capability admission and Linux backend
 # shim, `clone3(CLONE_PIDFD)`, the closed post-clone child contract and an
 # `execveat` of the exact admitted descriptor.
 #
-# There is **no public launch API**: no `launch`, no `LaunchOutcome`, no process
-# handle, no pidfd, no child pid and no raw descriptor in the public surface, and
-# `tests/p3_boundary.rs` plus `compile_fail` doctests fail if one appears. There
-# is no process-group sweep, no run timeout, no `SIGTERM`, no grace period and no
-# stream drain policy: those are P4, which is not authorised.
+# P4 adds the public `launch` and `LaunchOutcome` on the Linux x86_64 cohort, the
+# observation loop, the run deadline, `SIGTERM`, the grace period, `SIGKILL`, the
+# bounded drains, the guarded process-group cleanup sweep and a real receipt. No
+# process handle, pidfd, child pid, process group or raw descriptor is public,
+# and `tests/p4_boundary.rs` plus `compile_fail` doctests fail if one appears.
+# P4 adds **no** `unsafe`: the whole lifecycle is safe `rustix` in
+# `src/launch.rs`, outside the backend boundary.
+#
+# The group sweep is **best-effort cleanup, not containment**: issuing it says
+# only that the one call was made. Nothing here claims a descendant received it,
+# died, or that a process tree was contained.
 #
 # **The Linux x86_64 job does create and execute processes**, which is exactly
 # the newly authorised P3 capability and ordinary validation of it. Every fixture
@@ -121,6 +127,25 @@ jobs:
 
       - run: cargo build -p helm-launch --release --locked
 
+      # THE P4 LIFECYCLE GATE. These cases create real children, drive the real
+      # observation loop against them, and exercise the deadline, the grace
+      # period, `SIGKILL`, the bounded drains, the guarded group sweep and the
+      # receipt. They are the only place the P4 loop is executed rather than
+      # inspected, so a green boundary suite never stands in for them.
+      - name: Name and run the P4 lifecycle and receipt cases
+        if: runner.os == 'Linux'
+        run: |
+          cargo test -p helm-launch --locked --lib -- --list
+          cargo test -p helm-launch --locked --lib -- --nocapture launch::tests::
+
+      # The real loop must agree with the pure model P1 tests everywhere. The
+      # model half runs on all three platforms above; this names it explicitly on
+      # Linux, beside the real loop, so a divergence is visible in one log.
+      - name: Name and run the pure lifecycle model beside it
+        if: runner.os == 'Linux'
+        run: |
+          cargo test -p helm-launch --locked --lib -- --nocapture lifecycle::tests::
+
       # THE MACHINE-CODE GATE. Source scanning cannot see code the compiler
       # inserts, and the earlier candidate's child window did call `memcpy` and
       # two panic helpers without any source token saying so. This reads the
@@ -211,7 +236,7 @@ jobs:
         if: runner.os != 'Linux'
         run: cargo test -p helm-launch --locked --test linux_admission -- --list
 
-      - name: Confirm no backend test exists off the cohort
+      - name: Confirm no backend or launch test exists off the cohort
         if: runner.os != 'Linux'
         shell: bash
         run: |
@@ -220,12 +245,17 @@ jobs:
             echo "FAILURE: a backend test exists off the Linux x86_64 cohort."
             exit 1
           fi
-          echo "no backend test off the cohort, as the gate requires"
+          if cargo test -p helm-launch --locked --lib -- --list | grep -q 'launch::'; then
+            echo "FAILURE: a P4 launch test exists off the Linux x86_64 cohort."
+            exit 1
+          fi
+          echo "no backend and no launch test off the cohort, as the gate requires"
 
       # The structural boundary suites run identically on all three platforms:
       # they read the tree and the manifests and execute nothing.
       - name: Run the unsafe-confinement and boundary suites
         run: |
+          cargo test -p helm-launch --locked --test p4_boundary -- --nocapture
           cargo test -p helm-launch --locked --test p3_boundary -- --nocapture
           cargo test -p helm-launch --locked --test p2_boundary
 

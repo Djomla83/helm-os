@@ -161,6 +161,22 @@ impl ValidatedLaunchPlan {
         self.working_directory_id.as_str()
     }
 
+    /// The same identifier as the parsed capability value, for the **P4**
+    /// receipt.
+    ///
+    /// The receipt records what plan validation already admitted; nothing
+    /// re-parses a string that was validated once.
+    #[cfg_attr(
+        not(all(target_os = "linux", target_arch = "x86_64")),
+        allow(
+            dead_code,
+            reason = "off the Linux x86_64 cohort no launch producer builds a receipt"
+        )
+    )]
+    pub(crate) const fn working_directory_capability_id(&self) -> &CapabilityId {
+        &self.working_directory_id
+    }
+
     /// The requested stdin arrangement.
     #[must_use]
     pub const fn stdin_mode(&self) -> StdinMode {
