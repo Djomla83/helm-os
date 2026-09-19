@@ -1417,18 +1417,45 @@ fn the_executed_image_has_no_new_privs_set() {
     // no test asserts that one was prevented.
 }
 
+/// The two group facts an ordinary launch really does establish: the executed
+/// image leads its own process group, and P3 issues no group signal at all.
+///
+/// **`P3R-21`.** This test deliberately requires **neither** value of
+/// `group_authority_established`, because on an ordinary, uncoordinated launch
+/// that boolean is legitimately scheduler-dependent. It is the parent's own
+/// `setpgid(child, child)` result and nothing else; the child's own
+/// `setpgid(0, 0)` is stage 5 of its closed sequence, so when the child reaches
+/// `execveat` before the parent's first post-`clone3` system call runs, Linux
+/// answers the parent `EACCES`. Requiring it here treated a permitted
+/// scheduling outcome as a defect, and that is what failed the hosted run
+/// `35461333887` — on the same commit and runner image on which the same test
+/// passed in another workflow.
+///
+/// The positive authority fact is **not** lost. It is asserted deterministically
+/// by `injected::a_child_that_stalls_before_exec_is_bounded_killed_and_reaped`,
+/// where the child is held before `execveat` and so cannot win that race.
+///
+/// **Process-group state and group-sweep authority are two separate facts, and
+/// stay separate here.** `pgid_is_self` is an observation the executed image
+/// makes about itself; it is evidence that the image leads its group, and it is
+/// **not** evidence that the parent holds sweep authority. Nothing in this test
+/// promotes one into the other.
 #[test]
-fn the_parent_establishes_group_authority_and_issues_no_group_signal() {
+fn the_executed_image_leads_its_group_and_p3_issues_no_group_signal() {
     let fixture = report_fixture();
     let workdir = scratch_dir("group");
     let launch =
         launch_minimal(authorize_fixture(&fixture, &workdir, &[b"group"])).expect("launch");
-    assert!(
-        launch.group_authority_established,
-        "the parent's own setpgid(child, child) did not succeed, so no later slice could sweep"
-    );
     assert!(!launch.sigkill_sent, "a normal run needs no signal at all");
     let completed = complete(launch);
+    // The producer self-test proves this field is `false` when the same fixture
+    // runs outside the backend, so `true` here is a result rather than a
+    // constant — whichever of the two `setpgid` calls happened to run first.
+    let report = parse_report(&completed.stdout);
+    assert!(
+        report.pgid_is_self,
+        "the executed image does not lead its own process group"
+    );
     assert_eq!(completed.end, Some(ChildEnd::Exited { code: 0 }));
 }
 
@@ -1672,6 +1699,25 @@ mod injected {
         assert!(
             result.sigkill_sent,
             "the pre-exec bound must send one SIGKILL"
+        );
+        // `P3R-21`. The deterministic positive case for parent-side group-sweep
+        // authority, and the reason the ordinary launch test does not need one.
+        //
+        // The stall injection runs after the child's own stage-5
+        // `setpgid(0, 0)` and strictly before `execveat`, and it blocks in
+        // `read` on descriptor 0 while the parent deliberately keeps the write
+        // end open for exactly this mode. The child therefore cannot execute at
+        // all until the parent's fixed pre-exec bound resolves it. The parent's
+        // `setpgid(child, child)` is its first system call after `clone3`, so
+        // here — unlike an uncoordinated launch — it cannot lose a race against
+        // `execveat` and be answered `EACCES` by an already-executed child.
+        //
+        // Only that call's success sets the fact. Nothing is inferred from the
+        // child's own `setpgid`, and P3 still issues no group signal.
+        assert!(
+            result.group_authority_established,
+            "the child was held before exec, so the parent's setpgid(child, child) could not \
+             have raced execveat; without its success no later slice could sweep"
         );
         assert_eq!(
             result.child.observed_end(),
