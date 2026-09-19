@@ -284,6 +284,186 @@ class ChildClosureGateTests(unittest.TestCase):
         self.assertEqual(result["problems"], [])
 
 
+HELPER = "_ZN11helm_launch7backend5child6helper17habcdE"
+
+
+class ConditionalBranchGateTests(unittest.TestCase):
+    """P3R-15 — a conditional branch is a function-escaping transfer too.
+
+    The earlier model assumed rustc emits `Jcc` only to a label of the same
+    function, so a conditional branch out of a function was discarded without
+    record. This crate's own release-codegen assembly disproved the assumption
+    with a real `jno <function symbol>`, and a synthetic `jno memcpy@PLT` in
+    `child_main` passed the gate. These cases are table-driven over the whole
+    branch vocabulary so a mnemonic cannot be modelled in one direction only.
+    """
+
+    def test_the_p3r15_reproduction_fails(self):
+        # The exact instruction that passed the previous checker.
+        result = closure_tool.check(
+            closure_tool.Assembly(clean_assembly(extra_child="\tjno\tmemcpy@PLT\n")),
+            control_needle=None,
+        )
+        self.assertIn(
+            ("memcpy", "libc string/memory helper"),
+            [(symbol, category) for _o, symbol, category in result["external_edges"]],
+        )
+        self.assertTrue(result["problems"], result)
+
+    def test_the_branch_vocabulary_is_the_canonical_one(self):
+        # The vocabulary is the authority, so it is pinned rather than inferred.
+        self.assertEqual(len(closure_tool.CONDITIONAL_JUMP_MNEMONICS), 33)
+        self.assertEqual(
+            closure_tool.LOOP_MNEMONICS,
+            frozenset({"loop", "loope", "loopz", "loopne", "loopnz"}),
+        )
+        for mnemonic in ("jno", "je", "jne", "jrcxz", "jecxz", "jcxz", "jpo", "jnle"):
+            self.assertIn(mnemonic, closure_tool.CONDITIONAL_JUMP_MNEMONICS)
+        for mnemonic in closure_tool.ESCAPING_MNEMONICS:
+            self.assertTrue(closure_tool.is_branch_like(mnemonic), mnemonic)
+
+    def test_every_conditional_branch_to_a_forbidden_external_fails(self):
+        for mnemonic in sorted(
+            closure_tool.CONDITIONAL_JUMP_MNEMONICS | closure_tool.LOOP_MNEMONICS
+        ):
+            with self.subTest(mnemonic=mnemonic):
+                result = closure_tool.check(
+                    closure_tool.Assembly(
+                        clean_assembly(extra_child=f"\t{mnemonic}\tmemcpy@PLT\n")
+                    ),
+                    control_needle=None,
+                )
+                self.assertTrue(
+                    any(
+                        "libc string/memory helper" in problem
+                        for problem in result["problems"]
+                    ),
+                    f"{mnemonic} memcpy@PLT was not reported as a libc helper edge: "
+                    f"{result['problems']}",
+                )
+
+    def test_every_conditional_branch_to_an_own_label_is_intra_function(self):
+        # The other half of the rule: modelling the mnemonic must not turn
+        # ordinary intra-function control flow into a false edge.
+        for mnemonic in sorted(
+            closure_tool.CONDITIONAL_JUMP_MNEMONICS | closure_tool.LOOP_MNEMONICS
+        ):
+            with self.subTest(mnemonic=mnemonic):
+                asm = closure_tool.Assembly(
+                    clean_assembly(extra_child=f"\t{mnemonic}\t.LBB0_7\n.LBB0_7:\n")
+                )
+                result = closure_tool.check(asm, control_needle=None)
+                edges = asm.edges(CHILD)
+                self.assertEqual(result["problems"], [], mnemonic)
+                self.assertNotIn(".LBB0_7", edges.targets)
+                # `jmp .LBB0_3` in the baseline plus this one.
+                self.assertEqual(edges.local, 2, mnemonic)
+
+    def test_a_conditional_branch_to_an_internal_helper_is_traversed(self):
+        # `je helper` is a call-graph edge: the helper enters the closure and
+        # its own branches are inspected, rather than the branch being marked
+        # seen and dropped.
+        text = (
+            function(CHILD, f"\tcallq\t{SHIM}\n\tje\t{HELPER}\n\tretq\n")
+            + function(HELPER, "\tjne\tmalloc@PLT\n\tretq\n")
+            + function(SHIM, "\t#APP\n\tsyscall\n\t#NO_APP\n\tretq\n")
+            + function(NOISY, "\tcallq\tmemcpy@PLT\n\tretq\n")
+        )
+        result = closure_tool.check(closure_tool.Assembly(text), control_needle=None)
+        self.assertIn(HELPER, result["closure"])
+        self.assertIn(
+            (CHILD, HELPER), [tuple(edge) for edge in result["internal_edges"]]
+        )
+        self.assertTrue(
+            any("malloc" in problem for problem in result["problems"]),
+            result["problems"],
+        )
+
+    def test_a_clean_conditional_branch_to_an_internal_helper_passes(self):
+        # The positive direction, so the rule above is not satisfied by failing
+        # on every conditional branch.
+        text = (
+            function(CHILD, f"\tcallq\t{SHIM}\n\tjg\t{HELPER}\n\tretq\n")
+            + function(HELPER, "\tretq\n")
+            + function(SHIM, "\t#APP\n\tsyscall\n\t#NO_APP\n\tretq\n")
+            + function(NOISY, "\tcallq\tmemcpy@PLT\n\tretq\n")
+        )
+        result = closure_tool.check(closure_tool.Assembly(text), control_needle=None)
+        self.assertIn(HELPER, result["closure"])
+        self.assertEqual(result["problems"], [])
+
+    def test_a_conditional_branch_keeps_every_other_fail_closed_rule(self):
+        for spelling, bucket in (
+            ("\tjne\t*%rax\n", "indirect_transfer_sites"),
+            ("\tjno\t*(%rbx)\n", "indirect_transfer_sites"),
+            ("\tjno\t.LBB99_7\n", "unresolved_transfer_sites"),
+            ("\tjs\tmemcpy+0x20\n", "unresolved_transfer_sites"),
+            ("\tje\n", "unresolved_transfer_sites"),
+        ):
+            with self.subTest(spelling=spelling.strip()):
+                result = closure_tool.check(
+                    closure_tool.Assembly(clean_assembly(extra_child=spelling)),
+                    control_needle=None,
+                )
+                self.assertEqual(len(result[bucket]), 1, result)
+                self.assertTrue(result["problems"], result)
+
+    def test_a_conditional_branch_through_the_got_resolves_to_its_symbol(self):
+        result = closure_tool.check(
+            closure_tool.Assembly(
+                clean_assembly(extra_child="\tjno\t*memcpy@GOTPCREL(%rip)\n")
+            ),
+            control_needle=None,
+        )
+        reached = {symbol for _origin, symbol, _category in result["external_edges"]}
+        self.assertIn("memcpy", reached)
+
+    def test_a_prefixed_conditional_branch_is_still_classified(self):
+        result = closure_tool.check(
+            closure_tool.Assembly(clean_assembly(extra_child="\tbnd jne\tmemcpy@PLT\n")),
+            control_needle=None,
+        )
+        reached = {symbol for _origin, symbol, _category in result["external_edges"]}
+        self.assertIn("memcpy", reached)
+
+    def test_an_unsupported_branch_mnemonic_fails_closed(self):
+        # "Not in the vocabulary" must never mean "ordinary instruction".
+        for spelling in (
+            "\tjfoo\tmemcpy@PLT\n",
+            "\tjqq\t%rax\n",
+            "\tloopfoo\t.LBB0_3\n",
+            "\tcallfoo\tmemcpy\n",
+        ):
+            with self.subTest(spelling=spelling.strip()):
+                result = closure_tool.check(
+                    closure_tool.Assembly(clean_assembly(extra_child=spelling)),
+                    control_needle=None,
+                )
+                self.assertEqual(len(result["unsupported_transfer_sites"]), 1, result)
+                self.assertTrue(
+                    any(
+                        "outside the modelled vocabulary" in problem
+                        for problem in result["problems"]
+                    ),
+                    result["problems"],
+                )
+
+    def test_an_ordinary_instruction_is_not_a_branch(self):
+        # The conservative backstop must not swallow normal code, or every
+        # closure would fail and the gate would prove nothing.
+        body = (
+            "\tmovq\t8(%rdi), %rsi\n"
+            "\tcmpq\t$-4095, %rax\n"
+            "\tleaq\t(%rax,%rbx,8), %rcx\n"
+            "\tlock cmpxchgq\t%rcx, (%rdx)\n"
+            "\tud2\n"
+        )
+        asm = closure_tool.Assembly(clean_assembly(extra_child=body))
+        result = closure_tool.check(asm, control_needle=None)
+        self.assertEqual(result["unsupported_transfer_sites"], [])
+        self.assertEqual(result["problems"], [])
+
+
 def synthetic_archive(members: list[tuple[str, bytes]]) -> bytes:
     out = io.BytesIO()
     out.write(b"!<arch>\n")
