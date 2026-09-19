@@ -1,5 +1,65 @@
 # Stanje projekta
 
+<a id="helm-launch-p3-conditional-branch-dispositioned"></a>
+
+## HELM-LAUNCH P3 conditional-branch finding dispositioned, 2026-09-19 — bounded rereview done, P3R-10 and P3R-11 fixed, P3R-15 accepted, publication still blocked
+
+The owner [dispositioned the bounded rereview findings](DECISIONS.md#helm-launch-p3-conditional-branch-disposition)
+for the corrected HELM-LAUNCH P3 candidate. This supersedes the "next gate" of the sections below,
+which are left as written. P1 and P2 stay **accepted**; P3 stays **authorised**; P4 and P5 stay
+**not authorised**.
+
+| Item | State |
+|---|---|
+| ADR-0024 | **ACCEPTED** (unchanged by this disposition) |
+| HELM-LAUNCH P1 | **ACCEPTED** |
+| HELM-LAUNCH P2 | **ACCEPTED** |
+| HELM-LAUNCH P3 | **AUTHORISED / CORRECTED CANDIDATE / CORRECTION REQUIRED** |
+| P3 full independent unsafe review | `4c834415e8e0224b1eb1ce6c6546245cdfda0962` |
+| P3 bounded evidence correction | `f144d3004826276a5f2281ffea146c2e99645033` |
+| **P3 bounded independent correction re-review** | **`5c577d45f62e2e3adc35a6c04a5ed0d8465a4366`** — independence **SATISFIED** |
+| Re-review classification | **`HELM_LAUNCH_P3_CORRECTION_REREVIEW_NEEDS_FIX`** |
+| P3R-10 / P3R-11 | **INDEPENDENTLY VERIFIED FIXED** |
+| P3R-01 / P3R-02 | **REMAIN FIXED** |
+| Backend product semantics | **BYTE-UNCHANGED BY THE EVIDENCE CORRECTION** |
+| P3R-15 | **IMPORTANT, ACCEPTED, MUST FIX BEFORE PUBLICATION** |
+| P3R-16 | **MINOR, OPEN, NONBLOCKING** — out of scope for this correction |
+| Publication | **BLOCKED** pending the bounded correction of P3R-15 |
+| HELM-LAUNCH P4 / P5 | **NOT AUTHORISED** |
+| Trial #4 | **NOT AUTHORISED** |
+| Next gate | **BOUNDED CHECKER CORRECTION OF P3R-15, THEN ONE BOUNDED INDEPENDENT RE-REVIEW OF P3R-15** |
+
+* **The bounded rereview is independent.** `5c577d45` was produced by a session that authored
+  neither `7b749b8` nor `f144d30`. It is a **bounded** review of the evidence correction and does
+  **not** supersede the full independent unsafe review `4c834415`. **Together the two form the P3
+  pre-publication independent review record.**
+* **Both previously required corrections are verified fixed.** **P3R-10**: sixteen emitted keys and
+  sixteen accepted schema keys match exactly, `Report` derives no `Default` so no zero can be left
+  behind, `tgid` and `pgid_is_self` are separate facts separately asserted, and the producer
+  self-test proves `tgid` against a pid the harness observed itself. The parser was extracted and
+  executed outside the repository. **P3R-11**: a differential against the pre-correction checker
+  reproduces the original fail-open on `jmpq *%rax` and shows it closed, along with three further
+  fail-open holes; 1809 and 450 indirect transfers are now seen where the old parser saw 1771 and 421.
+* **P3R-01 and P3R-02 remain fixed**, re-established from fresh builds: the injection proof passes
+  with exact `compiler-artifact` selection and every archive member inspected, and the regenerated
+  debug, release-codegen and injection child closures each report 0 external, 0 indirect and 0
+  unresolved edges. The release proof is **probative, not DCE-only**.
+* **P3R-15 is accepted as IMPORTANT and blocks publication.** The machine-code checker can silently
+  discard a **conditional branch whose target escapes the current function**. A real emitted
+  `jno <function symbol>` exists in this crate's release-codegen assembly, and a synthetic
+  `jno memcpy@PLT` in `child_main` passes the current checker reporting zero external, zero indirect
+  and zero unresolved edges. Zero such branches occur inside the child closure today, so **no
+  current closure result is wrong**, but the gate does not fail closed as required.
+* **The required correction is checker-level and test-level only**: an explicit branch vocabulary
+  covering `call`/`jmp`, the canonical `Jcc` family and `loop*`; direct targets classified as
+  intra-function, traversed edge, or fail-closed; indirect transfers still failing closed with no
+  speculative resolver; an unsupported control-flow mnemonic failing closed; and table-driven tests
+  including the `jno memcpy@PLT` reproduction. **No prior machine-proof negative may be weakened,
+  and P3R-16 is out of scope.**
+* **The Linux runtime and `strace` child-window gates stay pending publication CI.** No product
+  code, test, workflow, Cargo file, ADR or experiment is changed by this disposition, and nothing
+  is pushed.
+
 <a id="helm-launch-p3-independent-review-dispositioned"></a>
 
 ## HELM-LAUNCH P3 independent review dispositioned, 2026-09-19 — independence satisfied, two new IMPORTANT findings, publication still blocked

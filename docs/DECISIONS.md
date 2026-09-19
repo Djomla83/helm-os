@@ -1455,3 +1455,124 @@ BOUNDED CORRECTION OF P3R-10 AND P3R-11. P4 AND P5 ARE NOT AUTHORISED.**
 
 **Next gate: BOUNDED P3 CORRECTION OF P3R-10 AND P3R-11, then ONE BOUNDED INDEPENDENT CORRECTION
 RE-REVIEW BEFORE PUBLICATION.**
+
+
+<a id="helm-launch-p3-conditional-branch-disposition"></a>
+
+### Owner disposition 2026-09-19 — **HELM-LAUNCH P3 CONDITIONAL-BRANCH FINDING**: bounded rereview completed, P3R-10 and P3R-11 verified fixed, P3R-15 accepted, publication still blocked
+
+**`HELM_LAUNCH_P3_CONDITIONAL_BRANCH_DISPOSITIONED`.** The repository owner, Djomla83, dispositions
+the findings of the **bounded independent correction re-review** recorded in
+[HELM-LAUNCH-P3-CORRECTION-REREVIEW.md](implementation/HELM-LAUNCH-P3-CORRECTION-REREVIEW.md).
+**P1 and P2 remain accepted, P3 remains authorised, and P4 and P5 remain not authorised.**
+
+| Item | Value |
+|---|---|
+| Accepted P2 base | `9fb0f8cabd5b7dd4f8df3ee5d15cf127702fcb5b` |
+| P3 **full independent unsafe review** | `4c834415e8e0224b1eb1ce6c6546245cdfda0962` |
+| Disposition of the independent findings | `7b749b8116b53ed07a8758b9feec50334546b7cd` |
+| P3 bounded evidence correction | `f144d3004826276a5f2281ffea146c2e99645033` |
+| **P3 bounded independent correction re-review** | **`5c577d45f62e2e3adc35a6c04a5ed0d8465a4366`** |
+| Re-review classification | **`HELM_LAUNCH_P3_CORRECTION_REREVIEW_NEEDS_FIX`** |
+| HELM-LAUNCH P3 | **AUTHORISED / CORRECTED CANDIDATE / CORRECTION REQUIRED** |
+| Publication | **BLOCKED** pending the bounded correction of P3R-15 |
+| HELM-LAUNCH P4 / P5 | **NOT AUTHORISED** |
+| Trial #4 | **NOT AUTHORISED** |
+
+#### 1. The bounded rereview was performed independently
+
+`5c577d45` was produced by a session that authored **neither** `7b749b8` nor `f144d30`, the bounded
+evidence correction it reviewed. It re-derived the corrected evidence from source, from freshly
+emitted Linux x86_64 machine code and from parsers it executed itself, rather than from the author
+report.
+
+It is a **bounded** rereview and does **not** supersede `4c834415`. Together the two documents form
+the **P3 pre-publication independent review record**; neither is complete alone.
+
+#### 2. The two previously required corrections are verified fixed
+
+| Finding | Disposition |
+|---|---|
+| **P3R-10** — report contract | **INDEPENDENTLY VERIFIED FIXED.** The emitted key set and the parser schema are both sixteen keys and match exactly. `Report` derives no `Default`, so no missing-value path can leave a zero behind. `tgid` is the executed image own process identity and `pgid_is_self` a separate group fact, each parsed and asserted separately; PID, TGID and PGID are not conflated. The producer self-test proves `tgid` against a pid the harness observed itself and `pgid_is_self` against a negative control. The parser was extracted and **executed** outside the repository, where the committed schema test and a further independent battery of refusal probes all behaved as required |
+| **P3R-11** — indirect `jmp` fail-closedness | **INDEPENDENTLY VERIFIED FIXED.** Thirty-seven of thirty-seven synthetic probes behaved as the predecessor disposition required, and a **differential against the pre-correction checker** reproduces the original fail-open on `jmpq *%rax` and shows it closed, together with three further fail-open holes. Freshly generated assembly shows 1809 and 450 indirect transfers now seen where the old parser saw 1771 and 421, with zero unresolved transfers file-wide |
+| **P3R-01** | **REMAINS FIXED.** The proof tool is byte-identical across the correction and was rerun: fresh roots, exact `compiler-artifact` selection, 128 and 11 archive members inspected, marker PRESENT in the debug feature build and ABSENT in release `--all-features` |
+| **P3R-02** | **REMAINS FIXED.** Regenerated debug, release-codegen and injection child closures each report 0 external, 0 indirect and 0 unresolved edges. The release proof is **probative, not DCE-only**: the release-codegen path instantiates `child_main` with eighteen system calls while a plain release library eliminates it |
+
+**Backend product semantics are byte-unchanged by `f144d30`**, confirmed by blob identity across
+`4c834415` to `f144d30` for every backend file, both Cargo files, ADR-0024 and the plan, with no
+workflow change. The full unsafe review at `4c834415` therefore remains valid for all of it.
+
+#### 3. One new IMPORTANT finding is accepted
+
+| Finding | Severity | Disposition |
+|---|---|---|
+| **P3R-15** | **IMPORTANT / machine-proof fail-closedness** | **ACCEPTED. MUST FIX BEFORE PUBLICATION.** The machine-code checker can **silently discard a conditional branch whose target escapes the current function**. The reviewer demonstrated a real emitted form from this crate — `jno <function symbol>`, in freshly generated release-codegen assembly — and proved that a synthetic `jno memcpy@PLT` placed in `child_main` **passes the current checker** with zero external, zero indirect and zero unresolved edges reported. That violates the owner-required fail-closed machine-code proof. Zero such branches occur inside the child closure today, so no current closure result is wrong |
+| **P3R-16** | MINOR | **OPEN, NONBLOCKING.** `sig_blk`, `sig_ign` and `sig_cgt` are documented as required exactly once but are never presence-checked, because no `Report` field reads them. **Not to be fixed in the P3R-15 correction** |
+| **P3R-12** | MINOR | **OPEN**, unchanged |
+| **P3R-13 / P3R-14** | BACKLOG_NONBLOCKING | unchanged |
+| **P3R-03 … P3R-09** | MINOR | remain **OPEN**, carried forward, none promoted; no numeric-PID fallback is authorised |
+| **P3R-G1 / P3R-G2** | GATE_PENDING | unchanged: real Linux backend execution and real `strace` child-window evidence |
+
+#### 4. Required correction
+
+**P3R-15 — all function-escaping control transfers.** The checker must model every function-escaping
+x86 control transfer, not only `call` and `jmp`. An explicit, reviewable branch vocabulary is
+required — `call`/`callq`; `jmp`/`jmpq`; the canonical `Jcc` family; and `loop`, `loope`, `loopz`,
+`loopne`, `loopnz` — rather than a loose "starts with `j`" heuristic as the primary authority.
+
+For **every** direct transfer with a target, including `Jcc`, `jcxz`/`jecxz`/`jrcxz` and `loop*`:
+a target inside the current function own body is **intra-function control flow**; a target that
+resolves uniquely to another function or symbol is a **call-graph edge** that enters the closure and
+is **traversed transitively**; anything else **FAILS CLOSED**. A conditional edge to another
+function is still a possible execution edge. A conditional or tail branch to `memcpy`, `memmove`,
+`memset`, an allocator, a panic or unwind helper or any glibc/runtime helper must fail exactly as
+the equivalent call, so `jno memcpy@PLT` must fail. A conditional branch to a permitted internal
+helper must add that helper to the closure and inspect its own branches, not merely mark the first
+branch as seen.
+
+The existing fail-closed rule for **indirect** `call` and `jmp` is preserved, and **no speculative
+resolver is authorised**. A recognisably control-flow mnemonic that the explicit model does not
+support must **FAIL CLOSED**: "not in the transfer pattern" must never mean "ordinary instruction".
+
+Coverage must be proven by **table-driven** tests over the canonical conditional-jump vocabulary,
+explicitly including `jno memcpy@PLT`, which reproduced P3R-15, together with representative
+`je internal_helper`, `jne external_forbidden`, `jrcxz external_forbidden` and
+`loop external_forbidden` cases. **No prior machine-proof negative may be weakened.**
+
+#### 5. Bounded correction scope
+
+**The intended correction is checker-level and test-level only.** The expected changed files are
+`tools/helm_launch_child_closure.py` and `tools/tests/test_helm_launch_machine_proofs.py`, plus this
+disposition in the status documents as a separate commit.
+
+The correction must **not** touch `crates/helm-launch/src/backend/**`, the crate manifest,
+`Cargo.lock`, any workflow, ADR-0024, the productization contract, the public API, any unsafe code
+or any process semantics. It must not publish, start P4, add a public `launch()`, add
+`LaunchOutcome`, add a process-group sweep, add a numeric-pid fallback, or authorise Trial #4.
+**P3R-16 is explicitly out of scope.** **If the correction required changing product backend
+semantics, the work stops and returns `OWNER DECISION REQUIRED`.**
+
+**No P3 contract amendment is made.** ADR-0024 and the productization plan are **not** modified by
+this disposition, and the accepted technical contract of sections A to N is untouched.
+
+#### 6. Re-review gate
+
+If the correction touches only the checker, its tests and this owner disposition, the next gate is
+**ONE BOUNDED INDEPENDENT RE-REVIEW OF P3R-15**. A full unsafe review is **not** required. The
+reviewer **must not have authored the correction**. **If product backend semantics changed, a full
+fresh independent unsafe review is required again.**
+
+#### 7. Boundary and next gate
+
+This decision is recorded in documentation only. It changes no product code, test, workflow, Cargo
+file, ADR, experiment or evidence, and does not touch `main`.
+
+**TRIAL #3 FROZEN RESULT REMAINS MECHANISM_REJECTED. TRIAL #3 MUST NOT BE RERUN.**
+
+**NO TRIAL #4 IS AUTHORISED.**
+
+**HELM-LAUNCH P1 AND P2 ARE ACCEPTED. P3 IS AUTHORISED, IS A CORRECTED CANDIDATE, AND REQUIRES THE
+BOUNDED CORRECTION OF P3R-15. P4 AND P5 ARE NOT AUTHORISED.**
+
+**Next gate: BOUNDED CHECKER CORRECTION OF P3R-15, then ONE BOUNDED INDEPENDENT RE-REVIEW OF P3R-15
+BEFORE PUBLICATION.**
