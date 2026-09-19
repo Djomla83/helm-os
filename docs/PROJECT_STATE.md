@@ -1,5 +1,82 @@
 # Stanje projekta
 
+<a id="helm-launch-p3-accepted"></a>
+
+## HELM-LAUNCH P3 ACCEPTED, 2026-09-19 — hosted Linux validation passed on the third publication; P4 and P5 not authorised
+
+The owner [accepted HELM-LAUNCH P3](DECISIONS.md#helm-launch-p3-accepted) as the third helm-launch
+product implementation slice, at head `8a359ee4215b6c803dcc5b527010612dabbd110b`. This supersedes
+the "next gate" of the sections below, which are left as written. **P1, P2 and P3 are accepted; P4
+and P5 stay not authorised**, and the complete helm-launch 0.1 module is **not yet
+product-accepted**.
+
+| Item | State |
+|---|---|
+| ADR-0024 | **ACCEPTED** (contract unchanged by this acceptance) |
+| **Accepted P3 head** | **`8a359ee4215b6c803dcc5b527010612dabbd110b`** |
+| Previous published head | `80ea89b8eef40dc1de68993eac3e140a4925d9b3` |
+| Publication | **ONE FAST-FORWARD PUSH**, `80ea89b..8a359ee`, no force, no tags |
+| `origin/main` | `501a7fa95c4884da4fec9a20a512c2d63f2b30cc` — **UNCHANGED** |
+| helm-launch hosted run | **`35467256138`**, run 5, attempt 1, `push` — **SUCCESS** |
+| Workspace hosted run | **`35467255952`**, run 37, attempt 1, `push` — **SUCCESS** |
+| helm-bind hosted run | not triggered — path filter unmatched |
+| LAUNCH-EXEC-01 trial workflow | **NONE RAN** |
+| Retry / rerun / replacement | **NONE** |
+| Review findings, every P3 review | **0 BLOCKER**, **0 IMPORTANT** |
+| **`P3R-20`** / **`P3R-21`** | **CLOSED / VERIFIED CORRECTED** |
+| Public `launch()` | **ABSENT** |
+| Process-group sweep | **ABSENT** |
+| N3 real privilege transition | **UNVALIDATED / NONCLAIM** |
+| HELM-LAUNCH P4 / P5 | **NOT AUTHORISED** |
+| Trial #3 | frozen **`MECHANISM_REJECTED`**, unchanged, must not be rerun |
+| Trial #4 | **NOT AUTHORISED** |
+| Complete helm-launch 0.1 | **NOT YET PRODUCT-ACCEPTED** |
+| Next gate | **OWNER DECISION ON WHETHER TO AUTHORISE HELM-LAUNCH P4** |
+
+* **Acceptance rests on executed gates, not on a green job colour.** On the first natural run of
+  `8a359ee`: `P3R-20` Linux concurrency regression **PASSED**; `P3R-21` ordinary Linux regression
+  **PASSED** (the default lib suite moved from 80 passed / 1 failed to **81 passed / 0 failed**);
+  `P3R-21` S6 positive-authority regression **PASSED**; P3 Linux runtime validation **PASSED**
+  (**29 backend tests passed, 0 failed**, 1 ignored by design, not `cfg`-skipped); machine-code
+  closed-world validation **PASSED** in both debug and release codegen with **0 external, 0
+  indirect, 0 unresolved and 0 unsupported** transfers and a live positive control in each;
+  injection-confinement validation **PASSED**; `strace` child-window validation **PASSED** under
+  real `strace` 6.8; S5 and S6 validations **PASSED**; and the public-API and unsafe-confinement
+  boundary proofs **PASSED**. Windows and macOS ran the off-cohort proofs successfully, and no
+  Linux backend result is inferred from them.
+
+* **Both failed publications remain permanent evidence.** The first publication of `3a9368f8`
+  failed (`35442641728`, `35442641743`, both attempt 1), and the `P3R-20` correction publication of
+  `80ea89b8` failed on helm-launch (`35461333887`, attempt 1) while its workspace run succeeded
+  (`35461333920`, attempt 1). **Nothing was retried**: no workflow rerun, no job rerun, no
+  replacement dispatch, no fix pushed to either published head. The success at `8a359ee` is **new
+  evidence after reviewed corrections** and does **not** convert either earlier publication into a
+  pass.
+
+* **The accepted P3 boundary is internal only.** P3 owns Linux x86_64 process creation,
+  `clone3(CLONE_PIDFD)`, the pidfd-owned direct-child lifecycle, the `execveat` of the exact
+  admitted descriptor, the closed post-clone child contract, scoped `unsafe` under
+  `src/backend/` alone, the parent `setpgid` attempt and its conservative group-authority fact, the
+  fixed pre-exec bound, bounded direct-child `SIGKILL` cleanup and the test-only fault injection.
+  It owns **no** public `launch()`, no `LaunchOutcome`, no public process handle, no P4 run
+  lifecycle, no run timeout, no `SIGTERM` or grace policy, no process-group sweep, no drain policy,
+  no real receipt emission, no sandbox and no Wine integration. A clean exec-status end-of-file
+  stays **`Indeterminate`** and no `ExecSucceeded` product state exists.
+
+* **Group-authority semantics are unchanged.** Only a successful parent-side
+  `setpgid(child, child)` — the parent's first system call after `clone3` — establishes
+  group-sweep authority. Any error establishes nothing; there is no retry and no inference from the
+  child's own `setpgid(0, 0)`. Executed-image group leadership and parent-side sweep authority stay
+  two separate facts, and P3 issues no group signal at all.
+
+* **Nonblocking findings are carried, not fixed.** `P3R-03` … `P3R-09`, `P3R-12`, `P3R-16` …
+  `P3R-19`, `P3R21-M1` and `P3R21-M2` stay **MINOR / open**; `P3R-13` and `P3R-14` stay
+  **`BACKLOG_NONBLOCKING`**. `P3R21-M2` now has a concrete hosted manifestation: default-feature
+  Linux builds warn that `group_authority_established` is never read, because its only reader is
+  the S6 assertion behind `test-fault-injection`. That warning is **nonblocking**, invalidates no
+  hosted P3 semantics or evidence, and **no code was changed to remove it in this acceptance**.
+
+
 <a id="helm-launch-p3-second-publication-failed"></a>
 
 ## HELM-LAUNCH P3 corrected chain published, second hosted validation failed, 2026-09-19 — P3R-20 hosted-verified corrected, P3R-21 accepted

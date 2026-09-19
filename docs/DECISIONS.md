@@ -53,8 +53,17 @@ owner authorised the bounded **HELM-LAUNCH P2** slice — safe Linux x86_64 capa
 authorisation composition, with no process creation, no process execution and no `unsafe` — while
 **P3, P4 and P5 remain not authorised**; see the
 [decision of 2026-09-18](#helm-launch-p2-authorised). P2 was implemented, independently reviewed,
-published against hosted CI and [accepted the same day](#helm-launch-p2-accepted). **P3, P4 and P5
-are still not authorised**, and the complete helm-launch 0.1 module is **not yet product-accepted**.
+published against hosted CI and [accepted the same day](#helm-launch-p2-accepted). On the same day
+the owner authorised **HELM-LAUNCH P3** — the scoped-`unsafe` Linux x86_64 process-creation backend
+and the closed post-clone child contract, internally only; see the
+[decision of 2026-09-18](#helm-launch-p3-authorised). P3 was implemented, reviewed by a full
+independent unsafe review and four bounded independent correction reviews, and published three
+times: the [first](#helm-launch-p3-publication-failure-disposition) and
+[second](#helm-launch-p3-second-publication-failure-disposition) hosted validations **failed**, on
+`P3R-20` and then on `P3R-21`, and both failures stay as permanent evidence. The third publication,
+at `8a359ee4215b6c803dcc5b527010612dabbd110b`, passed every load-bearing hosted gate on its first
+natural run, and P3 was [accepted on 2026-09-19](#helm-launch-p3-accepted). **P4 and P5 are still
+not authorised**, and the complete helm-launch 0.1 module is **not yet product-accepted**.
 
 | ID | Odluka | Status |
 |---|---|---|
@@ -99,7 +108,7 @@ Proces je u [master planu](../HELM_MASTER_PLAN.md#s31). Licencna odluka ostaje z
 | ADR-0021 | [Make the second product module an inert application contract](adr/ADR-0021-second-product-module.md) — [selection analysis and owner refinements](research/SECOND-PRODUCT-MODULE-SELECTION.md); bounded architectural authority, with experimental helm-app-spec 0.1 now accepted on main | **Accepted 2026-09-08** |
 | ADR-0022 | [Observe explicit targets without interpreting desired state](adr/ADR-0022-observation-authority.md) — [architecture analysis](research/HELM-OBSERVE-ARCHITECTURE.md), [independent review with Amendment 1](implementation/HELM-OBSERVE-INDEPENDENT-REVIEW.md), [execution definition](experiments/obs-fs-01/) and [OBS-FS-01 PASS](experiments/OBS-FS-01-EXECUTION-REPORT.md). **Bounded acceptance**: Linux x86_64 and ext4 cohort only; descendant bind mounts excluded and unverified; three implementation-binding obligations, all met and independently verified on the review branch. [Owner clarification 2026-09-09](adr/ADR-0022-observation-authority.md#cohort-attestation-clarification): cohort membership is a caller precondition, not an observer attestation; `0xEF53` is a necessary ext-family guard only; no new authority added; scope unchanged. **Experimental helm-observe 0.1 is implemented, independently reviewed and owner-merged to main on 2026-09-09** at reviewed tip `626de914000263cc3206d28479db692ad0b40724`; schema and API unstabilised, `publish = false`, not a release | **Accepted 2026-09-08, clarified 2026-09-09** |
 | ADR-0023 | [Compare desired claims with actual observations without producing a satisfaction verdict](adr/ADR-0023-binding-authority.md) — [design report](research/HELM-BIND-ARCHITECTURE.md). A pure, authority-free `helm-bind` 0.1 with no satisfaction, compatibility or readiness verdict, a two-axis result whose coverage can never be complete in 0.1, an explicit identity-bearing binding plan instead of target-ID heuristics, and no change to any existing crate. Owner corrections of 2026-09-09: both entry-point comparators require `regular_file_sha256` and bind the desired path byte for byte; the caller assertion is named `asserted_prefix_root_id` and is conditional; the claim universe excludes contextual metadata and selector keys; the coverage theorem is at least four unsupported claims. **Experimental helm-bind 0.1 is implemented, [independently reviewed](implementation/HELM-BIND-INDEPENDENT-REVIEW-0.1.md) and owner-merged to main on 2026-09-09** at reviewed tip `4f51c1b2bc7e59b8142ccc4c328e2641c89327d3`, product-code tip `78e26de4ca952b7125032e5c9fa468e6dc85af7c`; no BLOCKER and no unresolved IMPORTANT; unsupported coverage stays at least four; `asserted_prefix_root_id` stays an assertion, never an attestation; schema and API unstabilised, `publish = false`, not a release | **Accepted 2026-09-09** |
-| ADR-0024 | [Execute one explicitly authorized object without granting authority from comparison](adr/ADR-0024-launch-authority.md) — [design report and falsification plan](research/HELM-LAUNCH-ARCHITECTURE.md), [LAUNCH-EXEC-01 preregistered definition](experiments/LAUNCH-EXEC-01-DEFINITION.md), **NOT_RUN**. A single-crate, Linux x86_64, capability-driven launcher for exactly one already-open regular ELF object, with no satisfaction, compatibility, readiness or success verdict. Parsing a LaunchPlan and holding a BindingReport both grant **zero** execution authority; `NoClaimContradicted` is never permission. Direct-child lifecycle only, **no process-tree containment**, and **not a sandbox** — the child runs with the caller's own credentials. Depends on no HELM crate; context travels as opaque digests. Requires a scoped `unsafe` backend or a weaker descriptor claim (owner decision D-1), because the workspace `forbid(unsafe_code)` cannot be locally relaxed and rustix provides no `close_range`. **Narrowed on 2026-09-09 by the [three-workstream pre-execution review](implementation/HELM-LAUNCH-PRE-EXECUTION-REVIEW.md)**, sixteen BLOCKERs among 53 findings, classification NEEDS_ARCHITECTURE_OWNER_REVIEW: the executable digest is a pre-execution measurement of the main file body (`pre_exec_body_sha256`) and never the identity of the body that ran, `ETXTBSY` does not cover the measure-to-exec window, the child runs with the caller's credentials **except** for a set-user-ID or capability-bearing object, clean EOF does not prove exec, direct-child lifecycle does not imply direct-child liveness, and the receipt becomes a product of one process disposition and one per-stream completeness. LAUNCH-EXEC-01 re-frozen at **71 cases** with a total aggregate precedence. **Owner decisions of 2026-09-09**: D-1 **arm (i)** (scoped unsafe backend; FD isolation not weakened to keep crate-wide `forbid`), D-2 to D-6 and D-8 accepted (D-4 as corrected), **D-9** refuse `S_ISUID`/`S_ISGID` at admission, **D-10** environment **exactly empty** with `explicit` removed from 0.1, and new **D-11** `PR_SET_NO_NEW_PRIVS` before exec because D-9 does not cover file capabilities. Definition re-frozen at **72 cases** (56 mandatory / 9 conditional / 7 recorded) against a machine-readable manifest, with the disposable [experiment sources](experiments/launch-exec-01/) committed and hashed. **Pre-trial implementation only: D-7 is NOT granted, LAUNCH-EXEC-01 remains NOT_RUN, and `crates/helm-launch` must not be created before it has run and been reviewed**. The text of this row up to here records the state of 2026-09-09. **[Owner decision 2026-09-17](#adr-0024-accepted-helm-launch-p1-authorised): the revised ADR-0024 is Accepted** for the helm-launch 0.1 architecture only; Trial #3 remains `MECHANISM_REJECTED`, no Trial #4; **HELM-LAUNCH P1 only** is authorised, P2+ is not | **Proposed 2026-09-09; revised 2026-09-16; Accepted 2026-09-17** |
+| ADR-0024 | [Execute one explicitly authorized object without granting authority from comparison](adr/ADR-0024-launch-authority.md) — [design report and falsification plan](research/HELM-LAUNCH-ARCHITECTURE.md), [LAUNCH-EXEC-01 preregistered definition](experiments/LAUNCH-EXEC-01-DEFINITION.md), **NOT_RUN**. A single-crate, Linux x86_64, capability-driven launcher for exactly one already-open regular ELF object, with no satisfaction, compatibility, readiness or success verdict. Parsing a LaunchPlan and holding a BindingReport both grant **zero** execution authority; `NoClaimContradicted` is never permission. Direct-child lifecycle only, **no process-tree containment**, and **not a sandbox** — the child runs with the caller's own credentials. Depends on no HELM crate; context travels as opaque digests. Requires a scoped `unsafe` backend or a weaker descriptor claim (owner decision D-1), because the workspace `forbid(unsafe_code)` cannot be locally relaxed and rustix provides no `close_range`. **Narrowed on 2026-09-09 by the [three-workstream pre-execution review](implementation/HELM-LAUNCH-PRE-EXECUTION-REVIEW.md)**, sixteen BLOCKERs among 53 findings, classification NEEDS_ARCHITECTURE_OWNER_REVIEW: the executable digest is a pre-execution measurement of the main file body (`pre_exec_body_sha256`) and never the identity of the body that ran, `ETXTBSY` does not cover the measure-to-exec window, the child runs with the caller's credentials **except** for a set-user-ID or capability-bearing object, clean EOF does not prove exec, direct-child lifecycle does not imply direct-child liveness, and the receipt becomes a product of one process disposition and one per-stream completeness. LAUNCH-EXEC-01 re-frozen at **71 cases** with a total aggregate precedence. **Owner decisions of 2026-09-09**: D-1 **arm (i)** (scoped unsafe backend; FD isolation not weakened to keep crate-wide `forbid`), D-2 to D-6 and D-8 accepted (D-4 as corrected), **D-9** refuse `S_ISUID`/`S_ISGID` at admission, **D-10** environment **exactly empty** with `explicit` removed from 0.1, and new **D-11** `PR_SET_NO_NEW_PRIVS` before exec because D-9 does not cover file capabilities. Definition re-frozen at **72 cases** (56 mandatory / 9 conditional / 7 recorded) against a machine-readable manifest, with the disposable [experiment sources](experiments/launch-exec-01/) committed and hashed. **Pre-trial implementation only: D-7 is NOT granted, LAUNCH-EXEC-01 remains NOT_RUN, and `crates/helm-launch` must not be created before it has run and been reviewed**. The text of this row up to here records the state of 2026-09-09. **[Owner decision 2026-09-17](#adr-0024-accepted-helm-launch-p1-authorised): the revised ADR-0024 is Accepted** for the helm-launch 0.1 architecture only; Trial #3 remains `MECHANISM_REJECTED`, no Trial #4; **HELM-LAUNCH P1 only** is authorised, P2+ is not. **[2026-09-18/19](#helm-launch-p3-accepted):** P2 and P3 were each authorised, implemented, independently reviewed and **accepted**; **P4 and P5 remain not authorised** and the complete helm-launch 0.1 module is not yet product-accepted | **Proposed 2026-09-09; revised 2026-09-16; Accepted 2026-09-17** |
 
 
 <a id="d-7-authorised"></a>
@@ -1937,3 +1946,159 @@ VALIDATION FAILED AND IS INCOMPLETE. P4 AND P5 ARE NOT AUTHORISED.**
 
 **Next gate: BOUNDED HARNESS CORRECTION OF `P3R-21`, then ONE BOUNDED INDEPENDENT REVIEW OF
 `P3R-21`, then a corrected publication and a new hosted Linux P3 CI run from a NEW SHA.**
+
+<a id="helm-launch-p3-accepted"></a>
+
+### Owner decision 2026-09-19 — **HELM-LAUNCH P3 ACCEPTED**; P4 and P5 not authorised
+
+**`HELM_LAUNCH_P3_ACCEPTED`.** The repository owner, Djomla83, accepts HELM-LAUNCH P3 as the
+**third helm-launch product implementation slice**, under Accepted
+[ADR-0024](adr/ADR-0024-launch-authority.md), the
+[P3 authorisation of 2026-09-18](#helm-launch-p3-authorised), the
+[P2 acceptance of 2026-09-18](#helm-launch-p2-accepted) and the
+[P1 acceptance of 2026-09-17](#helm-launch-p1-accepted). **P1 and P2 remain accepted.** This is
+**not** product acceptance of the complete helm-launch 0.1 module. Every earlier section, including
+every ADR, D-7, Trial #1, #2 and #3 record, and both failed P3 publications, is left as written.
+
+| Item | Value |
+|---|---|
+| **Accepted P3 implementation head** | **`8a359ee4215b6c803dcc5b527010612dabbd110b`** |
+| Accepted P3 authority record | [P3 authorised 2026-09-18](#helm-launch-p3-authorised) |
+| Full independent unsafe review | `4c834415` — [review](implementation/HELM-LAUNCH-P3-INDEPENDENT-UNSAFE-REVIEW.md) |
+| Bounded independent re-reviews | `5c577d45` (correction), `3a9368f8` ([`P3R-15`](implementation/HELM-LAUNCH-P3-P3R15-REREVIEW.md)), `80ea89b8` ([`P3R-20`](implementation/HELM-LAUNCH-P3-P3R20-REVIEW.md)), `8a359ee4` ([`P3R-21`](implementation/HELM-LAUNCH-P3-P3R21-REVIEW.md)) |
+| Review findings, every review | **0 BLOCKER**, **0 IMPORTANT** |
+| Accepted P2 base | `c74e9064f4a852688b1a13dc3d3d31b93b61b0aa` |
+| Publication | **ONE FAST-FORWARD PUSH**, `80ea89b..8a359ee`, no force, no tags |
+| `origin/main` | `501a7fa95c4884da4fec9a20a512c2d63f2b30cc` — **UNCHANGED** |
+| helm-launch hosted run | **`35467256138`**, run 5, attempt 1, `push`, workflow `360677034` — **SUCCESS** |
+| Workspace hosted run | **`35467255952`**, run 37, attempt 1, `push`, workflow `352797925` — **SUCCESS** |
+| helm-bind hosted run | not triggered — path filter unmatched, verified from workflow source |
+| LAUNCH-EXEC-01 trial workflow | **NONE RAN**; no trial was dispatched |
+| Retry / rerun / replacement | **NONE** |
+| helm-launch 0.1 complete module | **NOT YET PRODUCT-ACCEPTED** |
+| HELM-LAUNCH P4 / P5 | **NOT AUTHORISED** |
+| Trial #3 | frozen **`MECHANISM_REJECTED`**, unchanged, must not be rerun |
+| Trial #4 | **NOT AUTHORISED** |
+
+#### 1. The hosted gates this acceptance rests on
+
+**A green job colour is not the evidence.** Each gate below was read from the executed log of the
+first natural run of `8a359ee`.
+
+| Gate | Result |
+|---|---|
+| **`P3R-20` Linux concurrency regression** | **PASSED** — `concurrent_builders_of_one_fixture_publish_exactly_one_object` executed and passed on Linux in **both** workflows; no historical collision signature present |
+| **`P3R-21` ordinary Linux regression** | **PASSED** — `the_executed_image_leads_its_group_and_p3_issues_no_group_signal` executed and passed in both workflows; the default lib suite moved from **80 passed / 1 failed** to **81 passed / 0 failed** |
+| **`P3R-21` S6 positive-authority regression** | **PASSED** — `injected::a_child_that_stalls_before_exec_is_bounded_killed_and_reaped` executed and passed with `group_authority_established == true` |
+| **P3 Linux runtime validation** | **PASSED** — **29 backend tests passed, 0 failed**, 1 ignored by design; not `cfg`-skipped |
+| **P3 machine-code closed-world validation** | **PASSED** — debug closure 9 functions and release closure 2 functions, each **0 external, 0 indirect, 0 unresolved, 0 unsupported**; the release child is **instantiated**, with 18 inlined syscall sites, so the proof is not dead-code elimination; both runs carry a live positive control |
+| **P3 injection-confinement validation** | **PASSED** — marker **PRESENT** in the debug feature build, **ABSENT** from the release `--all-features` build, by exact artifact selection |
+| **P3 `strace` child-window validation** | **PASSED** — single-threaded, multithreaded-allocating and `pthread_atfork` cases under real `strace` 6.8 |
+| **P3 S5 validation** | **PASSED** — `injected::a_child_that_dies_before_exec_without_a_record_is_indeterminate_never_success` |
+| **P3 S6 bounded-cleanup validation** | **PASSED** — `PreExecStatusTimeout`, one pidfd `SIGKILL`, bounded reap, `Signaled { signal: 9 }`, no zombie, no sweep |
+| **P3 public API boundary** | **UNCHANGED / NO PUBLIC `launch()`** — `test_no_public_launch_api_exists` and `the_crate_root_proves_the_absence_of_a_public_execution_path` both green |
+| **Process-group sweep** | **ABSENT** — `test_no_process_group_signal_exists_anywhere_in_the_crate` green |
+| **N3 real privilege transition** | **UNVALIDATED / NONCLAIM** — nothing attempts a privilege transition and no test claims one was prevented |
+
+Off the Linux x86_64 cohort, `windows-2025` and `macos-15` both ran the off-cohort proofs
+successfully: the admission suite is empty and **no backend test exists**. No Linux backend result
+is inferred from either.
+
+#### 2. Accepted P3 product boundary
+
+**P3 includes:** Linux x86_64 internal process creation; `clone3(CLONE_PIDFD)` with
+`exit_signal = SIGCHLD`; a pidfd-owned direct-child lifecycle; an internal authorised-object
+execution attempt; `execveat(fd, "", ..., AT_EMPTY_PATH)`; the closed raw post-clone child contract;
+scoped `unsafe` **only** under `crates/helm-launch/src/backend/`; the parent `setpgid` attempt and
+the conservative group-authority fact; the fixed internal pre-exec confirmation bound; bounded
+direct-child pidfd `SIGKILL` cleanup; the test-only fault injection; and the machine-code and
+syscall-window evidence.
+
+**P3 does NOT include:** a public `launch()`; `LaunchOutcome`; a public process handle; the P4 run
+lifecycle; a general run timeout; `SIGTERM` or grace policy; a process-group sweep; a general
+stdout/stderr drain policy; real launch receipt emission; any sandbox or containment; Wine
+integration; and N3 real privileged-transition validation.
+
+A clean exec-status end-of-file remains **`ExecStatus::Indeterminate`**. It is **not** positive exec
+success, and **no `ExecSucceeded` product state is introduced** — its absence is proven by a
+`compile_fail` doctest.
+
+#### 3. The accepted group-authority semantics are unchanged
+
+> **ONLY A SUCCESSFUL PARENT-SIDE `setpgid(child, child)` ESTABLISHES GROUP-SWEEP AUTHORITY.**
+
+The parent issues `setpgid(child, child)` as its **first** system call after `clone3`. Only that
+call's success sets `group_authority_established`; any error establishes nothing, is not retried and
+is not interpreted further. Nothing is inferred from the child's own `setpgid(0, 0)`, which the
+child issues independently as stage 5 of its closed sequence, before `execveat`.
+
+**Executed-image group leadership and parent-side sweep authority are two separate facts.**
+`pgid_is_self` is an observation the executed image makes about itself and is never promoted into
+authority. **P3 performs no process-group sweep**, and no negative-pid signal exists anywhere in the
+crate.
+
+#### 4. Both failed publications stay as permanent evidence
+
+| Publication | Head | helm-launch | Workspace | helm-bind |
+|---|---|---|---|---|
+| **First** | `3a9368f8` | `35442641728` attempt 1 **FAILURE** | `35442641743` attempt 1 **FAILURE** | `35442641707` attempt 1 SUCCESS |
+| **`P3R-20` correction** | `80ea89b8` | `35461333887` attempt 1 **FAILURE** | `35461333920` attempt 1 **SUCCESS** |  not triggered |
+| **`P3R-21` correction** | **`8a359ee4`** | **`35467256138` attempt 1 SUCCESS** | **`35467255952` attempt 1 SUCCESS** | not triggered |
+
+**NO RETRY. NO RERUN. NO REPLACEMENT.** No workflow or job was rerun, no replacement run was
+dispatched, and no fix was pushed to either failed head. Every historical run remains **attempt 1**
+with its original conclusion. The successful validation at `8a359ee` is **new evidence obtained
+after reviewed corrections**; it does **not** convert either earlier publication into a pass.
+
+#### 5. Findings carried forward
+
+`P3R-20` and `P3R-21` are **CLOSED / VERIFIED CORRECTED** — each independently reviewed and then
+verified on hosted Linux. `P3R-10`, `P3R-11` and `P3R-15` remain **CLOSED / VERIFIED FIXED**.
+
+These remain **open and nonblocking**, and this acceptance invents no fix for any of them:
+
+| Finding | Class | Carried state |
+|---|---|---|
+| `P3R-03` | MINOR | **OPEN.** `PidfdNotProvided` is unreachable under the `CLONE_PIDFD` kernel contract; **no numeric-PID fallback is authorised** |
+| `P3R-04` | MINOR | **OPEN.** No traced exec-failure child window; narrowed by the machine-code gate covering `fail`'s own closure |
+| `P3R-05` | MINOR | **OPEN, not promoted.** No handler-fire positive control for `pthread_atfork`; the registration control keeps the test probative |
+| `P3R-06` | MINOR | **OPEN.** The trace pins the mask restore as the second parent syscall after `clone3`, tighter than the contract requires |
+| `P3R-07` | MINOR | **OPEN.** The backend suite runs three times per job, each paying the intentional 5 s S6 bound and the tracer executions |
+| `P3R-08` | MINOR | **OPEN.** `require_tool("env", …)` is GNU-specific; satisfied on `ubuntu-24.04` and a loud environment failure elsewhere |
+| `P3R-09` | MINOR | **OPEN.** The crate README still describes the superseded grep-based injection proof and does not mention the machine-code gate; both **understate** the evidence |
+| `P3R-12` | MINOR | **OPEN.** Cached fixtures and the preloaded `pthread_atfork` helper are reused from a shared temporary directory without content verification |
+| `P3R-16` | MINOR | **OPEN.** `sig_blk`, `sig_ign` and `sig_cgt` are documented as required exactly once but are never presence-checked, because no `Report` field reads them |
+| `P3R-17` | MINOR | **OPEN.** The machine-code vocabulary and backstop are case-sensitive; unreachable in the gate's actual input |
+| `P3R-18` | MINOR | **OPEN.** `int` and `xbegin` are outside both the model and the backstop; unreachable in the gate's actual input |
+| `P3R-19` | MINOR | **OPEN.** `is_branch_like("syscall")` is `True`, so correctness depends on guard ordering; implicit coupling covered by committed tests |
+| `P3R-13` | BACKLOG_NONBLOCKING | CI does not machine-prove the injection-enabled child; the independent review verified it clean |
+| `P3R-14` | BACKLOG_NONBLOCKING | The release-library backend-absence step reads only the first emitted assembly |
+| `P3R21-M1` | MINOR | **OPEN.** The ordinary group test's name claims "no group signal", but its only signal assertion is the direct-child `!sigkill_sent`; the group-signal-absence claim is carried structurally by the traced-window scan |
+| `P3R21-M2` | MINOR | **OPEN, with a concrete hosted manifestation.** The only reader of `group_authority_established` now lives behind `test-fault-injection`, so **default-feature Linux builds warn that the field is never read**. The warning is **nonblocking**: it invalidates no hosted P3 semantics or evidence, and `cargo clippy --all-features … -D warnings` stays green because `--all-features` compiles the reader. **No code is changed to remove it in this acceptance** |
+
+#### 6. Authority after this acceptance
+
+| Slice | Authority |
+|---|---|
+| HELM-LAUNCH P1 | **ACCEPTED** |
+| HELM-LAUNCH P2 | **ACCEPTED** |
+| HELM-LAUNCH P3 | **ACCEPTED** |
+| HELM-LAUNCH P4 | **NOT AUTHORISED** |
+| HELM-LAUNCH P5 | **NOT AUTHORISED** |
+| Complete helm-launch 0.1 module | **NOT YET PRODUCT-ACCEPTED** |
+
+#### 7. Boundary of this decision
+
+This decision is recorded in documentation only. It changes no product code, test, workflow, Cargo
+file, experiment or evidence, and does not touch `main`. It modifies no review artifact. **Accepting
+P3 is status synchronisation against the already accepted ADR-0024 contract, not a new architecture
+decision**, and it promotes no traceability row to a stronger evidence class.
+
+**TRIAL #3 FROZEN RESULT REMAINS `MECHANISM_REJECTED`. TRIAL #3 MUST NOT BE RERUN.**
+
+**NO TRIAL #4 IS AUTHORISED.**
+
+**HELM-LAUNCH P1, P2 AND P3 ARE ACCEPTED. P4 AND P5 ARE NOT AUTHORISED. THE COMPLETE HELM-LAUNCH
+0.1 MODULE IS NOT YET PRODUCT-ACCEPTED.**
+
+**Next gate: OWNER DECISION ON WHETHER TO AUTHORISE HELM-LAUNCH P4.**

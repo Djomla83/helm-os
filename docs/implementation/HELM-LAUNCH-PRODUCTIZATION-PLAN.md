@@ -2,10 +2,10 @@
 
 > **ADR-0024: ACCEPTED 2026-09-17.**
 > **PRODUCTIZATION PLAN: OWNER-REVIEWED** (2026-09-16: `HELM_LAUNCH_PRODUCTIZATION_PLAN_OWNER_REVIEW_PASSED_WITH_BOUNDED_AMENDMENTS`).
-> **IMPLEMENTATION AUTHORITY: P1 AND P2 ACCEPTED; P3 AUTHORISED.**
+> **IMPLEMENTATION AUTHORITY: P1, P2 AND P3 ACCEPTED; P4 AND P5 NOT AUTHORISED.**
 > **HELM-LAUNCH P1: ACCEPTED 2026-09-17** as the first product slice (portable model only); the complete 0.1 module is **not yet product-accepted**.
 > **HELM-LAUNCH P2: ACCEPTED 2026-09-18** as the second product slice — capability admission and authorisation composition only, with no process creation, no process execution and no `unsafe`. Its **stop condition is SATISFIED**: admission, refusal and measurement are **green on hosted Linux x86_64**, the independent review **PASSED with 0 BLOCKER and 0 IMPORTANT**, and portable compatibility is **green on Windows and macOS**.
-> **HELM-LAUNCH P3: AUTHORISED 2026-09-18** as the third product slice — the unsafe Linux x86_64 process-creation backend and the closed post-clone child contract, **internally only**: no public `launch()`, no public process handle, no process-group sweep and no host privilege. **Not yet accepted**; see the [P3 authority note](#p3-authority-2026-09-18).
+> **HELM-LAUNCH P3: ACCEPTED 2026-09-19** as the third product slice — the unsafe Linux x86_64 process-creation backend and the closed post-clone child contract, **internally only**: no public `launch()`, no public process handle, no process-group sweep and no host privilege. Authorised 2026-09-18; see the [P3 authority note](#p3-authority-2026-09-18) and the [P3 acceptance sync](#p3-acceptance-sync-2026-09-19). Its **stop condition is SATISFIED**: the full independent unsafe review and four bounded independent correction reviews each returned **0 BLOCKER and 0 IMPORTANT**, and the hosted Linux x86_64 runtime, machine-code, injection-confinement, `strace` child-window, S5 and S6 gates are **all green on a single natural run of `8a359ee`**.
 > **P4, P5: NOT AUTHORISED.**
 > **NO TRIAL #4 IS AUTHORISED** (authorised = false).
 
@@ -1601,6 +1601,35 @@ X2c producer self-test rule.
 **After P5.** An independent product review, then an owner acceptance and merge decision, as for
 `helm-observe` and `helm-bind`. Merging would be a product-module acceptance, not a verdict about
 any application. No slice needs a formal trial or a D-7.
+
+<a id="p3-acceptance-sync-2026-09-19"></a>
+
+**P3 acceptance, 2026-09-19.** The owner
+[accepted HELM-LAUNCH P3](../DECISIONS.md#helm-launch-p3-accepted) as the third product
+implementation slice, at head `8a359ee4215b6c803dcc5b527010612dabbd110b`. **P1, P2 and P3 are
+accepted; P4 and P5 remain not authorised.** This note syncs current implementation authority and
+gate status only; the plan's accepted contract, slices, traceability and evidence classes are
+unchanged, and **no row of section 3 is promoted to a stronger class**.
+
+The P3 row's **stop condition is satisfied**, and by executed evidence rather than job colour:
+
+| P3 gate | State |
+|---|---|
+| P3 independent unsafe-review gate | **PASSED** — the full [independent unsafe review](HELM-LAUNCH-P3-INDEPENDENT-UNSAFE-REVIEW.md) and the bounded [correction](HELM-LAUNCH-P3-CORRECTION-REREVIEW.md), [P3R-15](HELM-LAUNCH-P3-P3R15-REREVIEW.md), [P3R-20](HELM-LAUNCH-P3-P3R20-REVIEW.md) and [P3R-21](HELM-LAUNCH-P3-P3R21-REVIEW.md) re-reviews each returned **0 BLOCKER / 0 IMPORTANT** |
+| P3 Linux runtime gate | **PASSED** — **29 backend tests passed, 0 failed**, 1 ignored by design, on `ubuntu-24.04`; not `cfg`-skipped |
+| P3 machine-code closed-world gate | **PASSED** — debug and release child closures both report 0 external, 0 indirect, 0 unresolved and 0 unsupported transfers, each with a live positive control |
+| P3 injection-confinement gate | **PASSED** — marker **present** in the debug feature build, **absent** from the release `--all-features` build |
+| P3 `strace` child-window gate | **PASSED** — single-threaded, multithreaded-allocating and `pthread_atfork` traced cases, under real `strace` 6.8 |
+| P3 S5 / S6 gates | **PASSED** — both fault-injection cases executed on Linux |
+| P3 boundary gate | **PASSED** — no public `launch()`, no public backend, no public fault injection, unsafe confinement green |
+
+Accepted P3 still creates and executes processes **only internally**. `launch()` does not exist on
+any platform, no process-group sweep exists anywhere in the crate, a clean exec-status end-of-file
+stays `Indeterminate` and no `ExecSucceeded` product state exists. **This acceptance changes no P4
+or P5 detail and authorises no part of either**: the section 8.5 observation loop, the plan-driven
+run deadline, `SIGTERM`, the grace period, the post-exit drain policy, the every-path process-group
+sweep and receipt emission from a real launch all stay with **P4, which is not authorised**. The
+next gate is an owner decision on whether to authorise **P4**.
 
 ## 17. Open questions
 
