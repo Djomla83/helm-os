@@ -48,6 +48,7 @@ use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::OnceLock;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use sha2::{Digest as _, Sha256};
@@ -343,12 +344,40 @@ fn try_unhex(text: &str) -> Option<Vec<u8>> {
         .collect()
 }
 
+/// One filename namespace per **actual** compiler invocation.
+///
+/// `std::process::id()` alone is not enough: cargo runs tests in parallel
+/// threads of one process, so every thread sees the same pid. Seventeen tests
+/// request the same content-addressed fixture, so several of them called
+/// `rustc` with the same source pathname and the same `-o` pathname at once —
+/// and `rustc` derives its intermediate object basenames from that `-o`
+/// pathname, so the concurrent invocations deleted and overwrote one another's
+/// objects. That was **`P3R-20`**, and it is what failed the first hosted
+/// Linux run of this suite: `undefined hidden symbol` for the fixture's own
+/// code generation units in one run, `cannot open …rcgu.o` in the next, with a
+/// different set of tests failing each time.
+///
+/// The pid still separates concurrent test **processes**; this nonce separates
+/// builders inside one.
+static FIXTURE_BUILD_NONCE: AtomicU64 = AtomicU64::new(0);
+
 /// Compile one fixture source with `rustc`, cached by the digest of its text.
 ///
 /// The fixture is an ordinary dynamically linked `ET_DYN` object — the same
 /// shape a real caller would admit, which also exercises the point that an
 /// empty environment still resolves an interpreter and libraries by name from
 /// host state (E7).
+///
+/// **Safe to call concurrently for the same source** (`P3R-20`). Every call
+/// that really compiles owns a unique source pathname and a unique `-o`
+/// pathname, and publication is atomic and **no-replace**: the winner links its
+/// staged object into the content-addressed name, every loser is told
+/// `AlreadyExists`, drops its own object and uses the winner's. The published
+/// object is therefore never replaced once it exists.
+///
+/// Correctness rests on the filesystem rather than on a process-local lock, so
+/// separate test processes publishing the same fixture are safe too, and no
+/// lock is held across launching anything.
 fn fixture_binary(name: &str, source: &str) -> PathBuf {
     let digest = hex(&Sha256::digest(source.as_bytes()));
     let stem = format!("{name}-{}", &digest[..16]);
@@ -359,20 +388,68 @@ fn fixture_binary(name: &str, source: &str) -> PathBuf {
         return binary;
     }
     require_tool("rustc", "fixtures are compiled at test time, never shipped");
-    let source_path = fixture_root().join(format!("{stem}.rs"));
+
+    // Two concurrent builders share no source pathname, no `-o` pathname and
+    // therefore no `rustc` intermediate object basename. The separator is `-`
+    // and not `.`, because `rustc` derives the crate name from the **source**
+    // file stem and refuses one containing a dot.
+    let nonce = FIXTURE_BUILD_NONCE.fetch_add(1, Ordering::Relaxed);
+    let unique = format!("{stem}-{}-{nonce}", std::process::id());
+    let source_path = fixture_root().join(format!("{unique}.rs"));
+    let staged = fixture_root().join(format!("{unique}.staging"));
+
+    // The crate name stays derived from the content-addressed stem alone, so
+    // the emitted fixture is the same bytes whichever builder compiled it and
+    // the content-addressed name keeps describing the content.
+    let crate_name: String = stem
+        .chars()
+        .map(|character| {
+            if character.is_alphanumeric() {
+                character
+            } else {
+                '_'
+            }
+        })
+        .collect();
+
     fs::write(&source_path, source).expect("write fixture source");
-    let staged = fixture_root().join(format!("{stem}.{}.staging", std::process::id()));
     let status = Command::new("rustc")
-        .args(["--edition", "2021", "-C", "debuginfo=0", "-o"])
+        .args(["--edition", "2021", "-C", "debuginfo=0", "--crate-name"])
+        .arg(&crate_name)
+        .arg("-o")
         .arg(&staged)
         .arg(&source_path)
         .status()
         .expect("run rustc");
-    assert!(
-        status.success(),
-        "TEST ENVIRONMENT FAILURE: rustc could not build fixture {name}"
-    );
-    fs::rename(&staged, &binary).expect("stage fixture");
+    // This builder owns both temporary names, so it removes both whatever
+    // happens, and never touches a name another builder owns.
+    let _ = fs::remove_file(&source_path);
+    if !status.success() {
+        let _ = fs::remove_file(&staged);
+        // A missing or unusable `rustc` is a test environment failure, raised
+        // by `require_tool` above. A `rustc` that ran and refused the source is
+        // a different thing and says so.
+        panic!(
+            "FIXTURE BUILD FAILURE: rustc ran and exited {status} building fixture {name}; \
+             the compiler is present, so this is a harness or fixture-source failure"
+        );
+    }
+
+    // Publish without replacing a winner. `rename` would replace an
+    // already-published inode, and testing `exists()` before a `rename` would
+    // only move the race; `hard_link` refuses atomically instead.
+    match fs::hard_link(&staged, &binary) {
+        // This builder published the fixture. The inode survives under
+        // `binary`, so its staging name can go.
+        Ok(()) => {}
+        // Another builder published the same content first. Its object is the
+        // one every caller must use, and this builder's own object is dropped
+        // unused. The published fixture is never removed or replaced here.
+        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
+        Err(error) => panic!("FIXTURE BUILD FAILURE: could not publish fixture {name}: {error}"),
+    }
+    let _ = fs::remove_file(&staged);
+
     let mode = fs::metadata(&binary)
         .expect("fixture metadata")
         .permissions()
@@ -2158,6 +2235,18 @@ static void install(void) {
 }
 "#;
 
+/// Build the one `pthread_atfork` host-condition helper.
+///
+/// Deliberately **not** given the `P3R-20` treatment, because the race that
+/// finding describes is not reachable here: this function has exactly one
+/// caller, [`a_registered_pthread_atfork_handler_does_not_run_in_the_child`],
+/// which is a single `#[test]` that cargo runs once on one thread and which
+/// spawns no thread of its own. There is therefore no concurrent construction
+/// path inside a test process, and across processes the pid in the staging name
+/// already separates builders. Widening `P3R-20` into a general harness
+/// refactor is out of its bounded scope; if a second caller is ever added, this
+/// builder needs the same unique-namespace and no-replace publication that
+/// [`fixture_binary`] now has.
 fn atfork_helper() -> PathBuf {
     let digest = hex(&Sha256::digest(ATFORK_HELPER_SOURCE.as_bytes()));
     let stem = format!("atfork-{}", &digest[..16]);
@@ -2211,4 +2300,173 @@ fn a_backend_error_is_crate_private_data_with_no_host_text() {
         }
     );
     assert_ne!(error, BackendError::ProcessCreationFailed { errno: 24 });
+}
+
+// ===========================================================================
+// 8. The fixture builder itself (P3R-20)
+// ===========================================================================
+
+/// A fixture with enough shape to need several code generation units and a real
+/// link, so a concurrent build is a genuine compiler invocation rather than a
+/// trivial one that finishes before it can overlap with anything.
+const CONCURRENCY_FIXTURE_SOURCE: &str = r##"
+fn shape(count: usize) -> String {
+    let mut items: Vec<String> = Vec::new();
+    for index in 0..count {
+        items.push(format!("{index}"));
+    }
+    let mut out = String::new();
+    for item in items.iter().rev() {
+        out.push_str(item);
+        out.push(',');
+    }
+    out
+}
+
+fn main() {
+    let shaped = shape(8);
+    assert!(shaped.starts_with("7,"), "{shaped}");
+    print!("__MARKER__");
+}
+"##;
+
+/// `P3R-20`. Several threads build the **same, previously uncached** fixture at
+/// the same moment, through the real [`fixture_binary`] and a real `rustc`.
+///
+/// This is the regression for the defect that failed the first hosted Linux
+/// publication run. Seventeen tests request the same content-addressed fixture,
+/// cargo runs them in parallel threads of one process, and the builder's
+/// temporary names were unique only by `std::process::id()` — which every one
+/// of those threads shares. Two concurrent `rustc` invocations then wrote the
+/// same `-o` path and destroyed each other's intermediate objects.
+///
+/// Overlap here is a synchronisation fact, not timing luck: the builders are
+/// released by a [`Barrier`], and nothing sleeps.
+#[test]
+fn concurrent_builders_of_one_fixture_publish_exactly_one_object() {
+    use std::os::unix::fs::MetadataExt as _;
+    use std::sync::{Arc, Barrier};
+
+    require_tool(
+        "rustc",
+        "the fixture-builder regression compiles a real fixture concurrently",
+    );
+
+    // The cache is content-addressed and `fixture_root()` outlives the run, so
+    // the source has to differ per run or a warm cache would prove nothing.
+    let marker = format!(
+        "helm-launch-p3r20-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("a clock after the epoch")
+            .as_nanos()
+    );
+    let source = CONCURRENCY_FIXTURE_SOURCE.replace("__MARKER__", &marker);
+    let stem = format!("p3r20-{}", &hex(&Sha256::digest(source.as_bytes()))[..16]);
+    let published = fixture_root().join(&stem);
+    assert!(
+        !published.exists(),
+        "the regression needs a cold cache, and {published:?} already exists"
+    );
+
+    const BUILDERS: usize = 6;
+    let before = FIXTURE_BUILD_NONCE.load(Ordering::Relaxed);
+    let barrier = Arc::new(Barrier::new(BUILDERS));
+    let mut builders = Vec::new();
+    for _ in 0..BUILDERS {
+        let barrier = Arc::clone(&barrier);
+        let source = source.clone();
+        builders.push(std::thread::spawn(move || {
+            barrier.wait();
+            let path = fixture_binary("p3r20", &source);
+            let identity = fs::metadata(&path).expect("published fixture metadata");
+            (path, identity.dev(), identity.ino())
+        }));
+    }
+    // Every builder returns, so none panicked: no link failure, no missing
+    // intermediate object, no failed staging rename.
+    let observed: Vec<(PathBuf, u64, u64)> = builders
+        .into_iter()
+        .map(|builder| builder.join().expect("a concurrent fixture builder failed"))
+        .collect();
+    let compiled = FIXTURE_BUILD_NONCE.load(Ordering::Relaxed) - before;
+
+    // The regression is only a regression if more than one builder really
+    // reached the compiler. The barrier releases all six within microseconds
+    // and a real `rustc` run is far longer than that, so this is a fact about
+    // the released threads rather than about how fast the host is.
+    assert!(
+        compiled >= 2,
+        "only {compiled} builder(s) reached rustc, so concurrent construction was not exercised"
+    );
+
+    // One path for every caller, and it is the content-addressed name.
+    for (path, _, _) in &observed {
+        assert_eq!(path, &published, "a builder returned a different fixture");
+    }
+
+    // One object, never replaced. A losing builder that had published over the
+    // winner — as an unconditional `rename` would — would show a different
+    // inode to the builders that returned before it.
+    let (_, device, inode) = observed[0];
+    for (_, observed_device, observed_inode) in &observed {
+        assert_eq!(
+            (*observed_device, *observed_inode),
+            (device, inode),
+            "the published fixture was replaced while builders were still running"
+        );
+    }
+    let settled = fs::metadata(&published).expect("published fixture metadata");
+    assert_eq!(
+        (settled.dev(), settled.ino()),
+        (device, inode),
+        "the published fixture was replaced after the builders finished"
+    );
+
+    // Exactly one name refers to the published object, which is what proves
+    // both that the winner released its staging name and that no loser left a
+    // second link behind.
+    assert_eq!(settled.nlink(), 1, "a staging link outlived its builder");
+
+    // Executable, complete and actually runnable: a partially linked object
+    // would not produce the marker.
+    assert_eq!(
+        settled.permissions().mode() & 0o111,
+        0o111,
+        "the published fixture is not executable"
+    );
+    let run = Command::new(&published)
+        .output()
+        .expect("run the published fixture");
+    assert!(
+        run.status.success(),
+        "the published fixture did not run: {run:?}"
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&run.stdout),
+        marker,
+        "the published fixture is not the one that was built"
+    );
+
+    // Every builder removed the two names it owned. Six builders wrote six
+    // distinct sources and six distinct staged objects into one shared
+    // directory, so a surviving name would mean either a collision or a
+    // builder reaching for a name that was not its own.
+    let owned = format!("{stem}-");
+    let leftovers: Vec<String> = fs::read_dir(fixture_root())
+        .expect("read the fixture root")
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .filter(|entry| {
+            entry.starts_with(&owned) && (entry.ends_with(".rs") || entry.ends_with(".staging"))
+        })
+        .collect();
+    assert!(
+        leftovers.is_empty(),
+        "fixture build temporaries were left behind: {leftovers:?}"
+    );
+
+    // This test owns the object it created, unlike the shared fixtures.
+    let _ = fs::remove_file(&published);
 }
