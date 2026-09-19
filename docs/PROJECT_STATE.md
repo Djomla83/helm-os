@@ -1,5 +1,68 @@
 # Stanje projekta
 
+<a id="helm-launch-p3-independent-review-dispositioned"></a>
+
+## HELM-LAUNCH P3 independent review dispositioned, 2026-09-19 — independence satisfied, two new IMPORTANT findings, publication still blocked
+
+The owner [dispositioned the independent-review findings](DECISIONS.md#helm-launch-p3-independent-review-disposition)
+for the corrected HELM-LAUNCH P3 candidate. This supersedes the "next gate" of the sections below,
+which are left as written. P1 and P2 stay **accepted**; P3 stays **authorised**; P4 and P5 stay
+**not authorised**.
+
+| Item | State |
+|---|---|
+| ADR-0024 | **ACCEPTED** (unchanged by this disposition) |
+| HELM-LAUNCH P1 | **ACCEPTED** |
+| HELM-LAUNCH P2 | **ACCEPTED** |
+| HELM-LAUNCH P3 | **AUTHORISED / CORRECTED CANDIDATE / CORRECTION REQUIRED** |
+| P3 bounded correction | `672228b8eeeef95cf72bb07051c0ccdec1ae261f` |
+| **P3 independent unsafe review** | **`4c834415e8e0224b1eb1ce6c6546245cdfda0962`** — independence **SATISFIED** |
+| Review classification | **`HELM_LAUNCH_P3_INDEPENDENT_UNSAFE_REVIEW_NEEDS_FIX`** |
+| P3R-00 | **CLOSED** — the independent review gate artifact exists |
+| P3R-01 / P3R-02 | **INDEPENDENTLY VERIFIED FIXED** |
+| P3R-10 / P3R-11 | **IMPORTANT, ACCEPTED, MUST FIX BEFORE PUBLICATION** |
+| Publication | **BLOCKED** pending the bounded correction |
+| HELM-LAUNCH P4 / P5 | **NOT AUTHORISED** |
+| Trial #4 | **NOT AUTHORISED** |
+| Next gate | **BOUNDED CORRECTION OF P3R-10 AND P3R-11, THEN ONE BOUNDED INDEPENDENT CORRECTION RE-REVIEW** |
+
+* **The independent review gate is satisfied.** `4c834415` was produced by a session that authored
+  none of the five P3 commits, so it is the independent P3 unsafe-review artifact that **P3R-00**
+  recorded as still owed. The author self-review `168fe133` stays **diagnostic evidence only**.
+  **P3R-00 is closed.**
+* **Both previously required corrections are verified fixed, independently.** **P3R-01**: exact
+  `compiler-artifact` selection, fresh build roots, every archive member inspected, and a positive
+  control that hits real object code; a release build with `-Cdebug-assertions=on` showed the
+  `#[used]` marker present, which isolates the release absence to the `cfg` gate and not to dead-code
+  elimination. **P3R-02**: the child entry borrows the `ChildPlan`, and regenerated Linux x86_64
+  assembly shows 0 external runtime edges and exactly the 18 contract system calls in contract order,
+  in both the debug/test profile and under release codegen. The release proof is **probative, not
+  DCE-only**.
+* **Two new IMPORTANT findings are accepted.** **P3R-10**: the report fixture emits `pgid_is_self`
+  while the parser handles only `tgid`, so the direct-child identity assertion compares `0` to a real
+  pid and the load-bearing descriptor-isolation case cannot pass on Linux. **P3R-11**: the
+  child-closure checker recognises an indirect `call` but silently discards an indirect `jmp`, so a
+  function-escaping control transfer can pass the gate unrecorded, against the required fail-closed
+  model.
+* **The intended correction is test-level and checker-level.** The fixture reports `tgid` and
+  `pgid_is_self` as two explicit, mandatory, separately asserted facts, with a missing or malformed
+  required field rejecting the producer report; the checker reasons about **function-escaping control
+  transfers**, traversing a resolvable direct tail `jmp` as a call-graph edge and failing closed on an
+  indirect `call`, an indirect `jmp` and an unresolvable direct `jmp`. **If either fix required
+  changing normal product unsafe or backend semantics, the work stops and returns
+  `OWNER DECISION REQUIRED`.**
+* **No contract amendment.** ADR-0024 and the productization plan are **not** modified. PID, TGID and
+  PGID must not be conflated, and no target resolver for indirect transfers is authorised.
+* **P3R-12 stays MINOR and open; P3R-13 and P3R-14 are backlog.** P3R-03 to P3R-09 stay open, were
+  re-evaluated by the independent review and none was promoted. The Linux runtime and `strace` gates
+  stay **pending publication CI**.
+* **Re-review.** If the correction stays strictly test-level and checker-level, one **bounded
+  independent correction re-review** follows, and the session that authored `4c834415` may perform it
+  provided it did not author the correction. If normal product backend or unsafe semantics changed, a
+  **full fresh independent unsafe review** is required again.
+
+**TRIAL #3 MUST NOT BE RERUN. NO TRIAL #4 IS AUTHORISED. HELM-LAUNCH P4 AND P5 ARE NOT AUTHORISED.**
+
 <a id="helm-launch-p3-correction-required"></a>
 
 ## HELM-LAUNCH P3 author-review dispositioned, 2026-09-18 — correction required, publication blocked, independent review still owed

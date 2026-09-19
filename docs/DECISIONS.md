@@ -1341,3 +1341,117 @@ CORRECTION. P4 AND P5 ARE NOT AUTHORISED.**
 
 **Next gate: BOUNDED P3 CORRECTION OF P3R-01 AND P3R-02, then ONE GENUINELY FRESH INDEPENDENT UNSAFE
 REVIEW OF THE CORRECTED P3 CANDIDATE BEFORE PUBLICATION.**
+
+
+<a id="helm-launch-p3-independent-review-disposition"></a>
+
+### Owner disposition 2026-09-19 — **HELM-LAUNCH P3 INDEPENDENT-REVIEW FINDINGS**: independence satisfied, P3R-01 and P3R-02 verified fixed, two new IMPORTANT findings accepted, publication still blocked
+
+**`HELM_LAUNCH_P3_INDEPENDENT_REVIEW_DISPOSITIONED`.** The repository owner, Djomla83, dispositions
+the findings of the **genuinely independent unsafe review** of the corrected HELM-LAUNCH P3
+candidate, recorded in
+[HELM-LAUNCH-P3-INDEPENDENT-UNSAFE-REVIEW.md](implementation/HELM-LAUNCH-P3-INDEPENDENT-UNSAFE-REVIEW.md).
+**P1 and P2 remain accepted, P3 remains authorised, and P4 and P5 remain not authorised.**
+
+| Item | Value |
+|---|---|
+| Accepted P2 base | `9fb0f8cabd5b7dd4f8df3ee5d15cf127702fcb5b` |
+| P3 authority record | `7bb016f5597c91a2aeb53ee0fb6c3eb38c3abe60` |
+| P3 implementation candidate | `afe8922bebd0c85ead7e58d146b738b84141f096` |
+| P3 **author self-review** | `168fe1339dd20bdecc8d5c0f111ef5f185493e9f` — **NOT INDEPENDENT**, diagnostic only |
+| Author-review disposition | `ac823cd87e38ad5af5393ff3436c5c55b1f496df` |
+| P3 bounded correction | `672228b8eeeef95cf72bb07051c0ccdec1ae261f` |
+| **P3 independent unsafe review** | **`4c834415e8e0224b1eb1ce6c6546245cdfda0962`** |
+| Review classification | **`HELM_LAUNCH_P3_INDEPENDENT_UNSAFE_REVIEW_NEEDS_FIX`** |
+| HELM-LAUNCH P3 | **AUTHORISED / CORRECTED CANDIDATE / CORRECTION REQUIRED** |
+| Publication | **BLOCKED** pending the bounded correction of P3R-10 and P3R-11 |
+| HELM-LAUNCH P4 / P5 | **NOT AUTHORISED** |
+| Trial #4 | **NOT AUTHORISED** |
+
+#### 1. The independence precondition is satisfied
+
+The review at `4c834415` was produced by a session that authored **none** of `7bb016f`, `afe8922`,
+`168fe13`, `ac823cd` or `672228b`. It is therefore the **independent P3 unsafe-review gate artifact**
+that [P3R-00](#helm-launch-p3-author-review-disposition) recorded as still owed, and the author
+self-review at `168fe133` remains diagnostic evidence only. **P3R-00 is closed.**
+
+The review re-derived the P3 safety case from source, from freshly emitted Linux x86_64 machine code
+and from freshly built artifacts, and it did not take the author report conclusions on trust.
+
+#### 2. The two previously required corrections are verified fixed
+
+| Finding | Disposition |
+|---|---|
+| **P3R-01** — release fault-injection absence proof | **INDEPENDENTLY VERIFIED FIXED.** The proof now selects the exact artifact from the `compiler-artifact` record cargo itself emits, uses fresh build roots, inspects every archive member, and has a positive control that hits real object code. The independent review additionally built the **release** profile with `-Cdebug-assertions=on` and observed the `#[used]` marker present, which isolates the release absence to the `cfg` gate rather than to dead-code elimination |
+| **P3R-02** — closed child world at machine level | **INDEPENDENTLY VERIFIED FIXED.** The child entry borrows the `ChildPlan`; regenerated assembly shows a child closure of 9 functions in the debug/test profile and 2 under release codegen, with 0 external runtime edges, 0 indirect call sites and exactly the 18 contract system calls in contract order. The release proof is **probative, not DCE-only** |
+
+#### 3. Two new IMPORTANT findings are accepted
+
+| Finding | Severity | Disposition |
+|---|---|---|
+| **P3R-10** | **IMPORTANT / Linux test correctness** | **ACCEPTED. MUST FIX BEFORE PUBLICATION.** The report fixture emits `pgid_is_self` while the parser handles only `tgid`, so `report.tgid` is always its default `0` and the direct-child identity assertion compares `0` to a real pid. The load-bearing descriptor-isolation case cannot pass on Linux x86_64, and the direct-child identity claim is unproven |
+| **P3R-11** | **IMPORTANT / machine-proof fail-closedness** | **ACCEPTED. MUST FIX BEFORE PUBLICATION.** The child-closure checker recognises an indirect `call` but silently discards an indirect `jmp`, so a function-escaping control transfer can pass the gate unrecorded. That violates the owner-required fail-closed model for the gate this disposition line made load-bearing |
+| **P3R-12** | MINOR | **OPEN.** Cached fixtures and the preloaded `pthread_atfork` helper live in a shared temporary directory and are reused without content verification |
+| **P3R-13** | BACKLOG_NONBLOCKING | CI does not machine-prove the injection-enabled child; the independent review verified it clean |
+| **P3R-14** | BACKLOG_NONBLOCKING | the release-library backend-absence step reads only the first emitted assembly |
+| **P3R-03 … P3R-09** | MINOR | remain **OPEN**, carried forward, re-evaluated by the independent review and none promoted; no numeric-PID fallback is authorised |
+| **P3R-G1 / P3R-G2** | GATE_PENDING | unchanged: real Linux backend execution and real `strace` child-window evidence |
+
+#### 4. Required corrections
+
+**P3R-10 — the report schema.** `pgid_is_self` must **not** be reinterpreted as `tgid`. The fixture
+reports both facts explicitly: `tgid` as the executed image actual process identity, and
+`pgid_is_self` as a boolean. Both are parsed explicitly, both are **mandatory** for the
+report-capable fixture schema, and a missing or malformed required field **rejects the producer
+report**. The direct-child identity assertion `report.tgid == child.pid()` must become genuinely
+probative, and any group-leader claim must be a **separate** assertion. PID, TGID and PGID must not
+be conflated. The producer self-test validates the new schema **before** any launcher consumer test
+uses it, and a cached fixture must not bypass that validation.
+
+**P3R-11 — function-escaping control transfers.** The checker must reason about
+**function-escaping control transfers**, not only `call`. A direct `jmp` whose target is inside the
+current function is ordinary intra-function control flow; a direct `jmp` that resolves to another
+function or symbol is a **call-graph edge** and is traversed transitively exactly like a direct call,
+so a tail jump to `memcpy`, a panic helper or an allocator fails exactly like a call. An **indirect
+`call`**, an **indirect `jmp`** and an **unresolvable direct `jmp` target** must all **FAIL CLOSED**.
+No target resolver for indirect transfers is authorised. A zero unresolved-edge result must not be
+reportable while one exists.
+
+#### 5. Bounded correction scope
+
+**The intended correction is test-level and checker-level.** The expected changed files are the
+backend test module and its report support, `tools/helm_launch_child_closure.py`,
+`tools/tests/test_helm_launch_machine_proofs.py`, and strictly necessary test support.
+
+The correction must **not** publish, start P4, add a public `launch()`, add `LaunchOutcome`, add a
+process-group sweep, add a numeric-pid fallback, add a `pidfd_open` fallback, alter the `clone3`,
+syscall or signal ABI, change the child stage order, change execution authority, weaken unsafe
+confinement, weaken the closed child contract, or authorise Trial #4. **If either fix required
+changing normal product unsafe or backend semantics, the work stops and returns
+`OWNER DECISION REQUIRED`.** The minor and backlog findings of section 3 are **not** in scope.
+
+**No P3 contract amendment is made.** ADR-0024 and the productization plan are **not** modified by
+this disposition, and the accepted technical contract of sections A to N is untouched.
+
+#### 6. Re-review gate
+
+If both IMPORTANT findings are corrected **without** backend semantic changes, the next gate is
+**ONE BOUNDED INDEPENDENT CORRECTION RE-REVIEW**. The session that authored `4c834415` may perform
+it **provided it did not author or modify the correction**. A third full unsafe review is **not**
+required while the correction stays strictly test-level and checker-level. **If normal product
+backend or unsafe semantics changed, a full fresh independent unsafe review is required again.**
+
+#### 7. Boundary and next gate
+
+This decision is recorded in documentation only. It changes no product code, test, workflow, Cargo
+file, ADR, experiment or evidence, and does not touch `main`.
+
+**TRIAL #3 FROZEN RESULT REMAINS MECHANISM_REJECTED. TRIAL #3 MUST NOT BE RERUN.**
+
+**NO TRIAL #4 IS AUTHORISED.**
+
+**HELM-LAUNCH P1 AND P2 ARE ACCEPTED. P3 IS AUTHORISED, IS A CORRECTED CANDIDATE, AND REQUIRES THE
+BOUNDED CORRECTION OF P3R-10 AND P3R-11. P4 AND P5 ARE NOT AUTHORISED.**
+
+**Next gate: BOUNDED P3 CORRECTION OF P3R-10 AND P3R-11, then ONE BOUNDED INDEPENDENT CORRECTION
+RE-REVIEW BEFORE PUBLICATION.**
