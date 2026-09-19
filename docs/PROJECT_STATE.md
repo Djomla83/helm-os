@@ -1,5 +1,80 @@
 # Stanje projekta
 
+<a id="helm-launch-p3-publication-failed"></a>
+
+## HELM-LAUNCH P3 published, first hosted validation failed, 2026-09-19 — P3R-20 accepted, publication validation incomplete
+
+The owner [dispositioned the first P3 publication failure](DECISIONS.md#helm-launch-p3-publication-failure-disposition).
+The complete P3 chain **is published**; the hosted validation it was published to obtain **failed**.
+This supersedes the "next gate" of the sections below, which are left as written. P1 and P2 stay
+**accepted**; P3 stays **authorised**; P4 and P5 stay **not authorised**.
+
+| Item | State |
+|---|---|
+| ADR-0024 | **ACCEPTED** (unchanged by this disposition) |
+| HELM-LAUNCH P1 | **ACCEPTED** |
+| HELM-LAUNCH P2 | **ACCEPTED** |
+| HELM-LAUNCH P3 | **PUBLISHED CANDIDATE / HOSTED VALIDATION FAILED** |
+| Previous remote milestone | `9fb0f8cabd5b7dd4f8df3ee5d15cf127702fcb5b` |
+| **Published head** | **`3a9368f845452110afc859ed899acae9384c7d9b`** |
+| Publication | **ONE FAST-FORWARD PUSH**, no force, no tags, no publication commit |
+| `main` | `501a7fa95c4884da4fec9a20a512c2d63f2b30cc` — **UNCHANGED** |
+| P3 bounded independent P3R-15 re-review | `3a9368f845452110afc859ed899acae9384c7d9b` — independence **SATISFIED** |
+| Pre-publication classification | **`HELM_LAUNCH_P3_P3R15_REREVIEW_PASSED_READY_FOR_PUBLICATION_CI`** |
+| helm-launch hosted run | **`35442641728`**, attempt 1, `push` — **FAILURE** |
+| Workspace hosted run | **`35442641743`**, attempt 1, `push` — **FAILURE** |
+| helm-bind hosted run | `35442641707`, attempt 1, `push` — SUCCESS |
+| Retry / rerun / replacement | **NONE** |
+| **P3R-20** | **IMPORTANT, ACCEPTED, MUST FIX** |
+| Failure classification | **TEST / EVIDENCE DEFECT** |
+| Product launcher mechanism | **NOT IMPLICATED BY THIS FAILURE** |
+| P3R-G1 / P3R-G2 | **GATE_PENDING** — hosted validation incomplete |
+| HELM-LAUNCH P4 / P5 | **NOT AUTHORISED** |
+| Trial #4 | **NOT AUTHORISED** |
+| Next gate | **BOUNDED HARNESS CORRECTION OF P3R-20, THEN ONE BOUNDED INDEPENDENT REVIEW OF P3R-20** |
+
+* **The publication is exactly one fast-forward push.** The twelve-commit P3 chain was published to
+  `docs/helm-launch-architecture`; nothing was amended, rebased, squashed or force-pushed, no
+  publication commit was created, no tag was pushed, and `main` is untouched. No merge to `main` is
+  authorised.
+* **The first hosted runs are preserved as failed.** Both Linux workflows failed on attempt 1 and
+  **nothing was retried**: no workflow rerun, no job rerun, no replacement dispatch, no fix pushed
+  to the published head. A corrected run must come naturally from a **new** SHA and does not replace
+  the historical result. No LAUNCH-EXEC-01 workflow triggered and **no trial was run**.
+* **P3R-20 is accepted as IMPORTANT and is a TEST / EVIDENCE DEFECT.** `fixture_binary` in the P3
+  test harness stages every fixture build under a name made unique only by `std::process::id()`,
+  which **parallel test threads share**. Seventeen call sites request the same content-addressed
+  `report` fixture, so concurrent `rustc` invocations collide on the source pathname, the `-o`
+  pathname and the intermediate `.rcgu.o` basenames derived from it. The two runs show the same race
+  with different timing and **different failing test sets** — 76 passed / 4 failed with
+  `undefined hidden symbol`, and 78 passed / 2 failed with `cannot open …-cgu.0.rcgu.o` — which is
+  what proves a race rather than a deterministic defect.
+* **The product launcher mechanism is not implicated.** The runner had `strace 6.8`, `cc` and
+  `rustc 1.95.0`, all verified before any test ran. The backend suite was **not** `cfg`-skipped, and
+  real hosted Linux evidence was obtained for the launcher before the abort: the traced child-window
+  cases passed from both a single-threaded and a multithreaded allocating parent, along with the
+  `pthread_atfork` host condition, the `clone3` UAPI record, the stage vocabulary, the full signal
+  mask, the raw `rt_sigaction` layout, `no_new_privs`, the empty environment, the admitted-directory
+  identity, execution of the admitted descriptor after its pathname is replaced, `ETXTBSY`,
+  `ENOEXEC`, the eight-byte failure record, and the parent establishing group authority while
+  issuing **no group signal**. `MeasurementInstabilityDetected` in one failing test is product code
+  **correctly refusing** an object the harness was replacing underneath it.
+* **Hosted validation is incomplete.** Because the first test step failed, every later step of both
+  Linux jobs was skipped: the debug and release-codegen machine-code closure gates, the
+  release-library DCE contrast, the injection positive control and release absence proof, the S5 and
+  S6 bounded-cleanup cases, the Linux admission suite, the `--nocapture` traced-window record, the
+  Linux boundary suites, and the P3R-15 conditional-branch machine proofs — skipped in **both**
+  failing runs. This was the **first hosted execution of the P3 Linux backend ever**: the two
+  earlier green runs of that workflow predate the backend, and the suite cannot run on the
+  Windows developer host.
+* **The correction is bounded to the test harness.** Unique per-invocation source and staging
+  pathnames (process id **plus** a process-local monotonic nonce), atomic **no-replace** publication
+  of the content-addressed fixture, a `Barrier`-synchronised concurrent regression over the real
+  builder with real `rustc`, and fixture-build failures described as such rather than as environment
+  failures. P3R-12 stays MINOR, open and out of scope, and `atfork_helper` is to be inspected but
+  not broadened into. No product backend, manifest, lockfile, workflow, checker, ADR or contract
+  change is authorised, and nothing is pushed.
+
 <a id="helm-launch-p3-conditional-branch-dispositioned"></a>
 
 ## HELM-LAUNCH P3 conditional-branch finding dispositioned, 2026-09-19 — bounded rereview done, P3R-10 and P3R-11 fixed, P3R-15 accepted, publication still blocked

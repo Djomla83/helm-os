@@ -1576,3 +1576,196 @@ BOUNDED CORRECTION OF P3R-15. P4 AND P5 ARE NOT AUTHORISED.**
 
 **Next gate: BOUNDED CHECKER CORRECTION OF P3R-15, then ONE BOUNDED INDEPENDENT RE-REVIEW OF P3R-15
 BEFORE PUBLICATION.**
+
+<a id="helm-launch-p3-publication-failure-disposition"></a>
+
+### Owner disposition 2026-09-19 — **HELM-LAUNCH P3 FIRST PUBLICATION FAILURE**: chain published, hosted validation failed, P3R-20 accepted
+
+**`HELM_LAUNCH_P3_PUBLICATION_FAILURE_DISPOSITIONED`.** The repository owner, Djomla83, records the
+**first hosted publication validation of the HELM-LAUNCH P3 candidate** and dispositions its
+failure. The publication itself succeeded exactly as instructed; the hosted validation that the
+publication existed to obtain did **not**. **P1 and P2 remain accepted, P3 remains authorised, and
+P4 and P5 remain not authorised.**
+
+| Item | Value |
+|---|---|
+| Previous remote milestone | `9fb0f8cabd5b7dd4f8df3ee5d15cf127702fcb5b` |
+| **Published head** | **`3a9368f845452110afc859ed899acae9384c7d9b`** |
+| Publication | **ONE FAST-FORWARD PUSH**, `9fb0f8c..3a9368f`, twelve linear commits, no force, no tags |
+| `main` | `501a7fa95c4884da4fec9a20a512c2d63f2b30cc` — **UNCHANGED**; no merge to `main` is authorised |
+| Pre-publication review record | `4c834415` + `5c577d45` + `3a9368f8` |
+| **Hosted validation** | **FAILED** |
+| **P3R-20** | **IMPORTANT / ACCEPTED / MUST FIX** |
+| Classification of the failure | **TEST / EVIDENCE DEFECT** |
+| Product launcher mechanism | **NOT IMPLICATED BY THIS FAILURE** |
+| HELM-LAUNCH P3 | **PUBLISHED CANDIDATE / HOSTED VALIDATION FAILED** |
+| HELM-LAUNCH P4 / P5 | **NOT AUTHORISED** |
+| Trial #4 | **NOT AUTHORISED** |
+
+#### 1. The publication
+
+The complete P3 chain was published to `docs/helm-launch-architecture` in a single fast-forward
+push. Nothing was amended, rebased, squashed, cherry-picked or force-pushed, no publication commit
+was created, no tag was pushed and `main` was not touched. The pre-publication review record was
+complete at the published head: the author self-review, the full independent unsafe review, the
+bounded P3R-10/P3R-11 re-review and the bounded P3R-15 re-review, the last classified
+`HELM_LAUNCH_P3_P3R15_REREVIEW_PASSED_READY_FOR_PUBLICATION_CI` with zero BLOCKER and zero
+IMPORTANT findings.
+
+#### 2. The first hosted runs, preserved as they are
+
+Three workflows triggered naturally from the push. **All three are attempt 1, and all three are
+permanently preserved.**
+
+| Workflow | Run | Attempt | Event | Conclusion |
+|---|---|---|---|---|
+| helm-launch portable model, Linux capability admission and Linux backend | `35442641728` | 1 | `push` | **FAILURE** |
+| HELM Rust workspace Linux | `35442641743` | 1 | `push` | **FAILURE** |
+| helm-bind cross-platform purity | `35442641707` | 1 | `push` | SUCCESS |
+
+No LAUNCH-EXEC-01 workflow triggered, nothing was dispatched, and **no trial was run**.
+
+**Nothing was retried.** No workflow was rerun, no job was rerun, no replacement run was dispatched
+and no correction was pushed to the published head. A corrected run must arrive naturally from a
+**new** SHA; it does not replace the historical result above.
+
+#### 3. What the failure was
+
+Both failures are the same root cause, in the P3 test harness's fixture builder, reached for the
+**first time ever** on a hosted Linux runner. The backend suite is `cfg`-gated to Linux x86_64 and
+the two earlier green runs of that workflow (`e32b2e17`, `94ce8dd3`) predate the P3 backend
+entirely, so no earlier CI and no developer host could have reached it.
+
+`fixture_binary` in [`crates/helm-launch/src/backend/tests.rs`](../crates/helm-launch/src/backend/tests.rs)
+builds its fixtures in one shared temporary directory, with a staging name made unique only by
+`std::process::id()`. **Parallel test threads share that pid.** Seventeen call sites request the
+same content-addressed `report` fixture, so several threads invoke `rustc` concurrently with the
+same source pathname and the same `-o` pathname; `rustc` derives its intermediate `.rcgu.o` names
+from that output pathname, so the concurrent invocations delete and overwrite one another's
+objects.
+
+The two runs show the same race with different timing, and **different failing test sets**, which
+is what proves it is a race and not a deterministic defect:
+
+| Run | Symptom | Result |
+|---|---|---|
+| `35442641728` | `rust-lld: error: undefined hidden symbol: …` for the fixture's own CGUs | 76 passed, **4 failed** |
+| `35442641743` | `rust-lld: error: cannot open …-cgu.0.rcgu.o: No such file or directory` | 78 passed, **2 failed** |
+
+Downstream symptoms follow from the same cause: the loser of the staging rename gets `NotFound`,
+and admission observing a fixture being replaced reports `MeasurementInstabilityDetected` — **that
+last one is product code correctly refusing a genuinely unstable object**, not a defect.
+
+#### 4. What the failure was not
+
+The runner had every required tool: `strace 6.8`, `cc` and `rustc 1.95.0` were all verified usable
+by the job's own tool check before any test ran. `rustc` was found and did run. The failure is
+therefore **not** a `TEST ENVIRONMENT FAILURE` in the sense the harness's own message used, even
+though the harness prints that wording for any `rustc` non-zero exit.
+
+**No product backend code is implicated.** The failing code path is the test harness's fixture
+builder. Real hosted Linux evidence was obtained for the launcher itself before the abort: the
+backend suite was **not** `cfg`-skipped — twenty-six `backend::tests::` cases were present, and the
+traced child-window cases passed on the hosted runner from both a single-threaded and a
+multithreaded allocating parent, together with the `pthread_atfork` host condition, the `clone3`
+UAPI record, the stage vocabulary, the full signal mask, the raw `rt_sigaction` layout,
+`no_new_privs`, the empty environment, the admitted-directory identity, execution of the admitted
+descriptor after its pathname is replaced, `ETXTBSY`, `ENOEXEC`, the eight-byte failure record and
+the rule that a clean end of file is never success, and the parent establishing group authority
+while issuing **no group signal**.
+
+#### 5. What the failure blocked
+
+Because the first test step failed, every later step of both Linux jobs was skipped. The following
+required hosted evidence therefore **did not run at all** and remains owed:
+
+* the debug and release-codegen child machine-code closure gates, and the release-library
+  dead-code-elimination contrast;
+* the fault-injection positive control and the release absence proof;
+* the S5 and S6 bounded-cleanup cases;
+* the Linux capability-admission suite and the `--nocapture` traced-window record;
+* the Linux run of `p3_boundary` and `p2_boundary`;
+* the P3R-15 conditional-branch machine-proof tests on Linux, skipped in **both** failing runs.
+
+**P3 hosted validation is incomplete.** `P3R-G1` and `P3R-G2` remain `GATE_PENDING`.
+
+#### 6. P3R-20 — accepted
+
+| Finding | Severity | Disposition |
+|---|---|---|
+| **P3R-20** | **IMPORTANT / test and evidence harness** | **ACCEPTED. MUST FIX.** `fixture_binary` is not safe for concurrent construction. Its source and staging pathnames are not unique per compiler invocation, because `std::process::id()` is shared by every parallel test thread, so concurrent `rustc` invocations collide on the source pathname, the `-o` pathname and the intermediate object basenames derived from it. Classified **TEST / EVIDENCE DEFECT**; the product launcher mechanism is **not implicated** |
+
+P3R-20 is adjacent to, but distinct from, the already-open P3R-12. P3R-12 is about a
+content-addressed cache returning a file **without verifying its contents**, and was rated on the
+basis that "on a fresh CI runner this is immaterial". P3R-20 is about the **construction and
+publication** step not being concurrency-safe, and it manifests **precisely** on a fresh CI runner.
+P3R-12 stays MINOR, open and **out of scope**.
+
+#### 7. Required correction
+
+Every actual compiler invocation must have its own source pathname and its own staging output
+pathname — process id **plus** a process-local monotonic nonce, no randomness and no new
+dependency — so that two concurrent invocations can never share a source pathname, an `-o`
+pathname or a `rustc` intermediate object basename.
+
+The final fixture stays content-addressed at `{fixture_root}/{stem}`, and publication must be
+**atomic and no-replace**: a successful build publishes its unique staged executable by a link that
+fails with `AlreadyExists` if another builder already published the same content-addressed fixture,
+in which case this builder deletes its own staged file and uses the existing published path. An
+unconditional `rename` is **not** acceptable, because it may replace an already-published inode,
+and an existence test followed by a rename is **not** an acceptable solution to the race. A
+process-local mutex may be an auxiliary optimisation only, never the correctness basis, and no
+global build lock may be held across launcher execution.
+
+A deterministic regression is required: several `Barrier`-synchronised threads calling the **real**
+`fixture_binary` for the **same previously uncached** source, with real `rustc` compilation, proving
+that every call succeeds, that every caller returns the same final path, that the published fixture
+is executable and actually runnable, that the published object is not subsequently replaced, and
+that no source or staging collision occurred. Sleep-based timing is not acceptable.
+
+`atfork_helper` must be **inspected** for the same pattern. If no concurrent construction path is
+reachable, that fact is documented and the function is left untouched; if the same race is
+reachable, the work stops and returns `OWNER DECISION REQUIRED` rather than broadening the
+correction.
+
+A `rustc` that is missing or unusable remains a genuine `TEST ENVIRONMENT FAILURE`. A `rustc` that
+runs and returns failure during fixture construction is a **fixture build failure**, and should say
+so. Unrelated environment diagnostics are not to be changed.
+
+#### 8. Bounded correction scope
+
+**The intended correction is test-harness-level only.** The expected changed file is
+`crates/helm-launch/src/backend/tests.rs`, plus this disposition in the status documents as a
+separate commit.
+
+The correction must **not** touch `child.rs`, `spawn.rs`, `syscall.rs`, `mod.rs`, `injection.rs`,
+`authority.rs`, the public API, the crate manifest, `Cargo.lock`, any workflow, the machine-code
+checker, the machine-proof tests, ADR-0024 or the productization contract. It must not publish,
+rerun CI, start P4, add a public `launch()`, add a process-group sweep or authorise Trial #4.
+**If normal product semantics must change, the work stops and returns `OWNER DECISION REQUIRED`.**
+
+**No P3 contract amendment is made.** ADR-0024 and the productization plan are **not** modified by
+this disposition, and the accepted technical contract of sections A to N is untouched.
+
+#### 9. Re-review gate
+
+If the correction touches only the status documents and the test harness, and normal backend
+semantics remain unchanged, the next gate is **ONE BOUNDED INDEPENDENT REVIEW OF P3R-20**. A full
+unsafe review is **not** required. The reviewer **must not have authored the correction**. **If the
+product backend changes, a full fresh independent unsafe review is required again.**
+
+#### 10. Boundary and next gate
+
+This decision is recorded in documentation only. It changes no product code, test, workflow, Cargo
+file, ADR, experiment or evidence, and does not touch `main`. The historical failed runs
+`35442641728` and `35442641743` stay as they are: **no retry, no rerun, no replacement run.**
+
+**TRIAL #3 FROZEN RESULT REMAINS MECHANISM_REJECTED. TRIAL #3 MUST NOT BE RERUN.**
+
+**NO TRIAL #4 IS AUTHORISED.**
+
+**HELM-LAUNCH P1 AND P2 ARE ACCEPTED. P3 IS A PUBLISHED CANDIDATE WHOSE HOSTED VALIDATION FAILED
+AND IS INCOMPLETE. P4 AND P5 ARE NOT AUTHORISED.**
+
+**Next gate: BOUNDED HARNESS CORRECTION OF P3R-20, then ONE BOUNDED INDEPENDENT REVIEW OF P3R-20,
+then a corrected publication and a new hosted Linux P3 CI run from a NEW SHA.**
