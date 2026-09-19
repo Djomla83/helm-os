@@ -1,5 +1,76 @@
 # Stanje projekta
 
+<a id="helm-launch-p3-second-publication-failed"></a>
+
+## HELM-LAUNCH P3 corrected chain published, second hosted validation failed, 2026-09-19 — P3R-20 hosted-verified corrected, P3R-21 accepted
+
+The owner [dispositioned the second P3 publication failure](DECISIONS.md#helm-launch-p3-second-publication-failure-disposition).
+The `P3R-20` correction chain **is published**, and **`P3R-20` is verified corrected on real hosted
+Linux**. The hosted validation the publication existed to obtain **failed again**, on a different
+and previously masked defect, **`P3R-21`**. This supersedes the "next gate" of the sections below,
+which are left as written. P1 and P2 stay **accepted**; P3 stays **authorised**; P4 and P5 stay
+**not authorised**.
+
+| Item | State |
+|---|---|
+| ADR-0024 | **ACCEPTED** (unchanged by this disposition) |
+| **Published head** | **`80ea89b8eef40dc1de68993eac3e140a4925d9b3`** |
+| Previous published head | `3a9368f845452110afc859ed899acae9384c7d9b` |
+| Publication | **ONE FAST-FORWARD PUSH**, `3a9368f..80ea89b`, no force, no tags |
+| `origin/main` | `501a7fa95c4884da4fec9a20a512c2d63f2b30cc` — **UNCHANGED** |
+| P3R-20 bounded independent review | `80ea89b8eef40dc1de68993eac3e140a4925d9b3` — independence **SATISFIED** |
+| helm-launch hosted run | **`35461333887`**, attempt 1, `push` — **FAILURE** |
+| Workspace hosted run | **`35461333920`**, attempt 1, `push` — **SUCCESS** |
+| helm-bind hosted run | not triggered — path filter unmatched |
+| Retry / rerun / replacement | **NONE** |
+| **`P3R-20`** | **HOSTED LINUX VERIFIED CORRECTED** |
+| **`P3R-21`** | **IMPORTANT, ACCEPTED, MUST FIX** — TEST / EVIDENCE CONTRACT defect |
+| Product launcher mechanism | **NOT IMPLICATED** |
+| `P3R-G1` / `P3R-G2` | **GATE_PENDING** — hosted validation incomplete |
+| HELM-LAUNCH P4 / P5 | **NOT AUTHORISED** |
+| Trial #3 | frozen **MECHANISM_REJECTED**, must not be rerun |
+| Trial #4 | **NOT AUTHORISED** |
+| Next gate | **BOUNDED HARNESS CORRECTION OF `P3R-21`, THEN ONE BOUNDED INDEPENDENT REVIEW OF `P3R-21`** |
+
+* **Both hosted publication results are preserved.** The first publication of `3a9368f` failed
+  (`35442641728`, `35442641743`, both attempt 1), and the `P3R-20` correction publication of
+  `80ea89b` failed on helm-launch (`35461333887`, attempt 1) while its workspace run succeeded
+  (`35461333920`, attempt 1). **Nothing was retried**: no workflow rerun, no job rerun, no
+  replacement dispatch, no fix pushed to either published head. No `launch-exec-01` workflow
+  triggered and **no trial was run**. A corrected run must come naturally from a **new** SHA and
+  does not replace either historical result.
+
+* **`P3R-20` is verified corrected on hosted Linux.**
+  `backend::tests::concurrent_builders_of_one_fixture_publish_exactly_one_object` executed on real
+  Linux x86_64 and passed; every historical fixture-build collision signature is absent; all
+  seventeen `report_fixture` consumers passed; and the workspace workflow, which previously failed
+  from the same defect, completed end to end including the `tools/tests` machine-proof suite and
+  `validate_docs.py`.
+
+* **`P3R-21` is accepted as IMPORTANT and is a TEST / EVIDENCE CONTRACT defect.**
+  `the_parent_establishes_group_authority_and_issues_no_group_signal` requires
+  `group_authority_established == true` on an ordinary uncoordinated launch. That is not an accepted
+  P3 guarantee: only a successful parent-side `setpgid(child, child)` sets the fact, any parent-side
+  error leaves it `false` without retry or inference, and the child's own stage-5 `setpgid(0, 0)`
+  means the executed image leads its group whichever call ran first. Linux permits the parent call
+  to fail with `EACCES` once the child has executed. The race is demonstrated, not assumed: on the
+  same head and runner image the same test passed in `35461333920` and failed in `35461333887`, and
+  it passed in the first publication run `35442641728`.
+
+* **Hosted validation is incomplete.** Because the default helm-launch test step failed, every later
+  step was skipped — fault injection, release build, both machine-code closure proofs, the
+  injection-confinement proof, capability admission, the backend and traced-window cases, S5/S6,
+  the off-cohort emptiness checks, the boundary suites, the repository-level confinement checks and
+  the receipt identities. None of those gates may be inferred from the successful workspace run.
+
+* **The accepted group-authority rule is not amended.** Only a successful parent-side
+  `setpgid(child, child)` establishes group-sweep authority. The authorised correction is bounded to
+  the status documents and `crates/helm-launch/src/backend/tests.rs`: the ordinary test must assert
+  that the executed image leads its own process group and that P3 issues no group signal, without
+  requiring either value of `group_authority_established`, and the positive authority fact must be
+  asserted deterministically under the existing test-only S6 pre-exec stall. Process-group state and
+  group-sweep authority stay two separate facts.
+
 <a id="helm-launch-p3-publication-failed"></a>
 
 ## HELM-LAUNCH P3 published, first hosted validation failed, 2026-09-19 — P3R-20 accepted, publication validation incomplete

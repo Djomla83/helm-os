@@ -1769,3 +1769,171 @@ AND IS INCOMPLETE. P4 AND P5 ARE NOT AUTHORISED.**
 
 **Next gate: BOUNDED HARNESS CORRECTION OF P3R-20, then ONE BOUNDED INDEPENDENT REVIEW OF P3R-20,
 then a corrected publication and a new hosted Linux P3 CI run from a NEW SHA.**
+
+<a id="helm-launch-p3-second-publication-failure-disposition"></a>
+
+### Owner disposition 2026-09-19 — **HELM-LAUNCH P3 SECOND PUBLICATION FAILURE**: P3R-20 hosted-verified corrected, P3R-21 accepted
+
+**`HELM_LAUNCH_P3_SECOND_PUBLICATION_FAILURE_DISPOSITIONED`.** The repository owner, Djomla83,
+records the **second hosted publication validation of the HELM-LAUNCH P3 candidate**, on the
+`P3R-20` correction chain, and dispositions its failure. **`P3R-20` is verified corrected on real
+hosted Linux.** A different, previously masked defect — **`P3R-21`** — failed the run. **P1 and P2
+remain accepted, P3 remains authorised, and P4 and P5 remain not authorised.**
+
+| Item | Value |
+|---|---|
+| **Published head** | **`80ea89b8eef40dc1de68993eac3e140a4925d9b3`** |
+| Publication | **ONE FAST-FORWARD PUSH**, `3a9368f..80ea89b`, three linear commits, no force, no tags |
+| Chain | `86d798e` disposition + `f15d19d` correction + `80ea89b` bounded independent review |
+| Pre-publication review record | `4c834415` + `5c577d45` + `3a9368f8` + `80ea89b8` |
+| **`P3R-20`** | **HOSTED LINUX VERIFIED CORRECTED** |
+| **`P3R-21`** | **IMPORTANT / ACCEPTED / MUST FIX** |
+| `P3R-21` classification | **TEST / EVIDENCE CONTRACT DEFECT** |
+| Product launcher mechanism | **NOT IMPLICATED BY THIS FAILURE** |
+| P3 hosted validation | **INCOMPLETE AND NOT ACCEPTED** |
+| HELM-LAUNCH P4 / P5 | **NOT AUTHORISED** |
+| Trial #4 | **NOT AUTHORISED** |
+
+#### 1. The two publication results are both permanent
+
+Two hosted validations now exist, on two different published heads. Neither replaces the other, and
+neither was retried.
+
+| Publication | Head | helm-launch | Workspace | helm-bind |
+|---|---|---|---|---|
+| **First** | `3a9368f8` | `35442641728` attempt 1 **FAILURE** | `35442641743` attempt 1 **FAILURE** | `35442641707` attempt 1 SUCCESS |
+| **`P3R-20` correction** | `80ea89b8` | `35461333887` attempt 1 **FAILURE** | `35461333920` attempt 1 **SUCCESS** | not triggered — path filter unmatched |
+
+**Nothing was retried.** No workflow was rerun, no job was rerun, no replacement run was dispatched,
+and no fix was pushed to either published head. Both runs on `80ea89b` are **attempt 1**, event
+`push`, naturally triggered. `helm-bind` and every `launch-exec-01` workflow correctly did **not**
+trigger, because the published range touched none of their filtered paths — so **no trial workflow
+ran and no trial was dispatched**.
+
+#### 2. `P3R-20` is verified corrected on hosted Linux
+
+The defect that failed the first publication is fixed, and the fix is proven by the run itself
+rather than inferred from a green job:
+
+* `backend::tests::concurrent_builders_of_one_fixture_publish_exactly_one_object` **executed on real
+  Linux x86_64 and passed** — it was not `cfg`-skipped;
+* every historical fixture-build collision signature is **absent** from the log: no
+  `undefined hidden symbol`, no `cannot open …rcgu.o`, no `FIXTURE BUILD FAILURE`, no
+  `TEST ENVIRONMENT FAILURE: rustc could not build fixture`, no failed staging rename;
+* all seventeen `report_fixture` consumers passed, where four failed on fixture construction in
+  `35442641728`;
+* the workspace workflow `35461333920`, which failed from the same defect in `35442641743`,
+  **completed successfully end to end**, including `cargo test -p helm-launch`, the
+  `tools/tests` machine-proof suite (831 tests, `OK`) and `validate_docs.py`.
+
+`P3R-20` therefore stands as **independently reviewed** (`80ea89b8`) **and hosted-verified
+corrected**. Its correction is not reopened by this disposition.
+
+#### 3. `P3R-21` — accepted
+
+| Finding | Severity and area | Disposition |
+|---|---|---|
+| **`P3R-21`** | **IMPORTANT / test and evidence contract** | **ACCEPTED. MUST FIX.** `backend::tests::the_parent_establishes_group_authority_and_issues_no_group_signal` asserts `group_authority_established == true` for an ordinary, uncoordinated launch. That is **not an accepted P3 guarantee**. Classified **TEST / EVIDENCE CONTRACT DEFECT**; the product launcher mechanism is **not implicated** |
+
+The exact failure, run `35461333887`, job `105945631799`, step `Run cargo test -p helm-launch
+--locked`, exit code 101:
+
+```
+---- backend::tests::the_parent_establishes_group_authority_and_issues_no_group_signal stdout ----
+thread '...' (4695) panicked at crates/helm-launch/src/backend/tests.rs:1426:5:
+the parent's own setpgid(child, child) did not succeed, so no later slice could sweep
+
+test result: FAILED. 80 passed; 1 failed; 1 ignored; 0 measured; 0 filtered out; finished in 1.79s
+```
+
+**Root cause.** The accepted P3 semantics are deliberately conservative and are unchanged by this
+disposition:
+
+* the parent, immediately after `clone3`, issues `setpgid(child, child)` as its **first** system
+  call, and **only that call's success** sets `group_authority_established`;
+* any parent-side error sets it `false`. There is no retry, no inference from the child, and no
+  further interpretation;
+* P3 consumes this fact for nothing — there is no process-group sweep and no negative-pid signal
+  anywhere in the crate;
+* separately, the child issues its own `setpgid(0, 0)` as stage 5 of its closed sequence, before
+  `execveat`.
+
+The executed image therefore leads its own process group **whichever of the two calls ran first**,
+exactly as `backend/child.rs` already documents. Linux permits the parent's `setpgid(child, child)`
+to fail with `EACCES` once the child has already executed. When the child wins that race, the group
+state is still correct and the parent's authority fact is legitimately `false`. **The test treated a
+permitted scheduling outcome as a failure.**
+
+**This is a race, and the evidence proves it rather than assuming it.** On the same head
+`80ea89b8`, on the same `ubuntu-24.04` image, the workspace run `35461333920` executed the same test
+binary and the same test **passed**, while `35461333887` failed it. In the first publication run
+`35442641728` the same test **passed**; every failure there was a `P3R-20` fixture-build failure.
+
+#### 4. Hosted validation is incomplete
+
+Because the default `cargo test -p helm-launch --locked` step failed, every later step of the
+helm-launch job was **skipped**: the fault-injection suite, the release build, both child
+machine-code closure proofs, the fault-injection positive control and release absence proof, the
+Linux capability-admission cases, the P3 backend and traced-window cases, the S5/S6 fault-injection
+cases, the off-cohort emptiness checks, the unsafe-confinement and boundary suites, the
+repository-level confinement checks and the deterministic receipt identities.
+
+`P3R-G1` and `P3R-G2` remain `GATE_PENDING`. **P3 hosted validation is not accepted.** A green job
+colour is not accepted as evidence for any of those gates, and none of them may be inferred from the
+successful workspace run.
+
+#### 5. Correction authorised, bounded
+
+A bounded correction of `P3R-21` is authorised. It may change **only** the status documents and
+`crates/helm-launch/src/backend/tests.rs`. It must not change `child.rs`, `spawn.rs`, `syscall.rs`,
+`mod.rs`, `injection.rs`, `authority.rs`, the public API, the crate manifest, `Cargo.lock`, any
+workflow, the machine-code checker, the machine-proof tests, ADR-0024 or the productization
+contract.
+
+**The accepted group-authority rule is not amended and must not be weakened:**
+
+> **ONLY A SUCCESSFUL PARENT-SIDE `setpgid(child, child)` ESTABLISHES GROUP-SWEEP AUTHORITY.**
+
+The correction must not retry `setpgid`, must not infer parent authority from the child's
+`setpgid(0, 0)`, must not read `EACCES` as authority, must not promote an observed process-group
+identity into authority, must not add a group sweep and must not change P4 semantics. **If fixing
+the test requires changing product semantics, the work stops and returns `OWNER DECISION
+REQUIRED`.**
+
+The ordinary-launch test must assert the deterministic contract — the executed image leads its own
+process group, and P3 issues no group signal — and must **not** require either value of
+`group_authority_established`. The positive parent-authority fact must not be lost: it is to be
+asserted deterministically under the existing test-only **S6** pre-exec stall, which holds the child
+before `execveat` so the parent's `setpgid` cannot lose the race. **Process-group state and
+group-sweep authority stay two separate facts, separately asserted.**
+
+The existing trace contract is not weakened: it must continue to prove that
+`setpgid(child, child)` is the first parent syscall after `clone3`, and it must **not** be made to
+require that call to return `0` on an uncoordinated run.
+
+**No P3 contract amendment is made.** ADR-0024 and the productization plan are **not** modified by
+this disposition, and the accepted technical contract of sections A to N is untouched.
+
+#### 6. Re-review gate
+
+If the correction touches only the status documents and the test harness, and normal backend
+semantics remain unchanged, the next gate is **ONE BOUNDED INDEPENDENT REVIEW OF `P3R-21`**. A full
+unsafe review is **not** required. The reviewer **must not have authored the correction**. **If the
+product backend changes, a full fresh independent unsafe review is required again.**
+
+#### 7. Boundary and next gate
+
+This decision is recorded in documentation only. It changes no product code, test, workflow, Cargo
+file, ADR, experiment or evidence, and does not touch `main`. The historical failed runs
+`35442641728`, `35442641743` and `35461333887` stay as they are: **no retry, no rerun, no
+replacement run.**
+
+**TRIAL #3 FROZEN RESULT REMAINS MECHANISM_REJECTED. TRIAL #3 MUST NOT BE RERUN.**
+
+**NO TRIAL #4 IS AUTHORISED.**
+
+**HELM-LAUNCH P1 AND P2 ARE ACCEPTED. P3 IS A PUBLISHED CORRECTED CANDIDATE WHOSE SECOND HOSTED
+VALIDATION FAILED AND IS INCOMPLETE. P4 AND P5 ARE NOT AUTHORISED.**
+
+**Next gate: BOUNDED HARNESS CORRECTION OF `P3R-21`, then ONE BOUNDED INDEPENDENT REVIEW OF
+`P3R-21`, then a corrected publication and a new hosted Linux P3 CI run from a NEW SHA.**
