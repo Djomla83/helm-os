@@ -64,9 +64,12 @@ times: the [first](#helm-launch-p3-publication-failure-disposition) and
 at `8a359ee4215b6c803dcc5b527010612dabbd110b`, passed every load-bearing hosted gate on its first
 natural run, and P3 was [accepted on 2026-09-19](#helm-launch-p3-accepted). On the same day the
 owner authorised **HELM-LAUNCH P4** — the lifecycle, termination, public `launch` and real receipt
-slice; see the [decision of 2026-09-19](#helm-launch-p4-authorised). **P4 is authorised and not yet
-accepted, P5 is still not authorised**, and the complete helm-launch 0.1 module is **not yet
-product-accepted**.
+slice; see the [decision of 2026-09-19](#helm-launch-p4-authorised). P4 was implemented as a
+candidate and independently reviewed on 2026-09-20; that review returned **0 BLOCKER and 7
+IMPORTANT**, so **P4 publication is blocked** and a bounded correction is ordered; see the
+[disposition of 2026-09-20](#helm-launch-p4-independent-findings-disposition). **P4 is authorised,
+not accepted and under correction, P5 is still not authorised**, and the complete helm-launch 0.1
+module is **not yet product-accepted**.
 
 | ID | Odluka | Status |
 |---|---|---|
@@ -2204,3 +2207,87 @@ it promotes no traceability row to a stronger evidence class.
 AUTHORISED. THE COMPLETE HELM-LAUNCH 0.1 MODULE IS NOT YET PRODUCT-ACCEPTED.**
 
 **Next gate: P4 IMPLEMENTATION, then ONE FRESH INDEPENDENT P4 LIFECYCLE / RECEIPT REVIEW.**
+
+<a id="helm-launch-p4-independent-findings-disposition"></a>
+
+### Owner disposition 2026-09-20 — **HELM-LAUNCH P4 INDEPENDENT FINDINGS**: publication blocked, bounded correction ordered
+
+**`HELM_LAUNCH_P4_INDEPENDENT_REVIEW_NEEDS_FIX`.** The repository owner, Djomla83, accepts
+[`HELM-LAUNCH-P4-INDEPENDENT-LIFECYCLE-REVIEW.md`](implementation/HELM-LAUNCH-P4-INDEPENDENT-LIFECYCLE-REVIEW.md)
+at `351f985bb239496c1bd336e39279e8ff742de5cc` as the **authoritative pre-correction P4 review**. It
+returned **0 BLOCKER and 7 IMPORTANT**. **P4 publication is blocked** until a bounded correction and
+one bounded independent re-review return **0 BLOCKER and 0 IMPORTANT**.
+
+| Item | Value |
+|---|---|
+| Accepted P3 base | `ef50e8865a4f14965a115c5dc26c72e45d4af2c9` |
+| P4 authority | `41ac4f90e85da0688c9e76cdeec92ba904fcfe1d` |
+| P4 implementation candidate | `3d152ad0b7a422eb04160ba70697a457efd390c5` |
+| Independent P4 lifecycle / receipt review | `351f985bb239496c1bd336e39279e8ff742de5cc` |
+| Review result | **0 BLOCKER / 7 IMPORTANT / 8 MINOR / 1 BACKLOG / 1 GATE_PENDING** |
+| P4 | **AUTHORISED / IMPLEMENTED CANDIDATE / CORRECTION REQUIRED** |
+| P4 publication | **BLOCKED** |
+| P5 | **NOT AUTHORISED** |
+| Complete helm-launch 0.1 | **NOT PRODUCT-ACCEPTED** |
+| Trial #3 | frozen **`MECHANISM_REJECTED`**, unchanged, must not be rerun |
+| Trial #4 | **NOT AUTHORISED** |
+| ADR-0024 product contract | **UNCHANGED** by this disposition |
+| Accepted total-bound formula | **UNCHANGED** |
+
+#### 1. Owner dispositions, finding by finding
+
+| Finding | Author rating | **Owner disposition** |
+|---|---|---|
+| `P4A-01` — spawn mask-restore semantic transition | reported | **NOT A FINDING.** The independent verdict is adopted: public `launch` cannot turn a post-child mask-restore failure into `Err`, and the P3 compatibility path is intact. This path is **not** to be rewritten for activity |
+| `P4A-02` / `F-P4-02` — second `POST_KILL_REAP_MS` through `ChildHandle::Drop` | `MINOR` | **IMPORTANT / ACCEPTED / MUST FIX** |
+| `P4A-03` — missing real-loop cases | `MINOR` | **SPLIT.** `EndNotObserved` real-loop integration: **MINOR / OPEN**, carried; foreign-reap / `ECHILD` real-loop gap (`F-P4-06`): **IMPORTANT / MUST FIX** |
+| `P4A-04` / `F-P4-05` — scheduler-dependent, disjunctive real sweep test | `MINOR` | **IMPORTANT / ACCEPTED / MUST FIX** |
+| `P4A-05` — pre-commit busy-loop defect | reported fixed | **CONFIRMED FIXED.** A deterministic regression guard is **required** as part of `F-P4-07` |
+| `F-P4-01` — unbounded stream drain starves deadline processing | `IMPORTANT` | **IMPORTANT / ACCEPTED / MUST FIX** |
+| `F-P4-03` — privacy canary cannot pass on the cohort | `IMPORTANT` | **IMPORTANT / ACCEPTED / MUST FIX.** It is a **test** defect; the accepted mechanism identifier and the receipt vocabulary do not change |
+| `F-P4-04` — receipt determinism asserted over a scheduler-dependent fact | `IMPORTANT` | **IMPORTANT / ACCEPTED / MUST FIX.** It is a **test** defect; durable receipt semantics do not change |
+| `F-P4-06` — no real foreign-reap / `ECHILD` case | `IMPORTANT` | **IMPORTANT / ACCEPTED / MUST FIX** |
+| `F-P4-07` — accepted Level 3 O/R/S/T/P rows not delivered | `IMPORTANT` | **IMPORTANT / ACCEPTED / MUST FIX** |
+| `F-P4-M1` … `F-P4-M8`, `F-P4-B1` | `MINOR` / backlog | **CARRIED, NON-BLOCKING.** Not part of this bounded correction |
+
+#### 2. What the correction may not do
+
+The correction is bounded to the seven `IMPORTANT` findings. It **must not** publish, start P5, alter
+the accepted P4 architecture, **widen the accepted total bound**, add public API or public error
+semantics, add `unsafe` outside `crates/helm-launch/src/backend/`, alter the raw child syscall
+contract, add a numeric-pid direct-child lifecycle fallback, add containment or cgroups, add receipt
+authenticity, change `helm-evidence` semantics, or authorise Trial #4. A correction that would need a
+new child-window system call or a new `unsafe` operation **stops** and returns
+`OWNER DECISION REQUIRED`.
+
+#### 3. The accepted total bound is not renegotiated
+
+`launch` returns within
+
+`SPAWN_CONFIRM_TIMEOUT_MS + timeout_ms + grace_ms + POST_KILL_REAP_MS + POST_EXIT_DRAIN_MS`
+
+plus finite scheduling slack, with **exactly one** `POST_KILL_REAP_MS` contribution. The correction
+fixes the real adapter and the direct-child ownership hand-off so that the implementation meets that
+formula; it does not add a second contribution to the model, the documentation or the tests.
+
+#### 4. The pure lifecycle model stays the policy
+
+`src/lifecycle.rs` was independently found sound. The correction is an **adapter, ownership, fairness
+and evidence** correction. Any semantic change to the pure model **stops** and returns
+`OWNER DECISION REQUIRED`.
+
+#### 5. Boundary of this disposition
+
+This disposition is recorded in documentation only. It changes no product code, test, workflow, Cargo
+file, ADR contract, experiment or evidence, and does not touch `main`. It promotes no traceability row
+to a stronger evidence class and accepts no P4 gate.
+
+**TRIAL #3 FROZEN RESULT REMAINS `MECHANISM_REJECTED`. TRIAL #3 MUST NOT BE RERUN.**
+
+**NO TRIAL #4 IS AUTHORISED.**
+
+**HELM-LAUNCH P1, P2 AND P3 ARE ACCEPTED. P4 IS AUTHORISED, IMPLEMENTED AS A CANDIDATE AND REQUIRES
+CORRECTION. P4 PUBLICATION IS BLOCKED. P5 IS NOT AUTHORISED. THE COMPLETE HELM-LAUNCH 0.1 MODULE IS
+NOT PRODUCT-ACCEPTED.**
+
+**Next gate: BOUNDED P4 CORRECTION, then ONE BOUNDED INDEPENDENT P4 CORRECTION RE-REVIEW.**

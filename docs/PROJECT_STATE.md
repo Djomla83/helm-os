@@ -1,5 +1,59 @@
 # Stanje projekta
 
+<a id="helm-launch-p4-correction-required"></a>
+
+## HELM-LAUNCH P4 INDEPENDENT REVIEW: NEEDS FIX, 2026-09-20 — publication blocked, bounded correction ordered
+
+The fresh independent
+[P4 lifecycle and receipt review](implementation/HELM-LAUNCH-P4-INDEPENDENT-LIFECYCLE-REVIEW.md) at
+`351f985bb239496c1bd336e39279e8ff742de5cc` returned **0 BLOCKER and 7 IMPORTANT**. The owner
+[dispositioned every finding](DECISIONS.md#helm-launch-p4-independent-findings-disposition) and
+**blocked P4 publication** pending a bounded correction and one bounded independent re-review. This
+supersedes the "next gate" of the sections below, which are left as written. **P1, P2 and P3 stay
+accepted; P4 is authorised, implemented as a candidate and under correction; P5 stays not
+authorised**, and the complete helm-launch 0.1 module is **not product-accepted**.
+
+| Item | State |
+|---|---|
+| ADR-0024 | **ACCEPTED** (product contract unchanged by this disposition) |
+| Accepted P3 base | `ef50e8865a4f14965a115c5dc26c72e45d4af2c9` |
+| P4 authority | `41ac4f90e85da0688c9e76cdeec92ba904fcfe1d` |
+| P4 implementation candidate | `3d152ad0b7a422eb04160ba70697a457efd390c5` |
+| Independent P4 review | `351f985bb239496c1bd336e39279e8ff742de5cc` — **0 BLOCKER / 7 IMPORTANT** |
+| HELM-LAUNCH P4 | **AUTHORISED / CANDIDATE / CORRECTION REQUIRED** |
+| P4 publication | **BLOCKED** |
+| HELM-LAUNCH P5 | **NOT AUTHORISED** |
+| Accepted total bound | **UNCHANGED** — exactly one `POST_KILL_REAP_MS` contribution |
+| `unsafe` boundary | **UNCHANGED** — `src/backend/` only |
+| Closed child syscall contract | **UNCHANGED** |
+| Complete helm-launch 0.1 | **NOT PRODUCT-ACCEPTED** |
+| Trial #3 | frozen **`MECHANISM_REJECTED`**, unchanged, must not be rerun |
+| Trial #4 | **NOT AUTHORISED** |
+| Next gate | **BOUNDED P4 CORRECTION, then ONE BOUNDED INDEPENDENT P4 CORRECTION RE-REVIEW** |
+
+* **Must fix (IMPORTANT).** `F-P4-01` an unbounded stream drain can starve every deadline;
+  `F-P4-02` a second `POST_KILL_REAP_MS` and an unrecorded second direct `SIGKILL` reach the public
+  path through `ChildHandle::Drop`; `F-P4-03` the privacy canary cannot pass on the cohort;
+  `F-P4-04` receipt determinism is asserted over a scheduler-dependent fact; `F-P4-05` no
+  deterministic positive real group-sweep evidence; `F-P4-06` no real foreign-reap / `ECHILD` case;
+  `F-P4-07` accepted Level 3 O/R/S/T/P rows not delivered, including the non-spin regression guard
+  for `P4A-05`.
+
+* **Not a finding.** `P4A-01`, the spawn mask-restore transition, is closed by the independent
+  verdict and is not to be rewritten.
+
+* **Carried, non-blocking.** Real-loop `EndNotObserved` integration stays **MINOR / OPEN**: no safe
+  natural Linux child ordinarily survives `SIGKILL` long enough to produce the real path, and the
+  pure-model coverage is exhaustive. No dangerous kernel or privilege mechanism may be manufactured
+  to close it. `F-P4-M1`…`F-P4-M8` and `F-P4-B1` are carried as well.
+
+* **Bounded.** The correction fixes the real adapter, direct-child ownership and the test evidence.
+  It does not widen the accepted total bound, change the pure lifecycle policy, change durable
+  receipt semantics, add public API, add `unsafe` outside `src/backend/`, or touch the closed child
+  contract.
+
+
+
 <a id="helm-launch-p4-authorised"></a>
 
 ## HELM-LAUNCH P4 AUTHORISED, 2026-09-19 — lifecycle, termination, public launch and real receipt; P5 not authorised
