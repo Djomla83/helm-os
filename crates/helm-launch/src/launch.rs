@@ -1116,18 +1116,30 @@ fn main() {
 }
 "##;
 
-    /// Report whether this host let the image raise its own core limit, then
-    /// end by a signal.
+    /// Report which shape this image is running and whether this host let it
+    /// set its own core limit, then end **by raising a signal on itself**.
     ///
-    /// `argv[1]` selects the shape: `segv-core` raises `RLIMIT_CORE` to the
-    /// inherited hard limit and raises `SIGSEGV`; `segv-nocore` and
-    /// `abort-nocore` set the soft limit to zero first. Written in C because
-    /// `getrlimit`, `setrlimit` and `raise` are not in the Rust standard
-    /// library and this crate will not reach for them: the fixture is a
-    /// separate program, not part of the crate.
+    /// `argv[1]` selects the shape:
     ///
-    /// It prints `core_allowed=` before crashing so a failure can name the host
-    /// precondition rather than look like a product defect.
+    /// * `term` raises `SIGTERM`, whose default disposition terminates without
+    ///   ever producing a core, and touches `RLIMIT_CORE` not at all. It
+    ///   reports `core_allowed=-1`, because no limit was set;
+    /// * `segv-core` raises the soft `RLIMIT_CORE` to the inherited hard limit
+    ///   and raises `SIGSEGV`;
+    /// * `segv-nocore` and `abort-nocore` set the soft limit to zero first and
+    ///   raise `SIGSEGV` and `SIGABRT` respectively.
+    ///
+    /// Written in C because `getrlimit`, `setrlimit` and `raise` are not in the
+    /// Rust standard library and this crate will not reach for them: the
+    /// fixture is a separate program, not part of the crate.
+    ///
+    /// It prints its own identity, its mode and `core_allowed=` before ending,
+    /// so a producer self-test can confirm that the shape the case intends is
+    /// the shape that ran, and so a failure can name a host precondition rather
+    /// than look like a product defect.
+    ///
+    /// A soft core limit of zero is **not** a promise that the wait status will
+    /// report no core; `P4PUB-01` and the case below say why.
     const CRASHER_SOURCE: &str = r##"
 #include <signal.h>
 #include <stdio.h>
@@ -1136,17 +1148,28 @@ fn main() {
 int main(int argc, char **argv) {
     const char *mode = argc > 1 ? argv[1] : "segv-nocore";
     int want_core = strcmp(mode, "segv-core") == 0;
-    int allowed = 0;
+    int signo = SIGSEGV;
+    int sets_limit = 1;
+    if (strcmp(mode, "abort-nocore") == 0) {
+        signo = SIGABRT;
+    } else if (strcmp(mode, "term") == 0) {
+        signo = SIGTERM;
+        sets_limit = 0;
+    }
+    int allowed = -1;
     struct rlimit limit;
-    if (getrlimit(RLIMIT_CORE, &limit) == 0) {
-        limit.rlim_cur = want_core ? limit.rlim_max : 0;
-        if (setrlimit(RLIMIT_CORE, &limit) == 0) {
-            allowed = want_core ? (limit.rlim_cur != 0) : 1;
+    if (sets_limit) {
+        allowed = 0;
+        if (getrlimit(RLIMIT_CORE, &limit) == 0) {
+            limit.rlim_cur = want_core ? limit.rlim_max : 0;
+            if (setrlimit(RLIMIT_CORE, &limit) == 0) {
+                allowed = want_core ? (limit.rlim_cur != 0) : 1;
+            }
         }
     }
-    printf("core_allowed=%d\n", allowed);
+    printf("fixture=p4-crasher\nmode=%s\ncore_allowed=%d\n", mode, allowed);
     fflush(stdout);
-    raise(strcmp(mode, "abort-nocore") == 0 ? SIGABRT : SIGSEGV);
+    raise(signo);
     return 0;
 }
 "##;
@@ -2038,48 +2061,178 @@ int main(void) {
 
     // ------------------------------------------ R3 / S3: signalled and exited
 
+    /// `SIGABRT`, `SIGSEGV` and `SIGTERM`, as the numbers the Linux x86_64 UAPI
+    /// defines. Spelled out here because this file names no foreign interface
+    /// at all, not even for a test.
+    const SIGABRT: i32 = 6;
+    const SIGSEGV: i32 = 11;
+    const SIGTERM: i32 = 15;
+
+    /// What this host actually did with one crasher shape, run **directly**,
+    /// outside `helm-launch`.
+    ///
+    /// This is the producer oracle of the X2c rule: the same image, on the same
+    /// host, read through the standard library's own view of the wait status.
+    /// It separates a host fact from a product defect, and every claim below
+    /// that depends on the host is made only after it.
+    struct ProducerEnd {
+        signal: Option<i32>,
+        core_dumped: bool,
+        report: String,
+    }
+
+    /// Run the crasher fixture directly, read its end, and remove whatever core
+    /// file it left in its own scratch directory.
+    fn producer_end(fixture: &Path, workdir: &Path, mode: &str) -> ProducerEnd {
+        let probe = Command::new(fixture)
+            .arg(mode)
+            .current_dir(workdir)
+            .output()
+            .expect("run the crasher fixture directly");
+        let report = String::from_utf8_lossy(&probe.stdout).into_owned();
+        remove_core_files(workdir);
+        // The X2c marker: this is the fixture the case intends, in the shape it
+        // intends, and it reached its own report before raising.
+        assert!(
+            report.contains("fixture=p4-crasher") && report.contains(&format!("mode={mode}")),
+            "the producer self-test did not run the shape this case intends: {report:?}"
+        );
+        ProducerEnd {
+            signal: probe.status.signal(),
+            core_dumped: probe.status.core_dumped(),
+            report,
+        }
+    }
+
     #[test]
     fn a_signalled_child_keeps_its_signal_number_and_its_core_flag() {
         // R3. The signal number must survive whichever `waitid` class the
         // kernel reports, and `CLD_DUMPED` must reach the receipt as
         // `core_dumped: true` rather than being flattened into `CLD_KILLED`.
+        //
+        // The product obligation is to preserve the kernel's own termination
+        // classification, so this case never predicts that classification from
+        // `RLIMIT_CORE`. Owner classification `P4PUB-01`: the first publication
+        // asserted that a soft core limit of zero forces `core_dumped: false`,
+        // and a host whose `/proc/sys/kernel/core_pattern` pipes the dump to a
+        // userspace handler reported `true` for exactly that shape. A soft
+        // limit does not control that path; only the host does. Every
+        // host-dependent claim below therefore takes a **producer self-test**
+        // of the same image, run directly, as its oracle, and the one fixed
+        // branch is carried by a signal that never dumps on any host.
         let workdir = scratch_dir("p4-signal");
         let fixture = crasher();
 
-        for (mode, signal) in [("segv-nocore", 11_i32), ("abort-nocore", 6)] {
+        // 1. THE FIXED NON-CORE BRANCH. `SIGTERM` is an ordinary terminating
+        //    signal whose default disposition is to terminate **without** a
+        //    core, whatever `core_pattern` says and whoever handles it, so this
+        //    is a real invariant rather than a host fact. The fixture raises it
+        //    on itself after it has executed: this is deliberately not a
+        //    timeout-generated `SIGTERM`, so the launcher's own termination
+        //    sequence is not what produced the classification.
+        let control = producer_end(&fixture, &workdir, "term");
+        assert_eq!(
+            control.signal,
+            Some(SIGTERM),
+            "TEST ENVIRONMENT PRECONDITION NOT MET: the non-core control did not end by SIGTERM \
+             when run directly, so its disposition is not the default one here. It reported {:?}",
+            control.report
+        );
+        assert!(
+            !control.core_dumped,
+            "TEST ENVIRONMENT PRECONDITION NOT MET: this host reported a core dump for SIGTERM, \
+             whose default action does not produce one. The fixture reported {:?} and \
+             /proc/sys/kernel/core_pattern is {:?}",
+            control.report,
+            core_pattern()
+        );
+        let outcome = run(
+            &fixture,
+            &workdir,
+            &Spec::new(&["crasher", "term"]).capture(128, 0),
+        );
+        let record = outcome.receipt().record();
+        assert_eq!(
+            record.child_end(),
+            ChildEnd::Signaled {
+                signal: SIGTERM,
+                core_dumped: false,
+            },
+            "the fixed CLD_KILLED branch lost its signal number or gained a core flag"
+        );
+        assert!(
+            !record.termination().sigterm_sent() && !record.termination().sigkill_sent(),
+            "the launcher signalled this child, so the classification is not the fixture's own \
+             and this is not the non-core control the case needs"
+        );
+        assert!(
+            !record.run_deadline_expired(),
+            "the run deadline expired, so this SIGTERM could be the termination sequence's"
+        );
+
+        // 2. THE CORE-GENERATING SIGNALS. Their default action **is** to dump,
+        //    so whether a core was produced is a property of this host and not
+        //    of `helm-launch`. The same image, in the same shape, run directly,
+        //    is the oracle for each one: the receipt must report exactly what
+        //    the standard library reported for the producer, signal number and
+        //    core flag alike. Neither value is predetermined from `RLIMIT_CORE`.
+        for (mode, signal) in [("segv-nocore", SIGSEGV), ("abort-nocore", SIGABRT)] {
+            let producer = producer_end(&fixture, &workdir, mode);
+            assert_eq!(
+                producer.signal,
+                Some(signal),
+                "{mode} did not end by its own signal when run directly: {:?}",
+                producer.report
+            );
             let outcome = run(
                 &fixture,
                 &workdir,
                 &Spec::new(&["crasher", mode]).capture(128, 0),
             );
+            let reported = String::from_utf8_lossy(outcome.stdout_prefix()).into_owned();
+            assert_eq!(
+                field(&reported, "core_allowed"),
+                1,
+                "{mode} could not set its own core limit under helm-launch, so this is not the \
+                 shape the case names; it reported {reported:?} and core_pattern is {:?}",
+                core_pattern()
+            );
             assert_eq!(
                 outcome.receipt().record().child_end(),
                 ChildEnd::Signaled {
                     signal,
-                    core_dumped: false,
+                    core_dumped: producer.core_dumped,
                 },
-                "{mode} did not classify as a signal without a core"
+                "{mode} under helm-launch disagreed with the same image run directly, which \
+                 reported signal {:?} and core_dumped {}; core_pattern is {:?}",
+                producer.signal,
+                producer.core_dumped,
+                core_pattern()
             );
+            remove_core_files(&workdir);
         }
 
-        // The producer self-test: run the same image directly, outside
-        // `helm-launch`, and ask the standard library whether this host
-        // produced a core at all. That separates a host precondition from a
-        // product defect before any product claim is made.
-        let probe = Command::new(&fixture)
-            .arg("segv-core")
-            .current_dir(&workdir)
-            .output()
-            .expect("run the crasher fixture directly");
-        let host_dumps = probe.status.core_dumped();
-        let reported = String::from_utf8_lossy(&probe.stdout).into_owned();
-        remove_core_files(&workdir);
+        // 3. THE POSITIVE `CLD_DUMPED` CASE, which is load-bearing: without it
+        //    a launcher that flattened every `CLD_DUMPED` into `CLD_KILLED`
+        //    would still pass everything above. The producer self-test must
+        //    establish that this host dumps at all **before** any launcher
+        //    result is tested, so an unmet host precondition is named as one
+        //    rather than reported as a product defect. It is never silently
+        //    skipped.
+        let dumper = producer_end(&fixture, &workdir, "segv-core");
+        assert_eq!(
+            dumper.signal,
+            Some(SIGSEGV),
+            "the CLD_DUMPED producer did not end by SIGSEGV when run directly: {:?}",
+            dumper.report
+        );
         assert!(
-            host_dumps,
-            "TEST ENVIRONMENT PRECONDITION NOT MET: this host produced no core dump for a \
-             SIGSEGV even when the image raised its own RLIMIT_CORE. The fixture reported \
-             {reported:?} and /proc/sys/kernel/core_pattern is {:?}. CLD_DUMPED cannot be \
-             exercised here; that is a host fact, not a helm-launch defect.",
+            dumper.core_dumped,
+            "TEST ENVIRONMENT PRECONDITION NOT MET: this host produced no core dump for a SIGSEGV \
+             even when the image raised its own RLIMIT_CORE to the inherited hard limit. The \
+             fixture reported {:?} and /proc/sys/kernel/core_pattern is {:?}. CLD_DUMPED cannot \
+             be exercised here; that is a host fact, not a helm-launch defect.",
+            dumper.report,
             core_pattern()
         );
 
@@ -2088,24 +2241,22 @@ int main(void) {
             &workdir,
             &Spec::new(&["crasher", "segv-core"]).capture(128, 0),
         );
-        let allowed = field(
-            &String::from_utf8_lossy(outcome.stdout_prefix()),
-            "core_allowed",
-        );
+        let reported = String::from_utf8_lossy(outcome.stdout_prefix()).into_owned();
         assert_eq!(
-            allowed,
+            field(&reported, "core_allowed"),
             1,
-            "the fixture could not raise its own core limit under helm-launch; core_pattern is {:?}",
+            "the fixture could not raise its own core limit under helm-launch; it reported \
+             {reported:?} and core_pattern is {:?}",
             core_pattern()
         );
         assert_eq!(
             outcome.receipt().record().child_end(),
             ChildEnd::Signaled {
-                signal: 11,
+                signal: SIGSEGV,
                 core_dumped: true,
             },
-            "the host dumps cores, so CLD_DUMPED must reach the receipt with its signal intact; \
-             core_pattern is {:?}",
+            "the producer proved this host dumps, so CLD_DUMPED must reach the receipt with its \
+             signal intact; core_pattern is {:?}",
             core_pattern()
         );
         remove_core_files(&workdir);
@@ -2588,23 +2739,104 @@ int main(void) {
         );
     }
 
+    /// The inner half of the descriptor-ownership case.
+    ///
+    /// It runs **only** in the dedicated process the case below starts for it,
+    /// with this one case selected and `--test-threads 1`, which is what makes
+    /// its oracle sound. Owner classification `P4PUB-03`: `/proc/self/fd` is
+    /// the **process-global** descriptor table of the whole test binary, and
+    /// the first publication measured it while the Rust harness ran unrelated
+    /// cases in parallel, so an unrelated open or close moved the count without
+    /// any launch having leaked or reclaimed anything (the workspace run
+    /// observed `before = 11`, `after = 10`, on a head where this same case
+    /// passed in the `helm-launch` workflow).
+    ///
+    /// The answer to that is isolation, never a weaker oracle: `after <=
+    /// before` would hide a real leak, and a tolerance would hide a small one.
+    /// The equality below is exact.
     #[test]
-    fn the_outcome_owns_no_descriptor_and_consumes_its_authorisation() {
-        // Every descriptor the launch opened is closed before it returns, so
-        // the count of this process's open descriptors is unchanged by a
-        // completed launch.
-        let workdir = scratch_dir("p4-fds");
+    #[ignore = "driven by the_outcome_owns_no_descriptor_and_consumes_its_authorisation, in a dedicated process"]
+    fn descriptor_ownership_inner_case() {
+        let fixture = PathBuf::from(
+            std::env::var_os("HELM_P4_FIXTURE")
+                .expect("the outer case passes the prebuilt fixture path"),
+        );
+        let workdir = PathBuf::from(
+            std::env::var_os("HELM_P4_WORKDIR")
+                .expect("the outer case passes the prebuilt working directory"),
+        );
+
         let before = open_descriptor_count();
-        let outcome = run(&quiet(), &workdir, &Spec::new(&["quiet", "0"]));
+        let outcome = run(&fixture, &workdir, &Spec::new(&["quiet", "0"]));
         let after = open_descriptor_count();
         assert_eq!(
             before, after,
             "a launch leaked a descriptor: {before} open before, {after} after"
         );
         let _ = outcome.into_receipt();
-        assert_eq!(open_descriptor_count(), before);
+        assert_eq!(
+            open_descriptor_count(),
+            before,
+            "consuming the outcome changed this process's descriptor count"
+        );
+        println!("HELM-P4-FD-OWNERSHIP-INNER: ok");
     }
 
+    #[test]
+    fn the_outcome_owns_no_descriptor_and_consumes_its_authorisation() {
+        // Every descriptor the launch opened is closed before it returns, so
+        // the count of the calling process's open descriptors is unchanged by a
+        // completed launch.
+        //
+        // That count belongs to the whole process, so the measurement is taken
+        // in a process of its own: this case builds everything the measurement
+        // needs, starts this same test binary with only
+        // `descriptor_ownership_inner_case` selected and a single test thread,
+        // and requires that process to succeed. Nothing else holds descriptors
+        // open or closes them while the two counts are taken.
+        let workdir = scratch_dir("p4-fds");
+        let fixture = quiet();
+        let own = std::env::current_exe().expect("this test binary");
+
+        let output = Command::new(&own)
+            .args([
+                "--exact",
+                "launch::tests::descriptor_ownership_inner_case",
+                "--ignored",
+                "--nocapture",
+                "--test-threads",
+                "1",
+            ])
+            .env("HELM_P4_FIXTURE", &fixture)
+            .env("HELM_P4_WORKDIR", &workdir)
+            .output()
+            .expect("run the descriptor-ownership case in a dedicated process");
+        let text = format!(
+            "{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(
+            output.status.success(),
+            "the isolated descriptor-ownership case failed:\n{text}"
+        );
+        assert!(
+            text.contains("HELM-P4-FD-OWNERSHIP-INNER: ok"),
+            "the inner case did not reach its own marker:\n{text}"
+        );
+        assert!(
+            text.contains("1 passed"),
+            "the inner case did not actually run, so this proved nothing:\n{text}"
+        );
+    }
+
+    /// How many descriptors this process has open, read from its own
+    /// `/proc/self/fd`.
+    ///
+    /// The enumeration needs a descriptor of its own, and that descriptor is
+    /// one of the entries it counts. It is opened and closed inside this
+    /// function on every call, so it contributes exactly one to **both** sides
+    /// of the comparison above and biases neither.
     fn open_descriptor_count() -> usize {
         fs::read_dir("/proc/self/fd")
             .map(|entries| entries.count())

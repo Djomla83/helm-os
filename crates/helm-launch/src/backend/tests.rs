@@ -43,7 +43,7 @@
 use std::collections::BTreeMap;
 use std::ffi::OsStr;
 use std::fs;
-use std::os::fd::{AsFd, OwnedFd};
+use std::os::fd::{AsFd, BorrowedFd, OwnedFd};
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -2550,16 +2550,75 @@ fn drop_sleeper() -> PathBuf {
 }
 
 /// Is this pid still present in `/proc`? Test-only observation.
+///
+/// It answers **presence**, not liveness and not reaping: a child that was
+/// killed and never waited for stays here as a zombie. Owner classification
+/// `P4PUB-02` is exactly that confusion, so nothing below uses this as a reap
+/// oracle.
 fn pid_present(pid: i64) -> bool {
     Path::new(&format!("/proc/{pid}")).exists()
 }
 
-/// Terminate and reap a child this test deliberately left running.
-fn harness_cleanup(pid: i64) {
-    let _ = Command::new("kill").arg("-9").arg(pid.to_string()).status();
-    for _ in 0..500 {
-        if !pid_present(pid) {
-            return;
+/// The bound on the harness's own cleanup. It is a **test** bound and has
+/// nothing to do with `POST_KILL_REAP_MS`, which the product owns.
+const HARNESS_CLEANUP_BOUND: Duration = Duration::from_secs(5);
+
+/// Has the process this descriptor refers to already ended?
+///
+/// TEST HARNESS ONLY, and **non-consuming**: `NOWAIT` leaves the end available,
+/// so asking the question cannot itself reap the child and cannot change what
+/// the cleanup below then observes.
+///
+/// A refusal is returned rather than swallowed, because the two ways of failing
+/// are different facts and the caller says so in its message: `Ok(true)` is a
+/// child that was signalled and not collected, and `Err(ECHILD)` is one that
+/// was signalled **and** collected, which is what a still-armed drop guard
+/// would leave behind.
+fn child_has_ended(probe: BorrowedFd<'_>) -> Result<bool, rustix::io::Errno> {
+    rustix::process::waitid(
+        rustix::process::WaitId::PidFd(probe),
+        rustix::process::WaitIdOptions::EXITED
+            | rustix::process::WaitIdOptions::NOHANG
+            | rustix::process::WaitIdOptions::NOWAIT,
+    )
+    .map(|status| status.is_some())
+}
+
+/// Terminate **and reap** a child this test deliberately left running.
+///
+/// This is test-harness disposal of the harness's own descendant, performed
+/// after the product semantics under test have already been observed. It is not
+/// lifecycle behaviour and it is not a product path: `ChildHandle` is
+/// unchanged, and no product code gains a wait of any kind.
+///
+/// Both halves are needed. `kill -9` ends the child, but a direct child that
+/// nobody waits for remains a zombie — still listed in `/proc`, still holding a
+/// slot — until its parent collects it. The reap is therefore the oracle, and
+/// it is addressed by the harness's own duplicate of the child's process
+/// descriptor rather than by a numeric pid, so the descriptor-based identity
+/// the crate keeps everywhere is kept here too.
+fn harness_terminate_and_reap(probe: BorrowedFd<'_>, pid: i64) -> Result<(), String> {
+    let killed = Command::new("kill").arg("-9").arg(pid.to_string()).status();
+    let started = Instant::now();
+    loop {
+        match rustix::process::waitid(
+            rustix::process::WaitId::PidFd(probe),
+            rustix::process::WaitIdOptions::EXITED | rustix::process::WaitIdOptions::NOHANG,
+        ) {
+            Ok(Some(_)) => return Ok(()),
+            Ok(None) => {}
+            Err(errno) => {
+                return Err(format!(
+                    "waiting for the harness's own child was refused with {errno}, so something \
+                     else collected it; `kill -9` reported {killed:?}"
+                ));
+            }
+        }
+        if started.elapsed() >= HARNESS_CLEANUP_BOUND {
+            return Err(format!(
+                "the harness did not reap its own child within {HARNESS_CLEANUP_BOUND:?}; \
+                 `kill -9` reported {killed:?}"
+            ));
         }
         std::thread::sleep(Duration::from_millis(10));
     }
@@ -2606,6 +2665,14 @@ fn a_disarmed_drop_guard_neither_signals_nor_waits() {
     // A live child is the sharpest shape: if the guard still fired, the child
     // would be gone, and if it still waited, the drop would take the whole
     // post-kill bound.
+    //
+    // Once those two facts are in hand the **harness** owns the surviving
+    // child, and disposing of it is the harness's job: it terminates it and
+    // then actually reaps it. Owner classification `P4PUB-02`: the first
+    // publication killed the child and polled `/proc/<pid>` without ever
+    // waiting for it, and a killed-but-unreaped direct child legitimately stays
+    // visible in `/proc` as a zombie, so the cleanup could never finish. The
+    // product behaviour under test was already correct when that happened.
     let workdir = scratch_dir("drop-disarmed");
     let launch = launch_minimal(authorize_fixture(
         &drop_sleeper(),
@@ -2614,6 +2681,17 @@ fn a_disarmed_drop_guard_neither_signals_nor_waits() {
     ))
     .expect("launch");
     let pid = launch.child.pid();
+    // A harness-owned duplicate of the child's process descriptor, taken while
+    // the handle still holds one. The drop closes the handle's copy; this copy
+    // is what lets the observation and the cleanup below stay
+    // descriptor-addressed. It is an ordinary duplicate: it neither keeps the
+    // child alive nor prevents it being reaped, and the handle cannot tell it
+    // exists.
+    let probe = launch
+        .child
+        .pidfd()
+        .try_clone_to_owned()
+        .expect("duplicate the child's process descriptor for the harness");
     assert!(launch.child.drop_cleanup_armed());
     launch.child.disarm_drop_cleanup_after_lifecycle();
     assert!(!launch.child.drop_cleanup_armed());
@@ -2622,19 +2700,30 @@ fn a_disarmed_drop_guard_neither_signals_nor_waits() {
     drop(launch);
     let elapsed = started.elapsed();
 
-    let survived = pid_present(pid);
-    harness_cleanup(pid);
+    // The two load-bearing observations, taken before anything is cleaned up.
+    // The probe is non-consuming, so asking does not reap; and because it asks
+    // whether the child **ended** rather than whether its pid is still listed,
+    // a drop that killed the child without reaping it fails this case instead
+    // of passing it on the zombie that would be left in `/proc`.
+    let probed = child_has_ended(probe.as_fd());
+    let cleanup = harness_terminate_and_reap(probe.as_fd(), pid);
+
     assert!(
-        survived,
-        "a disarmed drop still signalled the child, so an unrecorded SIGKILL exists"
+        matches!(probed, Ok(false)),
+        "a disarmed drop still signalled the child, so an unrecorded SIGKILL exists: the \
+         non-consuming probe answered {probed:?}, where Ok(true) is a child that was signalled \
+         and not collected and Err(ECHILD) one that was signalled and collected"
     );
     assert!(
         elapsed < Duration::from_millis(250),
         "a disarmed drop waited {elapsed:?}, so a second post-kill wait still exists"
     );
+    if let Err(reason) = cleanup {
+        panic!("the harness did not dispose of the child it deliberately left running: {reason}");
+    }
     assert!(
         !pid_present(pid),
-        "the harness must leave no child of its own running"
+        "the harness reaped its child, so no trace of it may remain"
     );
 }
 
