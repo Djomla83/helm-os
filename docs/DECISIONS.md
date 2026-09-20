@@ -2755,3 +2755,180 @@ MODULE IS NOT PRODUCT-ACCEPTED.**
 
 **Next gate: BOUNDED `P4PUB-05` WORKFLOW CORRECTION, then ONE BOUNDED INDEPENDENT RE-REVIEW OF
 `P4PUB-05`.**
+
+<a id="helm-launch-p4-accepted"></a>
+
+### Owner decision 2026-09-20 — **HELM-LAUNCH P4 ACCEPTED**; workspace-gate applicability ruled; P5 not authorised
+
+**`HELM_LAUNCH_P4_ACCEPTED`.** The repository owner, Djomla83, accepts HELM-LAUNCH P4 as the
+**fourth helm-launch product implementation slice**, under Accepted
+[ADR-0024](adr/ADR-0024-launch-authority.md), the
+[P4 authorisation of 2026-09-19](#helm-launch-p4-authorised), the
+[P3 acceptance of 2026-09-19](#helm-launch-p3-accepted), the
+[P2 acceptance of 2026-09-18](#helm-launch-p2-accepted) and the
+[P1 acceptance of 2026-09-17](#helm-launch-p1-accepted). **P1, P2 and P3 remain accepted.** This is
+**not** product acceptance of the complete helm-launch 0.1 module. Every earlier section, including
+every ADR, D-7, Trial #1, #2 and #3 record, and **all three failed P4 publications**, is left
+exactly as written.
+
+| Item | Value |
+|---|---|
+| **Accepted P4 implementation / evidence head** | **`74255771602a619ffc06d211015f2b5a9497915d`** |
+| Accepted P4 authority record | [P4 authorised 2026-09-19](#helm-launch-p4-authorised) |
+| Accepted P3 base | `8a359ee4215b6c803dcc5b527010612dabbd110b` |
+| Phase-4 publication | **ONE FAST-FORWARD PUSH**, `6f9c73d..7425577`, no force, no tags |
+| `origin/main` | `501a7fa95c4884da4fec9a20a512c2d63f2b30cc` — **UNCHANGED** |
+| helm-launch hosted run | **`35526432911`**, run 9, attempt 1, `push`, workflow `360677034` — **SUCCESS** |
+| Workspace hosted evidence | **`35511973812`**, run 40, attempt 1, workflow `352797925` — **SUCCESS**, carried forward from `6f9c73d` by exact input identity (section 2) |
+| Phase-4 natural workspace run | **NOT REQUIRED and none exists** — path filter unmatched, ruled below |
+| LAUNCH-EXEC-01 trial workflow | **NONE RAN**; no trial was dispatched |
+| Retry / rerun / replacement | **NONE** |
+| Manufactured evidence | **NONE** — no dispatch, no no-op commit, no touched file |
+| helm-launch 0.1 complete module | **NOT YET PRODUCT-ACCEPTED** |
+| HELM-LAUNCH P5 | **NOT AUTHORISED** |
+| Trial #3 | frozen **`MECHANISM_REJECTED`**, unchanged, must not be rerun |
+| Trial #4 | **NOT AUTHORISED** |
+
+#### 1. The four publication phases
+
+P4 was published four times. The first three failed and are **immutable**; none is converted into a
+pass by this acceptance.
+
+| Phase | Head | Runs |
+|---|---|---|
+| 1 | `94ee48da0cc412f0d8043e34b914c198615b923e` | `35499943908` attempt 1 **FAILURE**; `35499943903` attempt 1 **FAILURE** |
+| 2 | `84b49ab9d7bf4f7c9d10c7e55f327778f2855da1` | `35507479482` attempt 1 **FAILURE**; `35507479458` attempt 1 **FAILURE** |
+| 3 | `6f9c73dfdde2e2321722519baa8fdf2764ca825f` | `35511973984` attempt 1 **FAILURE** at step 17; `35511973812` attempt 1 **SUCCESS** |
+| **4** | **`74255771602a619ffc06d211015f2b5a9497915d`** | **`35526432911` attempt 1 SUCCESS** |
+
+**NO RETRY. NO RERUN. NO REPLACEMENT.** Every historical run remains at attempt 1 with its original
+conclusion.
+
+#### 2. Owner ruling — the workspace gate does not apply to Phase 4
+
+No natural `HELM Rust workspace Linux` run exists for `7425577`, and the owner rules that **none is
+required**. This is **not** evidence carry-forward by convenience; it rests on **exact input
+identity** for the workspace-triggering paths.
+
+Between `6f9c73d` and `7425577` the complete changed-file set is:
+
+```
+M  .github/workflows/helm-launch.yml
+M  docs/DECISIONS.md
+M  docs/PROJECT_STATE.md
+A  docs/implementation/HELM-LAUNCH-P4-P4PUB05-REREVIEW.md
+```
+
+Every path that can trigger `helm-evidence.yml` is **byte-identical between the two heads**,
+verified by git object identity rather than by diff line count:
+
+| Workspace-triggering path | `6f9c73d` and `7425577` object |
+|---|---|
+| `Cargo.toml` | `953ca8a35cb74ce9fe08077c1d4ac7dce02f2be3` — **IDENTICAL** |
+| `Cargo.lock` | `b2df4153d01ce87f1beee8715cb7eb0cdaa63a11` — **IDENTICAL** |
+| `crates/` | `83616f16b6028544c9ecb39720ba09061caeabc0` — **IDENTICAL** |
+| `tools/` | `bfeb7c938d2571fd3b6d67fdb00a8e1d0efaca20` — **IDENTICAL** |
+| `.github/workflows/helm-evidence.yml` | `cc09fc4af5083b69f947be56cffdd206027650c4` — **IDENTICAL** |
+
+The workspace run `35511973812`, attempt 1, **SUCCESS**, on head `6f9c73d` is therefore accepted as
+**carry-forward evidence for unchanged workspace-sensitive product, test and tool inputs only**.
+
+**It did not run on `7425577`, and nothing here says it did.** It carries no evidence about
+`.github/workflows/helm-launch.yml`, which is the one non-documentation file Phase 4 changed — and
+that file was exercised directly by the Phase-4 `helm-launch` run.
+
+The absence of a Phase-4 workspace run is **expected path-filter behaviour**. No workspace run was
+manufactured: no `workflow_dispatch`, no no-op commit, no touched crate, lockfile, tool or workflow
+file.
+
+#### 3. The hosted gates this acceptance rests on
+
+**A green job colour is not the evidence.** Every gate below was read from the executed log of the
+first natural run of `7425577` — run `35526432911`, attempt 1, jobs `106119296002` (ubuntu-24.04),
+`106119296056` (windows-2025) and `106119296139` (macos-15). All **25** Linux steps executed;
+steps 21 and 22 are `if: runner.os != 'Linux'` and are skipped on Linux by design.
+
+| Gate | Result |
+|---|---|
+| **`P4PUB-05` release-library positive gate** (step 17) | **PASSED** — the reviewed positive oracle built the real production release library and required the backend marker to be **present**: `P4 release library instantiates the private child backend, as expected: /home/runner/work/_temp/p4-release-lib/x86_64-unknown-linux-gnu/release/deps/helm_launch-80b126f5403d56ca.s` |
+| **Explicit repository-level confinement** (step 24) | **PASSED** — the step Phase 3 skipped now executed **both** commands: `test_helm_launch_confinement` **10 tests OK**, `test_helm_launch_machine_proofs` **37 tests OK** |
+| **`P4PUB-01`** | **PASSED** — `launch::tests::a_signalled_child_keeps_its_signal_number_and_its_core_flag` |
+| **`P4PUB-02`** | **PASSED** — `backend::tests::a_disarmed_drop_guard_neither_signals_nor_waits` |
+| **`P4PUB-03`** | **PASSED** — `launch::tests::the_outcome_owns_no_descriptor_and_consumes_its_authorisation` |
+| **`P4PUB-04`** | **PASSED** — the Linux `authority.rs` doctests at lines 503, 512 and 524 plus five `compile_fail` cases |
+| **Default Linux suite** | **PASSED** — **254 passed, 0 failed**, 2 ignored: 107 unit, 28 `linux_admission`, 20 `p2_boundary`, 17 `p3_boundary`, 15 `p4_boundary`, 19 `plan_contract`, 48 doctests |
+| **Fault-injection suite** | **PASSED** — **261 passed, 0 failed** (114 unit) |
+| **Phase A** | **PASSED** — clean status EOF stays `Indeterminate`; exec-stage failure; exit-127 is an exit, not a pre-exec failure; **S5** `injected::a_child_that_dies_before_exec_without_a_record_is_indeterminate_never_success`; **S6** `injected::a_child_that_stalls_before_exec_is_bounded_killed_and_reaped`; pre-exec timeout bound |
+| **Phase B** | **PASSED** — normal end; run deadline → `SIGTERM`; grace → `SIGKILL`; continuous-output deadline progress; post-exit drain |
+| **Phase C** | **PASSED** — `established_authority_issues_exactly_one_real_sweep_that_reaches_its_own_group`; `a_descendant_that_left_the_group_survives_the_sweep`; `a_foreign_reaper_suppresses_the_sweep_and_leaves_the_end_unobservable`; `the_sweep_is_guarded_by_a_non_consuming_probe`; `no_source_infers_group_authority_from_an_observed_process_group` |
+| **Continuous-output fairness** | **PASSED** — `continuous_output_cannot_starve_the_run_deadline`; `a_ready_stream_is_read_at_most_once_per_observation_turn` |
+| **8 MiB dual-stream drain** | **PASSED** — `eight_mebibytes_on_both_streams_at_once_are_drained_in_full` |
+| **`POLLIN` + `POLLHUP`** | **PASSED** — `readiness_with_a_hangup_reads_every_byte_before_end_of_file` |
+| **Post-exit non-spin** | **PASSED** — `a_retained_writer_does_not_turn_the_post_exit_drain_into_a_spin` |
+| **Accepted total bound** | **PASSED** — on the run-timeout path, on the retained-writer path and on the pre-exec-timeout path |
+| **No hidden second `Drop` wait** | **PASSED** — `the_total_bound_counts_one_post_kill_wait_and_the_drop_guard_is_handed_back` |
+| **Receipt privacy / determinism / digest / size** | **PASSED** — `the_receipt_is_deterministic_bounded_and_recomputable`; `no_captured_byte_and_no_host_detail_reaches_the_receipt`; `the_receipt_record_carries_no_time_pid_or_descriptor_field`; `every_variant_combination_is_bounded_injective_and_recomputable`; `debug_output_names_the_digest_and_never_dumps_bytes`. Printed identities: fixture `bytes=1091 sha256=c2e58e8825b8398fd4b2492f13109caa39a52b461de01c43abe804498525e949`; data variant `bytes=1229 sha256=19771d9cd6216735a4d9145ad4e06b6f2ba070b365dfc46004a50436f7bfc52a` |
+| **Machine-code closed world — debug/test** | **PASSED** — root found, closure 9 functions, **0 external edges, 0 indirect, 0 unsupported**, 1 syscall site (shim out of line), live positive control of 4 witness functions |
+| **Machine-code closed world — release codegen** | **PASSED** — root found, closure 2 functions, **0 external edges, 0 indirect, 0 unsupported**, 18 inlined syscall sites, live positive control of 4 witness functions |
+| **Injection confinement** | **PASSED** — marker **PRESENT** in the debug feature build (163 members inspected), **ABSENT** from the release `--all-features` build (17 members): `INJECTION PROOF PASSED` |
+| **P3 backend regression** | **PASSED** — `P3R-20` `concurrent_builders_of_one_fixture_publish_exactly_one_object`; `P3R-21` `the_executed_image_leads_its_group_and_p3_issues_no_group_signal`; 32 backend cases passed, 0 failed |
+| **`strace` child window** | **PASSED** — `strace` 6.8 verified present; closed child window from a single-threaded and from a multithreaded allocating parent; `pthread_atfork` handlers do not run across the raw clone |
+| **Windows off-cohort** | **PASSED** — `windows-2025`, admission suite empty and no backend or launch test exists |
+| **macOS off-cohort** | **PASSED** — `macos-15`, same two absence proofs |
+
+Two cases report as `ignored` and are **not** skipped gates: `foreign_reaper_inner_case` is
+"driven by `a_foreign_reaper_suppresses_the_sweep`, under a `SIGCHLD=SIG_IGN` wrapper", and
+`traced_launch_inner` is "run under `strace` by the tracer tests, never on its own". Each executes
+inside its driver.
+
+#### 4. The accepted P4 product boundary
+
+P4 now includes, on the Linux x86_64 cohort only:
+
+* public `launch(AuthorizedLaunch)` and `LaunchOutcome`;
+* a real synchronous lifecycle with a monotonic application run timeout;
+* `SIGTERM` → grace period → `SIGKILL`;
+* bounded post-kill observation and reap;
+* concurrent `stdout` and `stderr` draining with bounded in-memory output prefixes;
+* a guarded, best-effort process-group cleanup sweep;
+* real `LaunchReceipt` emission from a real launch.
+
+P4 does **not** include sandboxing, containment, cgroups, Wine or Proton, an async launch, receipt
+authenticity or provenance, a positive exec-success claim, N3 privileged-transition validation, or
+any P5 hardening or evidence-contract work.
+
+The backend stays **crate-private** while being **internally reachable** from the public `launch`.
+`no_backend_item_is_public` is green, and the release-library gate of step 17 proves reachability of
+a private module — **not** public exposure of it. Fault injection is **absent** from the same
+release build that reaches the backend.
+
+#### 5. Preserved nonclaims
+
+* A clean exec-status end-of-file establishes only `Indeterminate(StatusEofWithoutRecord)`. There
+  is **no** `ExecSucceeded` state anywhere in the crate.
+* The process-group sweep is **best-effort cleanup, not containment**. Issuing it says only that
+  the one call was made.
+* `LaunchReceipt` carries **zero execution authority** and makes **no authenticity claim**. A
+  matching receipt digest is **byte identity only, not provenance**.
+* N3 real privileged transition remains **unvalidated**, and nothing claims one was prevented.
+
+#### 6. Open nonblocking findings, carried
+
+| Id | Severity | Disposition |
+|---|---|---|
+| `P4DOC-01` | `MINOR` / `BACKLOG_NONBLOCKING` | **CARRIED**, not fixed here |
+| `P4PUB05-R1` | `MINOR` / `BACKLOG_NONBLOCKING` | **CARRIED** — release-gate artifact selection is structurally unique but unasserted; P5 may assert the match count |
+| `P4PUB05-R2` | `MINOR` / `BACKLOG_NONBLOCKING` | **CARRIED** — the release-gate marker proves emission, and the reachability edge was confirmed by review rather than by the oracle; P5 may assert the call edge |
+| `P4A-03` `EndNotObserved` real integration | `MINOR` / **OPEN** | **CARRIED** as previously dispositioned |
+| Earlier accepted P3 nonblocking findings | as recorded | **CARRIED** |
+
+No cleanup is performed in this acceptance task.
+
+**TRIAL #3 FROZEN RESULT REMAINS `MECHANISM_REJECTED`. TRIAL #3 MUST NOT BE RERUN.**
+
+**NO TRIAL #4 IS AUTHORISED.**
+
+**HELM-LAUNCH P1, P2, P3 AND P4 ARE ACCEPTED. P5 IS NOT AUTHORISED. THE COMPLETE HELM-LAUNCH 0.1
+MODULE IS NOT YET PRODUCT-ACCEPTED.**
+
+**Next gate: OWNER DECISION ON WHETHER TO AUTHORISE HELM-LAUNCH P5.**

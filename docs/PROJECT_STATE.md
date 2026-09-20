@@ -1,5 +1,72 @@
 # Stanje projekta
 
+<a id="helm-launch-p4-accepted"></a>
+
+## HELM-LAUNCH P4 ACCEPTED, 2026-09-20 — fourth product slice; workspace gate ruled inapplicable; P5 not authorised
+
+The owner [accepted HELM-LAUNCH P4](DECISIONS.md#helm-launch-p4-accepted) as the **fourth
+helm-launch product implementation slice**, on head `74255771602a619ffc06d211015f2b5a9497915d`,
+after the fourth publication's first natural hosted run passed every load-bearing gate on attempt 1.
+**P1, P2 and P3 remain accepted. P5 is NOT authorised.** The complete helm-launch 0.1 module is
+**not yet product-accepted**. This supersedes the "next gate" of the sections below, which are left
+as written.
+
+| Item | State |
+|---|---|
+| ADR-0024 | **ACCEPTED** (architecture unchanged; this is status synchronisation only) |
+| **Accepted P4 head** | **`74255771602a619ffc06d211015f2b5a9497915d`** |
+| `helm-launch` run `35526432911` | run 9, attempt 1, `push` — **SUCCESS** on Ubuntu, Windows and macOS |
+| All applicable Linux steps through 25 | **EXECUTED AND PASSED** |
+| `P4PUB-05` release-library positive gate (step 17) | **PASSED** |
+| Repository-level confinement (step 24) | **PASSED** — the step Phase 3 skipped |
+| `P4PUB-01` … `P4PUB-04` | **PASSED** |
+| Phase-4 natural workspace run | **NOT REQUIRED; none exists** — path filter unmatched |
+| Workspace carry-forward evidence | `35511973812`, attempt 1, **SUCCESS**, head `6f9c73d` |
+| Manufactured evidence | **NONE** — no dispatch, no no-op commit, no touched input |
+| P4 product contract | **UNCHANGED** by this acceptance |
+| `unsafe` boundary | **UNCHANGED** — `src/backend/` only |
+| HELM-LAUNCH P4 | **ACCEPTED** |
+| HELM-LAUNCH P5 | **NOT AUTHORISED** |
+| Complete helm-launch 0.1 | **NOT YET PRODUCT-ACCEPTED** |
+| Trial #3 | frozen **`MECHANISM_REJECTED`**, unchanged, must not be rerun |
+| Trial #4 | **NOT AUTHORISED** |
+| Next gate | **OWNER DECISION ON WHETHER TO AUTHORISE HELM-LAUNCH P5** |
+
+* **The workspace gate was ruled inapplicable, on exact input identity.** Between `6f9c73d` and
+  `7425577` the only changed files are `.github/workflows/helm-launch.yml`, `docs/DECISIONS.md`,
+  `docs/PROJECT_STATE.md` and the `P4PUB-05` rereview artifact. `Cargo.toml`, `Cargo.lock`,
+  `crates/`, `tools/` and `.github/workflows/helm-evidence.yml` are **byte-identical between the
+  two heads**, verified by git object identity. The successful Phase-3 workspace run `35511973812`
+  is therefore carried forward **for those unchanged inputs only**. It **did not run on
+  `7425577`**, and it carries no evidence about the one non-documentation file Phase 4 changed —
+  which the `helm-launch` run exercised directly.
+
+* **The two gates Phase 3 never reached both passed.** Step 17 now requires the backend marker to
+  be **present** and found it in the real production release library; step 24 executed both Python
+  modules, **10** and **37** tests, all passing.
+
+* **The product evidence is real, not inferred.** 254 default-suite tests and 261 fault-injection
+  tests passed with **0 failures**; Phases A, B and C, stream and bound behaviour, receipt privacy,
+  determinism and digest, both machine-code closed-world gates (**0 external, 0 indirect, 0
+  unsupported**, live positive controls), injection confinement, the P3 backend regression and the
+  real `strace` child-window cases all executed on hosted Linux.
+
+* **A private backend that is reachable is not a public backend.** `no_backend_item_is_public` is
+  green, and fault injection is **absent** from the same release build whose backend the gate
+  reaches.
+
+* **All three failed P4 publications stay failed.** Phase 1 `94ee48d`, Phase 2 `84b49ab` and
+  Phase 3 `6f9c73d` remain immutable at attempt 1. **NO RETRY, NO RERUN, NO REPLACEMENT.**
+
+* **Nonclaims preserved.** Clean exec-status EOF is `Indeterminate(StatusEofWithoutRecord)` and
+  there is no `ExecSucceeded` state; the group sweep is best-effort cleanup, **not containment**;
+  the receipt carries zero execution authority and no authenticity claim, and a matching digest is
+  byte identity only, not provenance; N3 privileged transition remains unvalidated.
+
+* **Nonblocking findings are carried, not fixed.** `P4DOC-01`, `P4PUB05-R1` and `P4PUB05-R2` stay
+  **MINOR / BACKLOG_NONBLOCKING**; `P4A-03` `EndNotObserved` real integration stays **MINOR /
+  OPEN**; earlier accepted P3 nonblocking findings are carried.
+
 <a id="helm-launch-p4-third-publication-failed"></a>
 
 ## HELM-LAUNCH P4 THIRD PUBLICATION FAILED, 2026-09-20 — `P4PUB-01` through `P4PUB-04` verified fixed on Linux, new `P4PUB-05` stale CI-oracle defect

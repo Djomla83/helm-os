@@ -2,11 +2,11 @@
 
 > **ADR-0024: ACCEPTED 2026-09-17.**
 > **PRODUCTIZATION PLAN: OWNER-REVIEWED** (2026-09-16: `HELM_LAUNCH_PRODUCTIZATION_PLAN_OWNER_REVIEW_PASSED_WITH_BOUNDED_AMENDMENTS`).
-> **IMPLEMENTATION AUTHORITY: P1, P2 AND P3 ACCEPTED; P4 AUTHORISED AND NOT YET ACCEPTED; P5 NOT AUTHORISED.**
+> **IMPLEMENTATION AUTHORITY: P1, P2, P3 AND P4 ACCEPTED; P5 NOT AUTHORISED.**
 > **HELM-LAUNCH P1: ACCEPTED 2026-09-17** as the first product slice (portable model only); the complete 0.1 module is **not yet product-accepted**.
 > **HELM-LAUNCH P2: ACCEPTED 2026-09-18** as the second product slice — capability admission and authorisation composition only, with no process creation, no process execution and no `unsafe`. Its **stop condition is SATISFIED**: admission, refusal and measurement are **green on hosted Linux x86_64**, the independent review **PASSED with 0 BLOCKER and 0 IMPORTANT**, and portable compatibility is **green on Windows and macOS**.
 > **HELM-LAUNCH P3: ACCEPTED 2026-09-19** as the third product slice — the unsafe Linux x86_64 process-creation backend and the closed post-clone child contract, **internally only**: no public `launch()`, no public process handle, no process-group sweep and no host privilege. Authorised 2026-09-18; see the [P3 authority note](#p3-authority-2026-09-18) and the [P3 acceptance sync](#p3-acceptance-sync-2026-09-19). Its **stop condition is SATISFIED**: the full independent unsafe review and four bounded independent correction reviews each returned **0 BLOCKER and 0 IMPORTANT**, and the hosted Linux x86_64 runtime, machine-code, injection-confinement, `strace` child-window, S5 and S6 gates are **all green on a single natural run of `8a359ee`**.
-> **HELM-LAUNCH P4: AUTHORISED 2026-09-19** as the fourth product slice — the parent observation loop, the plan-driven run deadline, the `SIGTERM`/grace/`SIGKILL` lifecycle, concurrent stream draining, the guarded process-group cleanup sweep, the public `launch` and `LaunchOutcome`, and deterministic `LaunchReceipt` emission from a real launch. **Not yet accepted**; see the [P4 authority note](#p4-authority-2026-09-19).
+> **HELM-LAUNCH P4: AUTHORISED 2026-09-19** as the fourth product slice — the parent observation loop, the plan-driven run deadline, the `SIGTERM`/grace/`SIGKILL` lifecycle, concurrent stream draining, the guarded process-group cleanup sweep, the public `launch` and `LaunchOutcome`, and deterministic `LaunchReceipt` emission from a real launch. **ACCEPTED 2026-09-20** on head `74255771602a619ffc06d211015f2b5a9497915d`; see the [P4 authority note](#p4-authority-2026-09-19) and the [P4 acceptance sync](#p4-acceptance-sync-2026-09-20). Its **stop condition is SATISFIED**: the independent lifecycle review and four bounded independent correction re-reviews each returned **0 BLOCKER and 0 IMPORTANT**, and every load-bearing hosted Linux gate — lifecycle Phases A/B/C, streams and bounds, receipt, both machine-code closed-world profiles, injection confinement, the P3 backend and `strace` regressions, the release-library backend gate and the explicit repository-level confinement step — passed on a **single natural attempt-1 run** of `7425577`.
 > **P5: NOT AUTHORISED.**
 > **NO TRIAL #4 IS AUTHORISED** (authorised = false).
 
@@ -1676,6 +1676,46 @@ integration, a published receipt schema document, portable published test vector
 orchestration, sandboxing, cgroups, process-tree containment, an async API, an N3 privileged
 transition claim, and any receipt signing, verification constructor or provenance claim. **P5
 remains not authorised.**
+
+<a id="p4-acceptance-sync-2026-09-20"></a>
+
+**P4 acceptance, 2026-09-20.** The owner
+[accepted HELM-LAUNCH P4](../DECISIONS.md#helm-launch-p4-accepted) as the fourth product
+implementation slice, at head `74255771602a619ffc06d211015f2b5a9497915d`. **P1, P2, P3 and P4 are
+accepted; P5 remains not authorised.** This note syncs current implementation authority and gate
+status only; the plan's accepted contract, slices, traceability and evidence classes are unchanged,
+and **no row of section 3 is promoted to a stronger class**. In particular, N3 real privileged
+transition stays **UNVALIDATED**.
+
+The P4 row's **stop condition is satisfied**, and by executed evidence rather than job colour. Every
+gate below was read from the log of the first natural run of `7425577` — run `35526432911`,
+attempt 1, `push`, all three matrix jobs **SUCCESS**:
+
+| P4 gate | State |
+|---|---|
+| Public `launch` / `LaunchOutcome`, Linux x86_64 | **PASSED** — present and cohort-gated; `the_crate_root_names_the_p4_public_pair_exactly_as_often_as_it_must` green |
+| Lifecycle Phase A — exec evidence | **PASSED** — clean status EOF stays `Indeterminate`, exec-stage failure, exit-127 distinction, S5, S6, pre-exec timeout |
+| Lifecycle Phase B — deadline and termination | **PASSED** — normal end, run deadline → `SIGTERM`, grace → `SIGKILL`, continuous-output progress, post-exit drain |
+| Lifecycle Phase C — guarded group sweep | **PASSED** — exactly one real sweep under established authority, escaped descendant survives, foreign reaper suppresses the sweep, sweep strictly before the reap |
+| Streams, poll and bounds | **PASSED** — 8 MiB dual-stream drain, `POLLIN`+`POLLHUP`, retained-writer non-spin, truncation and zero-capture, accepted total bound, no hidden second `Drop` wait |
+| Real `LaunchReceipt` emission | **PASSED** — deterministic, bounded, recomputable; no time, pid or descriptor field; no verdict vocabulary |
+| Default Linux suite | **PASSED** — 254 passed, 0 failed, across unit, integration and doctest targets |
+| Fault-injection suite | **PASSED** — 261 passed, 0 failed |
+| Machine-code closed world, both profiles | **PASSED** — debug closure 9 functions, release closure 2 functions, each **0 external, 0 indirect, 0 unsupported**, live positive control |
+| Injection confinement | **PASSED** — marker present in the debug feature build, **absent** from the release `--all-features` build |
+| Release-library backend reachability | **PASSED** — the P4 production release library instantiates the **private** backend; this is internal reachability, **not** public exposure |
+| Repository-level confinement, independent of cargo | **PASSED** — 10 + 37 Python tests |
+| P3 backend and `strace` regressions under P4 | **PASSED** — `P3R-20`, `P3R-21`, closed child window single- and multi-threaded, `pthread_atfork` |
+| Off-cohort absence proofs | **PASSED** — `windows-2025` and `macos-15` |
+| N3 real privileged transition | **UNVALIDATED / NONCLAIM** — unchanged |
+
+No `HELM Rust workspace Linux` run exists for `7425577`, and the owner ruled one **not required**:
+`Cargo.toml`, `Cargo.lock`, `crates/`, `tools/` and `.github/workflows/helm-evidence.yml` are
+**byte-identical** between `6f9c73d` and `7425577`, so the successful Phase-3 workspace run
+`35511973812` carries forward for those unchanged inputs only. No workspace run was manufactured.
+
+**Not accepted by this note**: the complete helm-launch 0.1 module, which stays **not yet
+product-accepted**, and **P5, which remains not authorised**.
 
 ## 17. Open questions
 

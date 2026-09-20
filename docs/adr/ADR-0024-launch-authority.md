@@ -8,8 +8,7 @@
 **Authoritative base:** `5cc56384257a2ec1f2a2a9c64f7f4328da6cef2e`; revision base
 `930ec14b940da9b136c7d2ad024b441d47ceba6c`; acceptance base
 `03285d9d13f53c2d97d78bd4f50552c201941c8f`\
-**Implementation authority:** **HELM-LAUNCH P1, P2 and P3 accepted; P4 authorised and not yet
-accepted; P5 not authorised.** P1
+**Implementation authority:** **HELM-LAUNCH P1, P2, P3 and P4 accepted; P5 not authorised.** P1
 — the crate skeleton and the portable, pure model — was authorised by the
 [owner decision of 2026-09-17](../DECISIONS.md#adr-0024-accepted-helm-launch-p1-authorised) and
 [accepted the same day](../DECISIONS.md#helm-launch-p1-accepted). P2 — safe Linux x86_64 capability
@@ -21,15 +20,21 @@ process-creation backend and the closed post-clone child contract — was
 [accepted on 2026-09-19](../DECISIONS.md#helm-launch-p3-accepted) after a full independent unsafe
 review, four bounded independent correction reviews and hosted Linux x86_64 validation. P4 — the
 lifecycle, termination, public `launch` and real receipt slice — was
-[authorised on 2026-09-19](../DECISIONS.md#helm-launch-p4-authorised) and is **not yet accepted**.
-**P5 is not authorised**, and it needs a new explicit owner decision. The P3
+[authorised on 2026-09-19](../DECISIONS.md#helm-launch-p4-authorised) and
+[accepted on 2026-09-20](../DECISIONS.md#helm-launch-p4-accepted) after one bounded independent
+lifecycle review, four bounded independent correction re-reviews, three failed publications whose
+evidence is preserved unchanged, and a fourth publication whose first natural hosted run passed
+every load-bearing Linux gate on attempt 1. **P5 is not authorised**, and it needs a new explicit
+owner decision. The P3
 authorisation activates the scoped `unsafe` exception of section E **only under
 `crates/helm-launch/src/backend/`**, and authorises process creation and an execution attempt
 **only internally**: it adds **no public execution API**, no process-group sweep and no host
 privilege acquisition. **P4 keeps that same `unsafe` boundary**: it adds the public `launch`,
 `LaunchOutcome` and the guarded process-group cleanup sweep, all in safe code outside
-`src/backend/`. **Neither the acceptance of P3 nor the authorisation of P4 changes any of the
-architectural contract below**: both are status synchronisation, not new architecture decisions.\
+`src/backend/`. **Neither the acceptance of P3 nor the acceptance of P4 changes any of the
+architectural contract below**: both are status synchronisation, not new architecture decisions.
+Accepting P4 grants **no** containment, sandboxing, exec-success claim or receipt authenticity, and
+it does **not** product-accept the complete helm-launch 0.1 module.\
 **Design basis:** the [helm-launch 0.1 productization plan](../implementation/HELM-LAUNCH-PRODUCTIZATION-PLAN.md),
 as amended by the [owner review of 2026-09-16](../DECISIONS.md#helm-launch-productization-plan-owner-review).
 The [architecture and falsification plan](../research/HELM-LAUNCH-ARCHITECTURE.md) is historical
