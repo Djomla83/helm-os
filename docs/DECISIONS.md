@@ -2495,3 +2495,131 @@ AUTHORISED. THE COMPLETE HELM-LAUNCH 0.1 MODULE IS NOT PRODUCT-ACCEPTED.**
 
 **Next gate: ONE FAST-FORWARD PUBLICATION OF THE ATTRIBUTION-CLEAN REVIEWED CHAIN, then NEW NATURAL
 HOSTED P4 CI.**
+
+<a id="helm-launch-p4-second-publication-failure"></a>
+
+### Owner disposition 2026-09-20 — **HELM-LAUNCH P4 SECOND PUBLICATION**: hosted validation FAILED on a stale P3-era doctest, `P4PUB-01/02/03` verified fixed
+
+**`HELM_LAUNCH_P4_SECOND_PUBLICATION_HOSTED_VALIDATION_FAILED`.** The repository owner, Djomla83,
+records that the attribution-clean corrected P4 head was published once and its hosted Linux
+validation failed. The two natural runs are **permanent historical evidence** and are preserved
+exactly as they stand. **P4 hosted validation is NOT ACCEPTED.** A narrowly bounded
+**documentation / doctest** correction is authorised inside `crates/helm-launch/src/authority.rs`
+only; the P4 product contract is not reopened.
+
+| Item | Value |
+|---|---|
+| Published P4 head | `84b49ab9d7bf4f7c9d10c7e55f327778f2855da1` |
+| `helm-launch` — first natural run | `35507479482`, run #7, attempt 1, event `push` — **FAILURE** |
+| its Linux job | `106069632303` (`ubuntu-24.04`) — **FAILURE** at step 8, `cargo test -p helm-launch --locked` |
+| its Windows job | `106069632268` (`windows-2025`) — **SUCCESS** |
+| its macOS job | `106069632184` (`macos-15`) — **SUCCESS** |
+| `HELM Rust workspace Linux` — first natural run | `35507479458`, run #39, attempt 1, event `push` — **FAILURE** |
+| its Linux job | `106069631924` (`ubuntu-24.04`) — **FAILURE** at step 6, `cargo test --workspace --locked` |
+| P4 hosted validation | **NOT ACCEPTED** |
+| P4 product mechanism | **NOT IMPLICATED** by any preserved evidence |
+| Historical runs | **PRESERVED** — **NO RETRY, NO RERUN, NO REPLACEMENT** |
+| ADR-0024 product contract | **UNCHANGED** by this disposition |
+| P4 product contract | **UNCHANGED** by this disposition |
+| `unsafe` boundary | **UNCHANGED** — `crates/helm-launch/src/backend/` only |
+| HELM-LAUNCH P5 | **NOT AUTHORISED** |
+| Trial #3 | frozen **`MECHANISM_REJECTED`**, unchanged, must not be rerun |
+| Trial #4 | **NOT AUTHORISED** |
+
+#### 1. The three dispositioned first-publication failures are closed on real Linux
+
+All three corrections authorised earlier on 2026-09-20 executed on real Linux and **passed**, each
+on **two independent `ubuntu-24.04` runners** — the `helm-launch` Linux job and the workspace
+`verify` job:
+
+| Id | Case | Hosted result |
+|---|---|---|
+| `P4PUB-01` | `launch::tests::a_signalled_child_keeps_its_signal_number_and_its_core_flag` | **HOSTED VERIFIED FIXED** |
+| `P4PUB-02` | `backend::tests::a_disarmed_drop_guard_neither_signals_nor_waits` | **HOSTED VERIFIED FIXED** |
+| `P4PUB-03` | `launch::tests::the_outcome_owns_no_descriptor_and_consumes_its_authorisation` | **HOSTED VERIFIED FIXED** |
+
+`P4PUB-01` passed without invoking its named `TEST ENVIRONMENT PRECONDITION` path, so the positive
+`CLD_DUMPED` producer gate was satisfied on both runners. `P4PUB-03`'s inner case reported
+`ignored, driven by the_outcome_owns_no_descriptor_and_consumes_its_authorisation, in a dedicated
+process`, exactly as designed. The `helm-launch` Linux library target reported **107 passed, 0
+failed, 2 ignored**, and six boundary suites then passed (28, 20, 17, 15, 19, 6). In the workspace
+run every crate suite passed before the failure.
+
+#### 2. `P4PUB-04`, the one new failure
+
+| Id | Severity | Class | Reachable | Product mechanism |
+|---|---|---|---|---|
+| `P4PUB-04` | **IMPORTANT** | **TEST / EVIDENCE DOCUMENTATION DEFECT** | **YES** | **NOT IMPLICATED** |
+
+Both runs failed identically, in the **doctest** target and in no lifecycle, sweep, stream or
+receipt case:
+
+```text
+test crates/helm-launch/src/authority.rs - authority::AuthorizedLaunch (line 500) - compile fail ... FAILED
+test crates/helm-launch/src/authority.rs - authority::AuthorizedLaunch (line 506) - compile fail ... FAILED
+Test compiled successfully, but it is marked `compile_fail`.
+test result: FAILED. 40 passed; 2 failed; 0 ignored
+error: doctest failed, to rerun pass `-p helm-launch --doc`
+```
+
+Those two P3-era doctests assert that `helm_launch::launch(..)` cannot be named and that
+`helm_launch::LaunchOutcome` does not exist, under a prose claim that nothing in the crate can
+consume an `AuthorizedLaunch` to create a process because no `launch` function exists. Accepted P4
+made both public on the cohort — `#[cfg(all(target_os = "linux", target_arch = "x86_64"))] pub use
+launch::{LaunchOutcome, launch};` — so on Linux the snippets now compile and their stale
+`compile_fail` expectation correctly reports FAILED. **The product is correct and the doctest is
+wrong.**
+
+#### 3. Why it was not seen before
+
+The defect is **pre-existing and newly exposed**, not a regression of the authorised correction.
+`authority.rs` was not touched by any published commit of this chain and was last modified in
+`afe8922`, before P4; the contradiction dates from `3d152ad`, the P4 implementation commit, which
+added the public export without retiring the P3-era negative proofs. It was unobservable until now
+because `authority.rs` is compiled only on the cohort, so off-cohort and on the Windows development
+host the snippets correctly fail to compile and pass, while on Linux — the only place the defect is
+observable — the first publication's library target failed first, so `cargo` never reached the
+doctest target. The log of run `35499943908` contains no doctest line at all. This publication is
+the first time the Linux doctest target has ever executed on a P4 head.
+
+#### 4. Later load-bearing gates are INCOMPLETE, not passed
+
+`cargo test` stops at the first failing target, so every later step was skipped and **no skipped
+gate may be treated as success**: the fault-injection suite and with it `F-P4-05` positive parent
+group authority and the foreign-reaper `ECHILD` case; the three named P4 gate steps; machine-code
+closure in both profiles; the P3 regression steps; the repository-level confinement checks; and, in
+the workspace run, the Python tool tests, `validate_docs.py` and the release builds. Windows and
+macOS remained **green**, including the off-cohort absence proofs, but no Linux runtime claim
+derives from them.
+
+#### 5. The authorised correction is bounded to documentation
+
+The correction is confined to `crates/helm-launch/src/authority.rs` and to doc comments, doctests,
+ordinary comments and lint-reason strings. It **must not** change the public API, a signature, a
+body, a type or field layout, visibility, a `cfg` boundary, a trait implementation, runtime
+behaviour, `unsafe` or any dependency, and it must not touch `launch.rs`, `lifecycle.rs`,
+`receipt.rs`, `model.rs`, the backend or any workflow. Still-valid authority-boundary negative
+proofs must be preserved rather than deleted to obtain green, no off-cohort absence claim may be
+encoded in this cohort-only module, and no new wording may claim exec success: a clean status EOF
+remains `Indeterminate(StatusEofWithoutRecord)`. Adding `--no-fail-fast` is **not** authorised here.
+A correction that would need an executable change **stops** and returns `OWNER DECISION REQUIRED`.
+
+#### 6. Both publication phases are permanent
+
+Phase 1 at `94ee48da0cc412f0d8043e34b914c198615b923e` — runs `35499943908` and `35499943903`, both
+attempt 1, **FAILURE** — and Phase 2 at `84b49ab9d7bf4f7c9d10c7e55f327778f2855da1` — runs
+`35507479482` and `35507479458`, both attempt 1, **FAILURE** — are immutable. Neither is rerun,
+retried, cancelled, restarted or replaced by a dispatch, no published history is amended and nothing
+is force pushed. **NO RETRY. NO RERUN. NO REPLACEMENT.** A corrected head receives a new SHA and new
+natural run identifiers, which will be new evidence rather than a revision of either phase.
+
+**TRIAL #3 FROZEN RESULT REMAINS `MECHANISM_REJECTED`. TRIAL #3 MUST NOT BE RERUN.**
+
+**NO TRIAL #4 IS AUTHORISED.**
+
+**HELM-LAUNCH P1, P2 AND P3 ARE ACCEPTED. P4 IS AUTHORISED, PUBLISHED TWICE AND ITS HOSTED
+VALIDATION HAS NOT PASSED. P4 IS NOT ACCEPTED. P5 IS NOT AUTHORISED. THE COMPLETE HELM-LAUNCH 0.1
+MODULE IS NOT PRODUCT-ACCEPTED.**
+
+**Next gate: BOUNDED `P4PUB-04` DOCUMENTATION CORRECTION, then ONE BOUNDED INDEPENDENT RE-REVIEW OF
+`P4PUB-04`.**

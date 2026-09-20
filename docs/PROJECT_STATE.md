@@ -1,5 +1,64 @@
 # Stanje projekta
 
+<a id="helm-launch-p4-second-publication-failed"></a>
+
+## HELM-LAUNCH P4 SECOND PUBLICATION FAILED, 2026-09-20 — `P4PUB-01/02/03` verified fixed on Linux, new `P4PUB-04` stale-doctest defect
+
+The attribution-clean corrected P4 head `84b49ab9d7bf4f7c9d10c7e55f327778f2855da1` was published
+once. Both natural Linux runs **FAILED**, identically and only in the **doctest** target. The owner
+[dispositioned the result](DECISIONS.md#helm-launch-p4-second-publication-failure): the three
+first-publication defects are **hosted verified fixed**, the single new failure `P4PUB-04` is a
+**test / evidence documentation defect**, and **no preserved evidence implicates the P4 product
+mechanism**. Both runs are permanent historical evidence: **NO RETRY, NO RERUN, NO REPLACEMENT.**
+This supersedes the "next gate" of the sections below, which are left as written.
+
+| Item | State |
+|---|---|
+| ADR-0024 | **ACCEPTED** (product contract unchanged by this disposition) |
+| Published P4 head | `84b49ab9d7bf4f7c9d10c7e55f327778f2855da1` |
+| `helm-launch` run `35507479482` | run #7, attempt 1, event `push` — **FAILURE**; Linux job `106069632303` failed at `cargo test -p helm-launch --locked`, Windows `106069632268` and macOS `106069632184` **SUCCESS** |
+| `HELM Rust workspace Linux` run `35507479458` | run #39, attempt 1, event `push` — **FAILURE**; Linux job `106069631924` failed at `cargo test --workspace --locked` |
+| `P4PUB-01` | **HOSTED VERIFIED FIXED** (two independent Linux runners) |
+| `P4PUB-02` | **HOSTED VERIFIED FIXED** (two independent Linux runners) |
+| `P4PUB-03` | **HOSTED VERIFIED FIXED** (two independent Linux runners) |
+| `P4PUB-04` | **IMPORTANT — TEST / EVIDENCE DOCUMENTATION DEFECT**, reachable, product mechanism **NOT IMPLICATED** |
+| Later load-bearing hosted gates | **INCOMPLETE** — the default `cargo test` stopped at the doctest failure, so every later step was skipped |
+| P4 hosted validation | **NOT ACCEPTED** |
+| HELM-LAUNCH P4 | **AUTHORISED / PUBLISHED TWICE / HOSTED VALIDATION NOT ACCEPTED / DOCUMENTATION CORRECTION AUTHORISED** |
+| P4 product contract | **UNCHANGED** |
+| `unsafe` boundary | **UNCHANGED** — `src/backend/` only |
+| HELM-LAUNCH P5 | **NOT AUTHORISED** |
+| Complete helm-launch 0.1 | **NOT PRODUCT-ACCEPTED** |
+| Trial #3 | frozen **`MECHANISM_REJECTED`**, unchanged, must not be rerun |
+| Trial #4 | **NOT AUTHORISED** |
+| Next gate | **BOUNDED `P4PUB-04` DOCUMENTATION CORRECTION, then ONE BOUNDED INDEPENDENT RE-REVIEW OF `P4PUB-04`** |
+
+* **The three first-publication corrections hold on real Linux.**
+  `launch::tests::a_signalled_child_keeps_its_signal_number_and_its_core_flag`,
+  `backend::tests::a_disarmed_drop_guard_neither_signals_nor_waits` and
+  `launch::tests::the_outcome_owns_no_descriptor_and_consumes_its_authorisation` all passed on both
+  `ubuntu-24.04` runners. `P4PUB-01` never invoked its named `TEST ENVIRONMENT PRECONDITION` path,
+  so the positive `CLD_DUMPED` producer gate was satisfied. The `helm-launch` Linux library target
+  reported **107 passed, 0 failed, 2 ignored**, followed by six passing boundary suites.
+
+* **`P4PUB-04` — IMPORTANT, test / evidence documentation defect.**
+  Two P3-era `compile_fail` doctests on `AuthorizedLaunch` assert that `helm_launch::launch(..)`
+  cannot be named and that `helm_launch::LaunchOutcome` does not exist. Accepted P4 made both public
+  on the cohort, so on Linux they now compile and the stale expectation correctly reports FAILED.
+  The product is correct; the documentation is stale.
+
+* **Pre-existing and newly exposed, not a regression.** `authority.rs` was untouched by this chain
+  and last modified in `afe8922`, before P4; the contradiction dates from `3d152ad`, the P4
+  implementation commit. It was unobservable because the module is cohort-only — so off-cohort and
+  on the Windows development host the snippets correctly fail to compile — and because at the first
+  publication the library target failed first, so `cargo` never reached the doctest target.
+
+* **Skipped is not passed.** The fault-injection suite, `F-P4-05` positive group authority, the
+  foreign-reaper `ECHILD` case, the three named P4 gate steps, machine-code closure, the P3
+  regression steps, the Python tool tests, `validate_docs.py` and the release builds did not
+  execute. Windows and macOS stayed green, including the off-cohort absence proofs, but no Linux
+  runtime claim derives from them.
+
 <a id="helm-launch-p4-attribution-clean"></a>
 
 ## HELM-LAUNCH P4 UNPUBLISHED CHAIN ATTRIBUTION-CLEAN, 2026-09-20 — `R-P4PUB-I1` closed, reviewed trees preserved exactly
