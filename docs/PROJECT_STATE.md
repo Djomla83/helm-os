@@ -1,5 +1,75 @@
 # Stanje projekta
 
+<a id="helm-launch-p4-third-publication-failed"></a>
+
+## HELM-LAUNCH P4 THIRD PUBLICATION FAILED, 2026-09-20 — `P4PUB-01` through `P4PUB-04` verified fixed on Linux, new `P4PUB-05` stale CI-oracle defect
+
+The corrected P4 head `6f9c73dfdde2e2321722519baa8fdf2764ca825f` was published once. The
+`helm-launch` Linux run **FAILED** at step 17; the `HELM Rust workspace Linux` run **SUCCEEDED**.
+The owner [dispositioned the result](DECISIONS.md#helm-launch-p4-third-publication-failure): all
+four earlier defects are **hosted verified fixed**, the single new failure `P4PUB-05` is a
+**CI / workflow evidence defect**, and **no preserved evidence implicates the P4 product
+mechanism**. Both runs are permanent historical evidence: **NO RETRY, NO RERUN, NO REPLACEMENT.**
+This supersedes the "next gate" of the sections below, which are left as written.
+
+| Item | State |
+|---|---|
+| ADR-0024 | **ACCEPTED** (product contract unchanged by this disposition) |
+| Published P4 head | `6f9c73dfdde2e2321722519baa8fdf2764ca825f` |
+| `helm-launch` run `35511973984` | attempt 1 — **FAILURE** at step 17, `Confirm a release library instantiates no backend` |
+| `HELM Rust workspace Linux` run `35511973812` | attempt 1 — **SUCCESS** |
+| `P4PUB-01` | **HOSTED VERIFIED FIXED** |
+| `P4PUB-02` | **HOSTED VERIFIED FIXED** |
+| `P4PUB-03` | **HOSTED VERIFIED FIXED** |
+| `P4PUB-04` | **HOSTED VERIFIED FIXED** |
+| `P4PUB-05` | **IMPORTANT — CI / WORKFLOW EVIDENCE DEFECT**, reachable, product mechanism **NOT IMPLICATED** |
+| Later load-bearing `helm-launch` gates | **INCOMPLETE** — steps after 17 were skipped |
+| `helm-launch` step 24 | **SKIPPED**; the same Python modules **PASSED** inside the workspace run |
+| P4 hosted validation | **NOT ACCEPTED** |
+| HELM-LAUNCH P4 | **AUTHORISED / PUBLISHED THREE TIMES / HOSTED VALIDATION NOT ACCEPTED / WORKFLOW CORRECTION AUTHORISED** |
+| P4 product contract | **UNCHANGED** |
+| `unsafe` boundary | **UNCHANGED** — `src/backend/` only |
+| HELM-LAUNCH P5 | **NOT AUTHORISED** |
+| Complete helm-launch 0.1 | **NOT PRODUCT-ACCEPTED** |
+| Trial #3 | frozen **`MECHANISM_REJECTED`**, unchanged, must not be rerun |
+| Trial #4 | **NOT AUTHORISED** |
+| Next gate | **BOUNDED `P4PUB-05` WORKFLOW CORRECTION, then ONE BOUNDED INDEPENDENT RE-REVIEW OF `P4PUB-05`** |
+
+* **The four earlier corrections hold on real Linux.** `P4PUB-01`, `P4PUB-02` and `P4PUB-03` passed
+  again, and `P4PUB-04` closed the stale `compile_fail` doctests: the Linux **doctest** target,
+  which had never completed on a P4 head, executed and passed. The default library, integration and
+  doctest targets, the fault-injection suite, the three named P4 gate steps, the pure lifecycle
+  model, machine-code closure in **both** profiles and the fault-injection positive control with its
+  release absence proof all passed before the failing step. Windows and macOS were **SUCCESS**.
+
+* **`P4PUB-05` — IMPORTANT, CI / workflow evidence defect.** Step 17 still encodes the **P3**
+  invariant that *"a release library contains no backend at all, because P3 adds no public consumer
+  for it"*, and fails when the release assembly contains `backend5child10child_main`. Accepted P4
+  exports `launch` on the cohort, and the accepted path is `launch` -> `backend::spawn_for_lifecycle`
+  -> `spawn::spawn` -> `child::child_main`, none of it behind `cfg(test)` or behind the
+  `test-fault-injection` feature, which is also gated on `debug_assertions` and so is absent from a
+  release build even under `--all-features`. A P4 release library is therefore **expected** to
+  instantiate the private backend. The oracle is superseded; the product is correct.
+
+* **The product is not changed.** The public API, `LaunchOutcome`, visibility, `cfg` boundaries,
+  `child_main`, the lifecycle, the receipt, the `unsafe` boundary and the P3 child contract are all
+  untouched. The backend stays **private** while being **reachable internally** from the public P4
+  `launch` — the accepted architecture. The correction is confined to the workflow file.
+
+* **Step 24 — substitute evidence, accurately scoped.** `helm-launch` step 24 was **SKIPPED**
+  because step 17 failed, and it is **not** separately defective. The workspace run `35511973812`
+  did complete `python3 -m unittest discover -s tools/tests -v`, with actual **PASS** execution of
+  `test_helm_launch_confinement.UnsafeConfinementTests` and `test_helm_launch_machine_proofs.*`.
+  That does **not** convert the failed `helm-launch` run into a success; the next natural run must
+  still pass its **own** explicit step 24.
+
+* **Skipped is not passed.** The capability-admission cases, the P3 backend and traced-window cases,
+  the P3 fault-injection cases, the unsafe-confinement and boundary suites, step 24 and the
+  deterministic receipt and plan identities did not execute in the `helm-launch` run. No Linux
+  runtime claim derives from the green Windows and macOS jobs.
+
+* **`P4DOC-01` is carried.** It remains **MINOR / NONBLOCKING** and is deliberately not fixed here.
+
 <a id="helm-launch-p4-second-publication-failed"></a>
 
 ## HELM-LAUNCH P4 SECOND PUBLICATION FAILED, 2026-09-20 — `P4PUB-01/02/03` verified fixed on Linux, new `P4PUB-04` stale-doctest defect
