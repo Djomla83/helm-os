@@ -176,9 +176,13 @@ jobs:
             --profile test \
             --label "debug/test profile (the profile the P3 tests execute)"
 
-      # The same contract under production codegen. A plain release library
-      # build discards the whole backend, so release codegen settings are
-      # applied to the profile that does instantiate the child.
+      # The same contract under production codegen. This deliberately keeps the
+      # test-instantiated profile and applies the release optimisation and
+      # debug-assertion settings to it, because that keeps `child_main` an
+      # independently inspectable root of its own call closure rather than one
+      # symbol among many in a whole-library build. Whether the actual P4
+      # production release library reaches the backend at all is a different
+      # property, proved separately by the release-library gate below.
       - name: Child machine-code closure — release codegen
         if: runner.os == 'Linux'
         run: |
@@ -200,15 +204,34 @@ jobs:
             --root "${RUNNER_TEMP}/p3-injection" \
             --target x86_64-unknown-linux-gnu
 
-      # A release library contains no backend at all, because P3 adds no public
-      # consumer for it. Stated as its own check so the fact is visible rather
-      # than inferred from the absence of a symbol nobody looked for.
-      - name: Confirm a release library instantiates no backend
+      # THE P4 PRODUCTION RELEASE-LIBRARY GATE. P4 exports `launch` on the
+      # cohort, and the accepted path is `launch` -> `spawn_for_lifecycle` ->
+      # `spawn` -> `child::child_main`. No step of it is behind `cfg(test)` or
+      # behind `test-fault-injection`, which is additionally gated on
+      # `debug_assertions` and so is compiled out here even with
+      # `--all-features`. A real production release library must therefore
+      # instantiate the private backend, and this builds one and requires that
+      # evidence rather than inferring it from the tests.
+      #
+      # This replaces P3's opposite gate, which stated that a release library
+      # contains no backend at all because P3 added no public consumer for it.
+      # That was true of P3 and is false of P4: the same build now legitimately
+      # reaches the child, so the old negative oracle would fail on exactly the
+      # evidence that proves P4 works. It is retired here rather than deleted,
+      # so the release library remains a stated fact instead of an assumption.
+      #
+      # This is a structural release-build evidence check. The symbol spelling
+      # is an implementation detail of the Rust version this workflow pins, not
+      # public API and not a product contract: `child_main` stays private and
+      # is reachable only from inside the crate. P5 may replace or harden this
+      # marker. It is deliberately the same marker the retired gate used, so
+      # the change here is the direction of the assertion and nothing else.
+      - name: Confirm the P4 release library instantiates the private backend
         if: runner.os == 'Linux'
         shell: bash
         run: |
           set -euo pipefail
-          out="${RUNNER_TEMP}/p3-release-lib"
+          out="${RUNNER_TEMP}/p4-release-lib"
           rm -rf "$out"
           cargo rustc -p helm-launch --lib --locked --release --all-features \
             --target x86_64-unknown-linux-gnu --target-dir "$out" -- --emit=asm
@@ -217,11 +240,13 @@ jobs:
             echo "TEST ENVIRONMENT FAILURE: no assembly was emitted for the release library."
             exit 1
           fi
-          if grep -q 'backend5child10child_main' "$asm"; then
-            echo "FAILURE: a release library instantiated the P3 child entry point."
+          if ! grep -q 'backend5child10child_main' "$asm"; then
+            echo "FAILURE: the P4 release library does not reach the private child backend."
+            echo "Either the public launch path no longer instantiates it, or this gate read"
+            echo "the wrong artifact: $asm"
             exit 1
           fi
-          echo "release library instantiates no backend, as expected: $asm"
+          echo "P4 release library instantiates the private child backend, as expected: $asm"
 
       # The Linux backend suite, named so the log shows which cases the cohort
       # actually exercised and a silently empty suite cannot pass unnoticed.
