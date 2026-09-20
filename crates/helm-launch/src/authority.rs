@@ -10,13 +10,16 @@
 //! caller-owned executable fd  --admit_executable--------▶ ExecutableCapability
 //! caller-owned cwd fd + id    --admit_working_directory-▶ WorkingDirectoryCapability
 //! plan + executable + cwd     --authorize---------------▶ AuthorizedLaunch
-//! AuthorizedLaunch            --╳--------------------------▶ process
+//! AuthorizedLaunch            --launch (P4, launch.rs)--▶ attempted execution
 //! ```
 //!
-//! **The last edge does not exist.** There is no `launch`, no process creation
-//! and no process execution in this crate, so an `AuthorizedLaunch` is an inert
-//! in-process value that nothing can execute. Creating a process needs a new
-//! explicit owner decision.
+//! **The last edge is not in this module.** Nothing here creates a process:
+//! admission and composition are complete before any of it, and no method of
+//! any type here executes anything. On this cohort the accepted P4 slice
+//! provides the public `launch`, which consumes an `AuthorizedLaunch` by value
+//! and exactly once; every raw operation it needs lives in `src/backend/`.
+//! Consuming the authority is an attempt, never a statement that the image ran:
+//! a clean status EOF stays `Indeterminate(StatusEofWithoutRecord)`.
 //!
 //! Execution authority is an already-open descriptor a trusted caller moves in
 //! by value. It is never a pathname, a name, a verdict or a document field: no
@@ -268,8 +271,10 @@ fn measure_body(fd: BorrowedFd<'_>, initial_size: u64) -> Result<(u64, Digest), 
 ///
 /// The value owns exactly the descriptor the caller moved into
 /// [`admit_executable`], and it closes that descriptor when it drops. It cannot
-/// execute anything by itself: no method of this type, and no function in this
-/// crate, creates a process.
+/// execute anything by itself: no method of this type creates a process, and
+/// admission never becomes execution. On this cohort only the accepted P4
+/// `launch` consumes the composed authority, and only after [`authorize`] has
+/// taken this capability by value.
 ///
 /// The read-only facts it exposes are the inert results of admission. There is
 /// no host path, no inode or device identity, no descriptor number and no
@@ -383,7 +388,7 @@ impl ExecutableCapability {
         not(test),
         allow(
             dead_code,
-            reason = "P2 only pins the descriptor; the execution slice that would use it is not authorised"
+            reason = "admission pins the descriptor; launch moves it out via into_parts, so only tests borrow"
         )
     )]
     pub(crate) fn descriptor(&self) -> BorrowedFd<'_> {
@@ -409,8 +414,8 @@ impl core::fmt::Debug for ExecutableCapability {
 /// [`admit_working_directory`] and closes it when it drops. After admission it
 /// performs no I/O of its own. The directory is never enumerated, no path is
 /// resolved or recorded, no search permission is checked, and nothing here
-/// changes any working directory: that kernel decision belongs to an execution
-/// slice that is not authorised.
+/// changes any working directory: that kernel decision belongs to the P4 launch
+/// path, not to admission.
 ///
 /// # Type boundary
 ///
@@ -469,7 +474,7 @@ impl WorkingDirectoryCapability {
         not(test),
         allow(
             dead_code,
-            reason = "P2 only pins the descriptor; the execution slice that would use it is not authorised"
+            reason = "admission pins the descriptor; launch moves it out via into_parts, so only tests borrow"
         )
     )]
     pub(crate) fn descriptor(&self) -> BorrowedFd<'_> {
@@ -487,26 +492,41 @@ impl core::fmt::Debug for WorkingDirectoryCapability {
 }
 
 /// One plan composed with the two capabilities it authorises: a **single-use**
-/// authority value for a future launch API.
+/// authority value for the launch API.
 ///
-/// **Nothing in this crate can consume it to create a process**, because no
-/// `launch` function exists:
+/// On this cohort the accepted P4 `launch` is what consumes it, **by value and
+/// exactly once**, to attempt execution of the admitted object. Consuming the
+/// authority is an attempt and never a claim that the image ran: a clean status
+/// EOF stays `Indeterminate(StatusEofWithoutRecord)`, and no exec-success state
+/// exists. The value executes nothing by itself and exposes no descriptor.
 ///
 /// ```
 /// fn assert_send<T: Send>() {}
 /// assert_send::<helm_launch::AuthorizedLaunch>();
 /// ```
 ///
-/// ```compile_fail
-/// fn execute(a: helm_launch::AuthorizedLaunch) {
-///     let _ = helm_launch::launch(a);
+/// The accepted cohort signature type-checks, and taking the authority by value
+/// is what makes one authorisation unrepeatable. These name the API only: they
+/// construct no authority and start no process.
+///
+/// ```
+/// fn execute(
+///     a: helm_launch::AuthorizedLaunch,
+/// ) -> Result<helm_launch::LaunchOutcome, helm_launch::LaunchError> {
+///     helm_launch::launch(a)
 /// }
+///
+/// let _: fn(
+///     helm_launch::AuthorizedLaunch,
+/// ) -> Result<helm_launch::LaunchOutcome, helm_launch::LaunchError> = execute;
 /// ```
 ///
-/// ```compile_fail
-/// fn outcome() -> helm_launch::LaunchOutcome {
-///     todo!()
+/// ```
+/// fn outcome(o: helm_launch::LaunchOutcome) -> helm_launch::LaunchOutcome {
+///     o
 /// }
+///
+/// let _: fn(helm_launch::LaunchOutcome) -> helm_launch::LaunchOutcome = outcome;
 /// ```
 ///
 /// It is not `Sync`, has no public constructor, no `Default`, no `Clone` — so
@@ -566,7 +586,8 @@ impl AuthorizedLaunch {
     /// The executable measurement exactly as admission recorded it.
     ///
     /// `authorize` moves the capability in unchanged: it does not re-measure,
-    /// reopen or re-resolve anything, and no future execution would either.
+    /// reopen or re-resolve anything, and the P4 launch path does not either —
+    /// it carries this measurement through untouched.
     #[must_use]
     pub const fn executable_measurement(&self) -> ExecutableMeasurement {
         self.executable.measurement()
@@ -743,8 +764,8 @@ pub fn admit_executable(fd: OwnedFd) -> Result<ExecutableCapability, AdmissionEr
 /// admitted, and `O_PATH` is refused.
 ///
 /// The directory is never enumerated, no path is resolved or recorded, and no
-/// search permission is checked: that kernel decision belongs to an execution
-/// slice which does not exist.
+/// search permission is checked: that kernel decision belongs to the P4 launch
+/// path, not to admission.
 ///
 /// # Errors
 ///
