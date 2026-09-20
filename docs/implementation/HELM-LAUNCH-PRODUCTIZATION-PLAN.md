@@ -2,12 +2,12 @@
 
 > **ADR-0024: ACCEPTED 2026-09-17.**
 > **PRODUCTIZATION PLAN: OWNER-REVIEWED** (2026-09-16: `HELM_LAUNCH_PRODUCTIZATION_PLAN_OWNER_REVIEW_PASSED_WITH_BOUNDED_AMENDMENTS`).
-> **IMPLEMENTATION AUTHORITY: P1, P2, P3 AND P4 ACCEPTED; P5 NOT AUTHORISED.**
+> **IMPLEMENTATION AUTHORITY: P1, P2, P3 AND P4 ACCEPTED; P5 AUTHORISED AND NOT YET ACCEPTED.**
 > **HELM-LAUNCH P1: ACCEPTED 2026-09-17** as the first product slice (portable model only); the complete 0.1 module is **not yet product-accepted**.
 > **HELM-LAUNCH P2: ACCEPTED 2026-09-18** as the second product slice — capability admission and authorisation composition only, with no process creation, no process execution and no `unsafe`. Its **stop condition is SATISFIED**: admission, refusal and measurement are **green on hosted Linux x86_64**, the independent review **PASSED with 0 BLOCKER and 0 IMPORTANT**, and portable compatibility is **green on Windows and macOS**.
 > **HELM-LAUNCH P3: ACCEPTED 2026-09-19** as the third product slice — the unsafe Linux x86_64 process-creation backend and the closed post-clone child contract, **internally only**: no public `launch()`, no public process handle, no process-group sweep and no host privilege. Authorised 2026-09-18; see the [P3 authority note](#p3-authority-2026-09-18) and the [P3 acceptance sync](#p3-acceptance-sync-2026-09-19). Its **stop condition is SATISFIED**: the full independent unsafe review and four bounded independent correction reviews each returned **0 BLOCKER and 0 IMPORTANT**, and the hosted Linux x86_64 runtime, machine-code, injection-confinement, `strace` child-window, S5 and S6 gates are **all green on a single natural run of `8a359ee`**.
 > **HELM-LAUNCH P4: AUTHORISED 2026-09-19** as the fourth product slice — the parent observation loop, the plan-driven run deadline, the `SIGTERM`/grace/`SIGKILL` lifecycle, concurrent stream draining, the guarded process-group cleanup sweep, the public `launch` and `LaunchOutcome`, and deterministic `LaunchReceipt` emission from a real launch. **ACCEPTED 2026-09-20** on head `74255771602a619ffc06d211015f2b5a9497915d`; see the [P4 authority note](#p4-authority-2026-09-19) and the [P4 acceptance sync](#p4-acceptance-sync-2026-09-20). Its **stop condition is SATISFIED**: the independent lifecycle review and four bounded independent correction re-reviews each returned **0 BLOCKER and 0 IMPORTANT**, and every load-bearing hosted Linux gate — lifecycle Phases A/B/C, streams and bounds, receipt, both machine-code closed-world profiles, injection confinement, the P3 backend and `strace` regressions, the release-library backend gate and the explicit repository-level confinement step — passed on a **single natural attempt-1 run** of `7425577`.
-> **P5: NOT AUTHORISED.**
+> **HELM-LAUNCH P5: AUTHORISED 2026-09-20** as the final product slice — the Level 4 adversarial regression suite of section 14.4, the published receipt schema document, portable receipt test vectors with recomputable SHA-256, README non-claims at current product truth, and CI hardening. **Not yet accepted**; see the [P5 authority note](#p5-authority-2026-09-20). P5 adds no architecture and freezes P1–P4 semantics as its baseline.
 > **NO TRIAL #4 IS AUTHORISED** (authorised = false).
 
 <a id="current-authority-2026-09-17"></a>
@@ -1716,6 +1716,46 @@ No `HELM Rust workspace Linux` run exists for `7425577`, and the owner ruled one
 
 **Not accepted by this note**: the complete helm-launch 0.1 module, which stays **not yet
 product-accepted**, and **P5, which remains not authorised**.
+
+<a id="p5-authority-2026-09-20"></a>
+
+**P5 authority, 2026-09-20.** The owner
+[authorised HELM-LAUNCH P5](../DECISIONS.md#helm-launch-p5-authorised) as the final product
+implementation slice. **P1, P2, P3 and P4 stay accepted, P5 is authorised and not yet accepted.**
+This note syncs current implementation authority only; the plan's accepted contract, slices,
+traceability and evidence classes are unchanged, and no row of section 3 is promoted to a stronger
+class. **No formal trial is required for P5, and no Trial #4 is authorised.**
+
+Under the P5 authority the slice may add the Level 4 adversarial regressions of
+[section 14.4](#144-level-4--adversarial-regressions-derived-from-trial-13-defects), a published
+receipt schema document derived from the accepted serializer, portable receipt test vectors carrying
+exact bytes and recomputable SHA-256, current-truth corrections to crate-facing documentation, and
+CI hardening.
+
+| Property | Authority after P5 |
+|---|---|
+| Level 4 adversarial regressions | **AUTHORISED IN P5** |
+| Published receipt schema document | **AUTHORISED IN P5**, derived from the accepted serializer; invents no field |
+| Portable receipt test vectors | **AUTHORISED IN P5**, Level 1, identical bytes and digest on all three platforms |
+| Current-truth documentation corrections | **AUTHORISED IN P5** — closes `P4DOC-01` |
+| CI hardening | **AUTHORISED IN P5**, provided no gate is weakened and no retry culture is introduced |
+| Public API | **UNCHANGED** — P5 adds none |
+| Receipt fields and meaning | **UNCHANGED** |
+| Lifecycle, signals, deadlines, sweep policy | **UNCHANGED** |
+| Child syscall contract and `unsafe` boundary | **UNCHANGED** — P5 adds zero `unsafe` |
+| HELM crate dependencies | **UNCHANGED** — still zero |
+| Receipt authenticity or provenance | **NOT IN P5** (backlog B-10) |
+| `helm-evidence` semantic receipt integration | **NOT IN P5** (backlog B-02) |
+| Wine, Proton, orchestrator, sandboxing, containment, cgroups, async | **NOT IN P5** |
+| N3 privileged transition claim | **NOT IN P5** — stays UNVALIDATED |
+
+**The accepted P1–P4 behaviour is P5's frozen baseline.** If a P5 adversarial regression exposes a
+real product defect that would require a semantic change, implementation **stops** and returns
+**OWNER DECISION REQUIRED**.
+
+**P5 stop condition:** Level 4 complete, the whole suite green on Linux, Level 1 green on Linux,
+Windows and macOS, then **one fresh independent review of the whole crate** by a reviewer who
+authored neither P5 commit. No owner merge before that review passes.
 
 ## 17. Open questions
 

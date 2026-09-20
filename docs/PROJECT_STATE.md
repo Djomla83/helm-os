@@ -1,5 +1,43 @@
 # Stanje projekta
 
+<a id="helm-launch-p5-authorised"></a>
+
+## HELM-LAUNCH P5 AUTHORISED, 2026-09-20 — final 0.1 slice: regressions, evidence contract, documentation, CI hardening
+
+The owner [authorised HELM-LAUNCH P5](DECISIONS.md#helm-launch-p5-authorised) as the **final**
+helm-launch 0.1 implementation slice, on the accepted P4 head
+`06223035828bfc6fec249bad7a5f2b5d520a7d59`. **P1, P2, P3 and P4 remain accepted; P5 is AUTHORISED
+and NOT YET ACCEPTED.** The complete helm-launch 0.1 module is **not yet product-accepted**. This
+supersedes the "next gate" of the sections below, which are left as written.
+
+| Item | State |
+|---|---|
+| ADR-0024 | **ACCEPTED**, unchanged — P5 adds no architecture |
+| HELM-LAUNCH P1 / P2 / P3 / P4 | **ACCEPTED** |
+| **HELM-LAUNCH P5** | **AUTHORISED / NOT YET ACCEPTED** |
+| P5 content | Level 4 regressions; receipt schema document; portable receipt test vectors; README non-claims; CI hardening |
+| P5 explicitly excludes | `helm-evidence` semantic integration, Wine, Proton, orchestrator, sandboxing, containment, cgroups, async launch, receipt authenticity/provenance, N3 privilege claim, Trial #4 |
+| New `unsafe` expected | **ZERO** |
+| New HELM crate dependencies expected | **ZERO** |
+| P1–P4 semantics | **FROZEN BASELINE** — a semantic change needs a new owner decision |
+| Complete helm-launch 0.1 | **NOT YET PRODUCT-ACCEPTED** |
+| Trial #3 | frozen **`MECHANISM_REJECTED`**, unchanged, must not be rerun |
+| Trial #4 | **NOT AUTHORISED** |
+| Next gate | **P5 IMPLEMENTATION, then ONE FRESH INDEPENDENT WHOLE-CRATE REVIEW** |
+
+* **P5 is evidence work, not architecture.** It closes the accepted plan's Level 4 row, publishes
+  the receipt evidence contract the plan promised, brings current crate-facing documentation to
+  product truth, and hardens CI. It introduces no new execution architecture, lifecycle policy,
+  authority model, receipt meaning or compatibility runtime.
+
+* **The accepted P1–P4 behaviour is the frozen baseline.** If a P5 adversarial regression exposes a
+  real product defect that would require a semantic change, the work stops and returns **OWNER
+  DECISION REQUIRED** rather than fixing the contract opportunistically.
+
+* **The stop condition is unchanged.** Level 4 complete, the whole suite green on Linux, Level 1
+  green on all three platforms, then **one fresh independent review of the whole crate** by a
+  reviewer who authored neither P5 commit. No owner merge before that review passes.
+
 <a id="helm-launch-p4-accepted"></a>
 
 ## HELM-LAUNCH P4 ACCEPTED, 2026-09-20 — fourth product slice; workspace gate ruled inapplicable; P5 not authorised

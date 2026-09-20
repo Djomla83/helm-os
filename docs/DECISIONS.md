@@ -2932,3 +2932,75 @@ No cleanup is performed in this acceptance task.
 MODULE IS NOT YET PRODUCT-ACCEPTED.**
 
 **Next gate: OWNER DECISION ON WHETHER TO AUTHORISE HELM-LAUNCH P5.**
+
+<a id="helm-launch-p5-authorised"></a>
+
+### Owner decision 2026-09-20 — **HELM-LAUNCH P5 AUTHORISED**; final 0.1 slice, regressions and evidence contract only
+
+**`HELM_LAUNCH_P5_AUTHORISED`.** The repository owner, Djomla83, authorises HELM-LAUNCH P5 as the
+**final helm-launch 0.1 implementation slice** defined by Accepted
+[ADR-0024](adr/ADR-0024-launch-authority.md) and the accepted
+[productization plan](implementation/HELM-LAUNCH-PRODUCTIZATION-PLAN.md). **P1, P2, P3 and P4 remain
+accepted.** P5 becomes **AUTHORISED / NOT YET ACCEPTED**. This is status synchronisation and an
+implementation authorisation; it changes **no** accepted architecture.
+
+| Item | Value |
+|---|---|
+| Authority base | `06223035828bfc6fec249bad7a5f2b5d520a7d59` — the accepted P4 head |
+| HELM-LAUNCH P1 | **ACCEPTED** |
+| HELM-LAUNCH P2 | **ACCEPTED** |
+| HELM-LAUNCH P3 | **ACCEPTED** |
+| HELM-LAUNCH P4 | **ACCEPTED** |
+| **HELM-LAUNCH P5** | **AUTHORISED / NOT YET ACCEPTED** |
+| Complete helm-launch 0.1 | **NOT YET PRODUCT-ACCEPTED** |
+| ADR-0024 | **ACCEPTED**, unchanged |
+| Trial #3 | frozen **`MECHANISM_REJECTED`**, unchanged, must not be rerun |
+| Trial #4 | **NOT AUTHORISED** |
+
+#### 1. What P5 is
+
+P5 is **regressions + evidence contract + documentation + CI hardening**, exactly the accepted plan
+row:
+
+* the **Level 4** adversarial regression suite derived from the Trial #1–#3 defects of plan
+  section 14.4;
+* a **published receipt schema document** for helm-launch receipt 0.1, derived from the accepted
+  serializer;
+* **portable receipt test vectors** with exact bytes and recomputable SHA-256;
+* **README non-claims** brought to current product truth;
+* **CI hardening** that does not weaken any gate.
+
+#### 2. What P5 is not
+
+P5 is **not** a new execution architecture, a new lifecycle policy, a new authority model, a new
+receipt meaning, a new compatibility runtime, or a formal LAUNCH-EXEC trial. It adds **no**
+`helm-evidence` semantic receipt integration (backlog B-02), no Wine, no Proton, no orchestrator, no
+sandboxing, no containment, no cgroups, no async launch, no receipt authenticity or provenance
+(backlog B-10), no N3 privilege claim and **no Trial #4**.
+
+#### 3. The P1–P4 baseline is frozen for P5
+
+The accepted P1–P4 behaviour is now the baseline. P5 must not silently change the public API, plan,
+capability or measurement semantics, the child syscall contract, the `unsafe` boundary, process
+creation, the lifecycle state machine, timeout or signal semantics, group-authority or group-sweep
+policy, the `Err`-versus-receipt boundary, receipt field or serializer meaning, exec-status meaning,
+the privacy model or the authenticity nonclaim.
+
+If a P5 adversarial test reveals a **real product defect requiring a semantic change**, the work
+**stops** and returns **OWNER DECISION REQUIRED**. The product contract is not fixed
+opportunistically inside P5. Nonsemantic test, documentation and CI corrections are in scope.
+
+P5 is expected to add **zero new `unsafe`** and **zero new HELM crate dependencies**.
+
+#### 4. Stop condition
+
+Level 4 complete; the whole suite green on Linux; Level 1 green on Linux, Windows and macOS; then
+**ONE FRESH INDEPENDENT REVIEW OF THE WHOLE `helm-launch` CRATE**, by a reviewer who authored
+neither P5 commit. Only afterwards may the owner consider final helm-launch 0.1 acceptance or merge.
+
+**TRIAL #3 FROZEN RESULT REMAINS `MECHANISM_REJECTED`. NO TRIAL #4 IS AUTHORISED.**
+
+**HELM-LAUNCH P1, P2, P3 AND P4 ARE ACCEPTED. P5 IS AUTHORISED AND NOT YET ACCEPTED. THE COMPLETE
+HELM-LAUNCH 0.1 MODULE IS NOT YET PRODUCT-ACCEPTED.**
+
+**Next gate: P5 IMPLEMENTATION, then ONE FRESH INDEPENDENT WHOLE-CRATE REVIEW.**

@@ -8,7 +8,8 @@
 **Authoritative base:** `5cc56384257a2ec1f2a2a9c64f7f4328da6cef2e`; revision base
 `930ec14b940da9b136c7d2ad024b441d47ceba6c`; acceptance base
 `03285d9d13f53c2d97d78bd4f50552c201941c8f`\
-**Implementation authority:** **HELM-LAUNCH P1, P2, P3 and P4 accepted; P5 not authorised.** P1
+**Implementation authority:** **HELM-LAUNCH P1, P2, P3 and P4 accepted; P5 authorised and not yet
+accepted.** P1
 — the crate skeleton and the portable, pure model — was authorised by the
 [owner decision of 2026-09-17](../DECISIONS.md#adr-0024-accepted-helm-launch-p1-authorised) and
 [accepted the same day](../DECISIONS.md#helm-launch-p1-accepted). P2 — safe Linux x86_64 capability
@@ -24,8 +25,11 @@ lifecycle, termination, public `launch` and real receipt slice — was
 [accepted on 2026-09-20](../DECISIONS.md#helm-launch-p4-accepted) after one bounded independent
 lifecycle review, four bounded independent correction re-reviews, three failed publications whose
 evidence is preserved unchanged, and a fourth publication whose first natural hosted run passed
-every load-bearing Linux gate on attempt 1. **P5 is not authorised**, and it needs a new explicit
-owner decision. The P3
+every load-bearing Linux gate on attempt 1. P5 — the final regression, evidence-contract, documentation and CI-hardening slice — was
+[authorised on 2026-09-20](../DECISIONS.md#helm-launch-p5-authorised) and is **not yet accepted**.
+P5 adds **no** architecture: it closes the plan's Level 4 row, publishes the receipt evidence
+contract, corrects current crate-facing documentation and hardens CI, under the frozen P1–P4
+semantic baseline. The P3
 authorisation activates the scoped `unsafe` exception of section E **only under
 `crates/helm-launch/src/backend/`**, and authorises process creation and an execution attempt
 **only internally**: it adds **no public execution API**, no process-group sweep and no host
