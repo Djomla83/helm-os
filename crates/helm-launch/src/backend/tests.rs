@@ -2516,3 +2516,152 @@ fn concurrent_builders_of_one_fixture_publish_exactly_one_object() {
     // This test owns the object it created, unlike the shared fixtures.
     let _ = fs::remove_file(&published);
 }
+
+// ===========================================================================
+// 9. The direct-child drop guard and its P4 hand-off
+// ===========================================================================
+//
+// `F-P4-02`. `ChildHandle`'s drop guard exists so that no path which
+// **abandons** a child can leave one behind: it sends one `SIGKILL` through the
+// pidfd and reaps within the fixed bound. It is armed by default and P3 never
+// disarms it.
+//
+// The P4 lifecycle is not such a path. It performs the complete accepted
+// direct-child sequence itself — at most one `SIGTERM`, at most one `SIGKILL`,
+// one bounded post-kill observation and one non-blocking reap — and then hands
+// the responsibility back. Leaving the guard armed there would send a second,
+// **unrecorded** `SIGKILL` and could pay a second `POST_KILL_REAP_MS` inside
+// `launch`, which the accepted total bound of plan section 8.6 does not
+// contain.
+//
+// These cases pin both halves against a real child.
+
+/// Sleep for `argv[1]` milliseconds and then exit 0. Nothing here installs a
+/// handler, so the default disposition ends it.
+const DROP_SLEEPER_SOURCE: &str = r##"
+fn main() {
+    let ms: u64 = std::env::args().nth(1).unwrap_or_default().parse().unwrap_or(60_000);
+    std::thread::sleep(std::time::Duration::from_millis(ms));
+}
+"##;
+
+fn drop_sleeper() -> PathBuf {
+    fixture_binary("p3-drop-sleeper", DROP_SLEEPER_SOURCE)
+}
+
+/// Is this pid still present in `/proc`? Test-only observation.
+fn pid_present(pid: i64) -> bool {
+    Path::new(&format!("/proc/{pid}")).exists()
+}
+
+/// Terminate and reap a child this test deliberately left running.
+fn harness_cleanup(pid: i64) {
+    let _ = Command::new("kill").arg("-9").arg(pid.to_string()).status();
+    for _ in 0..500 {
+        if !pid_present(pid) {
+            return;
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    }
+}
+
+#[test]
+fn the_drop_guard_is_armed_by_default_and_cleans_up_an_abandoned_child() {
+    // The P3 contract, unchanged: a handle nobody finished with kills and reaps
+    // its child. Every internal early-return path depends on this.
+    let workdir = scratch_dir("drop-armed");
+    let launch = launch_minimal(authorize_fixture(
+        &drop_sleeper(),
+        &workdir,
+        &[b"sleeper", b"60000"],
+    ))
+    .expect("launch");
+    assert!(
+        launch.child.drop_cleanup_armed(),
+        "a fresh handle must own the cleanup responsibility"
+    );
+    let pid = launch.child.pid();
+    assert!(pid_present(pid));
+
+    let started = Instant::now();
+    drop(launch);
+    let elapsed = started.elapsed();
+
+    assert!(
+        !pid_present(pid),
+        "an abandoned child survived its handle's drop"
+    );
+    assert!(
+        elapsed < Duration::from_millis(POST_KILL_REAP_MS),
+        "the armed drop took {elapsed:?}, which is not the bounded cleanup"
+    );
+}
+
+#[test]
+fn a_disarmed_drop_guard_neither_signals_nor_waits() {
+    // The P4 hand-off. After the accepted lifecycle has finished, dropping the
+    // handle must close its descriptors and do nothing else: no second
+    // `SIGKILL`, and no second bounded wait inside `launch`.
+    //
+    // A live child is the sharpest shape: if the guard still fired, the child
+    // would be gone, and if it still waited, the drop would take the whole
+    // post-kill bound.
+    let workdir = scratch_dir("drop-disarmed");
+    let launch = launch_minimal(authorize_fixture(
+        &drop_sleeper(),
+        &workdir,
+        &[b"sleeper", b"60000"],
+    ))
+    .expect("launch");
+    let pid = launch.child.pid();
+    assert!(launch.child.drop_cleanup_armed());
+    launch.child.disarm_drop_cleanup_after_lifecycle();
+    assert!(!launch.child.drop_cleanup_armed());
+
+    let started = Instant::now();
+    drop(launch);
+    let elapsed = started.elapsed();
+
+    let survived = pid_present(pid);
+    harness_cleanup(pid);
+    assert!(
+        survived,
+        "a disarmed drop still signalled the child, so an unrecorded SIGKILL exists"
+    );
+    assert!(
+        elapsed < Duration::from_millis(250),
+        "a disarmed drop waited {elapsed:?}, so a second post-kill wait still exists"
+    );
+    assert!(
+        !pid_present(pid),
+        "the harness must leave no child of its own running"
+    );
+}
+
+#[test]
+fn a_reaped_child_is_never_signalled_again_by_a_drop() {
+    // The ordinary P4 shape: Phase C collected the end, so the handle is
+    // already latched and the drop is a no-op whether or not it was disarmed.
+    let workdir = scratch_dir("drop-reaped");
+    let launch = launch_minimal(authorize_fixture(
+        &drop_sleeper(),
+        &workdir,
+        &[b"sleeper", b"10"],
+    ))
+    .expect("launch");
+    let end = launch
+        .child
+        .reap_within(Duration::from_secs(20))
+        .expect("the fixture ends on its own");
+    assert_eq!(end, ChildEnd::Exited { code: 0 });
+    // Still armed — P3 never disarms — but already reaped, so the guard has
+    // nothing to do and cannot signal a pid this handle no longer owns.
+    assert!(launch.child.drop_cleanup_armed());
+
+    let started = Instant::now();
+    drop(launch);
+    assert!(
+        started.elapsed() < Duration::from_millis(250),
+        "dropping a reaped child waited, so it tried to signal and collect again"
+    );
+}

@@ -169,6 +169,33 @@ fn compact(source: &str) -> String {
     strip(source).split_whitespace().collect()
 }
 
+/// The braced body of one function in whitespace-compacted source.
+///
+/// Compaction removes every newline, so a body cannot be delimited by one: the
+/// scan matches braces instead. Getting this wrong would silently widen a claim
+/// to the whole remainder of the file.
+fn function_body<'a>(code: &'a str, signature: &str) -> &'a str {
+    let after = code
+        .split_once(signature)
+        .unwrap_or_else(|| panic!("`{signature}` is missing"))
+        .1;
+    let open = after.find('{').expect("the function has a body");
+    let mut depth = 0_usize;
+    for (offset, character) in after.char_indices().skip(open) {
+        match character {
+            '{' => depth += 1,
+            '}' => {
+                depth -= 1;
+                if depth == 0 {
+                    return &after[open..=offset];
+                }
+            }
+            _ => {}
+        }
+    }
+    panic!("`{signature}` has an unbalanced body");
+}
+
 // ===========================================================================
 // The unsafe boundary does not move
 // ===========================================================================
@@ -346,18 +373,11 @@ fn launch_returns_err_only_before_a_child_exists() {
         code.contains("backend::spawn_for_lifecycle(authorized).map_err(to_launch_error)?"),
         "the only `?` in launch is not the pre-child spawn"
     );
-    let body = code
-        .split_once("pubfnlaunch(authorized:AuthorizedLaunch)")
-        .expect("launch exists")
-        .1;
-    let signature_end = body.find('{').expect("a body");
-    let after = &body[signature_end..];
-    let end = after.find("\n}").unwrap_or(after.len());
-    let body = &after[..end];
+    let body = function_body(&code, "pubfnlaunch(authorized:AuthorizedLaunch)");
     assert_eq!(
         body.matches('?').count(),
         1,
-        "launch has more than one fallible step, so a child could be lost behind an error"
+        "launch has more than one fallible step, so a child could be lost behind an error: {body}"
     );
     assert!(
         body.contains("Ok(Observer::new(spawned).run(started))"),
@@ -480,6 +500,175 @@ fn the_public_launch_is_gated_on_the_linux_x86_64_cohort() {
             "`{gated}` is not immediately preceded by the cohort gate"
         );
     }
+}
+
+// ===========================================================================
+// Bounded work per turn, and one bounded direct-child lifecycle
+// ===========================================================================
+
+#[test]
+fn a_ready_stream_is_read_at_most_once_per_observation_turn() {
+    // `F-P4-01`. A drain that looped to `EAGAIN` would let a child that
+    // produces output faster than the parent can count and hash it hold the
+    // loop away from its deadlines, from the other stream and from the process
+    // descriptor — and `launch` would not return until the child chose to stop.
+    // The read primitive therefore performs **one** read and returns.
+    let sources = rust_files("src");
+    let code = compact(&sources[LAUNCH_FILE]);
+    let body = function_body(
+        &code,
+        "fnread_once(fd:BorrowedFd<'_>,buffer:&mut[u8],mutabsorb:implFnMut(&[u8]))->Read",
+    );
+    assert!(
+        body.contains("returnRead::Progressed;"),
+        "a successful read does not end the turn: {body}"
+    );
+    // The only loop it contains is the bounded `EINTR` retry.
+    assert_eq!(
+        body.matches("for_in0..MAX_READ_EINTR_RETRIES").count(),
+        1,
+        "the read primitive does not use the bounded retry form: {body}"
+    );
+    assert!(
+        !body.contains("loop{"),
+        "the read primitive still contains an unbounded loop: {body}"
+    );
+    // And nothing else in the slice reads a descriptor.
+    assert_eq!(
+        code.matches("rustix::io::read(").count(),
+        1,
+        "the launch slice reads descriptors from more than one place"
+    );
+    assert_eq!(
+        code.matches("read_once(").count(),
+        3,
+        "expected exactly one definition and two callers of the bounded read"
+    );
+    // The per-turn budget is the accepted plan constant, not an ad-hoc size.
+    assert!(
+        code.contains("constREAD_BUFFER_BYTES:usize=65_536;"),
+        "the per-turn read budget is not the accepted READ_BUFFER_BYTES"
+    );
+    // The status channel gets its own fixed, tiny accumulator.
+    assert!(
+        code.contains("constSTATUS_BUFFER_BYTES:usize=STATUS_RECORD_BYTES+1;"),
+        "the status accumulator is not the fixed record-plus-detector size"
+    );
+}
+
+#[test]
+fn the_total_bound_counts_one_post_kill_wait_and_the_drop_guard_is_handed_back() {
+    // `F-P4-02`. Two halves of one claim: the implementation's bound is the
+    // accepted formula with `POST_KILL_REAP_MS` contributing exactly once, and
+    // the P3 drop guard is disarmed once the accepted lifecycle has finished,
+    // so no second unrecorded `SIGKILL` and no second bounded wait can happen
+    // inside `launch`.
+    let sources = rust_files("src");
+    let launch = compact(&sources[LAUNCH_FILE]);
+    let body = function_body(
+        &launch,
+        "fntotal_bound_ms(timeout_ms:u32,grace_ms:u32)->u64",
+    );
+    assert_eq!(
+        body.matches("POST_KILL_REAP_MS").count(),
+        1,
+        "the implementation bound counts the post-kill wait more than once: {body}"
+    );
+    assert_eq!(body.matches("POST_EXIT_DRAIN_MS").count(), 1);
+    assert!(body.contains("SPAWN_CONFIRM_TIMEOUT_MS"));
+
+    // Exactly one hand-off, and it is after the model's own completion.
+    assert_eq!(
+        launch
+            .matches("self.child.disarm_drop_cleanup_after_lifecycle();")
+            .count(),
+        1,
+        "the drop guard is handed back from more or less than one place"
+    );
+    let run = function_body(&launch, "fnrun(mutself,started:Instant)->LaunchOutcome");
+    let observed = run
+        .find("letfacts=self.observe();")
+        .expect("run observes first");
+    let disarmed = run
+        .find("self.child.disarm_drop_cleanup_after_lifecycle();")
+        .expect("run hands the guard back");
+    assert!(
+        observed < disarmed,
+        "the guard is handed back before the lifecycle finished: {run}"
+    );
+
+    // The guard itself: armed on construction, and the only early return in
+    // `Drop` is the already-reaped or handed-back one.
+    let spawn = compact(&sources["src/backend/spawn.rs"]);
+    assert!(
+        spawn.contains("cleanup_armed:Cell::new(true),"),
+        "a fresh child handle does not own the cleanup responsibility"
+    );
+    assert!(
+        spawn.contains("ifself.reaped.get()||!self.cleanup_armed.get(){return;}"),
+        "the drop guard does not honour the hand-off"
+    );
+    assert_eq!(
+        spawn
+            .matches("fndisarm_drop_cleanup_after_lifecycle(&self)")
+            .count(),
+        1
+    );
+    // Nothing leaks the child instead of closing it.
+    for forbidden in ["mem::forget", "ManuallyDrop", "into_raw_fd"] {
+        assert!(
+            !spawn.contains(forbidden),
+            "src/backend/spawn.rs names `{forbidden}`"
+        );
+    }
+}
+
+#[test]
+fn the_test_only_coordination_seam_is_not_reachable_from_the_public_launch() {
+    // `F-P4-05` and `F-P4-06` need deterministic parent group authority, and
+    // they get it from the **existing** pre-exec stall injection. That seam is
+    // compiled only in this crate's own test build with the non-default feature
+    // and debug assertions, it is not public, and `launch` does not name it.
+    let sources = rust_files("src");
+    let raw = &sources[LAUNCH_FILE];
+    let compacted: String = raw
+        .lines()
+        .filter(|line| !line.trim_start().starts_with("//"))
+        .collect::<Vec<_>>()
+        .join("")
+        .split_whitespace()
+        .collect();
+    let gate = r#"#[cfg(all(test,all(feature="test-fault-injection",debug_assertions)))]"#;
+    let at = compacted
+        .find("pub(crate)fnlaunch_with_stall_coordination(")
+        .expect("the coordinated seam exists");
+    assert!(
+        compacted[..at].ends_with(gate),
+        "the coordinated seam is not gated on cfg(test) and the two-condition feature gate"
+    );
+    assert!(
+        !compacted.contains("pubfnlaunch_with_stall_coordination"),
+        "the coordinated seam is public"
+    );
+
+    let code = compact(raw);
+    let body = function_body(&code, "pubfnlaunch(authorized:AuthorizedLaunch)");
+    for forbidden in ["stall", "Fault", "fault", "coordination"] {
+        assert!(
+            !body.contains(forbidden),
+            "the public launch names `{forbidden}`: {body}"
+        );
+    }
+    // The product path still asks the backend for no fault at all.
+    let backend = compact(&sources["src/backend/mod.rs"]);
+    let spawn_body = function_body(
+        &backend,
+        "pub(crate)fnspawn_for_lifecycle(authorized:AuthorizedLaunch,)->Result<SpawnedForLifecycle,BackendError>",
+    );
+    assert!(
+        spawn_body.contains("spawn::spawn(&prepared,Fault::default())?"),
+        "the product spawn no longer requests the default (absent) fault: {spawn_body}"
+    );
 }
 
 // ===========================================================================

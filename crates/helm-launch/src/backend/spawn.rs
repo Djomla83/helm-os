@@ -531,6 +531,15 @@ pub(crate) struct ChildHandle {
     pid: i64,
     end: Cell<Option<ChildEnd>>,
     reaped: Cell<bool>,
+    /// Whether dropping this handle still has to clean the child up itself.
+    ///
+    /// **Armed by default**, so every path that abandons a child early — the
+    /// P3 minimal launch's error returns, a panic, an unexpected early return —
+    /// still kills and reaps it. A caller that has already performed the
+    /// complete accepted direct-child lifecycle disarms it with
+    /// [`Self::disarm_drop_cleanup_after_lifecycle`], because a second signal
+    /// and a second bounded wait are not part of the accepted total bound.
+    cleanup_armed: Cell<bool>,
 }
 
 impl ChildHandle {
@@ -540,6 +549,7 @@ impl ChildHandle {
             pid,
             end: Cell::new(None),
             reaped: Cell::new(false),
+            cleanup_armed: Cell::new(true),
         }
     }
 
@@ -628,17 +638,49 @@ impl ChildHandle {
     pub(crate) fn observed_end(&self) -> Option<ChildEnd> {
         self.end.get()
     }
+
+    /// Hand the direct-child cleanup responsibility back to the caller.
+    ///
+    /// The **P4** lifecycle calls this once, after its accepted Phase C reap
+    /// attempt, because by then it has already performed every direct-child
+    /// action the contract allows: at most one `SIGTERM`, at most one
+    /// `SIGKILL`, one bounded post-kill observation and one non-blocking reap.
+    /// A drop that repeated any of that would send an **unrecorded** second
+    /// `SIGKILL` and could pay a second `POST_KILL_REAP_MS` inside `launch`,
+    /// which the accepted total bound does not contain.
+    ///
+    /// It changes nothing else. The process descriptor is still owned and still
+    /// closes with this handle, no descriptor is leaked, nothing is forgotten
+    /// and no thread is left behind. A child whose end was never observed is
+    /// left unreaped to the host, which is exactly what the accepted
+    /// `end_not_observed` contract says happens.
+    ///
+    /// P3 paths never call it, so they stay armed.
+    pub(crate) fn disarm_drop_cleanup_after_lifecycle(&self) {
+        self.cleanup_armed.set(false);
+    }
+
+    /// Whether dropping this handle would still kill and reap.
+    #[cfg(test)]
+    pub(crate) fn drop_cleanup_armed(&self) -> bool {
+        self.cleanup_armed.get()
+    }
 }
 
 impl Drop for ChildHandle {
-    /// Bounded cleanup, so that no P3 code path can leave a child behind.
+    /// Bounded cleanup, so that no path that **abandons** a child can leave one
+    /// behind.
     ///
-    /// This is **P3 cleanup**, not a lifecycle policy: one `SIGKILL` through
-    /// the pidfd and a bounded, non-blocking reap. There is no `SIGTERM`, no
-    /// grace period, no group signal and no run deadline anywhere in this
-    /// crate. A child already reaped is left alone.
+    /// This is **cleanup for an abandoned child**, not a lifecycle policy: one
+    /// `SIGKILL` through the pidfd and a bounded, non-blocking reap. There is
+    /// no `SIGTERM`, no grace period and no group signal here. A child already
+    /// reaped is left alone, and so is one whose owner has already completed
+    /// the accepted direct-child lifecycle and disarmed this guard
+    /// ([`ChildHandle::disarm_drop_cleanup_after_lifecycle`]) — repeating the
+    /// kill there would be a second, unrecorded signal and a second bounded
+    /// wait inside `launch`. Either way the pidfd closes with this handle.
     fn drop(&mut self) {
-        if self.reaped.get() {
+        if self.reaped.get() || !self.cleanup_armed.get() {
             return;
         }
         let _ = self.send_sigkill();

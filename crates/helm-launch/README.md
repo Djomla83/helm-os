@@ -401,6 +401,22 @@ only the plan's `capture_prefix_bytes` are kept in memory. **No raw output byte 
 receipt**, and neither `Debug` rendering prints captured bytes. The receipt carries no timestamp,
 no duration, no pid, no descriptor number, no host path and no authenticity claim.
 
+**Bounded work per turn.** One turn of the observation loop performs **at most one**
+`READ_BUFFER_BYTES` read per ready descriptor and then returns to the loop, which recomputes
+monotonic time and re-applies the model's deadlines. A child that produces output faster than the
+parent can count and hash it therefore cannot hold the loop away from its deadlines, from the other
+stream or from the process descriptor. The exec-status channel has its own fixed accumulator — one
+record plus one detector byte — and is read the same way.
+
+**One bounded direct-child lifecycle.** `launch` returns within
+`SPAWN_CONFIRM_TIMEOUT_MS + timeout_ms + grace_ms + POST_KILL_REAP_MS + POST_EXIT_DRAIN_MS` plus
+finite scheduling slack, with `POST_KILL_REAP_MS` contributing **exactly once**. The P3 handle's
+drop guard — one `SIGKILL` and a bounded reap, which exists so that no path abandoning a child can
+leave one behind — is handed back once Phase C has completed its accepted non-blocking reap
+attempt, so no second, unrecorded signal and no second bounded wait can happen inside `launch`. A
+child whose end was never observed is left unreaped to the host, which is exactly what
+`end_not_observed` says.
+
 ## Still not implemented
 
 P5 — the adversarial and evidence-contract slice, a published receipt schema document, portable

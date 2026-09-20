@@ -521,6 +521,70 @@ pub(crate) fn spawn_for_lifecycle(
     })
 }
 
+/// A **test-only** fault request that holds the child immediately before its
+/// execution attempt.
+///
+/// It is the coordination the P4 group-sweep and foreign-reap regressions need:
+/// while the child blocks in its pre-exec `read`, the parent's own
+/// `setpgid(child, child)` — its first system call after `clone3` — cannot lose
+/// the race against an already-executed child and be answered `EACCES`, so
+/// group-sweep authority is **deterministic** rather than scheduler-dependent
+/// (`P3R-21`). Releasing the child then lets it walk into the ordinary
+/// `execveat`, so the lifecycle that follows is the product one.
+#[cfg(all(feature = "test-fault-injection", debug_assertions))]
+pub(crate) const fn stall_before_exec_fault() -> Fault {
+    Fault {
+        stage: stage::NONE,
+        errno: 0,
+        mode: injection::MODE_STALL_BEFORE_EXEC,
+    }
+}
+
+/// [`spawn_for_lifecycle`] with a test-only fault request, returning the stdin
+/// write end the stall mode needs the parent to retain.
+///
+/// **Test-only and crate-private.** It is not compiled in a release build or in
+/// a build without the non-default feature, it has no public name, and it
+/// changes nothing about the product path: `spawn_for_lifecycle` still requests
+/// no fault and retains no writer.
+///
+/// Dropping the returned writer is the child's end-of-file, after which it
+/// continues into the ordinary `execveat` and the caller runs the unchanged
+/// observation loop.
+#[cfg(all(feature = "test-fault-injection", debug_assertions))]
+pub(crate) fn spawn_for_lifecycle_with_fault(
+    authorized: AuthorizedLaunch,
+    fault: Fault,
+) -> Result<(SpawnedForLifecycle, Option<OwnedFd>), BackendError> {
+    let prepared = spawn::prepare(authorized)?;
+    let measurement = prepared.measurement();
+    let plan = prepared.plan().clone();
+    let retain_stdin_writer = fault.mode == injection::MODE_STALL_BEFORE_EXEC;
+
+    let spawn::SpawnedChild {
+        child,
+        group_authority_established,
+        // As on the product path: a child exists by the time the restore runs,
+        // so this can never become an error return.
+        mask_restore_errno: _,
+    } = spawn::spawn(&prepared, fault)?;
+
+    let ends = prepared.release_child_side(retain_stdin_writer);
+
+    Ok((
+        SpawnedForLifecycle {
+            child,
+            group_authority_established,
+            status_read: ends.status_read,
+            stdout_read: ends.stdout_read,
+            stderr_read: ends.stderr_read,
+            measurement,
+            plan,
+        },
+        ends.stdin_write,
+    ))
+}
+
 /// What the exec-status channel produced within the fixed bound.
 struct StatusObservation {
     status: ExecStatus,

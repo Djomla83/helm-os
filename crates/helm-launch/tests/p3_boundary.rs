@@ -868,6 +868,13 @@ fn every_fault_injection_site_is_gated_on_the_feature_and_on_debug_assertions() 
             "{name}: a `test-fault-injection` condition is not the two-condition gate"
         );
     }
+    // `src/launch.rs` joined this inventory with the P4 correction: the
+    // deterministic group-sweep and foreign-reaper regressions reuse the
+    // existing pre-exec stall injection as **test-only coordination**, so the
+    // gate is named there too. Every occurrence there additionally carries
+    // `cfg(test)`, which the assertion above still requires to contain the full
+    // two-condition gate, and the P4 boundary suite pins that the coordinated
+    // entry point is not reachable from the public `launch`.
     assert_eq!(
         gated_files,
         [
@@ -875,6 +882,7 @@ fn every_fault_injection_site_is_gated_on_the_feature_and_on_debug_assertions() 
             "src/backend/injection.rs",
             "src/backend/mod.rs",
             "src/backend/tests.rs",
+            "src/launch.rs",
         ]
         .iter()
         .map(|s| (*s).to_owned())

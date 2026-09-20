@@ -138,6 +138,20 @@ jobs:
           cargo test -p helm-launch --locked --lib -- --list
           cargo test -p helm-launch --locked --lib -- --nocapture launch::tests::
 
+      # THE P4 DETERMINISTIC EVIDENCE GATE. The positive group sweep and the
+      # foreign-reaper `ECHILD` suppression both need parent group authority to
+      # be established rather than raced for, and they get it from the existing
+      # test-only pre-exec stall injection. They therefore live behind the
+      # non-default feature, and this step is what makes them load-bearing
+      # rather than optional. The foreign-reaper case runs its own inner half in
+      # a dedicated subprocess whose `SIGCHLD` disposition is `SIG_IGN`, so no
+      # other case is affected.
+      - name: Name and run the P4 coordinated sweep and foreign-reaper cases
+        if: runner.os == 'Linux'
+        run: |
+          cargo test -p helm-launch --locked --features test-fault-injection --lib -- \
+            --nocapture launch::tests::coordinated::
+
       # The real loop must agree with the pure model P1 tests everywhere. The
       # model half runs on all three platforms above; this names it explicitly on
       # Linux, beside the real loop, so a divergence is visible in one log.
