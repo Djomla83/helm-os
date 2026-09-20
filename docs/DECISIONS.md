@@ -2291,3 +2291,107 @@ CORRECTION. P4 PUBLICATION IS BLOCKED. P5 IS NOT AUTHORISED. THE COMPLETE HELM-L
 NOT PRODUCT-ACCEPTED.**
 
 **Next gate: BOUNDED P4 CORRECTION, then ONE BOUNDED INDEPENDENT P4 CORRECTION RE-REVIEW.**
+
+<a id="helm-launch-p4-first-publication-failure"></a>
+
+### Owner disposition 2026-09-20 — **HELM-LAUNCH P4 FIRST PUBLICATION**: hosted validation FAILED, bounded test/evidence correction authorised
+
+**`HELM_LAUNCH_P4_FIRST_PUBLICATION_HOSTED_VALIDATION_FAILED`.** The repository owner, Djomla83,
+records that the first publication of the corrected P4 head failed its hosted Linux validation. The
+two natural runs are **permanent historical evidence** and are preserved exactly as they stand.
+**P4 hosted validation is NOT ACCEPTED.** A bounded **test / evidence** correction is authorised;
+the P4 product contract is not reopened.
+
+| Item | Value |
+|---|---|
+| Published P4 head | `94ee48da0cc412f0d8043e34b914c198615b923e` |
+| `helm-launch` workflow — first natural run | `35499943908`, attempt 1, event `push` — **FAILURE** |
+| its Linux job | `106049803287` — **FAILURE** |
+| its Windows job | **SUCCESS** |
+| its macOS job | **SUCCESS** |
+| `HELM Rust workspace Linux` — first natural run | `35499943903`, attempt 1, event `push` — **FAILURE** |
+| its Linux job | `106049803383` — **FAILURE** |
+| P4 hosted validation | **NOT ACCEPTED** |
+| P4 product mechanism | **NOT IMPLICATED** by any preserved evidence |
+| Historical runs | **PRESERVED** — **NO RETRY, NO RERUN, NO REPLACEMENT** |
+| ADR-0024 product contract | **UNCHANGED** by this disposition |
+| P4 product contract | **UNCHANGED** by this disposition |
+| Accepted total-bound formula | **UNCHANGED** |
+| `unsafe` boundary | **UNCHANGED** — `crates/helm-launch/src/backend/` only |
+| HELM-LAUNCH P5 | **NOT AUTHORISED** |
+| Trial #3 | frozen **`MECHANISM_REJECTED`**, unchanged, must not be rerun |
+| Trial #4 | **NOT AUTHORISED** |
+
+#### 1. The three failures, classified
+
+All three are **IMPORTANT** and all three are **test / evidence** defects. None is a product defect,
+and no preserved evidence implicates the P4 product mechanism.
+
+| Id | Case | Owner classification |
+|---|---|---|
+| `P4PUB-01` | `launch::tests::a_signalled_child_keeps_its_signal_number_and_its_core_flag` | **IMPORTANT — TEST / EVIDENCE CONTRACT DEFECT** |
+| `P4PUB-02` | `backend::tests::a_disarmed_drop_guard_neither_signals_nor_waits` | **IMPORTANT — TEST HARNESS CLEANUP DEFECT** |
+| `P4PUB-03` | `launch::tests::the_outcome_owns_no_descriptor_and_consumes_its_authorisation` | **IMPORTANT — TEST EVIDENCE ISOLATION / RACE DEFECT** |
+
+**`P4PUB-01`.** The `segv-nocore` shape observed `Signaled { signal: 11, core_dumped: true }` where
+the case expected `core_dumped: false`. The fixture set `RLIMIT_CORE.rlim_cur = 0` and the case
+treated that as a universal Linux guarantee that the wait status must report no core. That
+assumption is **invalid** on a Linux host whose core dumps are piped to a userspace handler:
+`RLIMIT_CORE` need not control that path. The product preserved the kernel-reported wait
+classification, which is exactly its obligation.
+
+**`P4PUB-02`.** Both load-bearing assertions **passed** before the failure: the child survived the
+disarmed `Drop`, and `Drop` returned in under 250 ms. No hidden second `SIGKILL` and no hidden second
+`POST_KILL_REAP_MS` were observed. The later **harness cleanup** failed, because `kill -9` plus a
+poll of `/proc/<pid>` with **no reap** can leave a zombie visible in `/proc` indefinitely.
+
+**`P4PUB-03`.** The workspace run observed `before = 11`, `after = 10`. A descriptor count that
+**falls** is not a descriptor leak. The same case passed on the same head in the `helm-launch`
+workflow. The oracle reads the **process-global** descriptor table while the Rust test harness runs
+cases in parallel, so its equality is not isolated.
+
+#### 2. What the preserved evidence does and does not say
+
+On real Linux, before the default-suite failure, these executed and **passed**: continuous-output
+fairness; post-exit non-spin; the accepted total bound on the run-timeout path; the accepted total
+bound on the retained-writer path; armed `Drop` cleanup; a reaped child not re-signalled; receipt
+privacy; receipt determinism; 8 MiB concurrent dual streams; `POLLIN`+`POLLHUP` over 200
+repetitions; S3 exit 127; guarded sweep disposition; the same-group and escaped-descendant ordinary
+case; and the other Phase A/B and default cases.
+
+These remain evidence **from a failed publication**. They **do not** make the overall P4 validation
+pass: later named gates were skipped when the default suite failed.
+
+#### 3. The authorised correction is bounded to tests and evidence
+
+The correction **must not** change the public `launch` API, `LaunchOutcome`, the lifecycle policy,
+the receipt schema or serializer, group-sweep semantics, `ChildHandle` product semantics, stream
+fairness product code, the deadline implementation, the closed child contract or the `unsafe`
+boundary. It must not weaken an oracle merely to obtain green: `RLIMIT_CORE == 0` must not be
+encoded as a fixed `core_dumped == false` invariant, `/proc` absence must not be the sole reap
+oracle, and the descriptor equality must not be relaxed to `after <= before`. A correction that
+would need a product change **stops** and returns `OWNER DECISION REQUIRED`.
+
+#### 4. The historical runs are permanent
+
+Runs `35499943908` and `35499943903` both remain **attempt 1, FAILURE**. Neither is rerun, retried,
+cancelled, restarted or replaced by a dispatch, no published history is amended and nothing is force
+pushed. **NO RETRY. NO RERUN. NO REPLACEMENT.** A corrected head receives a new SHA and new natural
+run identifiers, which will be new evidence rather than a revision of this one.
+
+#### 5. Boundary of this disposition
+
+This disposition is recorded in documentation only. It changes no product code, test, workflow,
+Cargo file, ADR contract, experiment or evidence, does not touch `main`, promotes no traceability
+row and accepts no P4 gate.
+
+**TRIAL #3 FROZEN RESULT REMAINS `MECHANISM_REJECTED`. TRIAL #3 MUST NOT BE RERUN.**
+
+**NO TRIAL #4 IS AUTHORISED.**
+
+**HELM-LAUNCH P1, P2 AND P3 ARE ACCEPTED. P4 IS AUTHORISED, PUBLISHED ONCE AND ITS HOSTED
+VALIDATION FAILED. P4 IS NOT ACCEPTED. P5 IS NOT AUTHORISED. THE COMPLETE HELM-LAUNCH 0.1 MODULE IS
+NOT PRODUCT-ACCEPTED.**
+
+**Next gate: BOUNDED P4 TEST/EVIDENCE CORRECTION, then ONE BOUNDED INDEPENDENT RE-REVIEW OF
+`P4PUB-01`, `P4PUB-02` AND `P4PUB-03`.**

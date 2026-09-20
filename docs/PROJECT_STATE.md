@@ -1,5 +1,69 @@
 # Stanje projekta
 
+<a id="helm-launch-p4-first-publication-failed"></a>
+
+## HELM-LAUNCH P4 FIRST PUBLICATION FAILED, 2026-09-20 — hosted Linux validation NOT ACCEPTED, test/evidence correction authorised
+
+The corrected P4 head `94ee48da0cc412f0d8043e34b914c198615b923e` was published once. Both natural
+Linux runs **FAILED**. The owner
+[dispositioned the three failures](DECISIONS.md#helm-launch-p4-first-publication-failure) as
+**test / evidence** defects, **did not accept** P4 hosted validation, and authorised a bounded
+correction of the test oracles and their isolation. **No preserved evidence implicates the P4
+product mechanism.** Both runs are permanent historical evidence: **NO RETRY, NO RERUN, NO
+REPLACEMENT.** This supersedes the "next gate" of the sections below, which are left as written.
+
+| Item | State |
+|---|---|
+| ADR-0024 | **ACCEPTED** (product contract unchanged by this disposition) |
+| Published P4 head | `94ee48da0cc412f0d8043e34b914c198615b923e` |
+| `helm-launch` run `35499943908` | attempt 1, event `push` — **FAILURE**; Linux job `106049803287` failed, Windows and macOS **SUCCESS** |
+| `HELM Rust workspace Linux` run `35499943903` | attempt 1, event `push` — **FAILURE**; Linux job `106049803383` failed |
+| P4 hosted validation | **NOT ACCEPTED** |
+| HELM-LAUNCH P4 | **AUTHORISED / PUBLISHED ONCE / HOSTED VALIDATION FAILED / CORRECTION AUTHORISED** |
+| P4 product contract | **UNCHANGED** |
+| Accepted total bound | **UNCHANGED** — exactly one `POST_KILL_REAP_MS` contribution |
+| `unsafe` boundary | **UNCHANGED** — `src/backend/` only |
+| Closed child syscall contract | **UNCHANGED** |
+| HELM-LAUNCH P5 | **NOT AUTHORISED** |
+| Complete helm-launch 0.1 | **NOT PRODUCT-ACCEPTED** |
+| Trial #3 | frozen **`MECHANISM_REJECTED`**, unchanged, must not be rerun |
+| Trial #4 | **NOT AUTHORISED** |
+| Next gate | **BOUNDED P4 TEST/EVIDENCE CORRECTION, then ONE BOUNDED INDEPENDENT RE-REVIEW OF `P4PUB-01`, `P4PUB-02`, `P4PUB-03`** |
+
+* **`P4PUB-01` — IMPORTANT, test / evidence contract defect.**
+  `launch::tests::a_signalled_child_keeps_its_signal_number_and_its_core_flag` observed
+  `Signaled { signal: 11, core_dumped: true }` for `segv-nocore` where it expected
+  `core_dumped: false`. The fixture set `RLIMIT_CORE.rlim_cur = 0` and the case wrongly treated that
+  as a universal Linux guarantee of no core. A host whose core dumps are piped to a userspace
+  handler need not honour `RLIMIT_CORE` on that path. The product preserved the kernel-reported wait
+  classification.
+
+* **`P4PUB-02` — IMPORTANT, test harness cleanup defect.**
+  `backend::tests::a_disarmed_drop_guard_neither_signals_nor_waits` **passed** both load-bearing
+  assertions — the child survived the disarmed `Drop`, and `Drop` returned in under 250 ms — so no
+  hidden second `SIGKILL` and no hidden second `POST_KILL_REAP_MS` were observed. The **harness
+  cleanup** then failed: `kill -9` plus a `/proc/<pid>` poll with **no reap** can leave a zombie in
+  `/proc`.
+
+* **`P4PUB-03` — IMPORTANT, test evidence isolation / race defect.**
+  `launch::tests::the_outcome_owns_no_descriptor_and_consumes_its_authorisation` observed
+  `before = 11`, `after = 10` in the workspace run and **passed** on the same head in the
+  `helm-launch` workflow. A count that falls is not a leak: the oracle reads the process-global
+  descriptor table while the Rust harness runs cases in parallel.
+
+* **Passed before the failure, and not enough.** Continuous-output fairness, post-exit non-spin,
+  both accepted total-bound paths, armed `Drop` cleanup, a reaped child not re-signalled, receipt
+  privacy, receipt determinism, 8 MiB concurrent dual streams, `POLLIN`+`POLLHUP` ×200, S3 exit 127,
+  the guarded sweep disposition and the same-group / escaped-descendant case all executed and passed
+  on real Linux. They are evidence **from a failed publication**; later named gates were skipped, so
+  the overall P4 validation does **not** pass.
+
+* **Bounded.** The correction fixes test oracles and test isolation only. It does not weaken
+  coverage: `RLIMIT_CORE == 0` must not be encoded as a fixed `core_dumped == false` invariant,
+  `/proc` absence must not be the sole reap oracle, and the descriptor equality must not be relaxed
+  to `after <= before`.
+
+
 <a id="helm-launch-p4-correction-required"></a>
 
 ## HELM-LAUNCH P4 INDEPENDENT REVIEW: NEEDS FIX, 2026-09-20 — publication blocked, bounded correction ordered
