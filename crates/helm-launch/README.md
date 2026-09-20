@@ -28,8 +28,8 @@
 | **P1 — portable model** | **ACCEPTED** 2026-09-17 ([decision](../../docs/DECISIONS.md#helm-launch-p1-accepted)), independently reviewed (0 BLOCKER, 0 IMPORTANT), green three-platform CI |
 | **P2 — capability admission** | **ACCEPTED** 2026-09-18 ([decision](../../docs/DECISIONS.md#helm-launch-p2-accepted)), independently reviewed (0 BLOCKER, 0 IMPORTANT), green Linux runtime gate |
 | **P3 — unsafe backend and child contract** | **ACCEPTED** 2026-09-19 ([decision](../../docs/DECISIONS.md#helm-launch-p3-accepted)), independently reviewed four times over (0 BLOCKER, 0 IMPORTANT each), green hosted Linux runtime, machine-code, injection, `strace`, S5 and S6 gates |
-| **P4 — lifecycle, termination, public launch, real receipt** | **AUTHORISED** 2026-09-19 ([decision](../../docs/DECISIONS.md#helm-launch-p4-authorised)); this tree is an **IMPLEMENTED CANDIDATE, NOT YET PRODUCT-ACCEPTED** and **not yet independently reviewed**. One fresh independent lifecycle and receipt review is the next gate |
-| **P5** | **NOT AUTHORISED** |
+| **P4 — lifecycle, termination, public launch, real receipt** | **ACCEPTED** 2026-09-20 ([decision](../../docs/DECISIONS.md#helm-launch-p4-accepted)), independently reviewed five times over (0 BLOCKER, 0 IMPORTANT each), green hosted Linux lifecycle, receipt, machine-code, injection and release-library gates on a single natural attempt-1 run |
+| **P5 — regressions, evidence contract, documentation, CI hardening** | **AUTHORISED** 2026-09-20 ([decision](../../docs/DECISIONS.md#helm-launch-p5-authorised)); this tree is an **IMPLEMENTED CANDIDATE, NOT YET ACCEPTED**. One fresh independent **whole-crate** review is the next gate |
 | helm-launch 0.1 complete module | **NOT YET PRODUCT-ACCEPTED** |
 
 `crates/helm-launch` implements the accepted [ADR-0024](../../docs/adr/ADR-0024-launch-authority.md)
@@ -178,8 +178,9 @@ killed after its last setup stage shows, so it is never read as exec success. No
 value exists anywhere in the crate.
 
 **Group authority without a sweep.** A successful parent `setpgid(child, child)` is recorded as a
-boolean for a future slice. P3 issues **no** `kill(-pid, …)` and no other negative-pid signal; a
-boundary test and a traced test both fail if one appears.
+boolean. **P3 itself issues no sweep**: it emits **no** `kill(-pid, …)` and no other negative-pid
+signal, and a boundary test and a traced test both fail if one appears. The accepted P4 slice is
+the only consumer of that boolean, and it is the only place the one guarded sweep may appear.
 
 **The only two fixed bounds** are `SPAWN_CONFIRM_TIMEOUT_MS = 5000` and `POST_KILL_REAP_MS = 5000`.
 They are the pre-exec bound and the bound on the non-blocking reap after the one direct-child
@@ -419,10 +420,61 @@ child whose end was never observed is left unreaped to the host, which is exactl
 
 ## Still not implemented
 
-P5 — the adversarial and evidence-contract slice, a published receipt schema document, portable
-published test vectors and helm-evidence semantic receipt verification — is **not authorised**.
-Neither is Wine, Proton, orchestration, sandboxing, a cgroup, process-tree containment, an async
-API or any receipt signature. Each needs a new explicit owner decision.
+**P5 is authorised and implemented as a candidate**: the Level 4 adversarial regressions, the
+[published receipt schema](../../docs/implementation/HELM-LAUNCH-RECEIPT-0.1.md), the
+[portable receipt test vectors](../../docs/implementation/helm-launch-receipt-0.1-test-vectors.json),
+current-truth documentation and CI hardening. It is **not yet accepted**.
+
+Still **not authorised**, and each needing a new explicit owner decision: `helm-evidence` semantic
+receipt verification, Wine, Proton, orchestration, sandboxing, a cgroup, process-tree containment,
+an async API, and any receipt signature, attestation or provenance claim.
+
+## What proves what — the Level 1 to 4 inventory
+
+The accepted plan classes four evidence levels. This table answers "what proves every accepted
+obligation?" without reconstructing it from review documents. It is **executable**:
+`tests/p5_regressions.rs::the_level_4_inventory_names_a_real_test_for_every_accepted_obligation`
+fails if any named Level 4 test stops existing in the file it claims.
+
+| Level | What it proves | Where it runs | Entry points |
+|---|---|---|---|
+| **1 — portable purity** | the plan parser and its bounded adversarial inputs, the descriptor-layout properties, the receipt model, the exact serializer, the verdict-vocabulary guard, the published receipt vectors, and every boundary scan of the tree | **Linux, Windows, macOS** | `tests/plan_contract.rs`, `tests/p2_boundary.rs`, `tests/p3_boundary.rs`, `tests/p4_boundary.rs`, `tests/p5_regressions.rs`, unit tests in `src/plan.rs`, `src/model.rs`, `src/layout.rs`, `src/receipt.rs`, `src/error.rs` |
+| **2 — capability admission** | descriptor inspection, positional reads, pre-execution measurement, the working-directory identifier and single-use authorisation | Linux x86_64 | `tests/linux_admission.rs`, unit tests in `src/authority.rs` |
+| **3 — the internal backend** | `clone3(CLONE_PIDFD)`, the closed post-clone child contract, `execveat` of the admitted descriptor, the machine-code closed world in both profiles, injection confinement and the traced child window | Linux x86_64 | unit tests in `src/backend/tests.rs`; `tools/helm_launch_child_closure.py`; `tools/helm_launch_injection_proof.py` |
+| **4 — adversarial regressions** | the fifteen Trial #1 to #3 defect classes of plan section 14.4 | Linux x86_64, and the portable rows everywhere | `tests/p5_regressions.rs` and the tests it names |
+
+The lifecycle itself spans levels: the pure model in `src/lifecycle.rs` runs everywhere, and the
+real observation loop in `src/launch.rs` runs its cases on Linux x86_64 only.
+
+### Level 4, row by row
+
+| Plan 14.4 row | Origin | Proved by |
+|---|---|---|
+| write-only descriptor helper | Trial #1 `E5b` | `level4_e5b_no_test_helper_reads_through_a_write_only_descriptor` |
+| setup failure is not a mechanism result | Trial #1, definition 9.6 | `level4_a_setup_failure_is_typed_and_never_a_mechanism_result`, and the `NotPosed` type it checks |
+| fixture permission and mode assumptions | Trial #2 `X2b`/`X2c`/`X4` | `level4_every_generated_fixture_mode_is_asserted_after_writing` |
+| fd collision and layout assumptions | `F6`/`F7` | `generated_distinct_layouts_satisfy_every_property`, `simulated_hosts_end_with_exactly_stdio_in_the_image`, `an_authorised_object_executes_with_exactly_the_intended_descriptors` |
+| `CLD_DUMPED` lost its signal | Trial #2 `R3` | `a_signalled_child_keeps_its_signal_number_and_its_core_flag`, `reap_classification_keeps_exit_and_signal_distinct` |
+| clean EOF read as exec success | `S5`, Trial #2 `S4` | `a_clean_status_eof_is_indeterminate_and_never_exec_success`, `s5_status_eof_then_death_is_indeterminate_and_identical_to_a_normal_run`, `no_function_offers_a_success_reading` |
+| `clone3` thread-vs-process trace confusion | Trial #2 `M2` | `the_child_window_is_closed_from_a_multithreaded_allocating_parent` — the tracer requires exactly one `CLONE_PIDFD` clone and filters `CLONE_THREAD` |
+| relative fixture paths broken by `fchdir` | Trial #2 `O6`/`O7`, `E4` | `level4_fixture_paths_handed_to_children_are_canonical_and_absolute` |
+| report producer vs evidence consumer | Trial #3 `X2c` | `report_fixture_reports_without_the_backend`, `the_producer_report_schema_is_closed_and_a_malformed_report_is_refused` |
+| digest not recomputable from published bytes | Trial #3 `R3-M1` | `level4_every_published_receipt_digest_is_recomputable_from_the_artifact`, `published_receipt_vectors_match_the_production_serializer` |
+| read error treated as EOF | drain loop | `t41_read_errors_are_their_own_facts_and_never_eof` |
+| blocking reap after `SIGKILL` | spike `waitid` | `t40_no_end_within_the_kill_bound_is_end_not_observed_on_both_kill_paths`, `t40_end_not_observed_is_latched_and_a_later_reap_never_revises_it`, `the_total_bound_counts_one_post_kill_wait_and_the_drop_guard_is_handed_back` |
+| sweep after a lost reap | `R4`, `T31` | `a_foreign_reaper_suppresses_the_sweep_and_leaves_the_end_unobservable`, `t31_a_child_already_reaped_elsewhere_gets_no_sweep` |
+| sweep from an unestablished group | `T31` | `t31_without_group_authority_no_path_issues_a_sweep`, `no_source_infers_group_authority_from_an_observed_process_group` |
+| glibc leaves signals unblocked | `T21` | `the_blocked_mask_covers_every_signal_including_the_two_glibc_keeps_to_itself`, and the traced full-set mask immediately before `clone3` |
+
+### The published receipt evidence contract
+
+The [receipt schema 0.1](../../docs/implementation/HELM-LAUNCH-RECEIPT-0.1.md) documents the
+accepted serializer field by field, and
+[the vectors](../../docs/implementation/helm-launch-receipt-0.1-test-vectors.json) carry eleven
+receipts as exact bytes in two encodings plus their SHA-256. They are **data**: not signed, not a
+trusted manifest, and carrying no authenticity or provenance claim. Two tests hold them to it — one
+requires the published bytes to be exactly what the production serializer emits, the other
+recomputes every digest from the committed artifact alone, without touching the serializer.
 
 ## Testing
 

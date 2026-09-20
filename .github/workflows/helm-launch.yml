@@ -53,6 +53,8 @@ on:
       - 'tools/tests/test_helm_launch_machine_proofs.py'
       - 'tools/helm_launch_child_closure.py'
       - 'tools/helm_launch_injection_proof.py'
+      - 'tools/helm_launch_release_reachability.py'
+      - 'tools/tests/test_helm_launch_release_reachability.py'
       - '.github/workflows/helm-launch.yml'
   push:
     paths:
@@ -63,6 +65,8 @@ on:
       - 'tools/tests/test_helm_launch_machine_proofs.py'
       - 'tools/helm_launch_child_closure.py'
       - 'tools/helm_launch_injection_proof.py'
+      - 'tools/helm_launch_release_reachability.py'
+      - 'tools/tests/test_helm_launch_release_reachability.py'
       - '.github/workflows/helm-launch.yml'
 
   # Re-test an exact branch or ref on purpose, without a no-op source commit.
@@ -117,13 +121,20 @@ jobs:
 
       - run: cargo fmt --check
       - run: cargo clippy -p helm-launch --all-targets --all-features --locked -- -D warnings
-      - run: cargo test -p helm-launch --locked
+      # `--no-fail-fast` is evidence collection, not tolerance (P5). Cargo still
+      # exits non-zero if any target failed, nothing is rerun and no gate is
+      # weakened; the only change is that the remaining test targets of THIS
+      # run also report, instead of the run stopping at the first failing
+      # target. The P4 publication chain paid for that twice: a stale oracle in
+      # a later target stayed invisible until an earlier one went green. It is
+      # used only on the two multi-target suite steps, never on a named gate.
+      - run: cargo test -p helm-launch --locked --no-fail-fast
 
       # The non-default fault-injection feature. It exists only for S5 (a child
       # that dies before exec without a record) and S6 (a child that stalls
       # before exec), and for the child-stage failure paths no host state can
       # provoke. It is gated on the feature AND on `debug_assertions`.
-      - run: cargo test -p helm-launch --locked --features test-fault-injection
+      - run: cargo test -p helm-launch --locked --features test-fault-injection --no-fail-fast
 
       - run: cargo build -p helm-launch --release --locked
 
@@ -235,18 +246,52 @@ jobs:
           rm -rf "$out"
           cargo rustc -p helm-launch --lib --locked --release --all-features \
             --target x86_64-unknown-linux-gnu --target-dir "$out" -- --emit=asm
-          asm=$(find "$out" -name 'helm_launch-*.s' -print -quit)
-          if [ -z "$asm" ]; then
-            echo "TEST ENVIRONMENT FAILURE: no assembly was emitted for the release library."
+
+          # P5 (`P4PUB05-R1`): the gate asserts its own artifact-selection
+          # premise instead of trusting it. `cargo rustc` applies `--emit=asm`
+          # to exactly one selected target, the target directory is fresh, and
+          # no dependency is named `helm_launch`, so exactly one assembly file
+          # can exist. That is stated here as a check rather than as a comment:
+          # zero is a build-evidence failure, and more than one FAILS CLOSED
+          # rather than reading an arbitrary first match.
+          expected_dir="$out/x86_64-unknown-linux-gnu/release/deps"
+          mapfile -t asm_files < <(find "$out" -name 'helm_launch-*.s' -print | sort)
+          found=${#asm_files[@]}
+          if [ "$found" -eq 0 ]; then
+            echo "BUILD EVIDENCE FAILURE: no assembly was emitted for the release library."
             exit 1
           fi
+          if [ "$found" -ne 1 ]; then
+            echo "BUILD EVIDENCE FAILURE: expected exactly one helm_launch release assembly,"
+            echo "found $found. This gate must not read an arbitrary first match:"
+            printf '  %s\n' "${asm_files[@]}"
+            exit 1
+          fi
+          asm="${asm_files[0]}"
+          case "$asm" in
+            "$expected_dir"/*) ;;
+            *)
+              echo "BUILD EVIDENCE FAILURE: the one assembly is not the cross-built release"
+              echo "library of the selected target. Expected it under $expected_dir, found:"
+              echo "  $asm"
+              exit 1
+              ;;
+          esac
+
           if ! grep -q 'backend5child10child_main' "$asm"; then
             echo "FAILURE: the P4 release library does not reach the private child backend."
-            echo "Either the public launch path no longer instantiates it, or this gate read"
-            echo "the wrong artifact: $asm"
+            echo "The public launch path no longer instantiates it. Artifact: $asm"
             exit 1
           fi
           echo "P4 release library instantiates the private child backend, as expected: $asm"
+
+          # P5 (`P4PUB05-R2`): presence proves the child entry was emitted. This
+          # proves the stronger property the gate's name claims — that the
+          # PUBLIC launch reaches it by direct control transfers in this very
+          # artifact. It is a separate checker that imports the accepted P3
+          # assembly parser and changes nothing in it, and it fails closed on an
+          # ambiguous symbol or an unresolvable edge.
+          python3 tools/helm_launch_release_reachability.py --asm "$asm"
 
       # The Linux backend suite, named so the log shows which cases the cohort
       # actually exercised and a silently empty suite cannot pass unnoticed.
@@ -307,6 +352,7 @@ jobs:
         run: |
           python3 -m unittest tools.tests.test_helm_launch_confinement -v
           python3 -m unittest tools.tests.test_helm_launch_machine_proofs -v
+          python3 -m unittest tools.tests.test_helm_launch_release_reachability -v
 
       # The determinism anchors. Exact bytes and digests are asserted inside the
       # tests, so a platform-dependent serializer or parser fails above rather than
@@ -316,3 +362,21 @@ jobs:
         run: |
           cargo test -p helm-launch --locked --lib -- --nocapture one_platform_independent_identity
           cargo test -p helm-launch --locked --test plan_contract -- --nocapture a_fixed_plan_has_one_exact_byte_identity
+
+      # THE P5 LEVEL-4 SURFACE, NAMED. The default suite above already runs
+      # these, but naming them makes the log show which adversarial regressions
+      # and which published receipt vectors actually executed, so a silently
+      # empty Level-4 suite cannot pass unnoticed. It runs on **all three**
+      # platforms on purpose: the published receipt vectors are Level 1, and the
+      # same bytes and the same SHA-256 must come out on each. A
+      # platform-dependent receipt is a defect, not a platform expectation.
+      #
+      # It is deliberately the last step, so the step numbers the P4 publication
+      # evidence refers to — 17 for the release-library gate, 24 for the
+      # repository-level confinement checks — keep their meaning.
+      - name: Name and run the P5 Level-4 regressions and published receipt vectors
+        run: |
+          cargo test -p helm-launch --locked --test p5_regressions -- --nocapture --list
+          cargo test -p helm-launch --locked --test p5_regressions -- --nocapture
+          cargo test -p helm-launch --locked --lib -- --nocapture receipt::tests::published
+          cargo test -p helm-launch --locked --lib -- --nocapture receipt::tests::the_published

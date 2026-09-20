@@ -67,11 +67,12 @@ const EXPECTED_SOURCES: [&str; 15] = [
 ];
 
 /// The complete expected inventory of `tests/`.
-const EXPECTED_TESTS: [&str; 5] = [
+const EXPECTED_TESTS: [&str; 6] = [
     "tests/linux_admission.rs",
     "tests/p2_boundary.rs",
     "tests/p3_boundary.rs",
     "tests/p4_boundary.rs",
+    "tests/p5_regressions.rs",
     "tests/plan_contract.rs",
 ];
 

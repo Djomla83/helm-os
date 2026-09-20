@@ -931,4 +931,353 @@ mod tests {
         assert!(debug.contains(&receipt.sha256().to_hex()));
         assert!(!debug.contains("123, 34"), "raw byte dump in {debug}");
     }
+
+    // =====================================================================
+    // P5 — published receipt evidence contract
+    //
+    // `docs/implementation/helm-launch-receipt-0.1-test-vectors.json` is the
+    // published artifact. These records are its only source of truth: the
+    // vectors are produced by the **production** serializer below, never by a
+    // shadow writer, and the test recomputes SHA-256 from the committed bytes
+    // themselves rather than trusting a stored digest.
+    //
+    // Level 1: no process, no descriptor, no host state, so it runs unchanged
+    // on Linux, Windows and macOS and must produce identical bytes on each.
+    // =====================================================================
+
+    /// The published vector file, relative to this crate's manifest.
+    const VECTORS_JSON: &str = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../docs/implementation/helm-launch-receipt-0.1-test-vectors.json"
+    ));
+
+    fn hex_lower(bytes: &[u8]) -> String {
+        let mut text = String::with_capacity(bytes.len() * 2);
+        for byte in bytes {
+            text.push_str(&format!("{byte:02x}"));
+        }
+        text
+    }
+
+    fn unhex(text: &str) -> Vec<u8> {
+        assert!(text.len().is_multiple_of(2), "odd hex run in a vector");
+        (0..text.len() / 2)
+            .map(|i| u8::from_str_radix(&text[i * 2..i * 2 + 2], 16).expect("hex pair"))
+            .collect()
+    }
+
+    /// A fact shape with no exec-success reading anywhere; `base` is the only
+    /// place the shared, non-varying fields are written.
+    fn vector_base() -> ReceiptRecord {
+        ReceiptRecord {
+            backend: Backend::LinuxX8664Clone3PidfdExecveat,
+            plan_sha256: d(0x01),
+            asserted_context: AssertedContext {
+                subject_spec_sha256: None,
+                binding_report_sha256: None,
+            },
+            working_directory_id: id("vector-workdir"),
+            executable: ExecutableMeasurement {
+                pre_exec_body_size: 4_096,
+                pre_exec_body_sha256: d(0x02),
+                pre_exec_mode_bits: 0o755,
+                elf_type: ElfType::EtDyn,
+            },
+            argument_count: 2,
+            environment_mode: EnvironmentMode::Empty,
+            exec_status: ExecStatus::Indeterminate(IndeterminateReason::StatusEofWithoutRecord),
+            child_end: ChildEnd::Exited { code: 0 },
+            run_deadline_expired: false,
+            termination: Termination {
+                sigterm_sent: false,
+                sigkill_sent: false,
+                group_sweep: GroupSweep::NotIssuedGroupNotEstablished,
+            },
+            stdout: StreamFacts {
+                bytes_drained: 11,
+                drained_sha256: d(0x03),
+                completeness: Completeness::CompleteAtEof,
+            },
+            stderr: StreamFacts {
+                bytes_drained: 0,
+                drained_sha256: Digest::of(b""),
+                completeness: Completeness::CompleteAtEof,
+            },
+        }
+    }
+
+    /// The published vector set, in published order.
+    ///
+    /// There is deliberately **no** exec-success vector: no such value exists
+    /// in the model, and a vector claiming one could not be produced here.
+    fn published_vectors() -> Vec<(&'static str, ReceiptRecord)> {
+        let mut out: Vec<(&'static str, ReceiptRecord)> = Vec::new();
+
+        out.push(("normal_direct_child_exit", vector_base()));
+
+        let mut pre_exec = vector_base();
+        pre_exec.exec_status = ExecStatus::PreExecFailure {
+            stage: ChildStage::Exec,
+            errno: 13,
+        };
+        pre_exec.child_end = ChildEnd::Exited { code: 127 };
+        pre_exec.stdout = StreamFacts {
+            bytes_drained: 0,
+            drained_sha256: Digest::of(b""),
+            completeness: Completeness::CompleteAtEof,
+        };
+        out.push(("pre_exec_failure_exec_eacces", pre_exec));
+
+        let mut eof = vector_base();
+        eof.exec_status = ExecStatus::Indeterminate(IndeterminateReason::StatusEofWithoutRecord);
+        eof.child_end = ChildEnd::Exited { code: 3 };
+        out.push(("status_eof_without_record_indeterminate", eof));
+
+        let mut deadline = vector_base();
+        deadline.run_deadline_expired = true;
+        deadline.termination = Termination {
+            sigterm_sent: true,
+            sigkill_sent: true,
+            group_sweep: GroupSweep::NotIssuedGroupNotEstablished,
+        };
+        deadline.child_end = ChildEnd::Signaled {
+            signal: 9,
+            core_dumped: false,
+        };
+        out.push(("run_deadline_sigterm_then_sigkill", deadline));
+
+        let mut swept = vector_base();
+        swept.termination = Termination {
+            sigterm_sent: true,
+            sigkill_sent: false,
+            group_sweep: GroupSweep::Issued,
+        };
+        swept.child_end = ChildEnd::Exited { code: 0 };
+        out.push(("group_sweep_issued", swept));
+
+        // The deliberate contrast with `group_sweep_issued`: the same
+        // termination facts, and the sweep withheld only because the parent's
+        // own `setpgid` never established authority (T31).
+        let mut no_authority = vector_base();
+        no_authority.termination = Termination {
+            sigterm_sent: true,
+            sigkill_sent: false,
+            group_sweep: GroupSweep::NotIssuedGroupNotEstablished,
+        };
+        out.push(("group_sweep_not_issued_group_not_established", no_authority));
+
+        let mut foreign = vector_base();
+        foreign.child_end = ChildEnd::EndUnobservable;
+        foreign.termination = Termination {
+            sigterm_sent: false,
+            sigkill_sent: false,
+            group_sweep: GroupSweep::NotIssuedChildAlreadyReaped,
+        };
+        out.push(("foreign_reaped_end_unobservable", foreign));
+
+        let mut not_observed = vector_base();
+        not_observed.child_end = ChildEnd::EndNotObserved;
+        not_observed.termination = Termination {
+            sigterm_sent: true,
+            sigkill_sent: true,
+            group_sweep: GroupSweep::Issued,
+        };
+        not_observed.stdout = StreamFacts {
+            bytes_drained: 7,
+            drained_sha256: d(0x04),
+            completeness: Completeness::ReadStoppedChildEndNotObserved,
+        };
+        out.push(("end_not_observed_latched", not_observed));
+
+        let mut streams = vector_base();
+        streams.stdout = StreamFacts {
+            bytes_drained: 64,
+            drained_sha256: d(0x05),
+            completeness: Completeness::WriterRetainedAfterChildExit,
+        };
+        streams.stderr = StreamFacts {
+            bytes_drained: 32,
+            drained_sha256: d(0x06),
+            completeness: Completeness::ReadFailed { errno: 5 },
+        };
+        out.push(("stream_completeness_variants", streams));
+
+        let mut signaled = vector_base();
+        signaled.child_end = ChildEnd::Signaled {
+            signal: 11,
+            core_dumped: true,
+        };
+        out.push(("signaled_child_keeps_core_flag", signaled));
+
+        let mut widest = widest_base();
+        widest.exec_status =
+            ExecStatus::Indeterminate(IndeterminateReason::StatusReadFailed { errno: i32::MIN });
+        widest.child_end = ChildEnd::Signaled {
+            signal: i32::MIN,
+            core_dumped: true,
+        };
+        widest.run_deadline_expired = true;
+        widest.termination = Termination {
+            sigterm_sent: true,
+            sigkill_sent: true,
+            group_sweep: GroupSweep::NotIssuedChildAlreadyReaped,
+        };
+        widest.stdout = StreamFacts {
+            bytes_drained: u64::MAX,
+            drained_sha256: d(0xff),
+            completeness: Completeness::ReadFailed { errno: i32::MIN },
+        };
+        out.push(("widest_near_max_receipt", widest));
+
+        out
+    }
+
+    /// Every published vector is exactly what the production serializer emits,
+    /// and its digest is recomputable from the published bytes alone.
+    ///
+    /// This is the `R3-M1` regression: a published digest that cannot be
+    /// recomputed from the published artifact proves nothing.
+    #[test]
+    fn published_receipt_vectors_match_the_production_serializer() {
+        let document: serde_json::Value =
+            serde_json::from_str(VECTORS_JSON).expect("the published vector file is strict JSON");
+
+        assert_eq!(
+            document["schema"].as_str(),
+            Some("helm-launch-receipt-test-vectors"),
+            "the vector file changed schema"
+        );
+        assert_eq!(document["version"].as_str(), Some("0.1"));
+        assert_eq!(
+            document["receipt_schema"].as_str(),
+            Some("helm-launch-receipt")
+        );
+        assert_eq!(document["receipt_version"].as_str(), Some("0.1"));
+        assert_eq!(
+            document["max_receipt_bytes"].as_u64(),
+            Some(MAX_RECEIPT_BYTES as u64),
+            "the published bound drifted from the product constant"
+        );
+        assert_eq!(
+            document["authenticity"].as_str(),
+            Some("none"),
+            "the vector file must keep stating that it carries no authenticity claim"
+        );
+
+        let published = document["vectors"]
+            .as_array()
+            .expect("vectors is an array")
+            .clone();
+        let expected = published_vectors();
+        assert_eq!(
+            published.len(),
+            expected.len(),
+            "the published vector count and the in-crate set disagree"
+        );
+
+        let published_names: Vec<&str> = published
+            .iter()
+            .map(|v| v["name"].as_str().expect("vector name"))
+            .collect();
+        let expected_names: Vec<&str> = expected.iter().map(|(name, _)| *name).collect();
+        assert_eq!(
+            published_names, expected_names,
+            "published vector names and order must match the in-crate set exactly; \
+             no vector may be withheld"
+        );
+
+        let mut digests: BTreeSet<String> = BTreeSet::new();
+        for value in &published {
+            let digest = value["sha256"].as_str().expect("sha256").to_owned();
+            assert!(
+                digests.insert(digest.clone()),
+                "two published vectors share the digest {digest}; a vector is redundant"
+            );
+        }
+
+        for ((name, record), value) in expected.into_iter().zip(published.iter()) {
+            let receipt = LaunchReceipt::from_record(record);
+            let produced = receipt.exact_bytes();
+
+            // 1. The unambiguous encoding is authoritative.
+            let committed_hex = value["exact_bytes_base16"]
+                .as_str()
+                .unwrap_or_else(|| panic!("{name}: missing exact_bytes_base16"));
+            let committed = unhex(committed_hex);
+            assert_eq!(
+                committed,
+                produced.to_vec(),
+                "{name}: published bytes differ from the production serializer"
+            );
+
+            // 2. The readable copy must decode to exactly the same bytes, so a
+            //    reviewer reading the JSON sees the real receipt and not a
+            //    differently escaped near-miss.
+            let readable = value["exact_bytes_utf8"]
+                .as_str()
+                .unwrap_or_else(|| panic!("{name}: missing exact_bytes_utf8"));
+            assert_eq!(
+                readable.as_bytes(),
+                produced,
+                "{name}: the readable copy is not the same bytes as the base16 copy"
+            );
+
+            // 3. The length is published and is the real one.
+            assert_eq!(
+                value["exact_byte_length"].as_u64(),
+                Some(produced.len() as u64),
+                "{name}: published length is wrong"
+            );
+
+            // 4. The digest is recomputed from the COMMITTED bytes, not taken
+            //    on trust and not taken from the in-memory receipt.
+            let recomputed = hex_lower(&Sha256::digest(&committed));
+            let committed_digest = value["sha256"]
+                .as_str()
+                .unwrap_or_else(|| panic!("{name}: missing sha256"));
+            assert_eq!(
+                recomputed, committed_digest,
+                "{name}: the published digest is not sha256 of the published bytes"
+            );
+            assert_eq!(
+                recomputed,
+                receipt.sha256().to_hex(),
+                "{name}: the product digest and the published digest disagree"
+            );
+
+            // 5. The published bound holds, with no truncation.
+            assert!(
+                produced.len() <= MAX_RECEIPT_BYTES,
+                "{name}: {} bytes exceeds MAX_RECEIPT_BYTES {MAX_RECEIPT_BYTES}",
+                produced.len()
+            );
+
+            // 6. Nothing in a published vector may read as success.
+            let text = String::from_utf8(produced.to_vec()).expect("receipts are ASCII");
+            for term in ["success", "succeeded", "verified", "authentic", "trusted"] {
+                assert!(
+                    !text.contains(term),
+                    "{name}: published vector contains the verdict term {term:?}"
+                );
+            }
+        }
+    }
+
+    /// The widest vector the published set carries still fits the accepted
+    /// bound, and the bound itself is the accepted constant.
+    #[test]
+    fn the_published_vectors_respect_the_accepted_receipt_bound() {
+        assert_eq!(MAX_RECEIPT_BYTES, 8_192, "the accepted bound changed");
+        let widest = published_vectors()
+            .into_iter()
+            .map(|(name, record)| (name, LaunchReceipt::from_record(record).exact_bytes().len()))
+            .max_by_key(|(_, len)| *len)
+            .expect("the vector set is not empty");
+        assert!(
+            widest.1 <= MAX_RECEIPT_BYTES,
+            "widest published vector {} is {} bytes",
+            widest.0,
+            widest.1
+        );
+    }
 }

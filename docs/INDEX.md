@@ -13,6 +13,13 @@ records the first merged module, corrected commit identities and successful main
 Linux CI. [Module documentation](../crates/helm-evidence/README.md) defines its
 experimental schema/API and limits; A0-7ZIP experimental FAIL remains unchanged.
 
+[helm-launch 0.1](../crates/helm-launch/README.md) is the launch module: P1 to P4 are
+**accepted**, P5 is **authorised and not yet accepted**, and the complete 0.1 module is **not yet
+product-accepted**. Its published evidence contract is the
+[receipt schema 0.1](implementation/HELM-LAUNCH-RECEIPT-0.1.md) with
+[portable test vectors](implementation/helm-launch-receipt-0.1-test-vectors.json); the vectors are
+data, carry no authenticity claim, and their digests are recomputable from the published bytes.
+
 ## Odluke i istraživanja
 
 [ADR index](DECISIONS.md): nineteen Proposed records, ADR-0020 Accepted for documentation language,

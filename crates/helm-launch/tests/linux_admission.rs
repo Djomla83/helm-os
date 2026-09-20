@@ -318,9 +318,10 @@ fn a_writable_descriptor_is_refused_in_either_writable_mode() {
 #[test]
 fn close_on_exec_is_irrelevant_to_admission_in_either_state() {
     // Admission never inspects `FD_CLOEXEC`: that is a descriptor flag read
-    // with `F_GETFD`, and `F_GETFL` does not report it. A future launch would
-    // duplicate the descriptor with `F_DUPFD_CLOEXEC` anyway — and that future
-    // launch does not exist here. All three states are therefore admissible.
+    // with `F_GETFD`, and `F_GETFL` does not report it. The accepted P4
+    // `launch` duplicates the descriptor with `F_DUPFD_CLOEXEC` anyway, so the
+    // flag the caller happens to hold is irrelevant either way. All three
+    // states are therefore admissible.
     let path = fixture("k-cloexec", &elf_header(ET_EXEC), 0o755);
 
     // `rustix::fs::open` passes exactly the flags given, so this one has no
@@ -579,9 +580,11 @@ fn an_o_path_directory_is_refused() {
 fn working_directory_admission_neither_enumerates_nor_resolves_anything() {
     // The capability exposes exactly the caller's logical identifier: no path,
     // no entry list, no descriptor number. Admission also checks no search
-    // permission — that kernel decision belongs to an execution slice which
-    // does not exist here — so a directory the caller cannot search is still
-    // admissible, and admission says nothing about using it later.
+    // permission: that kernel decision belongs to the child's own `chdir`,
+    // inside the accepted execution slice and not here. A directory the
+    // caller cannot search is therefore still admissible, and admission says
+    // nothing about using it later; the accepted P4 path reports that case as
+    // a `chdir` stage failure with `EACCES` instead.
     let directory = directory_fixture("wd-opaque");
     let child = format!("{directory}/entry");
     let fd = open(

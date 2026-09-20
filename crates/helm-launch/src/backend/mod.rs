@@ -358,8 +358,10 @@ pub(crate) enum BackendError {
 pub(crate) struct MinimalLaunch {
     /// What the exec-status channel established. There is no success value.
     pub(crate) exec_status: ExecStatus,
-    /// Whether the parent's own `setpgid(child, child)` succeeded. Recorded
-    /// for a future P4 sweep; nothing in P3 consumes it.
+    /// Whether the parent's own `setpgid(child, child)` succeeded. The
+    /// accepted P4 sweep consumes this fact through
+    /// [`SpawnedForLifecycle`]; this P3-only minimal launch records it and
+    /// consumes nothing, which is why it is dead on this path.
     pub(crate) group_authority_established: bool,
     /// Whether P3 sent the direct child one `SIGKILL` through its pidfd.
     pub(crate) sigkill_sent: bool,
@@ -372,7 +374,8 @@ pub(crate) struct MinimalLaunch {
     pub(crate) stderr_read: OwnedFd,
     /// The stdin write end, retained only by the test-only stall injection.
     pub(crate) stdin_write: Option<OwnedFd>,
-    /// The P2 measurement, carried through unchanged for a future P4 receipt.
+    /// The P2 measurement, carried through unchanged for the accepted P4
+    /// receipt.
     pub(crate) measurement: ExecutableMeasurement,
     /// The plan identity, carried through unchanged.
     pub(crate) plan_sha256: Digest,

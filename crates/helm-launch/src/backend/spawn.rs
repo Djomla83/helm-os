@@ -524,7 +524,7 @@ fn restore_mask(saved: u64) -> i64 {
 /// The direct child, addressed **only** by its pidfd.
 ///
 /// No operation here takes a pid: the pid is carried for tracing and for the
-/// group identity a future P4 slice would need, and is never the target of a
+/// group identity the accepted P4 sweep needs, and is never the target of a
 /// signal or a wait. Dropping the handle cannot leak a child.
 pub(crate) struct ChildHandle {
     pidfd: OwnedFd,

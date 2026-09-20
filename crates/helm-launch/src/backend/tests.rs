@@ -300,15 +300,69 @@ fn no_release_build_compiles_the_fault_injection() {
 // 2. Test support: fixtures, plans, draining
 // ===========================================================================
 
+/// A required precondition could not be constructed, so **no case was posed**.
+///
+/// This is the Trial #1 and definition section 9.6 separation kept as a type
+/// rather than as a convention. A test that cannot build its own state ends
+/// here, and what it produces is a **harness failure**: it is not a launcher
+/// result, not a receipt, not a pass or fail verdict about the mechanism, and
+/// never a substituted outcome. Test-only and crate-private; no product API
+/// expresses it, and no product code can construct one.
+#[derive(Debug)]
+pub(crate) struct NotPosed {
+    what: &'static str,
+    why: String,
+}
+
+impl NotPosed {
+    pub(crate) fn new(what: &'static str, why: impl Into<String>) -> Self {
+        Self {
+            what,
+            why: why.into(),
+        }
+    }
+
+    /// End the current test as a setup failure. Never returns, and never yields
+    /// a value a caller could mistake for an observation.
+    pub(crate) fn fail(self) -> ! {
+        panic!(
+            "NOT POSED: {} could not be constructed ({}). No case was posed. This is a harness/setup failure: it is NOT a launcher result, NOT a receipt, and NOT a verdict about the mechanism.",
+            self.what, self.why
+        )
+    }
+}
+
+/// Set a mode and **assert it afterwards**.
+///
+/// Trial #2 `X2b`/`X2c`/`X4`: a fixture written with an assumed mode is a
+/// fixture whose mode was never checked. `0666 & ~umask` is not a constant, and
+/// a `set_permissions` that quietly did something else turns a product case
+/// into a harness accident.
+pub(crate) fn set_and_assert_mode(path: &Path, mode: u32) {
+    fs::set_permissions(path, fs::Permissions::from_mode(mode)).expect("set fixture mode");
+    let observed = fs::metadata(path)
+        .expect("fixture metadata")
+        .permissions()
+        .mode()
+        & 0o7777;
+    assert_eq!(
+        observed, mode,
+        "fixture mode was not applied at {path:?}: wanted {mode:o}, observed {observed:o}"
+    );
+}
+
 /// A host tool the suite genuinely needs. A missing one fails loudly.
 pub(crate) fn require_tool(tool: &str, why: &str) {
     let found = Command::new(tool).arg("--version").output();
     match found {
         Ok(output) if output.status.success() => {}
-        _ => panic!(
-            "TEST ENVIRONMENT FAILURE: `{tool}` is required for the helm-launch P3 suite ({why}), \
-             and it is not usable here. This is not a launcher result; install the tool and rerun."
-        ),
+        _ => NotPosed::new(
+            "a required host tool",
+            format!(
+                "`{tool}` is required for the helm-launch suite ({why}) and is not usable here; install it and rerun"
+            ),
+        )
+        .fail(),
     }
 }
 
@@ -317,6 +371,17 @@ pub(crate) fn fixture_root() -> &'static Path {
     ROOT.get_or_init(|| {
         let root = std::env::temp_dir().join("helm-launch-p3-fixtures");
         fs::create_dir_all(&root).expect("fixture root");
+        // Trial #2 `O6`/`O7` and `E4`: a child that already ran `fchdir`
+        // resolves a relative pathname against the admitted directory, not
+        // against the test's. Every path handed to a child therefore starts
+        // from a **canonical absolute** root, so `/tmp` behind a symlink, or a
+        // `TMPDIR` carrying a relative component, cannot silently retarget a
+        // case.
+        let root = fs::canonicalize(&root).expect("canonical fixture root");
+        assert!(
+            root.is_absolute(),
+            "the fixture root must be absolute after canonicalisation: {root:?}"
+        );
         root
     })
 }
@@ -1465,7 +1530,7 @@ fn an_object_without_execute_permission_reports_exec_eacces() {
     let workdir = scratch_dir("eacces");
     let copy = workdir.join("not-executable");
     fs::copy(&fixture, &copy).expect("copy the fixture");
-    fs::set_permissions(&copy, fs::Permissions::from_mode(0o600)).expect("drop execute bits");
+    set_and_assert_mode(&copy, 0o600);
     assert_eq!(
         fs::metadata(&copy).unwrap().permissions().mode() & 0o777,
         0o600,
@@ -1513,7 +1578,7 @@ fn an_unloadable_in_cohort_object_reports_exec_enoexec() {
     bytes[54] = 0;
     bytes[55] = 0;
     fs::write(&copy, &bytes).expect("write the broken object");
-    fs::set_permissions(&copy, fs::Permissions::from_mode(0o755)).expect("mode");
+    set_and_assert_mode(&copy, 0o755);
     assert_eq!(
         fs::metadata(&copy).unwrap().permissions().mode() & 0o777,
         0o755
@@ -1542,7 +1607,7 @@ fn an_object_held_open_for_writing_reports_exec_etxtbsy() {
     let workdir = scratch_dir("etxtbsy");
     let copy = workdir.join("busy");
     fs::copy(&fixture, &copy).expect("copy");
-    fs::set_permissions(&copy, fs::Permissions::from_mode(0o755)).expect("mode");
+    set_and_assert_mode(&copy, 0o755);
     // A writer held by the test, never by the product.
     let writer = fs::OpenOptions::new()
         .write(true)
@@ -1571,7 +1636,7 @@ fn a_working_directory_that_became_unsearchable_reports_chdir_eacces() {
     let authorized = authorize_fixture(&fixture, &workdir, &[b"x"]);
     // After admission, before the launch: the capability pins the directory,
     // not its mode.
-    fs::set_permissions(&workdir, fs::Permissions::from_mode(0o000)).expect("mode");
+    set_and_assert_mode(&workdir, 0o000);
     assert_eq!(
         fs::metadata(&workdir).unwrap().permissions().mode() & 0o777,
         0o000
@@ -1580,7 +1645,7 @@ fn a_working_directory_that_became_unsearchable_reports_chdir_eacces() {
     let launch = launch_minimal(authorized).expect("launch");
     let status = launch.exec_status;
     let completed = complete(launch);
-    fs::set_permissions(&workdir, fs::Permissions::from_mode(0o755)).expect("restore mode");
+    set_and_assert_mode(&workdir, 0o755);
 
     // A privileged host (a container running as root) can still search a
     // mode-0000 directory, in which case the child gets past CHDIR and executes.
@@ -1605,7 +1670,7 @@ fn the_admitted_descriptor_is_executed_after_its_pathname_is_replaced() {
     let workdir = scratch_dir("exact");
     let original = workdir.join("target");
     fs::copy(&fixture, &original).expect("copy");
-    fs::set_permissions(&original, fs::Permissions::from_mode(0o755)).expect("mode");
+    set_and_assert_mode(&original, 0o755);
 
     let authorized = authorize_fixture(&original, &workdir, &[b"exact"]);
 
@@ -1613,7 +1678,7 @@ fn the_admitted_descriptor_is_executed_after_its_pathname_is_replaced() {
     // place. The capability pins the inode, so the admitted body still runs.
     let replacement = workdir.join("replacement");
     fs::write(&replacement, b"#!/bin/sh\nexit 3\n").expect("write the replacement");
-    fs::set_permissions(&replacement, fs::Permissions::from_mode(0o755)).expect("mode");
+    set_and_assert_mode(&replacement, 0o755);
     fs::rename(&replacement, &original).expect("replace the pathname");
 
     let launch = launch_minimal(authorized).expect("launch");

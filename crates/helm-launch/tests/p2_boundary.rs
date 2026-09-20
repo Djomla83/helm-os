@@ -578,15 +578,36 @@ fn the_crate_declares_exactly_the_p2_modules() {
         if name != "src/lib.rs" {
             assert!(nested.is_empty(), "{name} declares a module: {nested:?}");
         }
+        // These can introduce code, or move a file into the module tree, so
+        // they are forbidden in the **whole** source: a test region that could
+        // `include!` another file would defeat the inventory above.
         let code: String = strip(source).split_whitespace().collect();
-        for forbidden in [
-            "#[path",
-            "include!(",
-            "include_bytes!(",
-            "include_str!(",
-            "cfg_if!",
-        ] {
+        for forbidden in ["#[path", "include!(", "include_bytes!(", "cfg_if!"] {
             assert!(!code.contains(forbidden), "{name} uses {forbidden}");
+        }
+        // `include_str!` is different in kind: it yields a `&str` and cannot
+        // introduce an item, a module or a path. Product code still may not use
+        // it — product code embeds nothing and reads nothing — but P5's
+        // published receipt vectors have to be compared against the output of
+        // the **production** serializer, and only in-crate code can construct a
+        // `ReceiptRecord`. The test region therefore embeds that one published
+        // artifact, and this scan pins it to exactly that: product code clean,
+        // and every test-region use naming the vectors file and nothing else.
+        let product: String = strip(product_code(source)).split_whitespace().collect();
+        assert!(
+            !product.contains("include_str!("),
+            "{name} uses include_str!( in product code"
+        );
+        let region = test_code(source);
+        for (at, _) in region.match_indices("include_str!(") {
+            // The argument nests `concat!` and `env!`, so read a window rather
+            // than to the first closing parenthesis.
+            let end = region.len().min(at + 240);
+            let argument = &region[at..end];
+            assert!(
+                argument.contains("helm-launch-receipt-0.1-test-vectors.json"),
+                "{name} embeds something other than the published receipt vectors: {argument}"
+            );
         }
         // Only the crate root may declare or reach the backend module. The
         // check is on the module, not on the word: `Backend` is also an
