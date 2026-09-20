@@ -55,6 +55,14 @@ on:
       - 'tools/helm_launch_injection_proof.py'
       - 'tools/helm_launch_release_reachability.py'
       - 'tools/tests/test_helm_launch_release_reachability.py'
+      # P5 receipt evidence. Both are load-bearing INPUTS to helm-launch tests,
+      # not prose: `src/receipt.rs` embeds the vectors and the schema document,
+      # and `tests/p5_regressions.rs` embeds the vectors. A change to either
+      # must run the suite that checks it, so each is named exactly rather than
+      # covered by a `docs/**` sweep. The two spellings differ in case, so one
+      # glob could not cover both.
+      - 'docs/implementation/HELM-LAUNCH-RECEIPT-0.1.md'
+      - 'docs/implementation/helm-launch-receipt-0.1-test-vectors.json'
       - '.github/workflows/helm-launch.yml'
   push:
     paths:
@@ -67,6 +75,14 @@ on:
       - 'tools/helm_launch_injection_proof.py'
       - 'tools/helm_launch_release_reachability.py'
       - 'tools/tests/test_helm_launch_release_reachability.py'
+      # P5 receipt evidence. Both are load-bearing INPUTS to helm-launch tests,
+      # not prose: `src/receipt.rs` embeds the vectors and the schema document,
+      # and `tests/p5_regressions.rs` embeds the vectors. A change to either
+      # must run the suite that checks it, so each is named exactly rather than
+      # covered by a `docs/**` sweep. The two spellings differ in case, so one
+      # glob could not cover both.
+      - 'docs/implementation/HELM-LAUNCH-RECEIPT-0.1.md'
+      - 'docs/implementation/helm-launch-receipt-0.1-test-vectors.json'
       - '.github/workflows/helm-launch.yml'
 
   # Re-test an exact branch or ref on purpose, without a no-op source commit.

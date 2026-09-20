@@ -235,7 +235,7 @@ impl LaunchReceipt {
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod tests {
-    use std::collections::{BTreeSet, HashSet};
+    use std::collections::{BTreeMap, BTreeSet, HashSet};
 
     use sha2::{Digest as _, Sha256};
 
@@ -1278,6 +1278,637 @@ mod tests {
             "widest published vector {} is {} bytes",
             widest.0,
             widest.1
+        );
+    }
+
+    // =====================================================================
+    // P5 — the published schema's machine-checkable normative contract
+    //
+    // `docs/implementation/HELM-LAUNCH-RECEIPT-0.1.md` publishes the receipt
+    // evidence contract. Its prose is documentation; the delimited contract
+    // block inside it is not. This section reads the **committed document**,
+    // parses that block, and checks every line against product truth: the
+    // production constants, the production `as_str()` vocabularies enumerated
+    // by wildcard-free `match`es, and the key order read back out of the
+    // production serializer's own bytes and out of the committed vectors.
+    //
+    // There is no second serializer here. The reader below consumes receipt
+    // bytes and reports the order of the keys it finds; nothing in this
+    // section can produce a receipt byte.
+    //
+    // Level 1: no process, no descriptor, no host state, so it runs on Linux,
+    // Windows and macOS in the ordinary suite.
+    // =====================================================================
+
+    /// The published schema document, relative to this crate's manifest.
+    const SCHEMA_DOC: &str = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../docs/implementation/HELM-LAUNCH-RECEIPT-0.1.md"
+    ));
+
+    const CONTRACT_BEGIN: &str = "<!-- HELM-LAUNCH-RECEIPT-CONTRACT:BEGIN -->";
+    const CONTRACT_END: &str = "<!-- HELM-LAUNCH-RECEIPT-CONTRACT:END -->";
+
+    /// Every key the contract block must carry, and no other.
+    const CONTRACT_KEYS: [&str; 34] = [
+        "schema",
+        "version",
+        "max_receipt_bytes",
+        "encoding",
+        "formatting_whitespace",
+        "trailing_newline",
+        "bool_literals",
+        "null_literal",
+        "digest_encoding",
+        "argument_count_encoding",
+        "backend_values",
+        "environment_mode_values",
+        "elf_type_values",
+        "child_stage_values",
+        "indeterminate_reason_values",
+        "exec_status_kinds",
+        "child_end_kinds",
+        "group_sweep_values",
+        "stream_completeness_values",
+        "top_level_order",
+        "asserted_context_order",
+        "asserted_context_nullable",
+        "executable_order",
+        "termination_order",
+        "termination_bool_fields",
+        "stream_order",
+        "stream_order_read_failed",
+        "exec_status_order_pre_exec_failure",
+        "exec_status_order_indeterminate",
+        "exec_status_order_indeterminate_status_read_failed",
+        "child_end_order_exited",
+        "child_end_order_signaled",
+        "child_end_order_end_unobservable",
+        "child_end_order_end_not_observed",
+    ];
+
+    /// Parse the one contract block out of the published document.
+    ///
+    /// Fails on a missing or repeated marker, a malformed line, a duplicate
+    /// key, an unknown key or a missing key, so the block cannot be quietly
+    /// extended, reordered or hollowed out.
+    fn contract() -> BTreeMap<String, String> {
+        assert_eq!(
+            SCHEMA_DOC.matches(CONTRACT_BEGIN).count(),
+            1,
+            "the schema document must carry exactly one contract begin marker"
+        );
+        assert_eq!(
+            SCHEMA_DOC.matches(CONTRACT_END).count(),
+            1,
+            "the schema document must carry exactly one contract end marker"
+        );
+        let after = SCHEMA_DOC
+            .split_once(CONTRACT_BEGIN)
+            .expect("begin marker")
+            .1;
+        let body = after.split_once(CONTRACT_END).expect("end marker").0;
+
+        let mut map: BTreeMap<String, String> = BTreeMap::new();
+        for line in body.lines() {
+            let line = line.trim_end_matches('\r');
+            if line.is_empty() {
+                continue;
+            }
+            let (key, value) = line
+                .split_once('=')
+                .unwrap_or_else(|| panic!("contract line is not `key=value`: {line:?}"));
+            assert!(
+                !key.is_empty() && !value.is_empty(),
+                "contract line has an empty side: {line:?}"
+            );
+            assert!(
+                CONTRACT_KEYS.contains(&key),
+                "the contract block carries the unknown key {key:?}"
+            );
+            assert!(
+                map.insert(key.to_owned(), value.to_owned()).is_none(),
+                "the contract block repeats the key {key:?}"
+            );
+        }
+        for key in CONTRACT_KEYS {
+            assert!(
+                map.contains_key(key),
+                "the contract block is missing the required key {key:?}"
+            );
+        }
+        map
+    }
+
+    /// One contract value as its comma-separated list.
+    fn listed<'a>(contract: &'a BTreeMap<String, String>, key: &str) -> Vec<&'a str> {
+        contract
+            .get(key)
+            .unwrap_or_else(|| panic!("missing contract key {key}"))
+            .split(',')
+            .collect()
+    }
+
+    /// The ordered `(key, value offset)` members of the compact object that
+    /// starts at `at`, and the offset just past that object.
+    ///
+    /// This is a **reader**. Receipts are compact ASCII with no array and no
+    /// escape sequence — which [`the_published_schema_contract_matches_the_production_serializer`]
+    /// asserts separately, from the same bytes — so it needs no general JSON
+    /// machinery, and anything it does not recognise fails loudly rather than
+    /// being guessed at.
+    fn members(bytes: &[u8], at: usize) -> (Vec<(String, usize)>, usize) {
+        assert_eq!(bytes[at], b'{', "an object must open with a brace");
+        let mut found: Vec<(String, usize)> = Vec::new();
+        let mut i = at + 1;
+        if bytes[i] == b'}' {
+            return (found, i + 1);
+        }
+        loop {
+            assert_eq!(bytes[i], b'"', "a member must open with a quoted key");
+            let start = i + 1;
+            let mut end = start;
+            while bytes[end] != b'"' {
+                assert_ne!(bytes[end], b'\\', "no escape is reachable in a receipt");
+                end += 1;
+            }
+            let key = String::from_utf8(bytes[start..end].to_vec()).expect("an ASCII key");
+            i = end + 1;
+            assert_eq!(bytes[i], b':', "a key must be followed by a colon");
+            i += 1;
+            found.push((key, i));
+            i = match bytes[i] {
+                b'{' => members(bytes, i).1,
+                b'"' => {
+                    let mut j = i + 1;
+                    while bytes[j] != b'"' {
+                        assert_ne!(bytes[j], b'\\', "no escape is reachable in a receipt");
+                        j += 1;
+                    }
+                    j + 1
+                }
+                b'[' => panic!("no array is part of the receipt contract"),
+                _ => {
+                    let mut j = i;
+                    while !matches!(bytes[j], b',' | b'}') {
+                        j += 1;
+                    }
+                    j
+                }
+            };
+            match bytes[i] {
+                b',' => i += 1,
+                b'}' => return (found, i + 1),
+                other => panic!("unexpected byte {other:?} after a member"),
+            }
+        }
+    }
+
+    /// The ordered keys of the object reached by `path` from the receipt root.
+    fn keys_at(bytes: &[u8], path: &[&str]) -> Vec<String> {
+        let mut at = 0usize;
+        for step in path {
+            let (found, _) = members(bytes, at);
+            let (_, value) = found
+                .iter()
+                .find(|(key, _)| key == step)
+                .unwrap_or_else(|| panic!("the receipt has no field {step:?}"));
+            at = *value;
+        }
+        members(bytes, at).0.into_iter().map(|(k, _)| k).collect()
+    }
+
+    /// The raw value text of a top-level field, exactly as emitted.
+    fn raw_value(bytes: &[u8], field: &str) -> String {
+        let (found, _) = members(bytes, 0);
+        let (_, at) = found
+            .iter()
+            .find(|(key, _)| key == field)
+            .unwrap_or_else(|| panic!("the receipt has no field {field:?}"));
+        let end = members(bytes, 0).0;
+        let _ = end;
+        let mut j = *at;
+        let stop = match bytes[j] {
+            b'"' => {
+                let mut k = j + 1;
+                while bytes[k] != b'"' {
+                    k += 1;
+                }
+                k + 1
+            }
+            b'{' => members(bytes, j).1,
+            _ => {
+                let mut k = j;
+                while !matches!(bytes[k], b',' | b'}') {
+                    k += 1;
+                }
+                k
+            }
+        };
+        j = *at;
+        String::from_utf8(bytes[j..stop].to_vec()).expect("ASCII value")
+    }
+
+    /// Every record shape the contract names an order for, each one built from
+    /// the helpers the accepted tests already use. No new receipt shape is
+    /// invented here.
+    fn contract_witnesses() -> Vec<ReceiptRecord> {
+        let mut out: Vec<ReceiptRecord> = published_vectors()
+            .into_iter()
+            .map(|(_, record)| record)
+            .collect();
+        // Both asserted-context states, and every exec-status, child-end and
+        // completeness shape, at the widest numeric values.
+        out.push(vector_base());
+        out.push(widest_base());
+        for status in all_exec_statuses(i32::MIN) {
+            let mut r = widest_base();
+            r.exec_status = status;
+            out.push(r);
+        }
+        for end in all_child_ends(i32::MIN) {
+            let mut r = widest_base();
+            r.child_end = end;
+            out.push(r);
+        }
+        for completeness in all_completeness(i32::MIN) {
+            let mut r = widest_base();
+            r.stdout.completeness = completeness;
+            r.stderr.completeness = completeness;
+            out.push(r);
+        }
+        for sweep in all_sweeps() {
+            let mut r = widest_base();
+            r.termination.group_sweep = sweep;
+            out.push(r);
+        }
+        for elf_type in all_elf_types() {
+            let mut r = widest_base();
+            r.executable.elf_type = elf_type;
+            out.push(r);
+        }
+        out
+    }
+
+    /// The published schema's normative contract block is true of the product.
+    ///
+    /// This is the `P5R-01B` enforcement: a published evidence contract whose
+    /// machine-checkable core nothing checks is not a contract. Every line of
+    /// the block is compared against a production constant, a production
+    /// `as_str()` vocabulary, or the key order read back out of bytes the
+    /// production serializer emitted — never against prose.
+    #[test]
+    fn the_published_schema_contract_matches_the_production_serializer() {
+        let contract = contract();
+
+        // ---------------------------------------------- 1. constants
+        assert_eq!(
+            contract["max_receipt_bytes"],
+            MAX_RECEIPT_BYTES.to_string(),
+            "the published bound drifted from the product constant"
+        );
+
+        // ---------------------------------------------- 2. vocabularies
+        //
+        // Each expectation comes from the exhaustive, wildcard-free list the
+        // accepted tests already use, so a new model variant fails compilation
+        // before it can go unlisted here.
+        let vocabularies: [(&str, Vec<String>); 9] = [
+            (
+                "backend_values",
+                vec![Backend::LinuxX8664Clone3PidfdExecveat.as_str().to_owned()],
+            ),
+            (
+                "environment_mode_values",
+                vec![EnvironmentMode::Empty.as_str().to_owned()],
+            ),
+            (
+                "elf_type_values",
+                all_elf_types()
+                    .iter()
+                    .map(|e| e.as_str().to_owned())
+                    .collect(),
+            ),
+            (
+                "child_stage_values",
+                all_stages().iter().map(|s| s.as_str().to_owned()).collect(),
+            ),
+            (
+                "indeterminate_reason_values",
+                all_exec_statuses(0)
+                    .into_iter()
+                    .filter_map(|s| match s {
+                        ExecStatus::Indeterminate(r) => Some(r.as_str().to_owned()),
+                        ExecStatus::PreExecFailure { .. } => None,
+                    })
+                    .collect(),
+            ),
+            (
+                "exec_status_kinds",
+                vec![
+                    ExecStatus::PreExecFailure {
+                        stage: ChildStage::Exec,
+                        errno: 0,
+                    }
+                    .as_str()
+                    .to_owned(),
+                    ExecStatus::Indeterminate(IndeterminateReason::StatusEofWithoutRecord)
+                        .as_str()
+                        .to_owned(),
+                ],
+            ),
+            (
+                "child_end_kinds",
+                all_child_ends(0)
+                    .iter()
+                    .map(|e| e.as_str().to_owned())
+                    .fold(Vec::new(), |mut acc, s| {
+                        if !acc.contains(&s) {
+                            acc.push(s);
+                        }
+                        acc
+                    }),
+            ),
+            (
+                "group_sweep_values",
+                all_sweeps().iter().map(|g| g.as_str().to_owned()).collect(),
+            ),
+            (
+                "stream_completeness_values",
+                all_completeness(0)
+                    .iter()
+                    .map(|c| c.as_str().to_owned())
+                    .collect(),
+            ),
+        ];
+        for (key, expected) in vocabularies {
+            assert_eq!(
+                listed(&contract, key),
+                expected.iter().map(String::as_str).collect::<Vec<_>>(),
+                "the contract's {key} disagrees with the production vocabulary"
+            );
+        }
+
+        // ---------------------------------------------- 3. field order
+        //
+        // Read back out of production bytes, for every shape, and separately
+        // out of the committed vector bytes further down.
+        for record in contract_witnesses() {
+            let exec_status = record.exec_status;
+            let child_end = record.child_end;
+            let stdout = record.stdout.completeness;
+            let stderr = record.stderr.completeness;
+            let nullable = record.asserted_context.subject_spec_sha256.is_none();
+            let receipt = LaunchReceipt::from_record(record);
+            let bytes = receipt.exact_bytes();
+
+            assert_eq!(
+                keys_at(bytes, &[]),
+                listed(&contract, "top_level_order"),
+                "top-level field order"
+            );
+            assert_eq!(
+                keys_at(bytes, &["asserted_context"]),
+                listed(&contract, "asserted_context_order")
+            );
+            assert_eq!(
+                keys_at(bytes, &["executable"]),
+                listed(&contract, "executable_order")
+            );
+            assert_eq!(
+                keys_at(bytes, &["termination"]),
+                listed(&contract, "termination_order")
+            );
+            for stream in [Stream::Stdout, Stream::Stderr] {
+                let completeness = match stream {
+                    Stream::Stdout => stdout,
+                    Stream::Stderr => stderr,
+                };
+                let key = if matches!(completeness, Completeness::ReadFailed { .. }) {
+                    "stream_order_read_failed"
+                } else {
+                    "stream_order"
+                };
+                assert_eq!(
+                    keys_at(bytes, &[stream.as_str()]),
+                    listed(&contract, key),
+                    "{} field order for {completeness:?}",
+                    stream.as_str()
+                );
+            }
+            let exec_key = match exec_status {
+                ExecStatus::PreExecFailure { .. } => "exec_status_order_pre_exec_failure",
+                ExecStatus::Indeterminate(IndeterminateReason::StatusReadFailed { .. }) => {
+                    "exec_status_order_indeterminate_status_read_failed"
+                }
+                ExecStatus::Indeterminate(_) => "exec_status_order_indeterminate",
+            };
+            assert_eq!(
+                keys_at(bytes, &["exec_status"]),
+                listed(&contract, exec_key),
+                "exec_status field order for {exec_status:?}"
+            );
+            let end_key = match child_end {
+                ChildEnd::Exited { .. } => "child_end_order_exited",
+                ChildEnd::Signaled { .. } => "child_end_order_signaled",
+                ChildEnd::EndUnobservable => "child_end_order_end_unobservable",
+                ChildEnd::EndNotObserved => "child_end_order_end_not_observed",
+            };
+            assert_eq!(
+                keys_at(bytes, &["child_end"]),
+                listed(&contract, end_key),
+                "child_end field order for {child_end:?}"
+            );
+
+            // ------------------------------------------ 4. byte contract
+            assert!(
+                bytes.iter().all(u8::is_ascii),
+                "the contract declares UTF-8 and the serializer emits ASCII"
+            );
+            assert_eq!(contract["encoding"], "utf8");
+            assert!(
+                !bytes.iter().any(u8::is_ascii_whitespace),
+                "the contract declares no formatting whitespace"
+            );
+            assert_eq!(contract["formatting_whitespace"], "none");
+            assert_ne!(
+                bytes.last(),
+                Some(&b'\n'),
+                "the contract declares no trailing newline"
+            );
+            assert_eq!(contract["trailing_newline"], "absent");
+
+            // Literals, read out of the emitted values themselves.
+            assert_eq!(listed(&contract, "bool_literals"), vec!["true", "false"]);
+            for field in listed(&contract, "termination_bool_fields") {
+                let (found, _) = members(bytes, 0);
+                let (_, at) = found
+                    .iter()
+                    .find(|(key, _)| key == "termination")
+                    .expect("termination");
+                let (inner, _) = members(bytes, *at);
+                let (_, value) = inner
+                    .iter()
+                    .find(|(key, _)| key == field)
+                    .unwrap_or_else(|| panic!("termination has no {field}"));
+                let text: String = bytes[*value..]
+                    .iter()
+                    .take_while(|b| b.is_ascii_alphabetic())
+                    .map(|b| char::from(*b))
+                    .collect();
+                assert!(
+                    listed(&contract, "bool_literals").contains(&text.as_str()),
+                    "{field} emitted {text:?}, which is not a declared boolean literal"
+                );
+            }
+            assert_eq!(contract["null_literal"], "null");
+            let asserted = raw_value(bytes, "asserted_context");
+            if nullable {
+                assert!(
+                    asserted.contains(&contract["null_literal"]),
+                    "an absent asserted digest must emit the declared null literal"
+                );
+            }
+            assert_eq!(contract["digest_encoding"], "lowercase_hex_64");
+            let plan_digest = raw_value(bytes, "plan_sha256");
+            let hex = plan_digest.trim_matches('"');
+            assert_eq!(hex.len(), 64, "a digest is 64 characters");
+            assert!(
+                hex.bytes()
+                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)),
+                "a digest is lowercase hexadecimal"
+            );
+            assert_eq!(contract["argument_count_encoding"], "decimal_u32");
+            let count = raw_value(bytes, "argument_count");
+            assert!(
+                count.parse::<u32>().is_ok(),
+                "argument_count emitted {count:?}, which is not a decimal u32"
+            );
+            assert_eq!(
+                raw_value(bytes, "schema").trim_matches('"'),
+                contract["schema"]
+            );
+            assert_eq!(
+                raw_value(bytes, "version").trim_matches('"'),
+                contract["version"]
+            );
+        }
+
+        // ---------------------------------------------- 5. the committed bytes
+        //
+        // The third leg of the link the contract rests on: the schema declares
+        // an order, the production serializer emits it, and the **committed**
+        // artifact preserves it. Read from the published file, not from a
+        // freshly serialised record.
+        let document: serde_json::Value =
+            serde_json::from_str(VECTORS_JSON).expect("the published vector file is strict JSON");
+        let published = document["vectors"].as_array().expect("vectors is an array");
+        assert!(!published.is_empty(), "the published vector set is empty");
+        for value in published {
+            let name = value["name"].as_str().expect("vector name");
+            let committed = unhex(
+                value["exact_bytes_base16"]
+                    .as_str()
+                    .unwrap_or_else(|| panic!("{name}: missing exact_bytes_base16")),
+            );
+            assert_eq!(
+                keys_at(&committed, &[]),
+                listed(&contract, "top_level_order"),
+                "{name}: the committed bytes do not carry the declared top-level order"
+            );
+            assert_eq!(
+                keys_at(&committed, &["asserted_context"]),
+                listed(&contract, "asserted_context_order"),
+                "{name}: asserted_context order"
+            );
+            assert_eq!(
+                keys_at(&committed, &["executable"]),
+                listed(&contract, "executable_order"),
+                "{name}: executable order"
+            );
+            assert_eq!(
+                keys_at(&committed, &["termination"]),
+                listed(&contract, "termination_order"),
+                "{name}: termination order"
+            );
+        }
+
+        // ---------------------------------------------- 6. nullability
+        //
+        // Both states of the two nullable fields, from production output.
+        let mut absent = vector_base();
+        absent.asserted_context = AssertedContext {
+            subject_spec_sha256: None,
+            binding_report_sha256: None,
+        };
+        let mut present = vector_base();
+        present.asserted_context = AssertedContext {
+            subject_spec_sha256: Some(d(0x11)),
+            binding_report_sha256: Some(d(0x22)),
+        };
+        let nullable = listed(&contract, "asserted_context_nullable");
+        assert_eq!(nullable, listed(&contract, "asserted_context_order"));
+        let absent_bytes = LaunchReceipt::from_record(absent).exact_bytes().to_vec();
+        let present_bytes = LaunchReceipt::from_record(present).exact_bytes().to_vec();
+        for field in &nullable {
+            let (found, _) = members(&absent_bytes, 0);
+            let (_, at) = found
+                .iter()
+                .find(|(key, _)| key == "asserted_context")
+                .expect("asserted_context");
+            let (inner, _) = members(&absent_bytes, *at);
+            let (_, value) = inner
+                .iter()
+                .find(|(key, _)| key == field)
+                .unwrap_or_else(|| panic!("asserted_context has no {field}"));
+            let text: String = absent_bytes[*value..]
+                .iter()
+                .take_while(|b| b.is_ascii_alphabetic())
+                .map(|b| char::from(*b))
+                .collect();
+            assert_eq!(
+                text, contract["null_literal"],
+                "{field} must be nullable and emit the declared null literal"
+            );
+        }
+        assert_ne!(
+            absent_bytes, present_bytes,
+            "the two nullability states must not serialise identically"
+        );
+    }
+
+    /// The document identifies the contract block as the machine-checked part,
+    /// and does not present the surrounding prose as machine-verified.
+    #[test]
+    fn the_schema_document_separates_its_machine_block_from_its_prose() {
+        for phrase in [
+            "Sections 1 to 6 are written for people. This section is written for a test.",
+            "remain documentation",
+            "no second serializer exists",
+        ] {
+            assert!(
+                SCHEMA_DOC.contains(phrase),
+                "the schema document no longer states {phrase:?}"
+            );
+        }
+        // The nonclaims of sections 1, 4 and 5 stay prose, and stay out of the
+        // machine block. What keeps them out is that the block's key set is
+        // **closed**: `contract()` rejects any key outside `CONTRACT_KEYS`, and
+        // every one of those names a structural or vocabulary fact that this
+        // file checks against the production model. A line asserting what a
+        // receipt *means* has nowhere to go, because there is no key for it and
+        // a new one is refused rather than ignored.
+        let parsed = contract();
+        assert_eq!(
+            parsed.len(),
+            CONTRACT_KEYS.len(),
+            "the contract block and the declared key set disagree in size"
+        );
+        let declared: BTreeSet<&str> = CONTRACT_KEYS.into_iter().collect();
+        let present: BTreeSet<&str> = parsed.keys().map(String::as_str).collect();
+        assert_eq!(
+            present, declared,
+            "the contract block's key set is not exactly the declared closed set"
         );
     }
 }

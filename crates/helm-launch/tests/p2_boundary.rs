@@ -587,12 +587,19 @@ fn the_crate_declares_exactly_the_p2_modules() {
         }
         // `include_str!` is different in kind: it yields a `&str` and cannot
         // introduce an item, a module or a path. Product code still may not use
-        // it — product code embeds nothing and reads nothing — but P5's
-        // published receipt vectors have to be compared against the output of
-        // the **production** serializer, and only in-crate code can construct a
-        // `ReceiptRecord`. The test region therefore embeds that one published
-        // artifact, and this scan pins it to exactly that: product code clean,
-        // and every test-region use naming the vectors file and nothing else.
+        // it — product code embeds nothing and reads nothing — but P5 publishes
+        // a receipt evidence contract in two committed artifacts, and both have
+        // to be checked against the **production** model and serializer, which
+        // only in-crate code can reach: the vectors must equal the bytes the
+        // production serializer emits, and the schema's normative block must
+        // equal the production vocabularies and field order. The test region
+        // therefore embeds exactly those two published artifacts, and this scan
+        // pins it to exactly them: product code clean, and every test-region use
+        // naming one of the two reviewed P5 evidence files and nothing else.
+        const P5_EVIDENCE_ARTIFACTS: [&str; 2] = [
+            "helm-launch-receipt-0.1-test-vectors.json",
+            "HELM-LAUNCH-RECEIPT-0.1.md",
+        ];
         let product: String = strip(product_code(source)).split_whitespace().collect();
         assert!(
             !product.contains("include_str!("),
@@ -605,8 +612,10 @@ fn the_crate_declares_exactly_the_p2_modules() {
             let end = region.len().min(at + 240);
             let argument = &region[at..end];
             assert!(
-                argument.contains("helm-launch-receipt-0.1-test-vectors.json"),
-                "{name} embeds something other than the published receipt vectors: {argument}"
+                P5_EVIDENCE_ARTIFACTS
+                    .iter()
+                    .any(|artifact| argument.contains(artifact)),
+                "{name} embeds something other than the published P5 receipt evidence: {argument}"
             );
         }
         // Only the crate root may declare or reach the backend module. The

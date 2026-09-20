@@ -281,7 +281,91 @@ platform-dependent result is a defect, not a platform expectation.
 | `signaled_child_keeps_core_flag` | signal retained with `core_dumped: true` |
 | `widest_near_max_receipt` | widest numeric and identifier values |
 
-## 7. Stability
+## 7. Machine-checkable normative contract
+
+Sections 1 to 6 are written for people. This section is written for a test.
+
+**Three authorities, each with its own scope, and no overlap between them:**
+
+1. **The normative contract block below pins the exact structural and vocabulary facts** — the
+   schema name and version, the receipt bound, every closed value vocabulary, the top-level field
+   order, the field order of every nested object and of every variant shape, which fields are
+   nullable, and the byte-level encoding rules that follow from compact JSON.
+   `receipt::tests::the_published_schema_contract_matches_the_production_serializer` reads **this
+   document**, parses the block, and checks every line against the production model and the
+   production serializer's own output. A line that stops being true fails that test.
+2. **The production serializer and the published vectors pin the exact bytes.** No prose can do
+   that, and none is asked to:
+   `receipt::tests::published_receipt_vectors_match_the_production_serializer` and
+   `p5_regressions::level4_every_published_receipt_digest_is_recomputable_from_the_artifact` are
+   where byte identity and digest recomputability are established.
+3. **The explanatory prose and the nonclaims of sections 1, 4 and 5 remain documentation.** They
+   are held by review and by the crate's own vocabulary scans, **not** by the block below. Claims
+   such as "carries zero execution authority", "is not containment" or "no authenticity is claimed"
+   are deliberately **absent** from the machine block, because they are not schema vocabulary and a
+   key asserting them would be a claim about meaning that no test could check.
+
+Do not read the block as a second, competing definition of the receipt. Where it names a fact, that
+fact is also true in sections 1 to 6; the block exists so the two cannot drift apart unnoticed.
+
+**Grammar.** One `key=value` per line between the two markers, no whitespace around `=`, no blank
+lines, no comments. A value is either a single token or a comma-separated list in the exact order
+the contract fixes. A duplicate key, an unknown key or a missing key fails the test, so the block
+cannot be quietly extended, reordered or hollowed out.
+
+<!-- HELM-LAUNCH-RECEIPT-CONTRACT:BEGIN -->
+schema=helm-launch-receipt
+version=0.1
+max_receipt_bytes=8192
+encoding=utf8
+formatting_whitespace=none
+trailing_newline=absent
+bool_literals=true,false
+null_literal=null
+digest_encoding=lowercase_hex_64
+argument_count_encoding=decimal_u32
+backend_values=linux_x86_64_clone3_pidfd_execveat
+environment_mode_values=empty
+elf_type_values=et_exec,et_dyn
+child_stage_values=dup2,clear_cloexec,chdir,close_range,setpgid,sigaction,sigmask,no_new_privs,exec
+indeterminate_reason_values=status_eof_without_record,status_record_malformed,pre_exec_status_timeout,status_read_failed
+exec_status_kinds=pre_exec_failure,indeterminate
+child_end_kinds=exited,signaled,end_unobservable,end_not_observed
+group_sweep_values=issued,not_issued_group_not_established,not_issued_child_already_reaped
+stream_completeness_values=complete_at_eof,writer_retained_after_child_exit,read_stopped_child_end_not_observed,read_failed
+top_level_order=schema,version,backend,plan_sha256,asserted_context,working_directory_id,executable,argument_count,environment_mode,exec_status,child_end,run_deadline_expired,termination,stdout,stderr
+asserted_context_order=subject_spec_sha256,binding_report_sha256
+asserted_context_nullable=subject_spec_sha256,binding_report_sha256
+executable_order=pre_exec_body_size,pre_exec_body_sha256,pre_exec_mode_bits,elf_type
+termination_order=sigterm_sent,sigkill_sent,group_sweep
+termination_bool_fields=sigterm_sent,sigkill_sent
+stream_order=bytes_drained,drained_sha256,completeness
+stream_order_read_failed=bytes_drained,drained_sha256,completeness,errno
+exec_status_order_pre_exec_failure=kind,stage,errno
+exec_status_order_indeterminate=kind,reason
+exec_status_order_indeterminate_status_read_failed=kind,reason,errno
+child_end_order_exited=kind,code
+child_end_order_signaled=kind,signal,core_dumped
+child_end_order_end_unobservable=kind
+child_end_order_end_not_observed=kind
+<!-- HELM-LAUNCH-RECEIPT-CONTRACT:END -->
+
+**What each key is checked against.** Nothing here is checked against prose.
+
+| Key group | Checked against |
+|---|---|
+| `max_receipt_bytes` | the production constant `MAX_RECEIPT_BYTES` |
+| every `*_values`, `*_kinds` | the production `as_str()` of every variant, enumerated by a wildcard-free `match` so a new variant fails compilation before it can go unlisted |
+| every `*_order*` | the key order read back out of **production serializer output**, for a record of each shape, and again out of the **committed vector bytes** |
+| `asserted_context_nullable` | a record with both digests absent and a record with both present |
+| `encoding`, `formatting_whitespace`, `trailing_newline`, `bool_literals`, `null_literal`, `digest_encoding`, `argument_count_encoding` | the production bytes themselves |
+| `schema`, `version` | the values the production serializer emits for those two fields |
+
+The reader the test uses walks compact receipt bytes and reports the order of the keys it finds. It
+is a reader, not a writer: **no second serializer exists**, and nothing in the test can produce
+receipt bytes.
+
+## 8. Stability
 
 This document describes **version `0.1`**. It is a description of the accepted serializer, not a
 compatibility promise. A later version may change field order, vocabulary or bounds, and would
