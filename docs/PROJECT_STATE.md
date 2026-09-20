@@ -1,5 +1,47 @@
 # Stanje projekta
 
+<a id="helm-launch-p4-attribution-clean"></a>
+
+## HELM-LAUNCH P4 UNPUBLISHED CHAIN ATTRIBUTION-CLEAN, 2026-09-20 — `R-P4PUB-I1` closed, reviewed trees preserved exactly
+
+The independent re-review's single IMPORTANT finding `R-P4PUB-I1` is **CLOSED / METADATA-ONLY
+BEFORE PUBLICATION**. The two unpublished correction commits carried an AI-agent `Co-Authored-By`
+trailer, which [commit authorship](../AGENTS.md) forbids. Because they were still unpublished, the
+owner [required the trailers removed before publication](DECISIONS.md#helm-launch-p4-unpublished-attribution-cleanup).
+The unpublished chain was rebuilt against its **original tree objects**, so every reviewed tree is
+bit-for-bit unchanged and the independent technical re-review **carries forward without being
+reopened**. Nothing was pushed; no published history was rewritten.
+
+| Role | Old SHA | New attribution-clean SHA | Tree |
+|---|---|---|---|
+| Owner disposition | `cfe2537ba638c536d2edd2a9660998713a443b89` | `59f15c3d59c9e4c496bcaca1065076be88ea5301` | **IDENTICAL** (`5bb3276`) |
+| Test/evidence correction | `aed3fd2564f47d2b0a999b553133d057b68783e1` | `eb673f5728e4e721427d3c0c73892e4990607f8a` | **IDENTICAL** (`52b8a86`) |
+| Independent re-review | `5aca7d593c9152b0252f2ed38be782fade0b4dc3` | `3ce7eb31fcbb4471245ee10b7763d465184f7ada` | **IDENTICAL** (`aa18dff`) |
+
+| Item | State |
+|---|---|
+| Published base `94ee48da0cc412f0d8043e34b914c198615b923e` | **NOT REWRITTEN**, still an ancestor of `HEAD` |
+| Product code | **UNCHANGED** |
+| Tests | **UNCHANGED** |
+| Review artifact and its findings | **UNCHANGED** |
+| Commit metadata | two trailers removed; parent identities updated; author/committer and timestamps preserved |
+| Forbidden AI attribution in the unpublished range | **0** |
+| `main` | **UNCHANGED** |
+| Remote | **UNCHANGED** — nothing pushed, no force push |
+| Historical runs `35499943908`, `35499943903` | attempt 1, **FAILURE** — **NO RETRY, NO RERUN, NO REPLACEMENT** |
+| HELM-LAUNCH P4 | **CORRECTED / INDEPENDENTLY RE-REVIEWED / ATTRIBUTION-CLEAN / LINUX RUNTIME PENDING NEW PUBLICATION CI** |
+| HELM-LAUNCH P5 | **NOT AUTHORISED** |
+| Trial #3 | frozen **`MECHANISM_REJECTED`**, unchanged, must not be rerun |
+| Trial #4 | **NOT AUTHORISED** |
+| Complete helm-launch 0.1 | **NOT PRODUCT-ACCEPTED** |
+| Next gate | **ONE FAST-FORWARD PUBLICATION OF THE ATTRIBUTION-CLEAN REVIEWED CHAIN, then NEW NATURAL HOSTED P4 CI** |
+
+Only commit metadata and parent identity changed. No product, test or documentation content from
+the three reviewed commits was modified, and no review finding was altered — the re-review body
+still quotes the `Co-Authored-By` trailer inside its statement of `R-P4PUB-I1`, because that
+occurrence is the finding itself rather than an attribution. This supersedes the "next gate" of the
+sections below, which are left as written.
+
 <a id="helm-launch-p4-first-publication-failed"></a>
 
 ## HELM-LAUNCH P4 FIRST PUBLICATION FAILED, 2026-09-20 — hosted Linux validation NOT ACCEPTED, test/evidence correction authorised

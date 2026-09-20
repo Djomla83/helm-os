@@ -2395,3 +2395,103 @@ NOT PRODUCT-ACCEPTED.**
 
 **Next gate: BOUNDED P4 TEST/EVIDENCE CORRECTION, then ONE BOUNDED INDEPENDENT RE-REVIEW OF
 `P4PUB-01`, `P4PUB-02` AND `P4PUB-03`.**
+
+<a id="helm-launch-p4-unpublished-attribution-cleanup"></a>
+
+### Owner disposition 2026-09-20 — **HELM-LAUNCH P4**: `R-P4PUB-I1` closed by a metadata-only rewrite of the unpublished chain
+
+**`R-P4PUB-I1` is CLOSED / METADATA-ONLY BEFORE PUBLICATION.** The bounded independent re-review of
+the P4 first-publication corrections returned one IMPORTANT finding that was neither a product, a
+test nor an evidence defect: the two unpublished correction commits carried an AI-agent
+`Co-Authored-By` trailer, which [commit authorship](../AGENTS.md) forbids and which states that the
+repository rule is stronger than a tool's default instruction. Because both commits were still
+**unpublished**, the repository owner, Djomla83, required the trailers to be removed **before**
+publication rather than becoming permanent. This disposition records that rewrite and proves, by
+exact tree identity, that nothing else changed.
+
+| Item | Value |
+|---|---|
+| Finding | `R-P4PUB-I1` — **CLOSED / METADATA-ONLY BEFORE PUBLICATION** |
+| Class | repository policy / commit metadata — **not** a product, test or evidence defect |
+| Published base | `94ee48da0cc412f0d8043e34b914c198615b923e` — **NOT REWRITTEN** |
+| Published history | **NOT REWRITTEN, NOT FORCE PUSHED, NOTHING PUSHED** |
+| `main` | **UNCHANGED** |
+| ADR-0024 product contract | **UNCHANGED** |
+| P4 product contract | **UNCHANGED** |
+| P4 hosted Linux runtime | **PENDING NEW PUBLICATION CI** |
+| HELM-LAUNCH P5 | **NOT AUTHORISED** |
+| Trial #3 | frozen **`MECHANISM_REJECTED`**, unchanged, must not be rerun |
+| Trial #4 | **NOT AUTHORISED** |
+
+#### 1. Commit mapping
+
+Only the unpublished descendants of the published base were rewritten. Each commit was rebuilt
+against its original tree object, so the mapping is provable rather than asserted.
+
+| Role | Old SHA | New attribution-clean SHA | Tree SHA (both) | Tree |
+|---|---|---|---|---|
+| Owner disposition | `cfe2537ba638c536d2edd2a9660998713a443b89` | `59f15c3d59c9e4c496bcaca1065076be88ea5301` | `5bb327622ad2b7f64e6e6f45c7ebb2d1ab616d03` | **IDENTICAL** |
+| Test/evidence correction | `aed3fd2564f47d2b0a999b553133d057b68783e1` | `eb673f5728e4e721427d3c0c73892e4990607f8a` | `52b8a86a58c63d05858838db0dd9ca03ec2bbf64` | **IDENTICAL** |
+| Independent re-review | `5aca7d593c9152b0252f2ed38be782fade0b4dc3` | `3ce7eb31fcbb4471245ee10b7763d465184f7ada` | `aa18dff18912576cffe3b998155c6bd451cd2a33` | **IDENTICAL** |
+
+The commit SHAs necessarily changed, because a commit object commits to its message and its parent.
+The **tree** SHAs did not change at all, which is the load-bearing fact.
+
+#### 2. What changed, and what did not
+
+Exactly two commit messages lost exactly one trailer line each, together with the blank line that
+separated it from the body. Nothing else in either message was touched: subject, body, findings,
+blockers, run identifiers and authority statements are byte-identical to what was reviewed. The
+independent re-review commit's message was replayed **byte-identical**; it carried no trailer and
+needed no change. Author and committer identity and both timestamps were preserved exactly on all
+three commits, so the only metadata deltas are the removed trailers and the new parent identities.
+
+* **No product change.** No file under `crates/` differs from the reviewed state.
+* **No test change.** The corrected oracles are exactly the reviewed oracles.
+* **No documentation-content change** inside the three replayed commits.
+* **No review artifact change.** `HELM-LAUNCH-P4-FIRST-PUBLICATION-CORRECTION-REREVIEW.md` is
+  byte-identical, and **no review finding was altered, softened or removed.**
+* **No published history rewritten.** `94ee48da0cc412f0d8043e34b914c198615b923e` and every ancestor
+  are untouched and the base is still an ancestor of `HEAD`.
+
+The re-review commit's body still quotes the `Co-Authored-By` trailer inside its statement of
+`R-P4PUB-I1`. That occurrence is the **finding itself**, not an attribution, and it was deliberately
+preserved: altering it would have altered a review finding.
+
+#### 3. Why no new technical re-review is required
+
+The independent re-review reviewed the **content** of the disposition and the correction, which is
+exactly what a tree object names. Since the old and new tree SHAs are identical for all three
+commits, the reviewed content is bit-for-bit the content now on the branch, and the re-review
+carries forward unchanged. Had any tree differed, the required response was to stop and return
+`TECHNICAL CONTENT CHANGED — NEW INDEPENDENT REREVIEW REQUIRED`. No tree differed. This disposition
+is the provenance bridge between the old and new SHAs; the re-review was **not** reopened merely
+because commit identities changed.
+
+#### 4. Attribution state of the unpublished range
+
+No commit in `94ee48da0cc412f0d8043e34b914c198615b923e..HEAD` carries a `Co-Authored-By` trailer, a
+"Generated with" signature, an agent signature in the body or any other AI-agent attribution.
+`git interpret-trailers --parse` returns an empty trailer set for every commit in the range, and the
+author and committer of every commit is the human owner who approves the change and takes
+responsibility for it. No commit outside this unpublished range was inspected for modification or
+modified.
+
+#### 5. Boundary of this disposition
+
+This disposition is recorded in documentation only. It changes no product code, test, workflow,
+Cargo file, ADR contract, experiment or evidence, does not touch `main`, promotes no traceability
+row and accepts no P4 gate. Nothing was pushed and no historical CI run was rerun: runs
+`35499943908` and `35499943903` both remain **attempt 1, FAILURE**. **NO RETRY. NO RERUN. NO
+REPLACEMENT.**
+
+**TRIAL #3 FROZEN RESULT REMAINS `MECHANISM_REJECTED`. TRIAL #3 MUST NOT BE RERUN.**
+
+**NO TRIAL #4 IS AUTHORISED.**
+
+**HELM-LAUNCH P1, P2 AND P3 ARE ACCEPTED. P4 IS AUTHORISED, CORRECTED, INDEPENDENTLY RE-REVIEWED AND
+ATTRIBUTION-CLEAN, AND ITS LINUX RUNTIME REMAINS UNVALIDATED. P4 IS NOT ACCEPTED. P5 IS NOT
+AUTHORISED. THE COMPLETE HELM-LAUNCH 0.1 MODULE IS NOT PRODUCT-ACCEPTED.**
+
+**Next gate: ONE FAST-FORWARD PUBLICATION OF THE ATTRIBUTION-CLEAN REVIEWED CHAIN, then NEW NATURAL
+HOSTED P4 CI.**
