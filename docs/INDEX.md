@@ -20,6 +20,16 @@ experimental schema/API and limits; A0-7ZIP experimental FAIL remains unchanged.
 [portable test vectors](implementation/helm-launch-receipt-0.1-test-vectors.json); the vectors are
 data, carry no authenticity claim, and their digests are recomputable from the published bytes.
 
+## Vizuelni proizvod (G2)
+
+[HELM G2 — visual product kickoff](implementation/HELM-G2-VISUAL-KICKOFF.md) defines the first
+visible HELM desktop application: a repository capability audit, the information architecture, the
+primary journey, the screen map and specifications, the state and error vocabulary, the first real
+vertical slice and the G2-D1 to G2-D9 acceptance gates. **Gates G2-D1 to G2-D8 are owner-accepted
+since 2026-09-21** — D1 to D7 with four recorded clarifications, and D8 recording the
+*Record / graphite frame* visual direction in section 8.16. **G2-D9 (toolkit selection) remains
+pending**, so **no toolkit is selected and no GUI code or backend work is authorised**.
+
 ## Odluke i istraživanja
 
 [ADR index](DECISIONS.md): nineteen Proposed records, ADR-0020 Accepted for documentation language,
