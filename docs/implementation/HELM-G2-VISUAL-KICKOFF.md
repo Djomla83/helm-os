@@ -887,8 +887,10 @@ marketing surface.
 | Density | **Medium** information density |
 
 **Secondary reference, non-canonical.** An *Instrument* direction — a lighter sidebar-and-panel
-treatment — is retained for comparison of **restraint and spacing only**. It is explicitly not
-canonical, it is not a live option, and adopting it would require a new recorded owner decision.
+treatment — was compared for **restraint and spacing only**. It is explicitly not canonical, it is
+not a live option, and adopting it would require a new recorded owner decision. It is no longer
+carried as an artefact in this repository: the canonical prototype directory holds exactly one
+approved design (8.16.7).
 
 #### 8.16.2 Working token set
 
@@ -953,12 +955,17 @@ The accepted direction is recorded as a clickable HTML prototype so the owner ca
 density, hierarchy, navigation, progressive disclosure, copy and state differentiation by operating
 it rather than by reading about it.
 
+The canonical artefact is the **owner-approved designer final**, normalised into plain standalone
+HTML, CSS and vanilla JavaScript. It supersedes and replaces the earlier prototype in that
+directory, which was built from an older designer variant; no alternate or historical variant is
+retained beside it.
+
 | Item | Value |
 |---|---|
 | Canonical entry point | [docs/prototypes/g2-html/index.html](../prototypes/g2-html/index.html) |
-| Description and limits | [prototype README](../prototypes/g2-html/README.md) |
+| Description, screen inventory and limits | [prototype README](../prototypes/g2-html/README.md) |
 | Canonical direction shown | **Record / graphite frame** |
-| Secondary reference | [alternates/instrument.html](../prototypes/g2-html/alternates/instrument.html) — retained for restraint and spacing comparison only, **non-canonical** |
+| Variants retained | none — one approved D8 design only |
 
 The prototype is **design evidence and nothing else**. It is a throwaway HTML, CSS and vanilla
 JavaScript artefact with no backend connection, no build step and no network access; every path,
@@ -973,8 +980,14 @@ and the prototype is wrong.
 reported 0*, with exec status indeterminate. It does not yet interactively expose the other accepted
 result states of sections 9 and 12: *ended, reported non-zero*; *run deadline expired* with
 termination facts; *signalled*; *end unobservable*; pre-exec failure; and pre-child `LaunchError`.
-The three admission refusals of 10.3 are demonstrated. Extending this coverage is new prototype work
-and an owner decision; it is recorded here as a follow-up and it blocks nothing.
+Two admission refusals of 10.3 are demonstrated — *not an ELF executable* and *set-id bits present*.
+Extending this coverage is new prototype work and an owner decision; it is recorded here as a
+follow-up and it blocks nothing.
+
+**Recorded fidelity note.** The approved final carries a single application-wide *Normal / Advanced*
+disclosure switch, while the technical detail it governs is attached per section, one layer deep.
+8.16.6 asks for disclosure that is local rather than global. The prototype follows the approved
+final and records the difference in its README; resolving it is an owner matter and blocks nothing.
 
 ---
 

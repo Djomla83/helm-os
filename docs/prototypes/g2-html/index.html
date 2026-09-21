@@ -3,572 +3,501 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HELM G2 — interaction prototype (non-product)</title>
+<title>HELM G2 — non-product interaction prototype</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<header class="masthead">
-  <div class="brand">
-    <span class="word">H<em>e</em>lm</span>
-    <span class="sub">g2 · record</span>
+<div class="app">
+
+  <div class="titlebar">
+    <span class="titlebar__dot"></span>
+    <span class="titlebar__dot"></span>
+    <span class="titlebar__dot"></span>
+    <span class="titlebar__name">Helm</span>
   </div>
-  <div class="disclaimer">
-    <b>Non-product prototype</b>
-    <span>mock data · no backend · nothing is launched</span>
-    <span class="spacer"></span>
-    <a class="mlink" href="screens.html">All screens</a>
-    <a class="mlink" href="alternates/instrument.html">Reference direction (non-canonical)</a>
+
+  <div class="app__body">
+
+    <div class="rail">
+      <div>
+        <div class="rail__brand">
+          <span class="rail__wordmark">Helm</span>
+          <span class="rail__g2">g2</span>
+        </div>
+        <nav class="rail__nav" aria-label="Sections">
+          <button type="button" class="navitem" data-go="library"><span class="navitem__dot"></span>Library</button>
+          <button type="button" class="navitem" data-go="program"><span class="navitem__dot"></span>Chosen program</button>
+          <button type="button" class="navitem" data-go="authority"><span class="navitem__dot"></span>Authority</button>
+          <button type="button" class="navitem" data-go="evidence"><span class="navitem__dot"></span>Evidence</button>
+        </nav>
+      </div>
+      <div class="rail__foot">
+        <div class="rail__label" data-bind="railLabel"></div>
+        <div class="rail__note" data-bind="railNote"></div>
+      </div>
+    </div>
+
+    <div class="sheet">
+     <div class="sheet__scroll">
+
+      <!-- ===================== LIBRARY ===================== -->
+      <section class="screen" data-screen="library" hidden>
+        <div class="screen__pad">
+          <div class="lib__head">
+            <div>
+              <h1 class="h1 h1--lg">Library</h1>
+              <p class="lede">What HELM currently has open, and the way to choose another program.</p>
+            </div>
+            <button type="button" class="btn btn--primary btn--noshrink" data-go="choose">Choose local program</button>
+          </div>
+
+          <div data-if="libraryEmpty" hidden>
+            <div class="row row--top-strong row--gap-md2">
+              <div class="row__label">Nothing is open</div>
+              <div class="row__body row__body--wide">HELM knows nothing about any program yet. Choosing one opens it, measures it and keeps it here for this session. Nothing is installed, nothing is added and nothing is written to disk.</div>
+            </div>
+          </div>
+
+          <div data-if="libraryHasEntry" hidden>
+            <div class="ledger__head">
+              <span class="col-program">Program</span><span class="col-state">State</span><span class="col-time">Opened</span>
+            </div>
+            <div class="ledger__row">
+              <div class="col-program">
+                <div class="entry__name">helm-probe</div>
+                <div class="entry__path num">/home/mk/build/helm-probe</div>
+              </div>
+              <div class="col-state">
+                <div class="stateline">
+                  <span class="shape" data-bind-shape="entry"></span>
+                  <span class="stateline__word" data-bind="entryStateWord"></span>
+                </div>
+                <div class="stateline__note" data-bind="entryStateNote"></div>
+              </div>
+              <span class="col-time num">11:42:07</span>
+            </div>
+            <div class="actions actions--afterledger">
+              <button type="button" class="btn btn--quiet btn--strong" data-go="program">Open program</button>
+              <button type="button" class="linkbtn" data-go="authority">Review authority</button>
+              <button type="button" class="linkbtn linkbtn--muted" data-act="closeEntry">Close program</button>
+            </div>
+          </div>
+
+          <div class="row row--top-soft row--gap-lg">
+            <div class="row__label row__label--accent">Not installing</div>
+            <div class="row__body row__body--widest row__body--sm">Choosing is not installing and not adding. HELM opens the file to inspect it, keeps the choice for this session, and changes nothing on disk. HELM does not install anything yet; doing so would need a source of record, an acquisition path and a replacement transaction.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== CHOOSE ===================== -->
+      <section class="screen" data-screen="choose" hidden>
+        <div class="screen__pad">
+          <div class="crumb">Library · Choose</div>
+          <h1 class="h1 h1--crumbed">Which program, and where should it run?</h1>
+          <p class="lede lede--wide">HELM opens the file you choose and measures it. It does not run, copy, modify or install anything at this step.</p>
+
+          <div class="row row--top-strong row--gap-md">
+            <div class="row__label-block">
+              <div class="row__label">The program file</div>
+              <div class="row__phase" data-bind="programPhase"></div>
+            </div>
+            <div class="row__field">
+              <div data-if="noProgram" hidden>
+                <div class="field__note">Nothing is chosen. HELM knows nothing about this until a file is opened.</div>
+                <button type="button" class="btn btn--primary btn--sm mt14" data-act="openChooser">Choose a program file…</button>
+              </div>
+              <div data-if="programAdmitted" hidden>
+                <div class="field__title">helm-probe</div>
+                <div class="entry__path num">/home/mk/build/helm-probe</div>
+                <div class="facts mt16">
+                  <div class="fact"><span class="fact__k">Kind</span><span class="fact__v num">Regular file</span></div>
+                  <div class="fact"><span class="fact__k">Size</span><span class="fact__v num">41 984 bytes</span></div>
+                  <div class="fact"><span class="fact__k">File mode bits</span><span class="fact__v num">0o755</span></div>
+                  <div class="fact"><span class="fact__k">ELF type</span><span class="fact__v num">EXEC</span></div>
+                </div>
+                <div class="microcopy mt12 microcopy--wide">HELM opened and measured this file. It did not run, copy, modify or install anything. This is a pre-execution measurement of the pinned object, never the identity of bytes that executed.</div>
+                <div data-if="advanced" hidden>
+                  <div class="fact fact--adv mt12">
+                    <span>Measurement digest<span class="fact__code">pre_exec_sha256</span></span>
+                    <span class="num fact__v">sha256:9d41…c7e0</span>
+                  </div>
+                </div>
+              </div>
+              <div data-if="programRefused" hidden>
+                <div class="stateline">
+                  <span class="mark mark--refused"></span>
+                  <span class="refusal__title" data-bind="refusalTitle"></span>
+                </div>
+                <div class="refusal__text" data-bind="refusalText"></div>
+                <div class="refusal__code num" data-bind="refusalCode"></div>
+                <div class="microcopy mt10 microcopy--wide">Nothing was admitted. HELM closed the descriptor it opened and kept nothing.</div>
+                <button type="button" class="btn btn--quiet btn--strong mt14" data-act="openChooser">Choose a different file…</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="row row--top-soft row--gap-xs">
+            <div class="row__label-block">
+              <div class="row__label">The working folder</div>
+              <div class="row__phase" data-bind="folderPhase"></div>
+            </div>
+            <div class="row__field">
+              <div data-if="folderAdmitted" hidden>
+                <div class="field__path num">/home/mk/build/helm-probe</div>
+                <div class="field__note mt8">Directory, identifier <span class="num">wd-7</span>. The program will start here.</div>
+              </div>
+              <div data-if="folderPending" hidden>
+                <div class="field__note">Not chosen yet.</div>
+                <button type="button" class="btn btn--quiet btn--strong mt14" data-act="chooseFolder">Choose a working folder…</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="footrow">
+            <div class="footrow__note">Cancel closes every descriptor HELM opened and leaves nothing behind.</div>
+            <div class="footrow__actions">
+              <button type="button" class="linkbtn linkbtn--muted" data-go="library">Cancel</button>
+              <span data-if="chooseComplete" hidden>
+                <button type="button" class="btn btn--primary" data-go="program">Continue</button>
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== CHOSEN PROGRAM ===================== -->
+      <section class="screen" data-screen="program" hidden>
+        <div class="screen__pad">
+          <div class="crumb">Library · Chosen program</div>
+          <div class="pagehead">
+            <div>
+              <h1 class="h1">helm-probe</h1>
+              <div class="stateline stateline--head">
+                <span class="shape" data-bind-shape="entry"></span>
+                <span class="stateline__word" data-bind="entryStateWord"></span>
+                <span class="stateline__dash">— <span data-bind="entryStateNote"></span></span>
+              </div>
+            </div>
+            <div class="pagehead__actions">
+              <span data-if="canAuthorise" hidden>
+                <button type="button" class="btn btn--primary" data-go="authority">Review what this will be permitted to use</button>
+              </span>
+              <span data-if="canAttempt" hidden>
+                <button type="button" class="btn btn--primary" data-act="startAttempt">Attempt launch</button>
+              </span>
+            </div>
+          </div>
+
+          <div data-if="canAttempt" hidden>
+            <div class="row row--bottom-soft">
+              <div class="row__label row__label--accent">Launch available</div>
+              <div class="row__body row__body--widest row__body--ink">A single-use authorisation exists. It is consumed by one attempt; after that, authorising happens again. Going back now discards it and requires choosing the file and folder again.</div>
+            </div>
+          </div>
+
+          <div class="row row--bottom-soft">
+            <div class="row__label">Overview</div>
+            <div class="row__field">
+              <div class="facts">
+                <div class="fact"><span class="fact__k">Program file</span><span class="fact__v num">/home/mk/build/helm-probe</span></div>
+                <div class="fact"><span class="fact__k">Working folder</span><span class="fact__v num">/home/mk/build/helm-probe</span></div>
+                <div class="fact"><span class="fact__k">Measured</span><span class="fact__v num">41 984 bytes · ELF EXEC · 0o755</span></div>
+              </div>
+              <div class="microcopy mt10">HELM has no application identity, version or icon for this program. Those would come from a specification HELM cannot read yet.</div>
+            </div>
+          </div>
+
+          <div class="row row--bottom-soft">
+            <div class="row__label">Runtime</div>
+            <div class="row__field">
+              <div class="field__note field__note--ink">HELM runs this program directly on this computer.</div>
+              <div data-if="advanced" hidden>
+                <div class="fact fact--adv mt10">
+                  <span>Backend identity<span class="fact__code">backend</span></span>
+                  <span class="num fact__v">linux_x86_64_clone3_pidfd_execveat</span>
+                </div>
+              </div>
+              <div class="microcopy mt10">There is no runtime selection. Wine, Proton, a PWA runtime and a MicroVM do not exist in HELM and are not offered here.</div>
+            </div>
+          </div>
+
+          <div class="row row--bottom-soft">
+            <div class="row__label">Result</div>
+            <div class="row__field">
+              <div data-if="hasResult" hidden>
+                <div class="field__note field__note--ink">The program ended and reported 0. HELM does not interpret what that number means.</div>
+                <div class="actions mt12">
+                  <button type="button" class="btn btn--quiet btn--strong" data-go="result">Open last result</button>
+                  <button type="button" class="linkbtn" data-go="evidence">Launch details</button>
+                </div>
+              </div>
+              <div data-if="noResult" hidden>
+                <div class="field__note">No launch has been attempted.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row row--bottom-soft">
+            <div class="row__label">Updates</div>
+            <div class="row__field field__note">HELM cannot check for updates. It has no updater, no source to check against and no record of what it previously had.</div>
+          </div>
+
+          <div class="row">
+            <div class="row__label">Recovery</div>
+            <div class="row__field">
+              <div class="chips">
+                <button type="button" class="btn btn--quiet btn--chip" data-go="authority">Review authority</button>
+                <button type="button" class="btn btn--quiet btn--chip" data-go="choose">Choose a different program or folder</button>
+                <button type="button" class="btn btn--quiet btn--chip" data-act="closeEntry">Close program</button>
+              </div>
+              <div class="microcopy mt12">Repair, rollback, reset and re-prepare are not shown as controls: nothing in HELM prepares an environment, so there is nothing to repair or return to a known state. Closing deletes nothing on disk.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== AUTHORITY ===================== -->
+      <section class="screen" data-screen="authority" hidden>
+        <div class="screen__pad screen__pad--authority">
+          <div class="pagehead pagehead--titleonly">
+            <h1 class="h1 h1--clamped">Authorise one launch of helm-probe?</h1>
+            <div class="pagehead__meta">Authority review<br>Single use</div>
+          </div>
+
+          <h2 class="grouphead">What HELM will permit for this one attempt</h2>
+          <div class="list">
+            <div class="item"><span class="item__n num">01</span><span class="item__k">The program</span><span class="item__v">HELM will run exactly this file — the one it inspected, not a file found by name later.</span></div>
+            <div class="item"><span class="item__n num">02</span><span class="item__k">The folder</span><span class="item__v">It will start in <span class="num">/home/mk/build/helm-probe</span>.</span></div>
+            <div class="item"><span class="item__n num">03</span><span class="item__k">The input</span><span class="item__v">It will receive no input. Anything it reads from input ends immediately.</span></div>
+            <div class="item"><span class="item__n num">04</span><span class="item__k">The time</span><span class="item__v">It may run for at most 30 seconds. After that HELM asks it to stop, waits 5 seconds, then forces it.</span></div>
+          </div>
+
+          <h2 class="grouphead grouphead--spaced">What HELM does not do</h2>
+          <div class="list">
+            <div class="item"><span class="item__n num">05</span><span class="item__k">No settings</span><span class="item__v">HELM passes no environment settings at all — not your home folder, not your display, not your language.</span></div>
+            <div class="item"><span class="item__n num">06</span><span class="item__k">No inheritance</span><span class="item__v">It inherits no open files or connections from HELM beyond its own input and output.</span></div>
+            <div class="item"><span class="item__n num">07</span><span class="item__k">No new privileges</span><span class="item__v">It cannot gain additional privileges while starting.</span></div>
+            <div class="item item--last"><span class="item__n num">08</span><span class="item__k">Everything else</span><span class="item__v">Beyond those, this program runs with the same access you have. HELM does not restrict what it can read or change on this computer.</span></div>
+          </div>
+
+          <div class="pull">
+            <span class="item__n"></span>
+            <p class="pull__text">HELM does not contain this program. It starts it and watches it. It does not restrict which files it can open, what it can change or what it can reach on the network.</p>
+          </div>
+
+          <div data-if="advanced" hidden>
+            <div class="pull pull--tight">
+              <span class="item__n"></span>
+              <div class="pull__body">
+                <div class="grouphead grouphead--inline">Technical detail</div>
+                <div class="grid2">
+                  <div class="fact fact--adv"><span><span class="fact__label">Environment settings</span><span class="fact__code">environment_mode</span></span><span class="num fact__v fact__v--sm">empty</span></div>
+                  <div class="fact fact--adv"><span><span class="fact__label">Input</span><span class="fact__code">stdin_mode</span></span><span class="num fact__v fact__v--sm">closed_pipe_eof</span></div>
+                  <div class="fact fact--adv"><span><span class="fact__label">Run deadline</span><span class="fact__code">timeout_ms</span></span><span class="num fact__v fact__v--sm">30000 ms</span></div>
+                  <div class="fact fact--adv"><span><span class="fact__label">Grace period</span><span class="fact__code">grace_ms</span></span><span class="num fact__v fact__v--sm">5000 ms</span></div>
+                  <div class="fact fact--adv"><span><span class="fact__label">Arguments</span><span class="fact__code">argv_len</span></span><span class="num fact__v fact__v--sm">1</span></div>
+                  <div class="fact fact--adv"><span><span class="fact__label">Plan identity</span><span class="fact__code">plan_sha256</span></span><span class="num fact__v fact__v--sm">sha256:4f1c…9ab2</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="footrow footrow--strong">
+            <div class="footrow__note footrow__note--narrow">An authorisation is single-use. Every attempt authorises again — nothing stands after this one launch.</div>
+            <div class="footrow__actions">
+              <button type="button" class="linkbtn linkbtn--muted" data-act="refuseAuthority">Do not authorise</button>
+              <button type="button" class="btn btn--primary" data-act="authorise">Authorise this one launch</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== ATTEMPT ===================== -->
+      <section class="screen" data-screen="attempt" hidden>
+        <div class="screen__pad">
+          <div class="crumb">helm-probe · Attempt</div>
+          <div class="attempt__title">
+            <span class="mark mark--attempt"></span>
+            <h1 class="h1">Launch attempt in progress</h1>
+          </div>
+          <p class="lede lede--ink lede--wider">HELM called launch and the call has not returned. This is a fact about HELM's own call. HELM has not established that the program is running.</p>
+
+          <div class="row row--top-strong row--gap-md">
+            <div class="row__label">Elapsed against the bound</div>
+            <div class="row__field">
+              <div class="elapsed num" data-bind="elapsedLabel"></div>
+              <div class="meter"><div class="meter__fill" data-bind-width="elapsedPct"></div></div>
+              <div class="microcopy mt10">This is a bound, not progress towards success. Reaching the deadline is a described outcome, not a failure to finish in time.</div>
+            </div>
+          </div>
+
+          <div class="row row--top-soft row--gap-sm">
+            <div class="row__label">When the deadline expires</div>
+            <div class="row__field">
+              <div class="steps">
+                <div class="step"><span class="item__n num">01</span><span class="step__t">HELM asks the program to stop.</span></div>
+                <div class="step"><span class="item__n num">02</span><span class="step__t">It waits 5 seconds.</span></div>
+                <div class="step"><span class="item__n num">03</span><span class="step__t">It forces the program to stop.</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row row--top-soft row--gap-sm">
+            <div class="row__label">No cancel</div>
+            <div class="row__field field__note field__note--ink field__note--sm">HELM cannot stop an attempt it started. The launch call is synchronous and returns no handle, so there is nothing to cancel and nothing to observe live. Making that possible needs orchestration HELM does not have.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== RESULT ===================== -->
+      <section class="screen" data-screen="result" hidden>
+        <div class="screen__pad">
+          <div class="crumb">helm-probe · Result</div>
+          <div class="pagehead">
+            <div>
+              <div class="stateline stateline--result">
+                <span class="shape shape--ended"></span>
+                <span class="stateline__word">Ended</span>
+              </div>
+              <h1 class="h1 h1--result">The program ended and reported 0.</h1>
+              <p class="lede lede--sm">HELM does not interpret what that number means. The program is the authority on its own exit codes.</p>
+            </div>
+            <div class="pagehead__actions">
+              <button type="button" class="linkbtn" data-go="evidence">Launch details</button>
+              <button type="button" class="btn btn--primary" data-go="authority">Attempt launch again</button>
+            </div>
+          </div>
+
+          <h2 class="grouphead">The facts that qualify it</h2>
+          <div class="list">
+            <div class="item"><span class="item__n num">01</span><span class="item__k item__k--wide">Start-up report</span><span class="item__v">HELM received no start-up failure report. It did not establish that the program began running.</span></div>
+            <div class="item"><span class="item__n num">02</span><span class="item__k item__k--wide">How it ended</span><span class="item__v">The direct child was observed to end by exit, reporting 0.</span></div>
+            <div class="item"><span class="item__n num">03</span><span class="item__k item__k--wide">Run deadline</span><span class="item__v">The deadline did not expire. HELM issued no stop and no force.</span></div>
+            <div class="item"><span class="item__n num">04</span><span class="item__k item__k--wide">Group cleanup</span><span class="item__v">Group cleanup was issued. That is not containment: a descendant that left the group survives it.</span></div>
+            <div class="item item--last"><span class="item__n num">05</span><span class="item__k item__k--wide">What was read</span><span class="item__v">Output and errors were drained to the end of file. Nothing was cut short.</span></div>
+          </div>
+
+          <div class="row row--top-soft row--gap-lg2">
+            <div class="row__label">Program output</div>
+            <div class="row__field">
+              <div class="facts">
+                <div class="fact"><span class="fact__k">Output</span><span class="fact__v num">1 284 bytes</span></div>
+                <div class="fact"><span class="fact__k">Errors and messages</span><span class="fact__v num">0 bytes</span></div>
+              </div>
+              <div class="actions mt12">
+                <button type="button" class="btn btn--quiet" data-act="toggleOutput" data-bind="outputToggleLabel" aria-expanded="false" aria-controls="output-panel"></button>
+                <span class="microcopy microcopy--inline">Kept in memory for this session only</span>
+              </div>
+              <div id="output-panel" data-if="outputOpen" hidden>
+                <div class="outputpanel">
+                  <div class="mono">probe: reading working folder
+probe: 14 entries
+probe: done</div>
+                  <div class="microcopy mt10">Output can contain anything the program printed, including paths. It is never included in an export without a separate, explicit opt-in.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row row--top-soft row--gap-sm">
+            <div class="row__label">What is next</div>
+            <div class="row__field chips">
+              <button type="button" class="btn btn--quiet btn--chip" data-go="program">Back to the program</button>
+              <button type="button" class="btn btn--quiet btn--chip" data-go="evidence">View evidence</button>
+              <button type="button" class="btn btn--quiet btn--chip" data-go="choose">Choose a different program</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== EVIDENCE ===================== -->
+      <section class="screen" data-screen="evidence" hidden>
+        <div class="screen__pad">
+          <div class="crumb">helm-probe · Result · Launch details</div>
+          <div class="pagehead pagehead--titleonly">
+            <h1 class="h1">What exactly was recorded</h1>
+            <button type="button" class="btn btn--primary btn--noshrink" data-act="copyBytes" data-bind="copyLabel"></button>
+          </div>
+
+          <div class="pull pull--lede">
+            <span class="item__n"></span>
+            <p class="pull__plain">This receipt is data. It records what HELM observed. It is not signed, carries no proof of origin, and grants no permission to run anything. Anyone can write bytes that look like it. Its digest identifies exactly these bytes and nothing else.</p>
+          </div>
+
+          <h2 class="grouphead grouphead--flush">Receipt facts</h2>
+          <div class="list">
+            <div class="item item--tight"><span class="item__n num">01</span><span class="item__k item__k--widest">Exec status<span class="fact__code">exec_status</span></span><span class="item__v num">indeterminate · status_eof_without_record</span></div>
+            <div class="item item--tight"><span class="item__n num">02</span><span class="item__k item__k--widest">Child end<span class="fact__code">child_end</span></span><span class="item__v num">exited · code 0</span></div>
+            <div class="item item--tight"><span class="item__n num">03</span><span class="item__k item__k--widest">Termination<span class="fact__code">sigterm_sent · sigkill_sent · group_sweep</span></span><span class="item__v num">false · false · issued</span></div>
+            <div class="item item--tight"><span class="item__n num">04</span><span class="item__k item__k--widest">Output stream<span class="fact__code">stdout · drained · completeness</span></span><span class="item__v num">1 284 bytes · complete_at_eof</span></div>
+            <div class="item item--tight"><span class="item__n num">05</span><span class="item__k item__k--widest">Error stream<span class="fact__code">stderr · drained · completeness</span></span><span class="item__v num">0 bytes · complete_at_eof</span></div>
+            <div class="item item--tight"><span class="item__n num">06</span><span class="item__k item__k--widest">Pre-execution measurement<span class="fact__code">size · sha256 · mode_bits · elf_type</span></span><span class="item__v num">41 984 · sha256:9d41…c7e0 · 0o755 · EXEC</span></div>
+            <div class="item item--tight"><span class="item__n num">07</span><span class="item__k item__k--widest">Plan identity<span class="fact__code">plan_sha256</span></span><span class="item__v num">sha256:4f1c…9ab2</span></div>
+            <div class="item item--tight item--last"><span class="item__n num">08</span><span class="item__k item__k--widest">Backend identity<span class="fact__code">backend</span></span><span class="item__v num">linux_x86_64_clone3_pidfd_execveat</span></div>
+          </div>
+
+          <div class="row row--top-soft row--gap-lg2">
+            <div class="row__label">SHA-256 of the exact receipt bytes</div>
+            <div class="row__field">
+              <div class="digest mono">3f8a1c9e5b47d20a6c1f8e93b7d4a05c2e6f9182d3b7c4a5e8f01926d7c3b4a5</div>
+              <div class="microcopy mt10">Reformatting a receipt changes its bytes and therefore its digest. Copying copies the exact bytes, unreformatted.</div>
+            </div>
+          </div>
+
+          <div class="row row--top-soft row--gap-sm">
+            <div class="row__label">Exact bytes</div>
+            <div class="row__field">
+              <div class="bytes mono" data-bytes></div>
+            </div>
+          </div>
+
+          <div class="footrow footrow--strong footrow--left">
+            <button type="button" class="btn btn--quiet" data-go="result">Back to result</button>
+            <span class="microcopy microcopy--inline">This screen is the whole disclosure; there is no further level.</span>
+          </div>
+        </div>
+      </section>
+
+     </div>
+
+      <div class="statusbar">
+        <div class="statusbar__subject">
+          <span class="shape shape--sm" data-bind-shape="entry"></span>
+          <span class="statusbar__text" data-bind="footerSubject"></span>
+        </div>
+        <div class="statusbar__facts num">
+          <span data-bind="footerBound"></span>
+          <button type="button" class="statusbar__mode" data-act="toggleMode" data-bind="footerMode"></button>
+          <span>Session memory</span>
+        </div>
+      </div>
+
+    </div>
   </div>
-</header>
-
-<nav class="rail" aria-label="Attempt sequence">
-  <button type="button" class="rail-step" data-step="choose" data-state="current">
-    <span class="n">1</span> Choose
-  </button>
-  <button type="button" class="rail-step" data-step="authority" data-state="pending">
-    <span class="n">2</span> Authority
-  </button>
-  <button type="button" class="rail-step" data-step="attempt" data-state="pending">
-    <span class="n">3</span> Attempt
-  </button>
-  <button type="button" class="rail-step" data-step="result" data-state="pending">
-    <span class="n">4</span> Result
-  </button>
-  <button type="button" class="rail-step" data-step="evidence" data-state="pending">
-    <span class="n">5</span> Evidence
-  </button>
-</nav>
-
-<div class="stage">
-
-  <main class="work" id="work" tabindex="-1">
-
-    <!-- ============ 00 · SESSION HOME ============ -->
-    <section class="screen" data-screen="home" hidden>
-      <div class="block block--hero">
-        <div class="side"><span class="num">0</span><span class="label">Session</span></div>
-        <div class="body">
-          <h1 id="home-title">Nothing is open in HELM.</h1>
-          <p class="standfirst" id="home-standfirst">
-            Choose a program file and a working folder on this computer. Choosing is not installing
-            and not adding. HELM opens the file, measures it, and changes nothing on disk.
-          </p>
-          <div class="acts" style="margin-top:26px">
-            <button type="button" class="btn btn--primary" data-action="choose-start">Choose local program</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="block" id="home-open" hidden>
-        <div class="side"><span class="num">1</span><span class="label">Open now</span></div>
-        <div class="body">
-          <div class="acts" style="align-items:flex-start">
-            <div style="flex:1;min-width:0">
-              <h2 style="font-family:var(--font-display);font-size:28px;font-weight:700">hello-cli</h2>
-              <table class="ruled" style="margin-top:14px">
-                <tr><th>Program file</th><td class="mono">/home/you/apps/hello-cli</td></tr>
-                <tr><th>Working folder</th><td class="mono">/home/you/work</td></tr>
-                <tr><th>Last attempt</th><td id="home-last">None in this session</td></tr>
-              </table>
-            </div>
-            <span class="stamp" id="home-stamp"><span class="glyph">○</span> Known</span>
-          </div>
-          <div class="acts" style="margin-top:22px">
-            <button type="button" class="btn btn--primary" data-goto="authority">Review authority</button>
-            <button type="button" class="btn" data-goto="result" id="home-result-btn" hidden>Last result</button>
-            <button type="button" class="btn" data-action="close-program">Close program</button>
-          </div>
-          <p class="aside" style="margin-top:22px">
-            Held for this session only. HELM has no durable library: closing HELM discards this and
-            nothing about it was written to disk.
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ 01 · CHOOSE ============ -->
-    <section class="screen" data-screen="choose" hidden>
-      <div class="block block--hero">
-        <div class="side"><span class="num">1</span><span class="label">Choose</span></div>
-        <div class="body">
-          <h1>Which program, and where should it run?</h1>
-          <p class="standfirst">
-            HELM opens what you choose, reads it to measure it, and reads nothing else. It does not
-            run, copy, move, modify or install anything. Cancelling closes everything HELM opened.
-          </p>
-        </div>
-      </div>
-
-      <div class="block">
-        <div class="side"><span class="label">Admission</span></div>
-        <div class="body">
-          <div class="op" id="op-program" data-state="active">
-            <span class="mark">▸</span>
-            <div>
-              <h3>Inspect the program</h3>
-              <p class="status" id="op-program-status">Nothing chosen yet.</p>
-              <div id="program-refusal"></div>
-            </div>
-            <button type="button" class="btn btn--sm" data-action="open-chooser" data-mode="program" id="btn-choose-program">
-              Choose file
-            </button>
-          </div>
-
-          <div class="op" id="op-folder" data-state="pending">
-            <span class="mark">○</span>
-            <div>
-              <h3>Inspect the working folder</h3>
-              <p class="status" id="op-folder-status">Not checked yet.</p>
-              <div id="folder-refusal"></div>
-            </div>
-            <button type="button" class="btn btn--sm" data-action="open-chooser" data-mode="folder" id="btn-choose-folder" disabled>
-              Choose folder
-            </button>
-          </div>
-
-          <div class="disclose" id="disclose-admission" hidden>
-            <button type="button" aria-expanded="false" aria-controls="admission-tech">
-              <span class="pm">+</span> Technical detail
-            </button>
-            <div class="disclose-body" id="admission-tech" hidden>
-              <table class="ruled">
-                <tr><th>pre_exec_body_size</th><td class="mono">18456</td></tr>
-                <tr><th>pre_exec_body_sha256</th><td class="mono">9f2c41d7b8e0a35c6d14f8027be59a3c1d0e7f48ab2c9d5e6f10a3b7c8d29e45</td></tr>
-                <tr><th>pre_exec_mode_bits</th><td class="mono">0o755</td></tr>
-                <tr><th>elf_type</th><td class="mono">et_dyn</td></tr>
-                <tr><th>working_directory_id</th><td class="mono">workdir-01</td></tr>
-              </table>
-              <p class="aside" style="margin-top:14px">
-                A pre-execution measurement of the object HELM pinned open. Not the identity of bytes
-                that executed, and it says nothing about an interpreter or shared libraries. HELM
-                sampled five metadata fields and one byte count and found them unchanged; not
-                detecting a change is not evidence that none occurred.
-              </p>
-            </div>
-          </div>
-
-          <div class="acts" style="margin-top:26px">
-            <button type="button" class="btn btn--primary" id="btn-open-program" disabled data-action="open-entry">
-              Open for this session
-            </button>
-            <button type="button" class="btn" data-action="cancel-choose">Cancel</button>
-            <span class="small muted" id="open-hint">Nothing is installed, added or written.</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ 02 · AUTHORITY ============ -->
-    <section class="screen" data-screen="authority" hidden>
-      <div class="block block--hero">
-        <div class="side"><span class="num">2</span><span class="label">Authority</span></div>
-        <div class="body">
-          <h1>What this program is about to be allowed to use.</h1>
-          <p class="standfirst">
-            One attempt. Stated before it happens, in the order it takes effect.
-          </p>
-        </div>
-      </div>
-
-      <div class="block">
-        <div class="side"><span class="label">Permitted</span></div>
-        <div class="body">
-          <table class="ruled">
-            <tr>
-              <th>The program</th>
-              <td>HELM will run exactly this file — the one it inspected, not a file found by name later.</td>
-            </tr>
-            <tr>
-              <th>The folder</th>
-              <td>It will start in <span class="mono">/home/you/work</span>.</td>
-            </tr>
-            <tr>
-              <th>The input</th>
-              <td>It will receive no input. Anything it reads from input ends immediately.</td>
-            </tr>
-            <tr>
-              <th>The time</th>
-              <td>It may run for at most 30 seconds. After that HELM asks it to stop, waits 5 seconds, then forces it.</td>
-            </tr>
-          </table>
-        </div>
-      </div>
-
-      <div class="block">
-        <div class="side"><span class="label">Not granted</span></div>
-        <div class="body">
-          <table class="ruled">
-            <tr>
-              <th>No settings passed</th>
-              <td>HELM passes no environment settings at all — not your home folder, not your display, not your language.</td>
-            </tr>
-            <tr>
-              <th>Nothing inherited</th>
-              <td>It inherits no open files or connections from HELM beyond its own input and output.</td>
-            </tr>
-            <tr>
-              <th>No new privileges</th>
-              <td>It cannot gain additional privileges while starting.</td>
-            </tr>
-            <tr>
-              <th>Everything else</th>
-              <td>Beyond those, this program runs with the same access you have. HELM does not restrict what it can read or change on this computer.</td>
-            </tr>
-          </table>
-
-          <div class="pull" style="margin-top:28px">
-            HELM does not contain this program. It starts it and watches it. It does not restrict
-            which files it can open, what it can change or what it can reach on the network.
-          </div>
-
-          <div class="disclose">
-            <button type="button" aria-expanded="false" aria-controls="authority-tech">
-              <span class="pm">+</span> Technical detail
-            </button>
-            <div class="disclose-body" id="authority-tech" hidden>
-              <table class="ruled">
-                <tr><th>plan_sha256</th><td class="mono">4b7e9a21c0d83f56ae1b2c9d7048f3e5a6b1c2d093847fe5ab0c1d2e3f405162</td></tr>
-                <tr><th>execution_kind</th><td class="mono">linux_exact_executable</td></tr>
-                <tr><th>argument_count</th><td class="mono">1</td></tr>
-                <tr><th>environment.mode</th><td class="mono">empty</td></tr>
-                <tr><th>stdin.mode</th><td class="mono">closed_pipe_eof</td></tr>
-                <tr><th>capture_prefix_bytes</th><td class="mono">stdout 4096 · stderr 4096</td></tr>
-                <tr><th>timeout_ms</th><td class="mono">30000</td></tr>
-                <tr><th>termination</th><td class="mono">SIGTERM · grace_ms 5000</td></tr>
-                <tr><th>working_directory.capability_id</th><td class="mono">workdir-01</td></tr>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="block" id="authorise-block">
-        <div class="side"><span class="label">Authorise</span></div>
-        <div class="body">
-          <p class="lede">
-            Authorising produces one single-use authorisation. It covers this attempt only: every
-            further attempt is authorised again. HELM holds no standing grant.
-          </p>
-          <div class="acts" style="margin-top:22px">
-            <button type="button" class="btn btn--primary" data-action="authorise">Authorise this attempt</button>
-            <button type="button" class="btn" data-goto="home">Cancel</button>
-            <span class="small muted">Cancelling authorises nothing and leaves nothing running.</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="block" id="launch-block" hidden>
-        <div class="side"><span class="label">Launch available</span></div>
-        <div class="body">
-          <div class="acts">
-            <span class="stamp stamp--open"><span class="glyph">◉</span> Launch available</span>
-            <span class="small muted">An authorisation exists. That is weaker than the program being ready.</span>
-          </div>
-          <p class="lede" style="margin-top:18px">
-            The attempt begins as soon as you activate this. It cannot be stopped from HELM once it
-            begins, and going back discards the authorisation and means choosing the file and folder
-            again.
-          </p>
-          <div class="acts" style="margin-top:22px">
-            <button type="button" class="btn btn--primary" data-action="attempt-launch">Attempt launch</button>
-            <button type="button" class="btn" data-action="discard-authorisation">Discard authorisation</button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ 03 · ATTEMPT ============ -->
-    <section class="screen" data-screen="attempt" hidden>
-      <div class="block block--hero">
-        <div class="side"><span class="num">3</span><span class="label">Attempt</span></div>
-        <div class="body" role="status" aria-live="polite">
-          <div class="attempt-line"><span class="tick"></span> Launch attempt in progress</div>
-          <p class="standfirst">
-            HELM's launch call has not returned. That is a fact about HELM's own call. It is not
-            confirmation that the program started, and HELM has no fact that says it did.
-          </p>
-        </div>
-      </div>
-
-      <div class="block">
-        <div class="side"><span class="label">Bound</span></div>
-        <div class="body">
-          <div class="scale">
-            <div class="scale-track"><div class="scale-fill" id="scale-fill"></div></div>
-            <div class="scale-marks">
-              <span id="scale-label">elapsed 0.0 s</span>
-              <span>run bound 30 s</span>
-            </div>
-          </div>
-          <div class="after-bound">
-            <span>If the bound is reached:</span>
-            <span class="tag">SIGTERM</span>
-            <span class="tag">grace 5 s</span>
-            <span class="tag">SIGKILL</span>
-            <span class="muted">— a described outcome, not a failure to finish in time.</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="block">
-        <div class="side"><span class="label">No cancel</span></div>
-        <div class="body">
-          <p class="lede">
-            <b>This attempt cannot be cancelled from HELM.</b> The launch call is synchronous and
-            returns no handle, so HELM cannot stop an attempt it started. A stop control would need a
-            launch session API that does not exist.
-          </p>
-          <div class="disclose">
-            <button type="button" aria-expanded="false" aria-controls="attempt-tech">
-              <span class="pm">+</span> Technical detail
-            </button>
-            <div class="disclose-body" id="attempt-tech" hidden>
-              <table class="ruled">
-                <tr><th>backend</th><td class="mono">linux_x86_64_clone3_pidfd_execveat</td></tr>
-                <tr><th>spawn confirmation</th><td class="mono">5000 ms</td></tr>
-                <tr><th>timeout_ms</th><td class="mono">30000 ms</td></tr>
-                <tr><th>grace_ms</th><td class="mono">5000 ms</td></tr>
-                <tr><th>post-kill reap</th><td class="mono">5000 ms</td></tr>
-                <tr><th>total bound</th><td class="mono">5000 + 30000 + 5000 + 5000 + post-exit drain</td></tr>
-              </table>
-              <p class="aside" style="margin-top:14px">
-                No process identifier, process descriptor or descriptor number exists in this
-                interface. None of them appear in the public API on any platform.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ 04 · RESULT ============ -->
-    <section class="screen" data-screen="result" hidden>
-      <div class="block block--hero">
-        <div class="side"><span class="num">4</span><span class="label">Result</span></div>
-        <div class="body">
-          <h1 class="verdictless">The program ended and reported 0.</h1>
-          <p class="standfirst">
-            0 is the number the program reported. HELM does not interpret it and is not the authority
-            on what this program's exit codes mean.
-          </p>
-        </div>
-      </div>
-
-      <div class="block">
-        <div class="side"><span class="label">Observed</span></div>
-        <div class="body">
-          <ul class="obs">
-            <li>
-              <span class="mark">■</span>
-              <div>
-                <b>The direct child was observed to end</b>
-                <p>It ended by exit and reported 0. Elapsed 2.18 s of a 30 s bound.</p>
-              </div>
-            </li>
-            <li>
-              <span class="mark">◇</span>
-              <div>
-                <b>No start-up failure report was received</b>
-                <p>
-                  HELM did not establish that the program began running. A clean close of the
-                  start-up channel is the ordinary case and means only this: no failure was
-                  reported, and no start was confirmed.
-                </p>
-              </div>
-            </li>
-            <li>
-              <span class="mark">─</span>
-              <div>
-                <b>The run deadline did not expire</b>
-                <p>HELM issued no stop request and no forced stop.</p>
-              </div>
-            </li>
-          </ul>
-
-          <p class="aside aside--flag" style="margin-top:22px">
-            Two of these facts sit side by side and neither overrides the other: the program ended
-            and reported a number, and HELM never established that execution began. HELM has no
-            value that would say it did.
-          </p>
-
-          <div class="disclose">
-            <button type="button" aria-expanded="false" aria-controls="result-tech">
-              <span class="pm">+</span> Technical detail
-            </button>
-            <div class="disclose-body" id="result-tech" hidden>
-              <table class="ruled">
-                <tr><th>exec_status</th><td class="mono">indeterminate · status_eof_without_record</td></tr>
-                <tr><th>child_end</th><td class="mono">exited · code 0</td></tr>
-                <tr><th>run_deadline_expired</th><td class="mono">false</td></tr>
-                <tr><th>termination</th><td class="mono">sigterm_sent false · sigkill_sent false</td></tr>
-                <tr><th>group_sweep</th><td class="mono">issued</td></tr>
-                <tr><th>completeness</th><td class="mono">stdout complete_at_eof · stderr complete_at_eof</td></tr>
-                <tr><th>elapsed</th><td class="mono">2183 ms</td></tr>
-              </table>
-              <p class="aside" style="margin-top:14px">
-                <span class="mono">group_sweep = issued</span> means one cleanup signal was issued to
-                the process group. It does not say a descendant received it, that any descendant
-                ended, or that the process tree was contained. A descendant that left the group
-                survives it.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="block">
-        <div class="side"><span class="label">Output</span></div>
-        <div class="body">
-          <div class="disclose" style="margin-top:0">
-            <button type="button" aria-expanded="false" aria-controls="output-body">
-              <span class="pm">+</span> 16 bytes out · 0 bytes errors
-            </button>
-            <div class="disclose-body" id="output-body" hidden>
-              <div class="stream-head">Output <span class="b">stdout · 16 bytes drained</span></div>
-              <pre class="stream">hello from helm
-</pre>
-              <div class="stream-head">Errors and messages <span class="b">stderr · 0 bytes drained</span></div>
-              <pre class="stream empty">Nothing was written to this stream.</pre>
-              <p class="aside" style="margin-top:14px">
-                Nothing was truncated: HELM kept the whole of both streams within its capture bound.
-                Output can contain anything the program printed, including paths; the receipt
-                contains no output bytes at all.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="block">
-        <div class="side"><span class="label">Next</span></div>
-        <div class="body">
-          <div class="acts">
-            <button type="button" class="btn btn--primary" data-action="attempt-again">Attempt again</button>
-            <button type="button" class="btn" data-goto="evidence">Evidence</button>
-            <button type="button" class="btn" data-goto="authority">Review authority</button>
-            <button type="button" class="btn" data-action="close-program">Close program</button>
-          </div>
-          <p class="aside" style="margin-top:20px">
-            Repair, rollback, reset and re-prepare are not offered. HELM prepares no environment, so
-            there is nothing of that kind to repair or roll back.
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ 05 · EVIDENCE ============ -->
-    <section class="screen" data-screen="evidence" hidden>
-      <div class="block block--hero">
-        <div class="side"><span class="num">5</span><span class="label">Evidence</span></div>
-        <div class="body">
-          <h1>The receipt.</h1>
-          <p class="standfirst">
-            This receipt is data. It records what HELM observed. It is not signed, carries no proof
-            of origin, and grants no permission to run anything. Anyone can write bytes that look
-            like it. Its digest identifies exactly these bytes and nothing else.
-          </p>
-        </div>
-      </div>
-
-      <div class="block">
-        <div class="side"><span class="label">Facts</span></div>
-        <div class="body">
-          <table class="ruled">
-            <tr><th>schema · version</th><td class="mono">helm-launch-receipt · 0.1</td></tr>
-            <tr><th>backend</th><td class="mono">linux_x86_64_clone3_pidfd_execveat</td></tr>
-            <tr><th>plan_sha256</th><td class="mono">4b7e9a21c0d83f56ae1b2c9d7048f3e5a6b1c2d093847fe5ab0c1d2e3f405162</td></tr>
-            <tr><th>asserted_context</th><td>absent — no subject specification or binding report was asserted</td></tr>
-            <tr><th>working_directory_id</th><td class="mono">workdir-01</td></tr>
-            <tr><th>argument_count · environment</th><td class="mono">1 · empty</td></tr>
-            <tr><th>exec_status</th><td class="mono">indeterminate · status_eof_without_record</td></tr>
-            <tr><th>child_end</th><td class="mono">exited · code 0</td></tr>
-            <tr><th>run_deadline_expired</th><td class="mono">false</td></tr>
-          </table>
-        </div>
-      </div>
-
-      <div class="block">
-        <div class="side"><span class="label">Measurement</span></div>
-        <div class="body">
-          <table class="ruled">
-            <tr><th>pre_exec_body_size</th><td class="mono">18456</td></tr>
-            <tr><th>pre_exec_body_sha256</th><td class="mono">9f2c41d7b8e0a35c6d14f8027be59a3c1d0e7f48ab2c9d5e6f10a3b7c8d29e45</td></tr>
-            <tr><th>pre_exec_mode_bits</th><td class="mono">493 (0o755)</td></tr>
-            <tr><th>elf_type</th><td class="mono">et_dyn</td></tr>
-          </table>
-          <p class="aside" style="margin-top:14px">
-            Measured before execution, from the object HELM held open. Not the identity of bytes that
-            executed.
-          </p>
-        </div>
-      </div>
-
-      <div class="block">
-        <div class="side"><span class="label">Streams</span></div>
-        <div class="body">
-          <table class="ruled">
-            <tr><th>stdout</th><td class="mono">16 bytes · complete_at_eof<br>2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae</td></tr>
-            <tr><th>stderr</th><td class="mono">0 bytes · complete_at_eof<br>e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</td></tr>
-            <tr><th>termination</th><td class="mono">sigterm_sent false · sigkill_sent false · group_sweep issued</td></tr>
-          </table>
-        </div>
-      </div>
-
-      <div class="block">
-        <div class="side"><span class="label">Exact bytes</span></div>
-        <div class="body">
-          <pre class="bytes" id="receipt-bytes"></pre>
-          <div class="digest">
-            <span class="k">SHA-256 of the exact receipt bytes</span>
-            <span class="v" id="receipt-digest">computing…</span>
-            <span class="src" id="receipt-digest-src"></span>
-          </div>
-          <div class="acts" style="margin-top:22px">
-            <button type="button" class="btn" data-action="copy-receipt">Copy exact bytes</button>
-            <span class="small muted" id="copy-confirm"></span>
-          </div>
-          <p class="aside" style="margin-top:20px">
-            Copying copies the exact bytes, unreformatted. Reformatting a receipt changes its bytes
-            and therefore its digest. A digest identifies bytes; it says nothing about where they
-            came from.
-          </p>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- ============ THE SESSION RECORD ============ -->
-  <aside class="record" aria-label="Session record">
-    <div class="record-head">
-      <h2>Session record</h2>
-      <p>
-        Append-only. Every fact HELM established in this session, in the order it established it.
-        Held in memory: closing HELM discards it, and nothing was written to disk.
-      </p>
-    </div>
-    <div class="record-list" id="record-list">
-      <p class="record-empty" id="record-empty">Nothing established yet.</p>
-    </div>
-  </aside>
-
 </div>
 
-<dialog class="chooser" id="chooser">
-  <header>
-    <h2 id="chooser-title">Choose a program file</h2>
-    <div class="path" id="chooser-path">/home/you/apps</div>
-  </header>
-  <div class="files" id="chooser-files"></div>
-  <footer>
-    <span class="small muted" style="margin-right:auto">Stand-in for the desktop file chooser.</span>
-    <button type="button" class="btn btn--sm" data-action="chooser-cancel">Cancel</button>
-    <button type="button" class="btn btn--sm btn--primary" id="chooser-accept" disabled>Choose</button>
-  </footer>
-</dialog>
-
-<p class="sr-only" role="status" aria-live="polite" id="announcer"></p>
+<!-- ===================== CHOOSER (simulated desktop dialog) ===================== -->
+<div class="chooser" data-if="chooserOpen" hidden>
+  <div class="chooser__win" role="dialog" aria-modal="true" aria-label="Open file — desktop file chooser (stand-in)">
+    <div class="chooser__bar">
+      <span class="chooser__dot"></span>
+      <span class="chooser__title">Open file — desktop file chooser (stand-in)</span>
+    </div>
+    <div class="chooser__body">
+      <div class="chooser__path num">/home/mk/build</div>
+      <div class="chooser__list">
+        <button type="button" class="chooser__item" data-act="pickGood"><span class="chooser__name">helm-probe</span><span class="chooser__size num">41 984 bytes</span></button>
+        <button type="button" class="chooser__item" data-act="pickSetId"><span class="chooser__name">mount-helper</span><span class="chooser__size num">18 120 bytes</span></button>
+        <button type="button" class="chooser__item chooser__item--last" data-act="pickNotElf"><span class="chooser__name">notes.txt</span><span class="chooser__size num">2 044 bytes</span></button>
+      </div>
+      <div class="chooser__foot">
+        <button type="button" class="linkbtn linkbtn--muted" data-act="closeChooser">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script src="prototype.js"></script>
 </body>
