@@ -1,6 +1,7 @@
 # HELM G2 — VISUAL PRODUCT KICKOFF
 
-> **Status: G2-D1 to G2-D8 accepted by the owner on 2026-09-21. G2-D9 pending. Docs only.**
+> **Status: G2-D1 to G2-D9 accepted by the owner on 2026-09-21. All G2 design gates are
+> accepted. Docs only — acceptance of D9 does **not** authorise GUI implementation.**
 > This document defines product intent, information architecture, interaction structure and
 > capability labelling for the first visible HELM application. It authorises **no** GUI code, **no**
 > toolkit, **no** backend work and **no** change to any accepted module. It is written in English
@@ -38,10 +39,11 @@ Windows desktop. Trial #4 is not authorised and no execution trial is proposed h
 **Accepted in part.** On 2026-09-21 the owner accepted gates G2-D1 to G2-D7 with four clarifications,
 which are applied throughout this revision and summarised in section 20.2. On the same day the owner
 accepted **G2-D8** as a visual system direction, on the terms recorded in section 20.4 and applied
-in section 8.16. **G2-D9 (toolkit selection) remains pending**, its dossier is open for owner
-decision in the
-[UI toolkit decision](HELM-G2-UI-TOOLKIT-DECISION.md), and **GUI implementation is still not
-authorised**.
+in section 8.16, and then accepted **G2-D9** on the terms recorded in section 20.5, selecting
+**GTK 4 + gtk-rs for the G2 prototype** on the evidence of the
+[UI toolkit decision](HELM-G2-UI-TOOLKIT-DECISION.md). **All nine design gates are accepted**, and
+**GUI implementation is still not authorised** — D9 selects a toolkit, it does not open
+implementation.
 
 Where this document describes a screen, a state or a flow that current code cannot support, it says
 so explicitly and carries a class label from section 3.2.
@@ -1597,17 +1599,23 @@ must preserve that property.
 
 ## 19. Toolkit decision criteria
 
-**Deferred.** No toolkit is selected here. GTK, libadwaita, Qt, Tauri, Slint and every alternative
-are equally unselected, and nothing in sections 5 to 16 depends on any of them.
+**Decided at G2-D9 on 2026-09-21, elsewhere.** This section was written while every toolkit was
+equally unselected, and it is left as written because nothing in sections 5 to 16 depends on any
+toolkit. The selection itself — **GTK 4 + gtk-rs for the G2 prototype**, with libadwaita bounded,
+GTK provisional for production, Qt 6 / QML + CXX-Qt as the named fallback and the version floor
+still open — lives in the
+[UI toolkit decision](HELM-G2-UI-TOOLKIT-DECISION.md) and in
+[DECISIONS.md](../DECISIONS.md#g2-d9-toolkit-accepted). See section 20.5 for the owner's
+terms.
 
-A later decision gate, **G2 UI TOOLKIT SELECTION**, records the choice. It happens after the
-information architecture and interaction model are accepted, so that the structure constrains the
-toolkit rather than the other way round.
+The decision gate **G2 UI TOOLKIT SELECTION** happened after the information architecture and
+interaction model were accepted, so that the structure constrained the toolkit rather than the
+other way round.
 
 The criteria below are the originally accepted set. They are expanded into a full candidate
 evaluation, with current primary-source evidence, in the
-[UI toolkit decision](HELM-G2-UI-TOOLKIT-DECISION.md). That document is a **dossier prepared for the
-owner**: it recommends, and it selects nothing. G2-D9 is still **PENDING**.
+[UI toolkit decision](HELM-G2-UI-TOOLKIT-DECISION.md), which now also carries the accepted
+decision and the correction record of its own revision 1.
 
 Evaluation criteria only, in no ranked order:
 
@@ -1641,7 +1649,7 @@ Sequential. Each is an owner decision recorded in [DECISIONS.md](../DECISIONS.md
 | **G2-D6** | Real-versus-future capability labelling | **ACCEPTED** 2026-09-21 | Every `REAL_NOW`, `REQUIRES_ORCHESTRATION` and `DESIGN_ONLY_FUTURE` label in this document |
 | **G2-D7** | First vertical slice | **ACCEPTED** 2026-09-21 | Section 16, including 16.6 |
 | **G2-D8** | Owner visual direction | **ACCEPTED** 2026-09-21 | Section 8.16, on the terms of 20.4; constrained by the visual jobs of 8.14 and the baseline of 8.15 |
-| **G2-D9** | UI toolkit selected | **PENDING** | Section 19 and the [UI toolkit decision](HELM-G2-UI-TOOLKIT-DECISION.md), as its own decision record |
+| **G2-D9** | UI toolkit selected | **ACCEPTED** 2026-09-21 | Section 20.5, the [UI toolkit decision](HELM-G2-UI-TOOLKIT-DECISION.md) and the [decision record](../DECISIONS.md#g2-d9-toolkit-accepted) |
 
 ### 20.2 Owner clarifications applied at acceptance
 
@@ -1658,8 +1666,18 @@ this revision.
 ### 20.3 What acceptance does and does not authorise
 
 **GUI implementation is authorised only after D1 to D9 are all accepted**, unless the owner
-explicitly changes this process in a recorded decision. D9 is pending, so **no GUI code is
-authorised by this acceptance**.
+explicitly changes this process in a recorded decision. **D1 to D9 are now all accepted** — and
+that is a necessary condition, not a sufficient one.
+
+**G2-D9 explicitly does not itself authorise implementation.** Completing the design gates means
+the design work that had to precede implementation is done; it does not mean implementation has
+begun, and nothing here says a spike has started. **No GUI code, no toolkit dependency, no toolkit
+installation, no `Cargo` change, no backend connection and no persistence is authorised.**
+
+The next gate is **owner authorisation of the bounded GTK implementation spike**, whose scope,
+hard exclusions and exit criteria are written in sections 11.1, 11.2 and 11.3 of the
+[UI toolkit decision](HELM-G2-UI-TOOLKIT-DECISION.md). That gate is not opened by this
+acceptance.
 
 Nothing in this document authorises backend work. Sections 17 and 18 describe gaps; they do not
 open them. No toolkit is selected. No custom shell is authorised. No execution trial is authorised.
@@ -1682,3 +1700,23 @@ The owner accepted G2-D8 on 2026-09-21 as a **visual system direction**, subject
 work, no branding decision and no change to any accepted module. It does not move G2-D9, and it does
 not alter the first vertical slice accepted at G2-D7. **GUI implementation remains NOT AUTHORISED
 until the owner decides G2-D9.**
+
+### 20.5 Owner terms recorded at G2-D9 acceptance
+
+The owner accepted **G2-D9** on 2026-09-21 on the terms below, recorded in full in
+[DECISIONS.md](../DECISIONS.md#g2-d9-toolkit-accepted) and grounded in the
+[UI toolkit decision](HELM-G2-UI-TOOLKIT-DECISION.md).
+
+| # | Term | Where recorded |
+|---|---|---|
+| 1 | **GTK 4 + gtk-rs is SELECTED FOR G2 PROTOTYPE.** | Toolkit decision 10.1 |
+| 2 | **Selective libadwaita is permitted only through its documented bounded public surface**: public widgets, documented properties, signals and methods, documented style classes, documented CSS variables, and `AdwStyleManager` for system preferences. Undocumented internal CSS nodes, internal widget composition, copying or forking the Adwaita stylesheet, and any dependence on undocumented internals for the HELM identity are **not** an accepted styling strategy. | Toolkit decision 6.2.1 |
+| 3 | **GTK is the PROVISIONAL PRODUCTION DEFAULT, not a production lock.** | Toolkit decision 10.1 |
+| 4 | **Qt 6 / QML + CXX-Qt is the NAMED FALLBACK**, taken if the spike fails any accepted exit criterion — visual and design cost, accessibility, virtualised evidence-table behaviour, keyboard and focus behaviour, or the maintenance and public-styling-surface requirement. **An exit criterion must not be silently lowered to retain GTK.** | Toolkit decision 10.2, 10.3, 11.3 |
+| 5 | **The GTK and libadwaita version floor remains OPEN.** No version pair is selected. It must be decided explicitly before the spike starts, or as the first recorded decision inside it, and in either case before any dependency or version feature flag is adopted. The packages installed on the first development machine must not select it silently. | Toolkit decision 2.3 |
+| 6 | **This decision by itself does not authorise GUI implementation.** | 20.3 |
+
+**What G2-D9 does not authorise.** No GUI code, no toolkit dependency, no `Cargo` change, no
+toolkit installation, no backend connection, no `helm-launch` integration and no persistence. It
+does not lock production, does not decide the version floor, does not open G-1, G-2 or G-3, and
+accepts no licence for HELM.

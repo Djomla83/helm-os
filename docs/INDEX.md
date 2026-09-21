@@ -25,18 +25,25 @@ data, carry no authenticity claim, and their digests are recomputable from the p
 [HELM G2 — visual product kickoff](implementation/HELM-G2-VISUAL-KICKOFF.md) defines the first
 visible HELM desktop application: a repository capability audit, the information architecture, the
 primary journey, the screen map and specifications, the state and error vocabulary, the first real
-vertical slice and the G2-D1 to G2-D9 acceptance gates. **Gates G2-D1 to G2-D8 are owner-accepted
-since 2026-09-21**: D1 to D7 with four recorded clarifications, and **D8 as a visual system
-direction** — reference hierarchy, working palette, status colour rule, character and medium
-density, recorded in section 8.16 on the terms of section 20.4. The palette is a working token set, not a
-final brand identity, and no generated concept is authoritative for product semantics.
+vertical slice and the G2-D1 to G2-D9 acceptance gates. **All nine gates are owner-accepted since
+2026-09-21**: D1 to D7 with four recorded clarifications, **D8** as a visual system direction —
+reference hierarchy, working palette, status colour rule, character and medium density, in section
+8.16 on the terms of 20.4 — and **D9**, the UI toolkit, on the terms of section 20.5. The
+palette is a working token set, not a final brand identity, and no generated concept is authoritative for
+product semantics.
 
 [HELM G2 — UI toolkit decision](implementation/HELM-G2-UI-TOOLKIT-DECISION.md) is the **G2-D9
 dossier prepared for the owner**: derived hard requirements, the A to S criteria, assessments of
 GTK 4 with gtk-rs, GTK 4 with selective libadwaita, Qt 6 / QML with CXX-Qt, Slint and iced, a technical
 rejection of the webview option, and a comparative table with version evidence read on 2026-09-21.
-It recommends and **selects nothing**. **G2-D9 remains pending, so no toolkit is selected, no
-dependency exists, and no GUI code and no backend work is authorised.**
+It carries the [accepted G2-D9 decision](DECISIONS.md#g2-d9-toolkit-accepted) of 2026-09-21:
+**GTK 4 + gtk-rs is selected for the G2 prototype**; selective libadwaita is permitted only
+through its documented bounded public surface; **GTK is a provisional production default, not a
+production lock**; **Qt 6 / QML + CXX-Qt is the named fallback** if the spike fails any exit
+criterion; and the **GTK/libadwaita version floor stays OPEN**, to be decided explicitly before any
+version feature flag is adopted. **No toolkit dependency exists, no GUI code exists, and GUI
+implementation is NOT AUTHORISED** — the next owner gate is authorisation of the bounded GTK
+implementation spike.
 
 ## Odluke i istraživanja
 

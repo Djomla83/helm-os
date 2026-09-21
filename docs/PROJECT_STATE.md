@@ -1,5 +1,48 @@
 # Stanje projekta
 
+<a id="g2-design-gates-accepted"></a>
+
+## G2 DESIGN GATES COMPLETE, 2026-09-21 — G2-D1 to G2-D9 accepted; GTK 4 + gtk-rs selected for the prototype; **no GUI exists and none is authorised**
+
+The owner [accepted G2-D9](DECISIONS.md#g2-d9-toolkit-accepted), the last of the nine G2 design
+gates. **G2-D1 through G2-D9 are accepted.** This completes the design work that had to precede
+implementation. It does not begin implementation.
+
+| Item | State |
+|---|---|
+| G2-D1 to G2-D7 | **ACCEPTED** 2026-09-21 — audit, information architecture, journey, screen map, state and error vocabulary, capability labelling, first vertical slice |
+| G2-D8 visual direction | **ACCEPTED** 2026-09-21 — working palette, status colour rule, character, medium density |
+| **G2-D9 UI toolkit** | **ACCEPTED** 2026-09-21 |
+| Prototype toolkit | **GTK 4 + gtk-rs**, selected for the G2 prototype |
+| libadwaita | **permitted, bounded** — documented public surface only |
+| Production standing | **PROVISIONAL GTK DEFAULT — not a production lock** |
+| Named fallback | **Qt 6 / QML + CXX-Qt**, if the spike fails any accepted exit criterion |
+| GTK/libadwaita version floor | **OPEN** — no version pair selected |
+| Evidence branch | `design/g2-visual-kickoff` at `d9e4693cce69fdaebcb46d2f0dddd27b4f4508bf`, **not merged to main** |
+| Next owner gate | **authorisation of the bounded GTK implementation spike** |
+
+**What does not exist.** There is **no HELM GUI**. No GUI source file exists anywhere in the
+repository. **No GTK, gtk-rs or libadwaita dependency exists** in `Cargo.toml` or `Cargo.lock`, and
+no toolkit is installed by this record. **No version floor exists** — the GTK and libadwaita
+generations HELM will target are undecided, and section 2.3 of the
+[toolkit decision](implementation/HELM-G2-UI-TOOLKIT-DECISION.md) records why that must be decided
+explicitly rather than inherited from whatever a development machine happens to have installed.
+No implementation spike has started.
+
+**What is unchanged.** `helm-launch` 0.1 stays product-accepted at reviewed head
+`dd92a85fcf0cc35306123ef2dc39adb148ddc616`; no backend work is opened. The recorded gaps **G-1**
+persistence, **G-2** long-lived interactive lifecycle and **G-3** desktop-session context stay
+recorded and unopened. The HELM licence policy stays **Proposed** in
+[LICENSE-DECISION.md](../LICENSE-DECISION.md); no toolkit choice accepted a licence for HELM.
+Final brand identity and the packaging format stay open.
+
+The G2 documents are [the visual kickoff](implementation/HELM-G2-VISUAL-KICKOFF.md), which carries
+the accepted product definition and the D1 to D9 gate table, and
+[the UI toolkit decision](implementation/HELM-G2-UI-TOOLKIT-DECISION.md), whose section 13 keeps the
+revision-1 errors and their corrections visible as permanent evidence.
+
+---
+
 <a id="helm-launch-0-1-product-accepted"></a>
 
 ## HELM-LAUNCH 0.1 PRODUCT-ACCEPTED, 2026-09-21 — P5 accepted, milestone integrated into main

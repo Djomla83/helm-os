@@ -79,7 +79,13 @@ independent whole-crate review, corrected once for `P5R-01` and independently re
 reviewed head `dd92a85fcf0cc35306123ef2dc39adb148ddc616`, carrying its nonblocking findings
 deliberately; see the [decision of 2026-09-21](#helm-launch-0-1-product-accepted). **P1 through P5
 are accepted and helm-launch 0.1 is product-accepted.** No further helm-launch implementation slice
-is authorised, and **Trial #4 is not authorised**.
+is authorised, and **Trial #4 is not authorised**. The **G2 visual kickoff** then opened the first
+visible HELM application as a documentation phase; its nine design gates G2-D1 to G2-D9 are all
+accepted, the last of them on 2026-09-21 — see the
+[decision of 2026-09-21](#g2-d9-toolkit-accepted). That gate selects **GTK 4 + gtk-rs for the G2 prototype**, permits libadwaita only through its
+documented public surface, makes GTK a **provisional** production default rather than a lock, names
+**Qt 6 / QML + CXX-Qt** as the fallback, leaves the **GTK and libadwaita version floor OPEN**, and
+**authorises no GUI implementation, no toolkit dependency and no backend work**.
 
 | ID | Odluka | Status |
 |---|---|---|
@@ -3123,3 +3129,121 @@ with product acceptance of the supported launch mechanism.
 is required. The next owner gate is the **G2 visual kickoff**, which defines the first visible HELM
 application, its information architecture, screen map and interaction model before any deeper
 desktop-shell implementation. It is not opened by this decision.
+
+<a id="g2-d9-toolkit-accepted"></a>
+
+### Owner decision 2026-09-21 — **G2-D9 ACCEPTED**: GTK 4 + gtk-rs selected for the G2 prototype; provisional production default; Qt named fallback; version floor **OPEN**; **no GUI implementation authorised**
+
+**`HELM_G2_D9_TOOLKIT_ACCEPTED_NO_IMPLEMENTATION_AUTHORISED`.** The repository owner, Djomla83,
+accepts **G2-D9**, the UI toolkit gate of the
+[G2 visual kickoff](implementation/HELM-G2-VISUAL-KICKOFF.md), on the evidence of the
+[UI toolkit decision dossier](implementation/HELM-G2-UI-TOOLKIT-DECISION.md) at its corrected
+revision 2. The owner's decision, as given:
+
+> Prihvatam G2-D9: GTK 4 + gtk-rs je izabran za G2 prototype; selective libadwaita je dozvoljen
+> samo kroz dokumentovani bounded public surface; GTK je provisional production default, ne
+> production lock; Qt 6 / QML + CXX-Qt je named fallback ako spike padne bilo koji exit criterion;
+> GTK/libadwaita version floor ostaje OPEN i mora biti eksplicitno odlučen pre ili na početku
+> spike-a; ova odluka sama ne autorizuje GUI implementation.
+
+This closes the G2 design gate sequence. **G2-D1 to G2-D9 are accepted.** It changes **no** accepted
+architecture, opens **no** backend work, and adds **no** dependency to the workspace.
+
+| Item | Value |
+|---|---|
+| Gate | **G2-D9 — UI toolkit selected** |
+| Status | **ACCEPTED 2026-09-21** |
+| Evidence head | `d9e4693cce69fdaebcb46d2f0dddd27b4f4508bf` on `design/g2-visual-kickoff` |
+| Prototype toolkit | **GTK 4 + gtk-rs — SELECTED FOR G2 PROTOTYPE** |
+| libadwaita | **PERMITTED, bounded** — documented public surface only |
+| Production standing | **PROVISIONAL PRODUCTION DEFAULT — not a production lock** |
+| Named fallback | **Qt 6 / QML + CXX-Qt** |
+| GTK/libadwaita version floor | **OPEN — no version pair is selected by this decision** |
+| GUI implementation | **NOT AUTHORISED by this decision** |
+| Toolkit dependency in the workspace | **NONE**, and none is added |
+| G2-D1 to G2-D8 | **ACCEPTED**, unchanged |
+| Next owner gate | **Authorisation of the bounded GTK implementation spike** |
+
+#### 1. What this decision accepts
+
+1. **GTK 4 + gtk-rs is SELECTED FOR G2 PROTOTYPE.** It is the toolkit for the bounded
+   implementation spike, when that spike is separately authorised.
+2. **Selective libadwaita is permitted, through its documented bounded public surface only** —
+   section 2 below.
+3. **GTK is the PROVISIONAL PRODUCTION DEFAULT.** This is explicitly **not** a production toolkit
+   lock. Production standing becomes permanent only after the spike is evaluated against its
+   accepted exit criteria.
+4. **Qt 6 / QML + CXX-Qt is the NAMED FALLBACK**, triggered if the GTK spike fails any accepted exit
+   criterion: HELM visual and design cost; accessibility; virtualised evidence-table behaviour;
+   keyboard and focus behaviour; the maintenance and public-styling-surface requirement.
+   **An exit criterion must not be silently lowered in order to retain GTK.**
+5. **The GTK and libadwaita version floor remains OPEN.** No version pair is selected here.
+
+#### 2. The bounded libadwaita rule, as accepted
+
+Permitted as an accepted styling and structural strategy:
+
+* public libadwaita widgets;
+* documented properties, signals and methods;
+* documented style classes;
+* documented CSS variables, including the accent variables, which the application may redeclare;
+* `AdwStyleManager` for reading system preferences, understanding that it reports the **system**
+  accent and not a HELM override.
+
+**Not permitted** as an accepted styling strategy:
+
+* undocumented internal CSS node names;
+* internal widget composition;
+* copying or forking the Adwaita stylesheet;
+* depending on undocumented internals to carry the HELM identity.
+
+The normative statement of this rule is section 6.2.1 of the
+[toolkit decision](implementation/HELM-G2-UI-TOOLKIT-DECISION.md).
+
+#### 3. What this decision does **not** accept and does **not** authorise
+
+| Item | State after this decision |
+|---|---|
+| Production toolkit lock | **NOT ACCEPTED** — GTK production standing is provisional only |
+| GTK/libadwaita version floor | **NOT DECIDED** — see section 4 |
+| GUI implementation | **NOT AUTHORISED** — no GUI source of any kind |
+| Toolkit dependency addition | **NOT AUTHORISED** — no `Cargo.toml`, no `Cargo.lock`, no crate |
+| Toolkit installation | **NOT AUTHORISED** by this decision |
+| Backend expansion | **NOT AUTHORISED** — `helm-launch` 0.1 stays as product-accepted |
+| `helm-launch` integration from a GUI | **NOT AUTHORISED** |
+| Persistence | **NOT AUTHORISED** |
+| G-1 persistence, G-2 long-lived interactive lifecycle, G-3 desktop-session context | **NOT OPENED** — recorded gaps, unchanged |
+| HELM licence policy | **STILL PROPOSED** — [LICENSE-DECISION.md](../LICENSE-DECISION.md) is unchanged and this decision accepts no licence |
+
+Accepting a toolkit is not accepting a dependency, and selecting a toolkit is not authorising an
+implementation. Those are separate owner acts.
+
+#### 4. The version floor, and how it must be decided
+
+The floor stays **OPEN**. It must be decided explicitly, either **before the implementation spike
+starts** or **as the first recorded decision inside that spike**, and in either case **before any
+dependency or version feature flag is adopted**.
+
+The evidence is recorded in section 2.3 of the
+[toolkit decision](implementation/HELM-G2-UI-TOOLKIT-DECISION.md): libadwaita declares a GTK minimum
+in its own build definition, so GTK 4.22.x with libadwaita 1.10 is **not** a compatible pair, and
+three candidate floors are recorded with what each costs in distribution reach.
+
+**The packages installed on the first development machine must not silently select the floor.**
+
+#### 5. What stays open after this decision
+
+HELM's licence policy, still Proposed. The GTK and libadwaita version floor. Final brand identity.
+Packaging and distribution format. The production toolkit lock. G-1 persistence, G-2 long-lived
+interactive lifecycle and G-3 desktop-session context. Whether a HELM shell will exist at all.
+
+#### 6. Authority after this decision
+
+**No GUI implementation is authorised.** The G2 design gates are complete, which means the design
+work that had to precede implementation is done — not that implementation has begun. Nothing has
+been built, no toolkit is installed, no dependency exists and no spike has started.
+
+The next owner gate is **authorisation of the bounded GTK implementation spike**, whose scope and
+exit criteria are already written in sections 11.1, 11.2 and 11.3 of the
+[toolkit decision](implementation/HELM-G2-UI-TOOLKIT-DECISION.md). It is **not** opened by this
+decision.

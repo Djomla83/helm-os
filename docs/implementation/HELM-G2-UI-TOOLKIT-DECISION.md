@@ -1,14 +1,15 @@
 # HELM G2 — UI TOOLKIT DECISION
 
-> **Status: dossier prepared for the owner. G2-D9 is PENDING. Docs only.**
-> **Revision 2, 2026-09-21 — corrected under HELM-G2-D9-EVIDENCE-C.** Five factual and
-> decision-scope corrections were applied to revision 1; each is listed with its before and
-> after in section 13. G2-D8 is untouched, D1 to D7 are untouched, and no product semantics
-> changed.
-> This document evaluates candidate toolkits for the first HELM graphical application and ends in a
-> recommendation. It **selects nothing**, authorises **no** GUI code, adds **no** dependency,
-> changes **no** crate and touches **no** backend. G2-D9 is an owner decision and is recorded in
-> [DECISIONS.md](../DECISIONS.md) when the owner makes it. Written in English under
+> **Status: G2-D9 ACCEPTED by the owner on 2026-09-21. Docs only — acceptance selects a
+> toolkit and authorises no implementation.**
+> **Revision 2, 2026-09-21 — corrected under HELM-G2-D9-EVIDENCE-C** before the decision was
+> taken. Five factual and decision-scope corrections were applied to revision 1; each is listed
+> with its before and after in section 13, which is permanent evidence and is not rewritten.
+> G2-D8 is untouched, D1 to D7 are untouched, and no product semantics changed.
+> This document evaluates candidate toolkits for the first HELM graphical application, ends in a
+> recommendation, and now carries the owner's decision on it. It authorises **no** GUI code, adds
+> **no** dependency, changes **no** crate and touches **no** backend. The decision is recorded in
+> [DECISIONS.md](../DECISIONS.md#g2-d9-toolkit-accepted). Written in English under
 > [ADR-0020](../adr/ADR-0020-documentation-language.md).
 
 ---
@@ -19,8 +20,12 @@
 |---|---|
 | G2-D1 to G2-D7 | **ACCEPTED** 2026-09-21 — [visual kickoff](HELM-G2-VISUAL-KICKOFF.md), section 20.1 |
 | G2-D8 visual direction | **ACCEPTED** 2026-09-21 — visual kickoff, sections 8.16 and 20.4 |
-| **G2-D9 UI toolkit** | **PENDING** — this document |
-| GUI implementation | **NOT AUTHORISED** |
+| **G2-D9 UI toolkit** | **ACCEPTED** 2026-09-21 — this document; [decision record](../DECISIONS.md#g2-d9-toolkit-accepted) |
+| Prototype toolkit | **GTK 4 + gtk-rs**, selected for the G2 prototype |
+| Production standing | **PROVISIONAL GTK DEFAULT** — not a production lock |
+| Named fallback | **Qt 6 / QML + CXX-Qt** |
+| GTK/libadwaita version floor | **OPEN** — no version pair selected |
+| GUI implementation | **NOT AUTHORISED** — D9 selects a toolkit, it does not open implementation |
 | Backend work | **NOT AUTHORISED**; `helm-launch` 0.1 is product-accepted and unchanged |
 | Toolkit dependency in the workspace | **NONE**, and none is added by this document |
 
@@ -730,11 +735,14 @@ Recorded now so that a later change is a decision rather than a drift.
 
 ### 10.5 What this recommendation is not
 
-It is not the decision. **G2-D9 is PENDING and remains an owner decision.** The dispositions in
-10.1 and 10.2 are this document's *recommendation* to the owner, not a gate outcome, and
-"SELECTED FOR G2 PROTOTYPE" describes the recommended disposition of the prototype scope — it
-takes effect only when the owner decides G2-D9. Nothing here authorises a dependency, a crate, a
-spike or a line of GUI code.
+The dispositions in 10.1 and 10.2 were this document's *recommendation*. **The owner accepted
+them at G2-D9 on 2026-09-21**, and section 14 records the decision as taken. Two things did **not**
+become true by that acceptance:
+
+- **Production is not locked.** GTK's production standing is still *provisional*, conditional on
+  the spike exit criteria of 11.3, and the fallback in 10.2 is still live.
+- **Implementation is not authorised.** Accepting a toolkit authorises no dependency, no crate,
+  no toolkit installation, no spike and no line of GUI code. That is a separate owner gate.
 
 ---
 
@@ -828,12 +836,32 @@ the evidence.
 
 ## 14. Decision record
 
-**G2-D9 is PENDING.** When the owner decides, the decision is recorded in
-[DECISIONS.md](../DECISIONS.md) and the gate table in the
-[visual kickoff](HELM-G2-VISUAL-KICKOFF.md), section 20.1, is updated to match. Until then:
+**G2-D9 was ACCEPTED by the owner on 2026-09-21**, on the evidence of this document at revision
+2. The full record, including the owner's wording, is the
+[decision of 2026-09-21](../DECISIONS.md#g2-d9-toolkit-accepted); the owner's terms are also
+restated in section 20.5 of the [visual kickoff](HELM-G2-VISUAL-KICKOFF.md), whose gate table in
+20.1 now reads **G2-D9 ACCEPTED**.
 
-- no toolkit is selected;
-- no dependency exists;
-- the GTK and libadwaita version floor is **not** selected;
+| What was decided | State |
+|---|---|
+| **GTK 4 + gtk-rs** | **SELECTED FOR G2 PROTOTYPE** |
+| **Selective libadwaita** | **PERMITTED**, through the documented bounded public surface of 6.2.1 only |
+| **GTK for production** | **PROVISIONAL PRODUCTION DEFAULT** — **not** a production lock; conditional on the exit criteria of 11.3 |
+| **Qt 6 / QML + CXX-Qt** | **NAMED FALLBACK**, on the triggers of 10.2; an exit criterion must not be lowered to retain GTK |
+| **GTK/libadwaita version floor** | **OPEN** — no pair selected; decided before the spike or as its first recorded decision, per 2.3 |
+| **GUI implementation** | **NOT AUTHORISED** by this decision |
+
+After this decision, and until the owner separately authorises the bounded implementation spike:
+
+- the toolkit is selected, but **no dependency exists** — no `Cargo.toml` entry, no `Cargo.lock`
+  entry, no crate, and no toolkit installation is authorised;
+- **no GUI source exists** anywhere in the repository;
+- the GTK and libadwaita version floor is **still not selected**, and must not be inherited from
+  whatever a development machine has installed;
 - the production default is **provisional**, not locked;
+- no backend work, no `helm-launch` integration and no persistence is authorised;
+- the HELM licence policy remains **Proposed** — [LICENSE-DECISION.md](../../LICENSE-DECISION.md)
+  is unchanged and no toolkit choice accepted a licence for HELM;
 - **GUI implementation is NOT AUTHORISED.**
+
+The next owner gate is **authorisation of the bounded GTK implementation spike** of section 11.
