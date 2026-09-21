@@ -1,0 +1,398 @@
+name: helm-launch portable model, Linux capability admission, Linux backend and public launch
+
+# helm-launch implements three owner-authorised slices. P1 is a portable, pure
+# model: plan parsing, the receipt model and serializer, the error vocabulary,
+# and pure descriptor-layout and lifecycle models. P2 adds Linux x86_64
+# capability admission and authorisation composition: safe descriptor
+# inspection, positional reads and pre-execution executable measurement through
+# a descriptor the caller moves in. P3 adds a **crate-private** Linux x86_64
+# process-creation backend: the one scoped `unsafe` module, a raw x86_64 syscall
+# shim, `clone3(CLONE_PIDFD)`, the closed post-clone child contract and an
+# `execveat` of the exact admitted descriptor.
+#
+# P4 adds the public `launch` and `LaunchOutcome` on the Linux x86_64 cohort, the
+# observation loop, the run deadline, `SIGTERM`, the grace period, `SIGKILL`, the
+# bounded drains, the guarded process-group cleanup sweep and a real receipt. No
+# process handle, pidfd, child pid, process group or raw descriptor is public,
+# and `tests/p4_boundary.rs` plus `compile_fail` doctests fail if one appears.
+# P4 adds **no** `unsafe`: the whole lifecycle is safe `rustix` in
+# `src/launch.rs`, outside the backend boundary.
+#
+# The group sweep is **best-effort cleanup, not containment**: issuing it says
+# only that the one call was made. Nothing here claims a descendant received it,
+# died, or that a process tree was contained.
+#
+# **The Linux x86_64 job does create and execute processes**, which is exactly
+# the newly authorised P3 capability and ordinary validation of it. Every fixture
+# is newly written in the crate and compiled by `rustc` at test time. No
+# LAUNCH-EXEC-01 asset, no `launcher_spike`, no frozen Python runner and no
+# frozen helper ELF is built or run. This is **not** a trial, not Trial #4 and
+# not D-7 activity, it dispatches nothing, needs no root and changes no
+# privilege.
+#
+# Off the Linux x86_64 cohort the P2 authority API and the P3 backend must not
+# exist at all — `compile_fail` doctests in the crate root prove that on Windows
+# and macOS, and neither runs any backend test.
+#
+# The P3 evidence model has **two** gates, and neither replaces the other
+# (owner disposition of P3R-02, 2026-09-18):
+#
+#   MACHINE-CODE GATE  no forbidden userspace runtime helper in the child's
+#                      emitted call closure. `strace` cannot see `memcpy`, a
+#                      panic helper or an allocator call that issues no syscall.
+#   STRACE GATE        no forbidden syscall in the runtime child window. The
+#                      machine-code gate cannot see what the kernel was asked.
+
+on:
+  pull_request:
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'crates/helm-launch/**'
+      - 'tools/tests/test_helm_launch_confinement.py'
+      - 'tools/tests/test_helm_launch_machine_proofs.py'
+      - 'tools/helm_launch_child_closure.py'
+      - 'tools/helm_launch_injection_proof.py'
+      - 'tools/helm_launch_release_reachability.py'
+      - 'tools/tests/test_helm_launch_release_reachability.py'
+      # P5 receipt evidence. Both are load-bearing INPUTS to helm-launch tests,
+      # not prose: `src/receipt.rs` embeds the vectors and the schema document,
+      # and `tests/p5_regressions.rs` embeds the vectors. A change to either
+      # must run the suite that checks it, so each is named exactly rather than
+      # covered by a `docs/**` sweep. The two spellings differ in case, so one
+      # glob could not cover both.
+      - 'docs/implementation/HELM-LAUNCH-RECEIPT-0.1.md'
+      - 'docs/implementation/helm-launch-receipt-0.1-test-vectors.json'
+      - '.github/workflows/helm-launch.yml'
+  push:
+    paths:
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'crates/helm-launch/**'
+      - 'tools/tests/test_helm_launch_confinement.py'
+      - 'tools/tests/test_helm_launch_machine_proofs.py'
+      - 'tools/helm_launch_child_closure.py'
+      - 'tools/helm_launch_injection_proof.py'
+      - 'tools/helm_launch_release_reachability.py'
+      - 'tools/tests/test_helm_launch_release_reachability.py'
+      # P5 receipt evidence. Both are load-bearing INPUTS to helm-launch tests,
+      # not prose: `src/receipt.rs` embeds the vectors and the schema document,
+      # and `tests/p5_regressions.rs` embeds the vectors. A change to either
+      # must run the suite that checks it, so each is named exactly rather than
+      # covered by a `docs/**` sweep. The two spellings differ in case, so one
+      # glob could not cover both.
+      - 'docs/implementation/HELM-LAUNCH-RECEIPT-0.1.md'
+      - 'docs/implementation/helm-launch-receipt-0.1-test-vectors.json'
+      - '.github/workflows/helm-launch.yml'
+
+  # Re-test an exact branch or ref on purpose, without a no-op source commit.
+  workflow_dispatch:
+
+# A newer run for the same workflow and ref makes an older, still-running one
+# stale, so cancel it instead of consuming runners for a result nobody reads.
+# This cancels only overlapping runs; it never relaxes a check or a failure.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  purity:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: Install Rust 1.95.0
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal --component rustfmt,clippy
+          rustup default 1.95.0
+
+      - name: Record the runner
+        run: |
+          rustc -vV
+          cargo -V
+
+      # The Linux job is the load-bearing backend runner. Its tests compile
+      # fixtures with `rustc`, trace a launcher process with `strace -f`, and
+      # build one tiny test-only C helper that registers `pthread_atfork`
+      # handlers so a test can prove they do NOT run across the raw clone. A
+      # missing tool is a test environment failure with an explicit message,
+      # never a silent skip, so it is checked here first.
+      - name: Check the Linux backend test tools
+        if: runner.os == 'Linux'
+        run: |
+          set -eux
+          strace --version
+          cc --version
+          rustc --version
+
+      - run: cargo fmt --check
+      - run: cargo clippy -p helm-launch --all-targets --all-features --locked -- -D warnings
+      # `--no-fail-fast` is evidence collection, not tolerance (P5). Cargo still
+      # exits non-zero if any target failed, nothing is rerun and no gate is
+      # weakened; the only change is that the remaining test targets of THIS
+      # run also report, instead of the run stopping at the first failing
+      # target. The P4 publication chain paid for that twice: a stale oracle in
+      # a later target stayed invisible until an earlier one went green. It is
+      # used only on the two multi-target suite steps, never on a named gate.
+      - run: cargo test -p helm-launch --locked --no-fail-fast
+
+      # The non-default fault-injection feature. It exists only for S5 (a child
+      # that dies before exec without a record) and S6 (a child that stalls
+      # before exec), and for the child-stage failure paths no host state can
+      # provoke. It is gated on the feature AND on `debug_assertions`.
+      - run: cargo test -p helm-launch --locked --features test-fault-injection --no-fail-fast
+
+      - run: cargo build -p helm-launch --release --locked
+
+      # THE P4 LIFECYCLE GATE. These cases create real children, drive the real
+      # observation loop against them, and exercise the deadline, the grace
+      # period, `SIGKILL`, the bounded drains, the guarded group sweep and the
+      # receipt. They are the only place the P4 loop is executed rather than
+      # inspected, so a green boundary suite never stands in for them.
+      - name: Name and run the P4 lifecycle and receipt cases
+        if: runner.os == 'Linux'
+        run: |
+          cargo test -p helm-launch --locked --lib -- --list
+          cargo test -p helm-launch --locked --lib -- --nocapture launch::tests::
+
+      # THE P4 DETERMINISTIC EVIDENCE GATE. The positive group sweep and the
+      # foreign-reaper `ECHILD` suppression both need parent group authority to
+      # be established rather than raced for, and they get it from the existing
+      # test-only pre-exec stall injection. They therefore live behind the
+      # non-default feature, and this step is what makes them load-bearing
+      # rather than optional. The foreign-reaper case runs its own inner half in
+      # a dedicated subprocess whose `SIGCHLD` disposition is `SIG_IGN`, so no
+      # other case is affected.
+      - name: Name and run the P4 coordinated sweep and foreign-reaper cases
+        if: runner.os == 'Linux'
+        run: |
+          cargo test -p helm-launch --locked --features test-fault-injection --lib -- \
+            --nocapture launch::tests::coordinated::
+
+      # The real loop must agree with the pure model P1 tests everywhere. The
+      # model half runs on all three platforms above; this names it explicitly on
+      # Linux, beside the real loop, so a divergence is visible in one log.
+      - name: Name and run the pure lifecycle model beside it
+        if: runner.os == 'Linux'
+        run: |
+          cargo test -p helm-launch --locked --lib -- --nocapture lifecycle::tests::
+
+      # THE MACHINE-CODE GATE. Source scanning cannot see code the compiler
+      # inserts, and the earlier candidate's child window did call `memcpy` and
+      # two panic helpers without any source token saying so. This reads the
+      # assembly the compiler actually emits for the Linux x86_64 child path,
+      # walks the call closure from `child_main` transitively, and fails on any
+      # external runtime helper. It fails loudly on a missing root, an empty
+      # body, an unresolved indirect call, a missing syscall or a failed
+      # positive control, so "no findings" can never mean "found nothing".
+      - name: Child machine-code closure — debug/test profile
+        if: runner.os == 'Linux'
+        run: |
+          python3 tools/helm_launch_child_closure.py \
+            --target-dir "${RUNNER_TEMP}/p3-closure-debug" \
+            --profile test \
+            --label "debug/test profile (the profile the P3 tests execute)"
+
+      # The same contract under production codegen. This deliberately keeps the
+      # test-instantiated profile and applies the release optimisation and
+      # debug-assertion settings to it, because that keeps `child_main` an
+      # independently inspectable root of its own call closure rather than one
+      # symbol among many in a whole-library build. Whether the actual P4
+      # production release library reaches the backend at all is a different
+      # property, proved separately by the release-library gate below.
+      - name: Child machine-code closure — release codegen
+        if: runner.os == 'Linux'
+        run: |
+          python3 tools/helm_launch_child_closure.py \
+            --target-dir "${RUNNER_TEMP}/p3-closure-release" \
+            --profile test \
+            --rustc-flag=-Copt-level=3 \
+            --rustc-flag=-Cdebug-assertions=off \
+            --label "release codegen (opt-level=3, debug-assertions=off)"
+
+      # THE INJECTION PROOF. Fresh build roots, the exact artifact taken from
+      # cargo's own compiler-artifact record rather than a wildcard, every
+      # archive member inspected, and a positive control so that ABSENT cannot
+      # mean "looked at the wrong file".
+      - name: Fault-injection positive control and release absence proof
+        if: runner.os == 'Linux'
+        run: |
+          python3 tools/helm_launch_injection_proof.py \
+            --root "${RUNNER_TEMP}/p3-injection" \
+            --target x86_64-unknown-linux-gnu
+
+      # THE P4 PRODUCTION RELEASE-LIBRARY GATE. P4 exports `launch` on the
+      # cohort, and the accepted path is `launch` -> `spawn_for_lifecycle` ->
+      # `spawn` -> `child::child_main`. No step of it is behind `cfg(test)` or
+      # behind `test-fault-injection`, which is additionally gated on
+      # `debug_assertions` and so is compiled out here even with
+      # `--all-features`. A real production release library must therefore
+      # instantiate the private backend, and this builds one and requires that
+      # evidence rather than inferring it from the tests.
+      #
+      # This replaces P3's opposite gate, which stated that a release library
+      # contains no backend at all because P3 added no public consumer for it.
+      # That was true of P3 and is false of P4: the same build now legitimately
+      # reaches the child, so the old negative oracle would fail on exactly the
+      # evidence that proves P4 works. It is retired here rather than deleted,
+      # so the release library remains a stated fact instead of an assumption.
+      #
+      # This is a structural release-build evidence check. The symbol spelling
+      # is an implementation detail of the Rust version this workflow pins, not
+      # public API and not a product contract: `child_main` stays private and
+      # is reachable only from inside the crate. P5 may replace or harden this
+      # marker. It is deliberately the same marker the retired gate used, so
+      # the change here is the direction of the assertion and nothing else.
+      - name: Confirm the P4 release library instantiates the private backend
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="${RUNNER_TEMP}/p4-release-lib"
+          rm -rf "$out"
+          cargo rustc -p helm-launch --lib --locked --release --all-features \
+            --target x86_64-unknown-linux-gnu --target-dir "$out" -- --emit=asm
+
+          # P5 (`P4PUB05-R1`): the gate asserts its own artifact-selection
+          # premise instead of trusting it. `cargo rustc` applies `--emit=asm`
+          # to exactly one selected target, the target directory is fresh, and
+          # no dependency is named `helm_launch`, so exactly one assembly file
+          # can exist. That is stated here as a check rather than as a comment:
+          # zero is a build-evidence failure, and more than one FAILS CLOSED
+          # rather than reading an arbitrary first match.
+          expected_dir="$out/x86_64-unknown-linux-gnu/release/deps"
+          mapfile -t asm_files < <(find "$out" -name 'helm_launch-*.s' -print | sort)
+          found=${#asm_files[@]}
+          if [ "$found" -eq 0 ]; then
+            echo "BUILD EVIDENCE FAILURE: no assembly was emitted for the release library."
+            exit 1
+          fi
+          if [ "$found" -ne 1 ]; then
+            echo "BUILD EVIDENCE FAILURE: expected exactly one helm_launch release assembly,"
+            echo "found $found. This gate must not read an arbitrary first match:"
+            printf '  %s\n' "${asm_files[@]}"
+            exit 1
+          fi
+          asm="${asm_files[0]}"
+          case "$asm" in
+            "$expected_dir"/*) ;;
+            *)
+              echo "BUILD EVIDENCE FAILURE: the one assembly is not the cross-built release"
+              echo "library of the selected target. Expected it under $expected_dir, found:"
+              echo "  $asm"
+              exit 1
+              ;;
+          esac
+
+          if ! grep -q 'backend5child10child_main' "$asm"; then
+            echo "FAILURE: the P4 release library does not reach the private child backend."
+            echo "The public launch path no longer instantiates it. Artifact: $asm"
+            exit 1
+          fi
+          echo "P4 release library instantiates the private child backend, as expected: $asm"
+
+          # P5 (`P4PUB05-R2`): presence proves the child entry was emitted. This
+          # proves the stronger property the gate's name claims — that the
+          # PUBLIC launch reaches it by direct control transfers in this very
+          # artifact. It is a separate checker that imports the accepted P3
+          # assembly parser and changes nothing in it, and it fails closed on an
+          # ambiguous symbol or an unresolvable edge.
+          python3 tools/helm_launch_release_reachability.py --asm "$asm"
+
+      # The Linux backend suite, named so the log shows which cases the cohort
+      # actually exercised and a silently empty suite cannot pass unnoticed.
+      # These cases DO create and execute purpose-built test processes.
+      - name: Name the Linux x86_64 capability-admission cases
+        if: runner.os == 'Linux'
+        run: |
+          cargo test -p helm-launch --locked --test linux_admission -- --nocapture --list
+          cargo test -p helm-launch --locked --test linux_admission
+
+      - name: Name and run the P3 backend and traced-window cases
+        if: runner.os == 'Linux'
+        run: |
+          cargo test -p helm-launch --locked --lib -- --list
+          cargo test -p helm-launch --locked --lib -- --nocapture backend::tests::
+
+      - name: Run the P3 fault-injection cases
+        if: runner.os == 'Linux'
+        run: |
+          cargo test -p helm-launch --locked --features test-fault-injection --lib -- --nocapture backend::tests::
+
+      # Off the cohort the P2 authority API and the P3 backend must be absent,
+      # which the crate root's `compile_fail` doctests assert; `cargo test`
+      # above runs them. These steps state the expectation in the log.
+      - name: Confirm the admission suite is empty off the cohort
+        if: runner.os != 'Linux'
+        run: cargo test -p helm-launch --locked --test linux_admission -- --list
+
+      - name: Confirm no backend or launch test exists off the cohort
+        if: runner.os != 'Linux'
+        shell: bash
+        run: |
+          set -eux
+          if cargo test -p helm-launch --locked --lib -- --list | grep -q 'backend::'; then
+            echo "FAILURE: a backend test exists off the Linux x86_64 cohort."
+            exit 1
+          fi
+          if cargo test -p helm-launch --locked --lib -- --list | grep -q 'launch::'; then
+            echo "FAILURE: a P4 launch test exists off the Linux x86_64 cohort."
+            exit 1
+          fi
+          echo "no backend and no launch test off the cohort, as the gate requires"
+
+      # The structural boundary suites run identically on all three platforms:
+      # they read the tree and the manifests and execute nothing.
+      - name: Run the unsafe-confinement and boundary suites
+        run: |
+          cargo test -p helm-launch --locked --test p4_boundary -- --nocapture
+          cargo test -p helm-launch --locked --test p3_boundary -- --nocapture
+          cargo test -p helm-launch --locked --test p2_boundary
+
+      # The runner's preinstalled interpreter, as the other workflows use. The
+      # checks read the tree and the manifests only, so one platform proves
+      # them; the Linux workspace workflow also runs them through its
+      # `tools/tests` discovery.
+      - name: Repository-level confinement checks, independent of cargo
+        if: runner.os == 'Linux'
+        run: |
+          python3 -m unittest tools.tests.test_helm_launch_confinement -v
+          python3 -m unittest tools.tests.test_helm_launch_machine_proofs -v
+          python3 -m unittest tools.tests.test_helm_launch_release_reachability -v
+
+      # The determinism anchors. Exact bytes and digests are asserted inside the
+      # tests, so a platform-dependent serializer or parser fails above rather than
+      # producing per-platform "expected" values. These steps print the identities
+      # so the three runs can also be compared by eye in the logs.
+      - name: Print the deterministic receipt and plan identities
+        run: |
+          cargo test -p helm-launch --locked --lib -- --nocapture one_platform_independent_identity
+          cargo test -p helm-launch --locked --test plan_contract -- --nocapture a_fixed_plan_has_one_exact_byte_identity
+
+      # THE P5 LEVEL-4 SURFACE, NAMED. The default suite above already runs
+      # these, but naming them makes the log show which adversarial regressions
+      # and which published receipt vectors actually executed, so a silently
+      # empty Level-4 suite cannot pass unnoticed. It runs on **all three**
+      # platforms on purpose: the published receipt vectors are Level 1, and the
+      # same bytes and the same SHA-256 must come out on each. A
+      # platform-dependent receipt is a defect, not a platform expectation.
+      #
+      # It is deliberately the last step, so the step numbers the P4 publication
+      # evidence refers to — 17 for the release-library gate, 24 for the
+      # repository-level confinement checks — keep their meaning.
+      - name: Name and run the P5 Level-4 regressions and published receipt vectors
+        run: |
+          cargo test -p helm-launch --locked --test p5_regressions -- --nocapture --list
+          cargo test -p helm-launch --locked --test p5_regressions -- --nocapture
+          cargo test -p helm-launch --locked --lib -- --nocapture receipt::tests::published
+          cargo test -p helm-launch --locked --lib -- --nocapture receipt::tests::the_published

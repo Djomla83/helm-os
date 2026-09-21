@@ -1,0 +1,871 @@
+{
+  "authoritative_main": "5cc56384257a2ec1f2a2a9c64f7f4328da6cef2e",
+  "build": {
+    "build_7_binds": false,
+    "build_7_run": "34575558065",
+    "build_8_evidence": null,
+    "c_sources_changed_since_build_7": [
+      "helper_fork.c",
+      "helper_report.c",
+      "launcher_spike.c"
+    ],
+    "c_sources_unchanged_since_build_7": [
+      "helper_alt.c",
+      "helper_dynamic.c",
+      "helper_setid.c"
+    ],
+    "status": "BUILD_8_REQUIRED"
+  },
+  "build_evidence": "BUILD-EVIDENCE.md in this directory, append-only and deliberately not hashed by this manifest. Build 7 (run 34575558065) compiled the Trial #2 C bytes. helper_fork.c, helper_report.c, launcher_spike.c differ at this freeze, so Build 7 does not bind Trial #3: BUILD_8_REQUIRED. No Build 8 evidence exists; it must come from the compile-only workflow after this freeze is independently reviewed and published.",
+  "build_identity": {
+    "covers": "every generated executable and fixture in the build directory at that moment",
+    "fields": [
+      "size",
+      "sha256",
+      "kind"
+    ],
+    "kind_source": "the ELF program headers, read directly rather than taken from file(1) or ldd(1) output text",
+    "point_of_use": {
+      "central": "one binding, defined once and called once, for every case",
+      "classifications": [
+        "DIRECT_BASE",
+        "BYTE_IDENTICAL_CASE_COPY",
+        "INTENTIONAL_MUTATION_TARGET",
+        "SYMLINK_TO_BASE",
+        "NON_BUILD_OBJECT"
+      ],
+      "mutation_targets": "bound by their STARTING bytes; the base digest is not required to survive the frozen intentional change",
+      "separate_identities": [
+        "build identity",
+        "case-private starting identity",
+        "the launcher's pre-exec measurement",
+        "the intentional post-pin mutation",
+        "the execution observation"
+      ],
+      "unclassified": "an object matching none of these and not declared does not pose its case"
+    },
+    "reuse_proof": "the driver builds nothing, and every case's starting object is bound and classified at the point of use",
+    "when": "hashed from the files on disk after the build and made durable BEFORE the first case"
+  },
+  "case_membership": {
+    "conditional": 11,
+    "mandatory": 54,
+    "recorded": 7,
+    "total": 72
+  },
+  "classification": "TRIAL_3_LOCAL_FREEZE_READY_FOR_INDEPENDENT_REVIEW",
+  "correction_candidate_record": {
+    "authority": "none; this manifest alone is the Trial #3 freeze",
+    "path": "TRIAL-3-CORRECTION-CANDIDATE.json",
+    "state": "SUPERSEDED_BY_TRIAL_003_FREEZE"
+  },
+  "d7_execution_authorised": false,
+  "definition_sha256": {
+    "docs/adr/ADR-0024-launch-authority.md": "c1f3cce88438439aab6632a9c56450ae98d1c64adb31b13c742e2febb1476351",
+    "docs/experiments/LAUNCH-EXEC-01-DEFINITION.md": "0c7406b4572341b2f156a242a2c9dcd2bfe2b61afd0c2a979c4450cdac8a7647",
+    "docs/research/HELM-LAUNCH-ARCHITECTURE.md": "97fbf0d8a602c68b0cf20529c4c1bb238ae2790a6089fa8ff6818c054b443151"
+  },
+  "driver": {
+    "case_handlers": 72,
+    "complete": true,
+    "duplicates": [],
+    "missing": [],
+    "note": "D-7 execution HALTS at preflight unless unposable_against_this_freeze is empty AND every mandatory preflight requirement, including a supported strace, succeeds.",
+    "posable_against_this_freeze": 72,
+    "supplied_evidence_channels": [
+      "liveness",
+      "payload",
+      "receipt",
+      "rejected_arm",
+      "report",
+      "threaded_launcher",
+      "trace"
+    ],
+    "unknown": [],
+    "unposable_against_this_freeze": [],
+    "unposable_mandatory": []
+  },
+  "durable_evidence": {
+    "artifact_contract": {
+      "case_record_posing_evidence": "every case_completed record carries posing_evidence: the build-identity binding and classification, every forced-state and parent-state landing fact, the posed check and its result, the measurements an assertion or posed check relied on, and the cleanup problems. Normalised: no raw pid, descriptor number, inode, device, private path or report text. Written even when the case is not posed. BLOCKED and pre-setup records included: `invocation` records whether case_pose_started was written, whether the mechanism was invoked and the frozen block cause; a repeated case lists every repetition's status and outcome and the reduction that decided it",
+      "files": [
+        "preflight.json",
+        "build-identity.json",
+        "journal.jsonl",
+        "evidence.json"
+      ],
+      "final_document": "a summary of durable facts, never their only copy",
+      "never_persisted": [
+        "capture_prefix_base64",
+        "raw strace text",
+        "raw pid/tid/fd values",
+        "environment values",
+        "private host paths",
+        "credentials"
+      ],
+      "preserved_after": [
+        "a completed trial",
+        "MECHANISM_REJECTED",
+        "MECHANISM_INCONCLUSIVE",
+        "a harness exception",
+        "a runner crash, up to the last flushed record"
+      ],
+      "sanitised": "every one, through evidence.publish, before it is written"
+    },
+    "build_identity": {
+      "covers": "every generated executable and fixture in the build directory at that moment",
+      "fields": [
+        "size",
+        "sha256",
+        "kind"
+      ],
+      "kind_source": "the ELF program headers, read directly rather than taken from file(1) or ldd(1) output text",
+      "reuse_proof": "the driver builds nothing, and every case's starting object is bound and classified at the point of use by the one central binding",
+      "when": "hashed from the files on disk after the build and made durable BEFORE the first case"
+    },
+    "journal": {
+      "boundary": "a trial's D-7 authorisation (for Trial #3, a future owner D-7 that does not exist at this freeze) is CONSUMED and the immutability boundary is crossed when the FIRST case_pose_started record is successfully fsynced. That record is written before the launcher process exists, so a death between the record and the process still counts as an execution: the bias is deliberate and can never permit a second execution under one D-7",
+      "crash_semantics": "a crash can lose only the record being written; a torn final line is dropped by the reader and reported, never repaired",
+      "entered_vs_completed": "case_entered when the runner begins preparing a case; case_pose_started when every setup and forced-state prerequisite has landed and the mechanism is about to be invoked; case_completed when a frozen status is final. A BLOCKED or unposable case never reaches case_pose_started",
+      "file": "journal.jsonl",
+      "format": "append-only JSONL, one record per line, flushed and fsynced",
+      "immutability": "no update and no delete; completing a case twice or completing one that was never entered raises",
+      "kinds": [
+        "trial_begin",
+        "preflight",
+        "build_identity",
+        "case_entered",
+        "case_pose_started",
+        "case_completed",
+        "trial_end"
+      ],
+      "partial_reading": {
+        "absent_case": "has no status",
+        "completed_case": "keeps exactly its recorded status and reason",
+        "incomplete_case": "UNKNOWN_FROM_PRESERVED_EVIDENCE; no frozen PASS/FAIL/INVALID/BLOCKED is derived after the fact and no fabricated INVALID is fed to the checker",
+        "no_pose_started_and_no_valid_trial_end": "TRIAL_NOT_STARTED; D-7 not consumed by execution; no aggregate",
+        "pose_started_and_no_valid_trial_end": "TRIAL_ABORTED_AFTER_BOUNDARY; D7_AUTHORIZATION_CONSUMED; AGGREGATE_NOT_DERIVABLE_FROM_FROZEN_EVIDENCE",
+        "replay_never_synthesises": "a trial_end, a status, or a repaired history",
+        "trial_end_prerequisites": "every membership case has a durable completed record, none has two, and the aggregate came from the frozen checker over exactly those records, recorded with its input digest",
+        "valid_trial_end": "TRIAL_COMPLETED with the frozen checker's aggregate"
+      }
+    }
+  },
+  "e5b_correction": {
+    "case_semantics_unchanged": "E5b remains mandatory with prediction Exited:0 and setup writer_open_closed",
+    "claim_preserved": "the writer is still opened O_WRONLY and is still closed before exec; the descriptor was NOT widened to O_RDWR, which would have changed what E5b tests",
+    "sequence": [
+      "open(path, O_RDONLY)",
+      "pread 1 byte at offset 0",
+      "close the reader",
+      "open(path, O_WRONLY)",
+      "pwrite that byte at offset 0",
+      "close the writer",
+      "launch"
+    ],
+    "short_transfer": "a read or write of other than exactly one byte returns not_posed, which the frozen checker scores INVALID",
+    "trial_001_defect": "os.pwrite(fd, os.pread(fd, 1, 0), 0) on a descriptor opened O_WRONLY; a write-only file description carries no FMODE_READ, so read(2)/pread(2) return EBADF"
+  },
+  "experiment": "LAUNCH-EXEC-01",
+  "freeze_lineage": [
+    "ba41a3f12be411058ed50e78bcd1c7e22afb7ae4 - Trial #2 freeze, executed once in run 34640280964 (MECHANISM_REJECTED); immutable",
+    "8a9dc77 - Trial #2 evidence preserved",
+    "1f0b86a - Trial #2 result review",
+    "a73e159 - owner postmortem decisions",
+    "b20c2b0 - bounded postmortem diagnostics",
+    "7f98d4dcdb098abf96fe5e15e314194f5df6cb20 - bounded Trial #3 correction candidate",
+    "ee8cd9106277a450f2987d3f4c759fd96085d5f3 - independent correction review, TRIAL_3_CORRECTION_CANDIDATE_NEEDS_FIX",
+    "53ad8bfef1b66592f2ae2e4e3df5fc847b526834 - R-I1 and R-M1 fix",
+    "db45336684817d95edbb7fcea3cf0191f7eee528 - bounded re-review, TRIAL_3_RI1_RM1_REREVIEW_NEEDS_FIX",
+    "f1e7eead6f604d28d436cfa474c7efc44d1dc886 - RR-I1 fix",
+    "030d88a6c96e1dd97b3ebf7839dc4b2dafed9d70 - final RR-I1 micro review, TRIAL_3_FINAL_RRI1_MICRO_REVIEW_PASSED_READY_FOR_FREEZE_PREPARATION",
+    "this freeze - cut over the reviewed bytes of f1e7eea plus the freeze step: trial-003, README status and three definition wording corrections"
+  ],
+  "freeze_state": "FROZEN",
+  "host_information": {
+    "collected": [
+      "uname -s (kernel name)",
+      "uname -r (kernel release)",
+      "uname -m (machine architecture)"
+    ],
+    "not_collected": [
+      "nodename",
+      "hostname",
+      "domain name",
+      "username"
+    ],
+    "why_by_key": "a hostname is a short arbitrary token, so no length, entropy or shape rule can separate it from the kernel build string beside it; the field goes whole rather than being scanned",
+    "withheld_by_key_if_it_reappears": [
+      "domainname",
+      "fqdn",
+      "hostname_fqdn",
+      "node",
+      "nodename",
+      "uname",
+      "uname_a",
+      "uname_all"
+    ]
+  },
+  "lineage": {
+    "trial_001_aggregate": "AGGREGATE_NOT_DERIVABLE_FROM_FROZEN_EVIDENCE",
+    "trial_001_d7": "D7_AUTHORIZATION_CONSUMED; it does not carry into Trial #2",
+    "trial_001_freeze": "89c923a147ff16182d4d0ae14a0bd7bb6e62723d",
+    "trial_001_outcome": "TRIAL_ABORTED_AFTER_BOUNDARY",
+    "trial_001_result_review": "docs/implementation/HELM-LAUNCH-EXEC-01-TRIAL-001-RESULT-REVIEW.md, accepted by the owner at commit f7e5ca0",
+    "trial_001_run": "GitHub run 34500901306, run number 1, attempt 1",
+    "trial_002_aggregate": "MECHANISM_REJECTED",
+    "trial_002_counts": "59 PASS / 6 FAIL / 6 INVALID / 1 BLOCKED",
+    "trial_002_d7": "D7_AUTHORIZATION_CONSUMED; it does not carry into Trial #3",
+    "trial_002_freeze": "ba41a3f12be411058ed50e78bcd1c7e22afb7ae4",
+    "trial_002_is_not": "a retry, a rerun, a resume or a continuation of Trial #1; Trial #1 is closed and remains permanently addressable as trial-001",
+    "trial_002_outcome": "TRIAL_COMPLETED",
+    "trial_002_reason": "HARNESS/PRESERVATION CORRECTION AFTER TRIAL #1: E5b's fixture setup read back through a write-only descriptor and aborted the trial, and every per-case record lived only in memory so five completed cases were lost with the runner",
+    "trial_002_result_review": "docs/implementation/HELM-LAUNCH-EXEC-01-TRIAL-002-RESULT-REVIEW.md, accepted by the owner in docs/DECISIONS.md#trial-002-postmortem-decisions",
+    "trial_002_run": "GitHub run 34640280964",
+    "trial_003_is_not": "a retry, a rerun, a resume or a continuation of Trial #2; Trial #2 is closed and remains permanently addressable as trial-002",
+    "trial_003_reason": "PROSPECTIVE CORRECTION AFTER TRIAL #2: the owner's postmortem decisions bounded the correction to X2b, X2c, X4, T1, S4, M2, E4, E6, E6c, O6, O7 and R3, plus liveness revalidation for P1, P2 and P4"
+  },
+  "m3_t": {
+    "block_causes_unchanged": [
+      "clone3_unavailable"
+    ],
+    "bounded_claim": "For the direct child in this candidate execution, the pidfd used by the launcher was returned through the CLONE_PIDFD facility of the SAME clone3 syscall that created that direct child, rather than being acquired later by pidfd_open() from a numeric PID.",
+    "claim_exclusions": [
+      "Linux pidfds are universally race-free",
+      "the kernel implementation has been proved atomic",
+      "any general claim about pidfd behaviour beyond this one execution",
+      "any timing-sensitive normal-launch behaviour: M3 runs under a tracer, and its evidence is restricted to the acquisition facts below"
+    ],
+    "closure_form": "REMOVED by R-2; absence of pidfd_open no longer proves which descriptor clone3 returned",
+    "evidence_facts": {
+      "A": "exactly one relevant candidate clone3 direct-child creation",
+      "B": "CLONE_PIDFD present in its flags",
+      "C": "clone_args.pidfd output location present",
+      "D": "clone3 succeeds and returns the DIRECT_CHILD pid",
+      "E": "the tracer directly renders the pidfd produced by that clone3 call",
+      "F": "that pidfd equals the pidfd used by the launcher's direct-child lifecycle observation",
+      "G": "waitid(P_PIDFD, that_pidfd, ...) reports si_pid == the clone3 return",
+      "H": "no pidfd_open(DIRECT_CHILD_PID) acquisition path is observed"
+    },
+    "evidence_forms": [
+      "direct"
+    ],
+    "self_assertion_rejected": "no pidfd_acquisition receipt field exists in launcher_spike.c and the rule never reads one"
+  },
+  "not_hashed_here": {
+    "BUILD-EVIDENCE.md": "append-only build record that grows AFTER the freeze; hashing it would make this manifest mutable, which is the defect it exists to avoid",
+    "SOURCE-HASHES.json": "a manifest cannot hash itself; OBS-FS-01 convention",
+    "TRIAL-3-CORRECTION-CANDIDATE.json": "the superseded NOT_FROZEN Trial #3 correction record, kept as provenance; it is never freeze authority and grants nothing"
+  },
+  "open_findings": {
+    "AB7-B1": "FIXED at Trial #2 freeze ba41a3f (1db4347) - O6 and O7 are posed by fixture_descendant_signalled: the harness opens the case-private FIFO's read end before the launcher is spawned, so helper_fork's descendant signals before the launcher's unchanged group sweep ends it; no --setsid and no C change",
+    "AB7-I1": "FIXED at Trial #2 freeze ba41a3f (1db4347) - S2/S7's explicit ExecFailed:CHDIR:EACCES exec-status record is authoritative that no image ran, and no clean end-of-file is required",
+    "AB7-M1": "FIXED at Trial #2 freeze ba41a3f (1db4347) - report_sentinel_seen is positive evidence that an image started even when the report does not parse; no_executed_image decides FAIL without a rule token, and a status record beside a sentinel is a contradiction FAIL",
+    "AB7-M2": "FIXED at Trial #2 freeze ba41a3f (1db4347) - O6 is posed by the fixture signal and its retained completeness is a result, so the frozen CompleteAtEof is a FAIL",
+    "AB7-N1": "BACKLOG - BLOCKED S2/S7 and M2 records carry null or placeholder measured counts; no landing fact is invented; recorded in the ab74356 final review",
+    "AB7-N2": "BACKLOG - the P-series liveness FIFO is not unlinked at release; hygiene only. The O6/O7 fixture-signal FIFO is removed after every invocation",
+    "AB7-N3": "BACKLOG - an M2 control-arm non-return is a FAIL only while the threaded arm's trace is structurally valid; the unchanged checker's traced-evidence gate comes first",
+    "F-1": "FIXED at a Trial #2 freeze carried by ba41a3f - fixed vocabulary derived from every symbolic registry, including the driver's, rather than hand-listed",
+    "F-2": "NOT A DEFECT - A4's long argument is data, not symbolic vocabulary, and may remain <OPAQUE:...>",
+    "F-3": "RESOLVED at a Trial #2 freeze carried by ba41a3f - protected because it is registered, without being made reachable",
+    "F417-B1": "FIXED at Trial #2 freeze ba41a3f (f9bbf39) - every repetition is evaluated on its own and the case reduced FAIL > INVALID > PASS",
+    "F417-B2": "FIXED at Trial #2 freeze ba41a3f (f9bbf39) - O8's trial_floor_512 posed check removed; a posed short repetition fails its own stream_exact rule",
+    "F417-B3": "FIXED at Trial #2 freeze ba41a3f (f9bbf39) - S2/S7 are posed by the barrier's proven landing; an image that ran fails the no_executed_image assertion",
+    "F417-B4": "FIXED at Trial #2 freeze ba41a3f (f9bbf39) - F7's adjacency comes from the launcher's pre-clone pipe2/fcntl records, never the child's close_range; an EINVAL after it is a FAIL",
+    "F417-I1": "FIXED at Trial #2 freeze ba41a3f (f9bbf39) - report-based rules take the lifecycle token on decisive evidence; missing evidence stays INVALID",
+    "F417-I2": "FIXED at Trial #2 freeze ba41a3f (f9bbf39) - M2's control-arm non-return or late return is a FAIL; not posed is INVALID",
+    "F417-I3": "FIXED at Trial #2 freeze ba41a3f (f9bbf39) - definition section 9.6 fixes the classification before any case",
+    "F417-M1": "FIXED at Trial #2 freeze ba41a3f (f9bbf39) - every case_completed record carries posing_evidence, BLOCKED included",
+    "F417-N1-N6": "BACKLOG - recorded in the F417 bounded review; not changed",
+    "F417-SECTION-2-AUDIT": "FIXED at Trial #2 freeze ba41a3f (f9bbf39) - the same rule applied to every posed check and rule: O3's bound and O6's completeness became assertions, O6/P4 posing is retention_observed, rule_admission decides an admitted run, rule_stream_exact a refused one, and a full payload that is not the recipe renders stream_mismatch",
+    "M-1": "FIXED at a Trial #2 freeze carried by ba41a3f - driver vocabulary acquisition is fail-closed: a failed, partial or invalid registry load raises VocabularyUnavailable, publishes nothing and caches nothing, and a later complete load recovers",
+    "M3": "RESOLVED by owner amendment M3-T at freeze 5d0b801; review section 14",
+    "O7-CONSTRUCTION": "RESOLVED by owner decision (82b8746) and corrected by the owner's AB7 decision - O7 runs on the unchanged helper_fork retained-writer fixture; the stderr capture failure is the receipt's WriterRetainedAfterChildExit beside Exited:42, a RESULT assertion; the posing proof is the pre-armed fixture signal (fixture_descendant_signalled), because the post-launch liveness first used was unreachable behind the launcher's group sweep (AB7-B1); no C or helper source changed",
+    "P-16": "FIXED at a Trial #2 freeze carried by ba41a3f - the host nodename is no longer collected (uname -s replaces uname -a; release and architecture were already separate) and every document leaves through one publication boundary, evidence.publish, so HALT_PREFLIGHT is sanitised like any other document",
+    "PRE-D7-B1": "CORRECTED at freeze a7ae6b9/002e1e4; review section 12",
+    "R-1": "FIXED at freeze dc1149f - strace fragments rejoined per task",
+    "R-2": "FIXED at freeze dc1149f - closure evidence form removed",
+    "R-3": "FIXED at freeze dc1149f - waitid requires si_pid == clone3 return",
+    "R-4": "FIXED at freeze dc1149f - mandatory strace preflight, no fallback",
+    "R-5": "FIXED at freeze dc1149f - docstring corrected to eight",
+    "R-B1": "BACKLOG - a receipt without wait_si_code is accepted uncorroborated; the launcher always prints the field",
+    "R-B2": "BACKLOG - the S4 claim token alone does not discriminate; S4's discrimination lives in its assertions",
+    "R-I1": "FIXED at 53ad8bf - P1, P2 and P4 require a reached liveness probe with no fixture failure before a missing byte means descendant_died; a broken or unproven fixture is INVALID",
+    "R-M1": "FIXED at 53ad8bf - a decisive launcher contradiction FAILs S4 before a missing report can make it INVALID",
+    "R-M2": "CORRECTED at this freeze - definition section 10 states that --verify-freeze checks the 17 source hashes only and that definition hashes are verified by the freeze tests",
+    "RR-B1": "BACKLOG - the S4 exec-status claim and the receipt's process_disposition share the spelling ExecStatusIndeterminate",
+    "RR-B2": "BACKLOG - helper_fork runs without the gate, silently, if pipe2 fails; the result is INVALID at worst",
+    "RR-B3": "BACKLOG - the shared errno renderer treats a Python bool True as errno 1; S4's structural fact rejects booleans and %d output cannot produce one",
+    "RR-B4": "BACKLOG - candidate-record test placement; at this freeze the decisive set is bound by this manifest directly",
+    "RR-B5": "BACKLOG - a receipt with a missing exec_failed_stage and a named errno raises inside evaluate; the receipt parser rejects it",
+    "RR-I1": "FIXED at f1e7eea - an explicit structured pre-exec failure with a valid errno outside ERRNO_NAMES FAILs S4; malformed records gain no authority",
+    "RR-M1": "CORRECTED at this freeze - definition section 10.9 states that the direct-child gate is fixture synchronisation: it waits for the case's own preparation, including P2's setsid, and the probe point, releases the direct child before any liveness result, and decides no outcome",
+    "RR-M2": "MINOR, ACCEPTED - a P2/P4 survivor stalled more than 3 s between its rendezvous open and its byte can be recorded descendant_died; accepted for this freeze by owner disposition",
+    "RR-M3": "CORRECTED at this freeze - definition section 10.4 no longer claims every malformed ExecFailed record stays INVALID; the unchanged shared rule's symbolic token still decides where it renders one",
+    "T1-BUILD-IDENTITY": "FIXED at a Trial #2 freeze carried by ba41a3f - harness.build_identity hashes every file the trial consumes and the runner makes it durable before the first case; the driver builds nothing and verifies the digest at the point of use",
+    "T1-E5b": "FIXED at a Trial #2 freeze carried by ba41a3f - E5b's writer stays O_WRONLY and the byte is read first through a separate read-only descriptor, closed before the writer opens; a short read or write does not pose the case",
+    "T1-PRESERVATION": "FIXED at a Trial #2 freeze carried by ba41a3f - preflight, build identity and every completed case status are flushed to an append-only journal before the next step is attempted, so an abort can lose only the record being written",
+    "T2-C-LATENT": "OBSERVED, NOT FIXED, UNREACHABLE - launcher_spike.c would pread an O_PATH descriptor if --bypass-admission and --exec-fd-o-path were passed together, because the O_PATH refusal sits inside the admission branch. No frozen plan passes both, so no case can reach it, and changing C would invalidate Build 5 for a defect this experiment cannot exercise",
+    "T2-R1": "FIXED at a Trial #2 freeze carried by ba41a3f - a frozen TEST/CONTROL-ONLY post-pin barrier lets the harness land every preregistered forced state and prove it landed, and the closed setup-result schema makes a producer-only semantic key a test failure. The affected set is TEN cases, derived from the plans: E2 E3 E4 E5 E6 E6b E6c E6d X1 X8",
+    "T2-R2": "FIXED at a Trial #2 freeze carried by ba41a3f - case_pose_started is the frozen boundary and D-7 consumption point, and the reading of a partial journal is preregistered in definition section 9.3",
+    "T2-R3": "FIXED at a Trial #2 freeze carried by ba41a3f - one central binding classifies and verifies every case's starting object against the pre-boundary identity",
+    "T2-R4": "FIXED at a Trial #2 freeze carried by ba41a3f - replay refuses impossible histories rather than repairing them",
+    "T2-R5": "MINOR, NOT FIXED - journal read() splits on U+2028/U+2029/U+0085; no current frozen field can emit one, and errors='replace' yields U+FFFD",
+    "T2-R6": "BACKLOG - build-identity keys are basenames of frozen artefacts and P-14 never rewrites keys; unreachable",
+    "T2-R7": "BACKLOG - a bare account name in free text survives by V-5 design; spike_stderr is the only channel and die() emits no name or path",
+    "T2-R8": "BACKLOG - the consumed Trial #1 dispatcher file remains on the milestone branch; GitHub reports that workflow deleted and main no longer carries it",
+    "T3-E4": "CORRECTED at 7f98d4d - canonical absolute symlink targets; the retarget is proven through the link; the binding requires the build artefact itself",
+    "T3-E6-E6c": "CORRECTED at 7f98d4d - helper_report.c declares the guarded marker as one 34-byte object and locate_marker_region requires exactly one region",
+    "T3-M2": "CORRECTED at 7f98d4d - the child window is anchored on the one CLONE_PIDFD process clone3, never a CLONE_THREAD clone",
+    "T3-N3": "UNCHANGED - conditional on unprivileged_runner; privileged transition testing is deferred by owner decision",
+    "T3-O6-O7": "CORRECTED at 7f98d4d - canonical absolute case-private fixture-signal FIFO proven before the spawn; helper_fork reports a failed signal open or write as one pathless stderr line that never poses",
+    "T3-P1-P2-P4": "CORRECTED at 7f98d4d and 53ad8bf - absolute liveness paths and an independent fixture-health channel; a missing liveness byte means descendant_died only after PROBE_REACHED with no reported failure",
+    "T3-R3": "CORRECTED at 7f98d4d - CLD_DUMPED keeps its terminating signal and the receipt names wait_si_code",
+    "T3-S4": "CORRECTED at 7f98d4d, 53ad8bf and f1e7eea - rule launcher_receipt_claim keeps the conservative ExecStatusIndeterminate claim; helper_exit_corroborated combines the launcher and report sides FAIL-first and decides without a token; an explicit structured pre-exec failure FAILs even with an unnamed errno",
+    "T3-T1": "CORRECTED at 7f98d4d - T1 predicts the exact qualified token TimedOut:KilledByLauncher:SIGTERM",
+    "T3-X2b-X2c-X4": "CORRECTED at 7f98d4d - make_fixtures declares each fixture's mode (0755 for script_fixture.sh and unloadable_in_cohort.elf, 0644 otherwise); a generated fixture without its declared mode does not pose its case",
+    "TRIAL-2-DELTA-N-1": "FIXED at a Trial #2 freeze carried by ba41a3f - parent states are a closed contract, created in the launcher and proven at the barrier; F2, F3, F5, F6, F7, R4, T6, M5 and V1 are proven there, M2 by its receipt against the control arm",
+    "TRIAL-2-DELTA-N-2": "FIXED at a Trial #2 freeze carried by ba41a3f - executed identity is asserted: marker for E1-E4 and E6, pre-exec measurement against the starting identity for E1-E4 and E6, mode bits for E6d and X1; a substituted body is a FAIL; E6 writes and reads back exactly its declared marker",
+    "TRIAL-2-DELTA-N-3": "FIXED at a Trial #2 freeze carried by ba41a3f - E5's writer is proven against the launcher's read-only pinned descriptor at the barrier; the relation is durable, raw inode numbers are not",
+    "TRIAL-2-DELTA-N-4a": "FIXED at a Trial #2 freeze carried by ba41a3f - O5's CPU is measured by the harness and its poll() count by a launcher counter; either missing is INVALID, an exceeded bound is a FAIL",
+    "TRIAL-2-DELTA-N-4b": "FIXED at a Trial #2 freeze carried by ba41a3f - S2 and S7 get a case-private capability whose mode goes to 0000 at the barrier after the launcher is proven to hold it; the inert work_dir_kind is removed",
+    "TRIAL-2-DELTA-N-5": "FIXED at a Trial #2 freeze carried by ba41a3f - every case_completed record carries normalised posing_evidence, including when the case is not posed",
+    "TRIAL-2-DELTA-N-6": "FIXED at a Trial #2 freeze carried by ba41a3f - E6c's mapping holds no descriptor, proven from /proc; it mutates the marker region, not the ELF header",
+    "TRIAL-2-DELTA-R4-GATE": "FIXED at a Trial #2 freeze carried by ba41a3f - never_reports_exited_zero is computed from the derived token",
+    "TRIAL-2-DELTA-WORDING": "FIXED at a Trial #2 freeze carried by ba41a3f - X8 and the barrier set are separated from the T2-R1 set, the T2-R3 reuse wording is corrected, and the new control flags are declared",
+    "V-1": "FIXED at freeze 2621381 - three-state return, bounded logical record",
+    "V-2": "FIXED at freeze 2621381 - contradictory waitid identity is INVALID",
+    "V-3": "FIXED at freeze 2621381 - shared structural traced-evidence gate",
+    "V-4": "FIXED at freeze 2621381 - the gate covers all eight traced cases",
+    "V-5": "FIXED at a Trial #2 freeze carried by ba41a3f - structure-aware sanitisation; keys immutable, frozen vocabulary never rewritten, username redacted only as a path component or an explicit host-identity value"
+  },
+  "owner_decisions": {
+    "D-1": "arm_i_scoped_unsafe_backend",
+    "D-10": "empty_environment_only",
+    "D-11": "no_new_privs_required_before_exec",
+    "D-2": "one_linux_substrate_before_wine",
+    "D-3": "zero_helm_crate_dependencies",
+    "D-4": "direct_child_lifecycle_only",
+    "D-5": "mandatory_working_directory_capability",
+    "D-6": "utf8_only_argv",
+    "D-8": "no_timestamp_no_duration_in_receipt",
+    "D-9": "refuse_set_id_objects_at_admission"
+  },
+  "parent_state_schema": {
+    "caller_state_flags": {
+      "--parent-close-low-fds": "F6 (3) and F7 (1) only; TEST/CONTROL ONLY; once, before the M5 arm and the pin; with 3 the receipt channel is saved above 2 first and restored only when the receipt is written",
+      "--parent-fd-set-cloexec": "F3 only; TEST/CONTROL ONLY; once, before the M5 arm and the pin"
+    },
+    "closed": "a parent-state key the schema does not name is refused; every key has one consumer that creates it and one prover that observes it, and a test fails if either is missing",
+    "created_in": "the launcher process, the caller each case describes; the harness's own signal state is changed only across the spawn and restored before the barrier",
+    "keys": [
+      "block_signals",
+      "close_low_fds",
+      "env",
+      "ignore_signals",
+      "inherit_fd",
+      "launcher_threads"
+    ],
+    "proof": "at the post-pin barrier, from /proc/<launcher>: environ names, fd table and fdinfo flags, SigBlk and SigIgn, and what descriptors 0-2 refer to; M2's threads from the receipt's parent_shape against the control arm; F7's adjacency from the launcher's own pre-clone pipe2 and fcntl(F_DUPFD_CLOEXEC) records, followed from the exec descriptor the barrier proved at fd 0 -- never from the child's close_range calls",
+    "requirement_source": "the declared state, never the consumer's derived fields, so a bypassed consumer cannot also empty the requirement",
+    "users": [
+      "F2",
+      "F3",
+      "F5",
+      "F6",
+      "F7",
+      "M2",
+      "M5",
+      "R4",
+      "T6",
+      "V1"
+    ]
+  },
+  "posing_versus_showing": {
+    "assertions": {
+      "bounded_drain": {
+        "cases": [
+          "O5"
+        ],
+        "reads": [
+          "launcher_cpu_ms",
+          "poll_returns"
+        ],
+        "violation_token": "drain_unbounded"
+      },
+      "completed_under_ten_seconds": {
+        "cases": [
+          "O3"
+        ],
+        "reads": [
+          "elapsed_ms"
+        ],
+        "violation_token": "completion_over_bound"
+      },
+      "executed_marker": {
+        "cases": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E6",
+          "S4"
+        ],
+        "reads": [
+          "expected_marker",
+          "report",
+          "report_state"
+        ],
+        "violation_token": "executed_body_mismatch"
+      },
+      "helper_exit_corroborated": {
+        "cases": [
+          "S4"
+        ],
+        "reads": [
+          "report",
+          "report_state",
+          "spike"
+        ],
+        "violation_token": "helper_exit_contradicted"
+      },
+      "measured_starting_identity": {
+        "cases": [
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E6"
+        ],
+        "reads": [
+          "spike",
+          "build_identity_binding"
+        ],
+        "violation_token": "measurement_mismatch"
+      },
+      "mode_measured_pre_change": {
+        "cases": [
+          "E6d",
+          "X1"
+        ],
+        "reads": [
+          "spike",
+          "post_pin_evidence"
+        ],
+        "violation_token": "mode_measurement_mismatch"
+      },
+      "no_executed_image": {
+        "cases": [
+          "S2",
+          "S7"
+        ],
+        "reads": [
+          "report_sentinel_seen",
+          "spike",
+          "report_state"
+        ],
+        "violation_token": "executed_image_observed"
+      },
+      "stderr_capture_failure_reported": {
+        "cases": [
+          "O7"
+        ],
+        "reads": [
+          "spike"
+        ],
+        "violation_token": "capture_failure_not_reported"
+      },
+      "stream_completeness_as_declared": {
+        "cases": [
+          "O6"
+        ],
+        "reads": [
+          "expected_streams",
+          "spike"
+        ],
+        "violation_token": "completeness_mismatch"
+      }
+    },
+    "classification": {
+      "FAIL": "the mechanism was invoked under the frozen state and a decisive observation contradicts the frozen prediction, safe set, gate or executed-identity assertion; or a launch, including M2's control arm, did not return in bound",
+      "INVALID": "only when the result cannot honestly be evaluated: a forced state or posing precondition was not established, an evidence channel or a required measurement is missing, or the observation is not interpretable",
+      "PASS": "otherwise",
+      "decisive_without_report": "a report-based rule (argv_exact, environ_empty, fds_exactly_012, signals_reset, no_new_privs, interpreter_ran_with_devfd, privilege_transition_suppressed) with no usable report takes the lifecycle token when the record is decisive: an admission refusal, an explicit pre-exec status record, or a complete stdout holding no report. A truncated, malformed or undecidable stream, or no receipt, stays INVALID",
+      "other_decisive_forms": "an admitted run in a refusal case takes its lifecycle token; a refused run in a stream_exact case takes its refusal; a declared payload drained in full that is not the recipe renders stream_mismatch",
+      "posing_checks": "only preconditions the mechanism does not control: barrier landing, same_inode_as_writer (E5), exec_status_pair_adjacent (F7), threaded_parent_observed (M2), retention_observed (P4), no_helper_report (S5), fixture_descendant_signalled (O6, O7)",
+      "source": "definition sections 9.6, 9.7 and 10"
+    },
+    "decisive_without_token": {
+      "assertions": [
+        "helper_exit_corroborated",
+        "no_executed_image"
+      ],
+      "rule": "an assertion whose violation proves a forbidden event or a decisive mechanism contradiction on its own decides a repetition even when the rule renders no token: S2/S7's report sentinel beside a report that does not parse (no_executed_image), and S4's explicit structured pre-exec failure whose errno has no symbolic name (helper_exit_corroborated); every other assertion still needs the rule's token",
+      "source": "definition section 9.7 (AB7-M1) and section 10.4 (RR-I1)"
+    },
+    "expected_markers": {
+      "E1": "helper_report",
+      "E2": "helper_report",
+      "E3": "helper_report",
+      "E4": "helper_report",
+      "E6": "MUTATED",
+      "S4": "helper_report"
+    },
+    "fixture_signal": {
+      "cases": [
+        "O6",
+        "O7"
+      ],
+      "cleanup": "the read end is closed and the FIFO removed after every launcher invocation (_run_once) and again by release_setup_resources",
+      "fd_safety": "opened O_RDONLY | O_NONBLOCK | O_CLOEXEC before the spawn; checked to be a FIFO, non-inheritable, absent from pass_fds and holding no byte; held only by the harness, so it enters neither launcher_spike nor helper_fork",
+      "freshness": "the FIFO node is case-private and created afresh for every launcher invocation, so no writer of an earlier node, another case or an earlier repetition can reach it",
+      "meaning": "exactly the frozen byte L arrived: helper_fork executed, its fork path ran and its descendant reached the signalling path. It does not mean the descendant outlived launch()",
+      "not_used_by": "P1-P4 and T5, which keep the post-launch rendezvous because their question is survival; P1, P2 and P4 carry the separate fixture-health channel (liveness_fixture_health) instead",
+      "read": "after launch() returned, from the already-open read end, bounded by FIXTURE_SIGNAL_READ_TIMEOUT_MS = 2000 ms in total; nothing, or any other bytes, is false",
+      "setup": "fork_helper_prearmed",
+      "sweep": "the launcher's kill(-child, SIGKILL) before the reap is unchanged; the descendant signals in its first actions after fork, and the sweep cannot come before the direct child's exit plus the whole bounded post-exit drain",
+      "writer": "only helper_fork's descendant; the harness never writes the FIFO"
+    },
+    "liveness_fixture_health": {
+      "cases": [
+        "P1",
+        "P2",
+        "P4"
+      ],
+      "channel": "a canonical absolute case-private FIFO handed to helper_fork as --fixture-health-fifo, created afresh with mode 0600 and armed before the spawn: non-inheritable, never in pass_fds, empty, and proven to be the node the helper argument names",
+      "gate": "fixture synchronisation only: helper_fork's direct child exits once the descendant wrote its token or died, before any liveness result exists; the launcher's lifecycle and group sweep decide survival",
+      "interpretation": "no probe, a reported failure, an unexpected open, or a malformed, unreadable or unarmed channel is INVALID; only a reached probe with no failure lets a liveness byte mean descendant_survived and its bounded absence mean descendant_died",
+      "not_used_by": "O6, O7, P3 and T5",
+      "probe_point": "after the case's stdio release and setsid, the health FIFO opened without blocking and the liveness FIFO confirmed to have no reader (non-blocking write open fails ENXIO)",
+      "published_as": [
+        "probe_reached",
+        "channel_failure",
+        "errno",
+        "errno_number"
+      ],
+      "source": "definition section 10.9",
+      "tokens": [
+        "PROBE_REACHED",
+        "LIVENESS_OPEN_FAILED:<errno number>",
+        "LIVENESS_WRITE_FAILED:<errno number>",
+        "LIVENESS_UNEXPECTED_OPEN"
+      ]
+    },
+    "o5": {
+      "cpu_bound_ms": 200,
+      "cpu_source": "measured by the harness outside the launcher, from RUSAGE_CHILDREN across the one launch; includes the helper the launcher reaped, so it can only overstate",
+      "poll_return_bound": 10000,
+      "poll_source": "the launcher's instrumentation counter poll_returns_not_in_receipt, outside the receipt"
+    },
+    "o6": {
+      "class_and_prediction": "mandatory, Exited:0 -- unchanged",
+      "construction": "helper_fork --prewrite 512 --retain-stdio --parent-exit 0 --lifetime-ms P_DESCENDANT_LIFETIME_MS on the pre-armed fixture-signal setup fork_helper_prearmed; no --setsid; helper_fork.c's O6/O7 path unchanged except the Trial #3 path-free signal-failure diagnostic",
+      "posing_evidence": "the pre-armed fixture signal alone (posed check fixture_descendant_signalled). The retention_observed receipt route, which made the frozen CompleteAtEof FAIL unreachable, no longer poses O6 (AB7-M2); the receipt's completeness is never posing evidence",
+      "result": "rule process_disposition, with the prewrite payload as exec evidence, and assertion stream_completeness_as_declared: stdout WriterRetainedAfterChildExit",
+      "scoring": {
+        "fixture signal missing": "INVALID",
+        "signalled, CompleteAtEof": "FAIL",
+        "signalled, Exited:0, WriterRetainedAfterChildExit and every other O6 gate": "eligible PASS",
+        "signalled, a launch that did not return, or TimedOut": "FAIL",
+        "signalled, a wrong decisive disposition": "FAIL"
+      },
+      "source": "definition section 9.7, owner decision after 898a31c"
+    },
+    "o7": {
+      "capture_failure_fact": "the receipt's stderr.completeness == WriterRetainedAfterChildExit, reported beside the direct child's Exited:42",
+      "class_and_prediction": "mandatory, Exited:42 -- unchanged",
+      "construction": "helper_fork --retain-stdio --parent-exit 42 --lifetime-ms P_DESCENDANT_LIFETIME_MS on the pre-armed fixture-signal setup fork_helper_prearmed; no --setsid; helper_fork.c's O6/O7 path unchanged except the Trial #3 path-free signal-failure diagnostic; no payload declared, because O7 freezes none",
+      "exec_evidence": "the same pre-armed fixture signal: helper_fork executed, forked, and its descendant reached the signalling path; it does not show that the descendant outlived launch()",
+      "posing_evidence": "the fixture: helper_fork's build-identity binding, the declared helper arguments, and the pre-armed fixture signal (posed check fixture_descendant_signalled). The receipt's completeness, the exit status and the receipt's outcome are never posing evidence. The retired fixture_descendant_alive read a post-launch rendezvous that the launcher's group sweep made unreachable (AB7-B1)",
+      "result": "rule process_disposition must give Exited:42, and assertion stderr_capture_failure_reported must hold; the two receipt facts are recorded separately",
+      "scoring": {
+        "established, Exited:42, stderr WriterRetainedAfterChildExit": "eligible PASS",
+        "established, Exited:42, stderr completeness absent": "INVALID",
+        "established, Exited:42, stderr completeness decisively not WriterRetainedAfterChildExit": "FAIL",
+        "established, disposition other than Exited:42": "FAIL",
+        "fixture not established or receipt uninterpretable": "INVALID"
+      },
+      "source": "definition section 9.6, owner decision after f9bbf39",
+      "stdout_retention": "stdout is retained too; a fixture side-effect that is not an O7 verdict requirement"
+    },
+    "posed": "a forced state that cannot be proven, or a posed check that does not hold, leaves the case not posed, which the frozen checker scores INVALID",
+    "posed_check_inputs": {
+      "exec_status_pair_adjacent": [
+        "exec_status_pair_adjacent"
+      ],
+      "fixture_descendant_signalled": [
+        "fixture_descendant_signalled"
+      ],
+      "no_helper_report": [
+        "report_state"
+      ],
+      "retention_observed": [
+        "descendant_alive_after_launch",
+        "spike"
+      ],
+      "same_inode_as_writer": [
+        "post_pin_evidence"
+      ],
+      "threaded_parent_observed": [
+        "spike",
+        "baseline_observation",
+        "declared_launcher_threads"
+      ]
+    },
+    "repeated_trials": "every repetition of a repeated case (O8, S7) is evaluated on its own into PASS, FAIL or INVALID; the case is FAIL if any repetition is FAIL, else INVALID if any is INVALID, else PASS. A known FAIL takes precedence over INVALID and no repetition stands for another (definition section 9.6)",
+    "s2_s7": {
+      "authoritative_status": "the child's explicit ExecFailed:CHDIR:EACCES exec-status record proves the CHDIR pre-exec stage failed and the image was not executed; no clean end-of-file on stdout is required (AB7-I1)",
+      "contradiction": "an explicit ExecFailed:CHDIR:EACCES beside a report sentinel is a FAIL with an evidence-contradiction reason; a record that contradicts itself cannot pass",
+      "posing": "the barrier's proven work-directory landing alone; the stream is never posing evidence",
+      "repetitions": "S7 scores each of its 200 repetitions on its own and reduces them FAIL > INVALID > PASS",
+      "scoring": {
+        "a report sentinel on descriptor 1, whether or not the report parses": "FAIL",
+        "any other decisive disposition": "FAIL",
+        "explicit ExecFailed:CHDIR:EACCES and a report sentinel": "FAIL",
+        "explicit ExecFailed:CHDIR:EACCES, no report sentinel": "the expected result, with or without a clean end-of-file",
+        "forced state did not land": "INVALID",
+        "no explicit status, no sentinel and no complete stream": "INVALID"
+      },
+      "sentinel": "report_sentinel_seen, a normalised boolean derived from the retained stdout prefix: positive evidence that an image started even when the report does not parse (AB7-M1); P-14 keeps withholding the captured bytes",
+      "source": "definition section 9.7, owner decision after 898a31c; supersedes the S2 clause 'its absence is the independent proof that the image never ran'"
+    },
+    "s4": {
+      "assertions": [
+        "executed_marker",
+        "helper_exit_corroborated"
+      ],
+      "claim_versus_termination": "the exec-status claim (the prediction token) is never a contradiction; the direct-child termination observation (process_disposition, exit_code, wait_si_code) is read separately",
+      "class_and_prediction": "mandatory, ExecStatusIndeterminate -- the launcher's conservative exec-status claim",
+      "construction": "helper_report --exit 7 with --post-fork-delay-ms 200; channels receipt and report; no posed check reads the report",
+      "precedence": "after honest posing, a decisive mechanism contradiction (admission refusal, explicit structured pre-exec failure, timeout, wrong signal, wrong exit, indeterminate or unobservable termination) is a FAIL even without a report; otherwise a missing or malformed report is INVALID; complete matching evidence is PASS",
+      "rule": "launcher_receipt_claim: process_disposition over the receipt with no independent exec evidence; clean exec-status EOF alone is never exec",
+      "source": "definition section 10.4",
+      "structural_pre_exec_failure": "observations.explicit_pre_exec_failure: admission accepted, process_disposition ExecFailed, timeout_disposition empty, exec_failed_stage one of the frozen STAGES, exec_failed_errno a plain integer from 1 to 4095; a symbolic errno name is not required"
+    },
+    "showed": "the rule's token and the executed-identity assertions decide PASS or FAIL; a violated assertion replaces the token with its violation token, which is no case's expectation",
+    "unobservable": "an assertion whose evidence is missing, in a case that would otherwise PASS, leaves the case not posed; missing evidence is never success"
+  },
+  "post_pin_barrier": {
+    "actions": [
+      "chmod_work_dir",
+      "fchmod",
+      "hold_writer",
+      "mmap_write",
+      "pwrite_marker",
+      "rename_away_and_unlink",
+      "rename_over",
+      "retarget_symlink",
+      "truncate_rewrite"
+    ],
+    "adds_helper_fd": false,
+    "barrier_cases": [
+      "E2",
+      "E3",
+      "E4",
+      "E5",
+      "E6",
+      "E6b",
+      "E6c",
+      "E6d",
+      "F2",
+      "F3",
+      "F5",
+      "F6",
+      "F7",
+      "M5",
+      "R4",
+      "S2",
+      "S7",
+      "T6",
+      "V1",
+      "X1"
+    ],
+    "control_fd_lifetime": "closed before clone3, so it can never reach the child or the executed image",
+    "e5b_excluded": "E5b's claim is that its writer is CLOSED before launch, so it does not use the barrier",
+    "failure_semantics": "no READY, a malformed channel, an action that fails, verification that fails, or CONTINUE undeliverable all close the socket without CONTINUE; the launcher ends at its own barrier and the case is not posed, which the frozen checker scores INVALID. Never a mechanism PASS or FAIL",
+    "flag": "--post-pin-control-fd (TEST/CONTROL ONLY, inactive without it)",
+    "hook_location": "after open/pin, fstat/classify, pre-exec measurement and the admission decision; before clone3, child setup and execveat",
+    "mutation_owner": "the Python harness; C only synchronises",
+    "parent_state_proofs": [
+      "parent_env",
+      "parent_inherited_fd",
+      "parent_signal_state",
+      "parent_low_fds_closed"
+    ],
+    "protocol": "the launcher writes READY and waits under a bounded poll; the harness performs the action and proves it landed; the harness answers CONTINUE; the launcher closes the control descriptor",
+    "purpose": "the HARNESS lands a preregistered adversarial change on the external object after the launcher has pinned, measured and admitted it, and before anything is cloned or executed; and, for a case with a declared caller state, the harness proves that state present in the launcher from its own /proc entries before clone3",
+    "t2_r1_note": "the ten cases whose setup keys nothing read in Trial #1's driver; X8's key was cleanup, so X8 never used the barrier. The barrier set is derived from the plans and tested against barrier_cases",
+    "t2_r1_producer_only_set": [
+      "E2",
+      "E3",
+      "E4",
+      "E5",
+      "E6",
+      "E6b",
+      "E6c",
+      "E6d",
+      "X1",
+      "X8"
+    ]
+  },
+  "pre_execution_review_tip": "030d88a6c96e1dd97b3ebf7839dc4b2dafed9d70",
+  "publication_boundary": {
+    "covered_paths": [
+      "the trial evidence document",
+      "HALT_PREFLIGHT (a failed mandatory preflight)",
+      "HALT (a drifted source freeze)",
+      "the NOT_RUN document emitted without D-7",
+      "--verify-freeze",
+      "--driver-completeness",
+      "--preflight-only",
+      "harness.py, oracles.py, make_fixtures.py and frozen_cases.py run directly"
+    ],
+    "double_sanitisation": "impossible by construction: run_trial returns its document RAW together with the sanitiser it built, and the boundary is the only place P-14 is applied",
+    "function": "evidence.publish(document, sanitiser=None, stream=None)",
+    "invariant": "json.dumps appears in exactly one place in the experiment, evidence.serialise, and no module other than evidence writes to stdout; both are asserted across the whole tree by AST, alongside behavioural tests over the real entry points",
+    "m1_inherited": "record() and serialise() each establish the fixed vocabulary first, so an unavailable driver vocabulary halts publication here too",
+    "rule": "no document reaches stdout without passing Sanitiser.record and serialise; sanitisation happens exactly once, at the boundary, never at a return site"
+  },
+  "requires": "ONE independent Trial #3 freeze review of these exact bytes; then publication and formal Build 8 compile-only evidence; then a NEW explicit owner D-7 for Trial #3 and a Trial #3 dispatcher behind its own review; this freeze grants nothing",
+  "reviewed_architecture_tip": "a5f09f8df8c3868b7ec2f3f6f9d973058c164a44",
+  "scope": "Execution definition and disposable experiment sources frozen for LAUNCH-EXEC-01 Trial #3 (trial-003). NOT_RUN: Trial #3 has not been executed and no Trial #3 case has been posed. D-7 for Trial #3 is NOT authorised. Trial #2 (freeze ba41a3f, run 34640280964) is complete and immutable.",
+  "setup_result_schema": {
+    "closed": "a setup key the schema does not name is a test failure",
+    "producer_only_forbidden": "a semantic key with no execution consumer is a test failure; that was exactly the Trial #1 defect",
+    "roles": [
+      "EXEC_PATH",
+      "IMMEDIATE_SETUP_FACT",
+      "POST_PIN_ACTION",
+      "POST_PIN_INPUT",
+      "HELD_RESOURCE",
+      "POSED_ASSERTION_INPUT",
+      "LAUNCH_ARGUMENT",
+      "CLEANUP_RESOURCE"
+    ]
+  },
+  "sha256": {
+    "README.md": "c35c4afa586e182942f6b077bbf227333e954fcf74dcfd8c2634364796347fcf",
+    "checker.py": "6201a2dcaa1be1b48667b1d0ceedfbd2d6619668fb78a1043b408ebfd7a7f9b0",
+    "driver.py": "846025341044b0713ee3cc41e7728317f706e1cd4a47f8e2d230932d48f723e1",
+    "evidence.py": "a91e02a945a31ae9a26d925da7053f9feec7efc6ecf99778e79d609afcc1893a",
+    "frozen_cases.py": "d29a58ade2336610975f0cd36e7d5af00f3b0c3e935cdc9265bc4b81b2f60212",
+    "harness.py": "38eabf42c4ab82fdc74eafe0580b7587dbeb46b08e9b8c6c8fe9d36d260ef856",
+    "helper_alt.c": "7993aa631abdca6796171fe4ffafb2d296f2a00b61ea2322ee8e624731b99113",
+    "helper_dynamic.c": "b3c398d840c16dfa4e0dbc56593b905b4019bfe2316fc339049b8a69930350a0",
+    "helper_fork.c": "52089697db8bb27138b2ecf1e96b0d2d567ef2917c7b9e03e35799bda7187cb0",
+    "helper_report.c": "ceaac0dc7c929db770d6146230136d72cb4f740dcc218cd59270440ec9253a81",
+    "helper_setid.c": "c609755d105122eea304f5fe12685d8dcc24064d77659295a11a76d42b86329f",
+    "journal.py": "6393164046051d97d84b722169cb3a0c63508dba49bc35f866ad75bb6b8e64d6",
+    "launcher_spike.c": "4d6a0ac71cf6f0dee26ccc7ac608f88c90d8f4697e88b363626915b7b43345aa",
+    "make_fixtures.py": "baa61170d9ea6f2f621b0dd2451417f03f0964273566b332b518008ea1fd8b50",
+    "observations.py": "d8bda42f7d9b6f17e83385ab3107ae4ad4c24823022fa661821218586df21833",
+    "oracles.py": "b056c374d39990ef8860062315ebb1af80bd572b737a81321b45687339fd2eeb",
+    "run_launch_exec_01.py": "1c84d194e5b163958195d57486bdcb094c8476d396304c2683bf31747f78da63"
+  },
+  "status": "NOT_RUN",
+  "supersedes": "ba41a3f12be411058ed50e78bcd1c7e22afb7ae4",
+  "supersession_reason": "Trial #3 freeze. Supersedes the Trial #2 freeze ba41a3f, which was executed once in run 34640280964 (59 PASS / 6 FAIL / 6 INVALID / 1 BLOCKED, MECHANISM_REJECTED; D-7 consumed; immutable). It is cut over the committed correction sequence 7f98d4d, 53ad8bf and f1e7eea, reviewed at ee8cd91, db45336 and 030d88a, plus the freeze step alone: the runner's trial identifier trial-003, the experiment README's status, and three definition wording corrections (R-M2, RR-M1, RR-M3). No case membership, class, traced flag or block cause moved; T1's and S4's predictions and the reviewed correction semantics are frozen as reviewed. Rehashed sources: README.md, driver.py, frozen_cases.py, helper_fork.c, helper_report.c, launcher_spike.c, make_fixtures.py, observations.py, run_launch_exec_01.py; rehashed definitions: docs/experiments/LAUNCH-EXEC-01-DEFINITION.md. Trial #1, Trial #2 and every earlier freeze, correction and review are preserved unchanged.",
+  "traced_cases": {
+    "amended_by": "M3-T",
+    "cases": [
+      "E1",
+      "E7",
+      "F4",
+      "F7",
+      "M1",
+      "M2",
+      "M3",
+      "M4"
+    ],
+    "count": 8,
+    "note": "a syscall record is collected ONLY for these cases. R, T, O, P and S cases are never traced, because ptrace notifies the tracer before the real parent and those cases measure the launcher's own waitid classification.",
+    "previously": [
+      "E1",
+      "E7",
+      "F4",
+      "F7",
+      "M1",
+      "M2",
+      "M4"
+    ]
+  },
+  "tracer_requirement": {
+    "fallback": "none; the ptrace fallback the definition once promised is withdrawn",
+    "not_a_block_cause": "tracer unavailability is never clone3_unavailable and never a conditional BLOCKED cause",
+    "on_failure": "preflight HALT before the first preregistered case",
+    "statement": "A usable strace >= 5.4 is a mandatory pretrial environment requirement. If strace is absent, older than the floor, or cannot render the trace contract the traced cases depend on, the runner HALTS before the first preregistered case. No ptrace, eBPF, helper-binary or root-requiring fallback exists or may be added for 0.1.",
+    "strace_min_version": [
+      5,
+      4
+    ]
+  },
+  "trial": "trial-003",
+  "trial_2": {
+    "aggregate": "MECHANISM_REJECTED",
+    "counts": {
+      "BLOCKED": 1,
+      "FAIL": 6,
+      "INVALID": 6,
+      "PASS": 59
+    },
+    "d7": "CONSUMED",
+    "evidence": "docs/experiments/evidence/LAUNCH-EXEC-01-TRIAL-002-2026-09-11/",
+    "freeze": "ba41a3f12be411058ed50e78bcd1c7e22afb7ae4",
+    "manifest_git_blob": "6f000fac9a48625d3c9def18e16ae7ce1b61efa8",
+    "manifest_sha256": "616dc6b340c5453a013259554b10fd997a90c990da3395449ba3497f186c9a94",
+    "rerun": "FORBIDDEN",
+    "result_review": "docs/implementation/HELM-LAUNCH-EXEC-01-TRIAL-002-RESULT-REVIEW.md",
+    "run": "34640280964",
+    "trial": "trial-002",
+    "valid_trial_count": 1
+  },
+  "trial_3": {
+    "aggregate": null,
+    "build": "BUILD_8_REQUIRED",
+    "d7": "NOT_AUTHORISED",
+    "dispatcher": "NONE",
+    "execution": "NOT_RUN",
+    "freeze_state": "FROZEN",
+    "independent_freeze_review": "REQUIRED",
+    "published": false,
+    "trial": "trial-003",
+    "valid_trial_count": 0
+  },
+  "valid_trial_count": 0,
+  "verify_freeze": {
+    "checks": "the 17 source hashes in sha256, and nothing else",
+    "definition_hashes_verified_by": "the manifest-coupled freeze tests in tools/tests",
+    "does_not_check": "definition_sha256",
+    "source": "definition section 10, correction review finding R-M2"
+  },
+  "vocabulary": {
+    "acquisition": {
+      "cache_rule": "only a complete validated snapshot is cached, as an immutable frozenset; failed and partial loads cache nothing, so no partially initialised import can poison the cache for the life of the process",
+      "contract": "fail-closed",
+      "on_refusal": "evidence.VocabularyUnavailable propagates out of Sanitiser.text, Sanitiser.record and serialise; no partially sanitised evidence is emitted and no empty vocabulary is substituted",
+      "readiness_signal": "driver.registry_vocabulary(), defined as the LAST statement of driver's module body, so its presence proves every registry is populated; a partially initialised driver simply does not have it",
+      "recovery": "the first call after the driver finishes initialising returns the complete vocabulary; verified from a fresh interpreter for every refused state above",
+      "refused_states": [
+        "driver import failure",
+        "partially initialised driver with the registries absent",
+        "registries present but empty",
+        "a required registry missing from the snapshot",
+        "a registry of the wrong type",
+        "a registry holding a value that is not a name",
+        "an accessor that is not callable or that raises",
+        "a snapshot that is not a mapping"
+      ],
+      "second_source_of_truth": "none; the accessor returns the registries themselves"
+    },
+    "closure": "CURRENT_VOCABULARY_CLOSED",
+    "derivation_sources": [
+      "frozen_cases (cases, predictions, safe sets, gates, stages, block reasons, syscall lists, injection and control modes, decisions, M3 evidence facts)",
+      "observations (RULES, spike dispositions and refusals, signal and errno tables, report states, return states, lifecycle and exec constants, executed-identity assertions, their results and violation tokens, publishable markers)",
+      "checker (per-case statuses and aggregate verdicts)",
+      "published observation schema and normalised role names",
+      "driver (SETUPS, PARENT_STATES, POSED_CHECKS, ALL_CHANNELS), imported lazily to avoid the driver -> evidence cycle"
+    ],
+    "not_vocabulary": "argv contents, environment values, host paths, captured bytes, tracer text and any high-entropy value remain redactable; A4's 4096-byte argument is still published as <OPAQUE:...>",
+    "tokens_protected": 409
+  }
+}

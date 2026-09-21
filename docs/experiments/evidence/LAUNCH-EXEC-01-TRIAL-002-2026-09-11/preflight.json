@@ -1,0 +1,140 @@
+{
+  "manifest": {
+    "conditional": 11,
+    "decisions": {
+      "D-1": "arm_i_scoped_unsafe_backend",
+      "D-10": "empty_environment_only",
+      "D-11": "no_new_privs_required_before_exec",
+      "D-2": "one_linux_substrate_before_wine",
+      "D-3": "zero_helm_crate_dependencies",
+      "D-4": "direct_child_lifecycle_only",
+      "D-5": "mandatory_working_directory_capability",
+      "D-6": "utf8_only_argv",
+      "D-8": "no_timestamp_no_duration_in_receipt",
+      "D-9": "refuse_set_id_objects_at_admission"
+    },
+    "instant_reject": [
+      "E2",
+      "E4",
+      "E6",
+      "E6b",
+      "E8",
+      "F2",
+      "N1",
+      "N2",
+      "O3",
+      "O6",
+      "S4",
+      "S5",
+      "S7",
+      "X7"
+    ],
+    "mandatory": 54,
+    "out_of_scope": 5,
+    "recorded": 7,
+    "series": {
+      "A": 5,
+      "E": 12,
+      "F": 7,
+      "M": 5,
+      "N": 3,
+      "O": 8,
+      "P": 4,
+      "R": 4,
+      "S": 7,
+      "T": 6,
+      "V": 1,
+      "X": 10
+    },
+    "total": 72,
+    "traced": [
+      "E1",
+      "E7",
+      "F4",
+      "F7",
+      "M1",
+      "M2",
+      "M3",
+      "M4"
+    ]
+  },
+  "preflight": {
+    "arch": "x86_64",
+    "binfmt_misc_entries": {
+      "llvm-16-runtime.binfmt": "enabled\ninterpreter /usr/bin/lli-16\nflags: \noffset 0\nmagic 4243",
+      "llvm-17-runtime.binfmt": "enabled\ninterpreter /usr/bin/lli-17\nflags: \noffset 0\nmagic 4243",
+      "llvm-18-runtime.binfmt": "enabled\ninterpreter /usr/bin/lli-18\nflags: \noffset 0\nmagic 4243",
+      "python3.12": "enabled\ninterpreter /usr/bin/python3.12\nflags: \noffset 0\nmagic cb0d0d0a"
+    },
+    "binfmt_misc_status": "enabled",
+    "block_reasons": {
+      "unprivileged_runner": "no privileged identity exists to attempt a real privilege transition, and none is manufactured"
+    },
+    "clone3": {
+      "available": true,
+      "detail": "clone3 is implemented and reached; arguments rejected",
+      "errno": "EINVAL"
+    },
+    "gcc": [
+      "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0"
+    ],
+    "geteuid": 1001,
+    "glibc": [
+      "ldd (Ubuntu GLIBC 2.39-0ubuntu8.8) 2.39"
+    ],
+    "kernel_name": "Linux",
+    "kernel_release": "6.17.0-1022-azure",
+    "mountinfo_noexec": [
+      "/dev",
+      "/proc",
+      "/sys",
+      "/sys/kernel/security",
+      "/dev/pts",
+      "<ABSPATH>",
+      "/sys/fs/cgroup",
+      "/sys/fs/pstore",
+      "/sys/firmware/efi/efivars",
+      "/sys/fs/bpf",
+      "/dev/mqueue",
+      "/sys/kernel/debug",
+      "/sys/kernel/tracing",
+      "/sys/fs/fuse/connections",
+      "/sys/kernel/config",
+      "/proc/sys/fs/binfmt_misc"
+    ],
+    "mountinfo_nosuid": [
+      "/dev",
+      "/proc",
+      "/sys",
+      "/sys/kernel/security",
+      "/dev/shm",
+      "/dev/pts",
+      "<ABSPATH>",
+      "<ABSPATH>",
+      "/sys/fs/cgroup",
+      "/sys/fs/pstore",
+      "/sys/firmware/efi/efivars",
+      "/sys/fs/bpf",
+      "/dev/hugepages",
+      "/dev/mqueue",
+      "/sys/kernel/debug",
+      "/sys/kernel/tracing",
+      "/sys/fs/fuse/connections",
+      "/sys/kernel/config",
+      "/proc/sys/fs/binfmt_misc",
+      "<ABSPATH>"
+    ],
+    "noexec_writable": [
+      "<ABSPATH>",
+      "/dev/mqueue"
+    ],
+    "os_release": "PRETTY_NAME=\"Ubuntu 24.04.5 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"24.04\"\nVERSION=\"24.04.5 LTS (Noble Numbat)\"\nVERSION_CODENAME=noble\nID=ubuntu\nID_LIKE=debian\nHOME_URL=\"https:/<ABSPATH>\"\nSUPPORT_URL=\"https:/<ABSPATH>\"\nBUG_REPORT_URL=\"https:/<ABSPATH>\"\nPRIVACY_POLICY_URL=\"https:/<ABSPATH>\"\nUBUNTU_CODENAME=noble\nLOGO=ubuntu-logo",
+    "pagesize": "4096",
+    "parent_no_new_privs": "0",
+    "ptrace_scope": "1",
+    "strace": "/usr/bin/strace",
+    "strace_version": [
+      "strace -- version 6.8"
+    ]
+  }
+}

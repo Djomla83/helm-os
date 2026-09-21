@@ -1,0 +1,73 @@
+{
+  "artefacts": {
+    "helper_alt": {
+      "kind": "elf_static",
+      "sha256": "d13082b12b26cb35d6707f6575feaab3b17368a13b6fd0ccf6ed7ae10c98e26d",
+      "size": 785320
+    },
+    "helper_dynamic": {
+      "kind": "elf_dynamic",
+      "sha256": "c854162ddf4074cdfe132492ddc595ae6345f820c22a1cd082e32dd1646850cc",
+      "size": 16144
+    },
+    "helper_foreign.elf": {
+      "kind": "elf_static",
+      "sha256": "415f14b8538c8e59832a107b12c54f2fae9cd2ab5637df2f8a6facb82a9cfd52",
+      "size": 64
+    },
+    "helper_fork": {
+      "kind": "elf_static",
+      "sha256": "3232d09ffb089907e2586ac0bffdd1ba5b635c99e80cab1333e4ddb575a13dcb",
+      "size": 790312
+    },
+    "helper_report": {
+      "kind": "elf_static",
+      "sha256": "423ac81e0cbf553a3d8f821d72209ed6f505f4a45494c38d800bfdfc126ca236",
+      "size": 791080
+    },
+    "helper_setid": {
+      "kind": "elf_static",
+      "sha256": "500c4af1934be000acefc6daa49ebe8ac984686b23a4358bd134464e02f66c10",
+      "size": 785272
+    },
+    "launcher_spike": {
+      "kind": "elf_static",
+      "sha256": "4d42212f3b4d45ca46e415961e36e8ee4d45090a15fb3b77a6f8971e661a6546",
+      "size": 942040
+    },
+    "magic_only.bin": {
+      "kind": "not_elf",
+      "sha256": "3bdbb4fe8397cd2b842430b39ccff01a8663c751945ef5e9a09e267fb8b1d359",
+      "size": 4
+    },
+    "probe": {
+      "kind": "elf_static",
+      "sha256": "3b01e4dd12f45ff93b249ecb3da48682131a5d01740778d544c166dc3ff82269",
+      "size": 785240
+    },
+    "probe.c": {
+      "kind": "not_elf",
+      "sha256": "2ad75d95660563887d8d3f1d0ae1dcf18c2379cbd83a5c72f5ab276351ee6949",
+      "size": 29
+    },
+    "script_fixture.sh": {
+      "kind": "not_elf",
+      "sha256": "37f800b1a77f026dbf2ee2724829458ddf78dd8329527deee3d086025959208a",
+      "size": 490
+    },
+    "unloadable_in_cohort.elf": {
+      "kind": "elf_static",
+      "sha256": "51224867e5fb13d0c6052397c9f4959c7c87bb8bc7d750c91429728a18b507d9",
+      "size": 64
+    }
+  },
+  "build": {
+    "helper_alt": "d13082b12b26cb35d6707f6575feaab3b17368a13b6fd0ccf6ed7ae10c98e26d",
+    "helper_dynamic": "c854162ddf4074cdfe132492ddc595ae6345f820c22a1cd082e32dd1646850cc",
+    "helper_fork": "3232d09ffb089907e2586ac0bffdd1ba5b635c99e80cab1333e4ddb575a13dcb",
+    "helper_report": "423ac81e0cbf553a3d8f821d72209ed6f505f4a45494c38d800bfdfc126ca236",
+    "helper_setid": "500c4af1934be000acefc6daa49ebe8ac984686b23a4358bd134464e02f66c10",
+    "launcher_spike": "4d42212f3b4d45ca46e415961e36e8ee4d45090a15fb3b77a6f8971e661a6546"
+  },
+  "trial": "trial-002"
+}

@@ -1,0 +1,195 @@
+{
+  "experiment": "LAUNCH-EXEC-01",
+  "record": "TRIAL_3_CORRECTION_CANDIDATE",
+  "state": "SUPERSEDED_BY_TRIAL_003_FREEZE",
+  "trial_3_authorised": false,
+  "trial_3_d7": null,
+  "trial_3_executed": false,
+  "superseded_by": {
+    "trial": "trial-003",
+    "manifest": "SOURCE-HASHES.json",
+    "manifest_sha256": "ea482c6feaf77abac1edcc23d26afbc4f249638170f60ed897088d5cda79ba70",
+    "freeze_state": "FROZEN",
+    "authority": "none",
+    "note": "the Trial #3 manifest alone is the freeze; this record is historical provenance of the reviewed NOT_FROZEN correction candidate and is never freeze authority"
+  },
+  "is_not": "a source freeze, a Trial #3 freeze, a D-7, a dispatcher or a result. Nothing verifies against this record. It described the NOT_FROZEN candidate while SOURCE-HASHES.json was still the Trial #2 manifest; the Trial #3 freeze manifest has replaced that, and run_launch_exec_01.py --verify-freeze reads SOURCE-HASHES.json alone.",
+  "definition_section": "docs/experiments/LAUNCH-EXEC-01-DEFINITION.md section 10",
+  "trial_2": {
+    "status": "IMMUTABLE",
+    "freeze": "ba41a3f12be411058ed50e78bcd1c7e22afb7ae4",
+    "manifest": "SOURCE-HASHES.json",
+    "manifest_git_blob": "6f000fac9a48625d3c9def18e16ae7ce1b61efa8",
+    "manifest_sha256": "616dc6b340c5453a013259554b10fd997a90c990da3395449ba3497f186c9a94",
+    "run": "34640280964",
+    "counts": {
+      "BLOCKED": 1,
+      "FAIL": 6,
+      "INVALID": 6,
+      "PASS": 59
+    },
+    "aggregate": "MECHANISM_REJECTED",
+    "d7": "CONSUMED",
+    "valid_trial_count": 1,
+    "rerun": "FORBIDDEN"
+  },
+  "scope": {
+    "corrected_findings": ["X2b", "X2c", "X4", "T1", "S4", "M2", "E4", "E6", "E6c", "O6", "O7", "R3"],
+    "revalidation_support": ["P1", "P2", "P4"],
+    "unchanged_conditional": {
+      "N3": "no correction; conditional on unprivileged_runner, no sudo, no set-id setup and no privileged runner"
+    },
+    "membership_unchanged": {
+      "conditional": 11,
+      "mandatory": 54,
+      "recorded": 7,
+      "total": 72
+    }
+  },
+  "sources_differing_from_trial_2_freeze": [
+    "driver.py",
+    "frozen_cases.py",
+    "helper_fork.c",
+    "helper_report.c",
+    "launcher_spike.c",
+    "make_fixtures.py",
+    "observations.py"
+  ],
+  "definition_files_differing_from_trial_2_freeze": [
+    "docs/experiments/LAUNCH-EXEC-01-DEFINITION.md"
+  ],
+  "c_sources_changed": [
+    "helper_fork.c",
+    "helper_report.c",
+    "launcher_spike.c"
+  ],
+  "build": {
+    "status": "BUILD_8_REQUIRED_FOR_FUTURE_FREEZE",
+    "build_7_binds_candidate": false,
+    "reason": "launcher_spike.c, helper_report.c and helper_fork.c changed; Build 7 compiled the Trial #2 bytes of all three",
+    "local_validation_compile": "compile-only scratch validation, not Build 8 and not build evidence; no binary was executed"
+  },
+  "contract_delta": {
+    "predictions": {
+      "S4": {
+        "candidate": "ExecStatusIndeterminate",
+        "trial_2": "Exited:7"
+      },
+      "T1": {
+        "candidate": "TimedOut:KilledByLauncher:SIGTERM",
+        "trial_2": "TimedOut"
+      }
+    },
+    "rules_added": {
+      "launcher_receipt_claim": {
+        "cases": ["S4"],
+        "meaning": "process_disposition over the receipt with no independent exec evidence; clean exec-status EOF alone is never exec"
+      }
+    },
+    "posed_checks_added": {},
+    "assertions_added": {
+      "helper_exit_corroborated": {
+        "cases": ["S4"],
+        "reads": ["report", "report_state", "spike"],
+        "violation_token": "helper_exit_contradicted",
+        "combination": "the launcher side (refusal, pre-exec failure, disposition, waitid classification, exit status) and the report side (declared exit) are judged separately and combined violated > unobservable > holds, so a decisive contradiction on either side is a FAIL even when the other side is missing (R-M1)"
+      }
+    },
+    "decisive_without_token_added": {
+      "helper_exit_corroborated": {
+        "cases": ["S4"],
+        "finding": "RR-I1 (re-review db45336)",
+        "structural_pre_exec_failure": "observations.explicit_pre_exec_failure: admission accepted, process_disposition ExecFailed, timeout_disposition empty, exec_failed_stage one of the frozen STAGES, exec_failed_errno a plain integer from 1 to 4095; a symbolic ERRNO_NAMES entry is not required",
+        "malformed": "an ExecFailed record failing any structural condition is unobservable on the launcher side and never decides"
+      }
+    },
+    "assertion_cases_added": {
+      "executed_marker": ["S4"]
+    },
+    "plans_changed": {
+      "S4": {
+        "channels": ["receipt", "report"],
+        "helper_args": ["--exit", "7"],
+        "trial_2_helper_args": ["--exit-immediately", "7"],
+        "spike_flags": ["--post-fork-delay-ms", "200"],
+        "posed_when": null,
+        "expected_marker": "helper_report",
+        "assertions": ["executed_marker", "helper_exit_corroborated"],
+        "rule": "launcher_receipt_claim"
+      }
+    },
+    "fixture_modes": {
+      "helper_foreign.elf": "0644",
+      "magic_only.bin": "0644",
+      "script_fixture.sh": "0755",
+      "unloadable_in_cohort.elf": "0755"
+    },
+    "generated_fixture_posing": "a make_fixtures object whose mode is not its declared mode does not pose E8, X2, X2b, X2c or X4",
+    "direct_child_window": "anchored on the clone3 that created the direct child: a lone clone3 as before unless it carries CLONE_THREAD; among several, the one process clone without CLONE_THREAD, which must carry CLONE_PIDFD; anything else yields no window. The published acquisition facts describe the same clone3 and still count every clone3",
+    "symlink_targets": "E4's link and its post-pin replacement are canonical absolute paths; the retarget landing is proven through the link; the binding names a dangling link and requires the link to resolve to the build artefact itself",
+    "marker_region": {
+      "object": "g_marker_region",
+      "layout": "HELM-MARK + 16 marker bytes + KRAM-MLEH as one 34-byte array",
+      "locator": "locate_marker_region: exactly one complete region and each guard exactly once, else not posed with the failed condition",
+      "shared_by": ["E6", "E6c"],
+      "posing_fact_added": "outside_region_unchanged"
+    },
+    "helper_facing_fifo_paths": {
+      "setups": ["fork_helper", "fork_helper_prearmed"],
+      "form": "canonical absolute case-private path",
+      "arming_facts_added": ["helper_path_absolute", "helper_path_is_armed_fifo"]
+    },
+    "fixture_signal_diagnostic": {
+      "writer": "helper_fork's descendant, on its own descriptor 2, only when the signal open or write fails",
+      "line": "HELM-LAUNCH-EXEC-01-FIXTURE-SIGNAL-FAILED:<open|write>:<errno number>",
+      "published_as": ["reported", "failed_step", "errno", "errno_number"],
+      "role": "explains a fixture that was not established; never posing evidence"
+    },
+    "liveness_fixture_health": {
+      "cases": ["P1", "P2", "P4"],
+      "selected_by": "the plan rule descendant_lifecycle; P3 and T5 keep their arguments",
+      "setup_result_key_added": "fixture_health_fifo",
+      "helper_argument": "--fixture-health-fifo <canonical absolute case-private FIFO>",
+      "arming_facts": ["armed_before_launch", "reader_inheritable", "reader_passed_to_launcher", "fresh_fifo", "private_mode", "helper_path_absolute", "helper_path_is_armed_fifo"],
+      "tokens": ["PROBE_REACHED", "LIVENESS_OPEN_FAILED:<errno number>", "LIVENESS_WRITE_FAILED:<errno number>", "LIVENESS_UNEXPECTED_OPEN"],
+      "probe_point": "in the descendant, after any stdio release and setsid: the health FIFO is opened non-blocking, the liveness FIFO is confirmed by a non-blocking write open failing ENXIO, PROBE_REACHED is written, and only then does the direct child's gate pipe close; the blocking rendezvous follows",
+      "direct_child_gate": "with a health channel, helper_fork's direct child exits once its descendant closed a close-on-exec gate pipe (or died), so the health token is buffered before the launcher can sweep; created after exec and never inherited through one",
+      "published_as": ["probe_reached", "channel_failure", "errno", "errno_number"],
+      "interpretation": "no probe, a channel failure, a malformed or unreadable channel, or an unarmed channel is INVALID; only a reached probe with no failure lets a liveness byte mean descendant_survived and its bounded absence mean descendant_died",
+      "questions": "P1, P2 and P4 ask what they asked; their safe sets, gates and classes are unchanged"
+    },
+    "receipt_fields_added": {
+      "wait_si_code": ["", "CLD_EXITED", "CLD_KILLED", "CLD_DUMPED"]
+    },
+    "term_signal": "si_status for CLD_KILLED and CLD_DUMPED; -1 for anything else"
+  },
+  "freeze_step_items_not_done_here": [
+    "rewrite SOURCE-HASHES.json for the reviewed candidate, keeping the Trial #2 manifest addressable at ba41a3f",
+    "a trial identifier other than run_launch_exec_01.py's trial-002",
+    "Build 8 compile-only evidence for the changed C sources",
+    "a Trial #3 dispatcher and its own infrastructure review",
+    "a new owner D-7 decision"
+  ],
+  "correction_review": {
+    "commit": "ee8cd9106277a450f2987d3f4c759fd96085d5f3",
+    "classification": "TRIAL_3_CORRECTION_CANDIDATE_NEEDS_FIX",
+    "fixed_here": ["R-I1", "R-M1"],
+    "left_for_freeze": ["R-M2"],
+    "backlog": ["R-B1", "R-B2"]
+  },
+  "correction_rereview": {
+    "commit": "db45336684817d95edbb7fcea3cf0191f7eee528",
+    "classification": "TRIAL_3_RI1_RM1_REREVIEW_NEEDS_FIX",
+    "fixed_here": ["RR-I1"],
+    "left_for_freeze": ["RR-M1", "RR-M2"],
+    "backlog": ["RR-B1", "RR-B2"]
+  },
+  "correction_micro_review": {
+    "commit": "030d88a6c96e1dd97b3ebf7839dc4b2dafed9d70",
+    "classification": "TRIAL_3_FINAL_RRI1_MICRO_REVIEW_PASSED_READY_FOR_FREEZE_PREPARATION",
+    "left_for_freeze": ["RR-M3"],
+    "backlog": ["RR-B3", "RR-B4", "RR-B5"]
+  },
+  "freeze_step_items_status": "cut at the Trial #3 freeze: SOURCE-HASHES.json rewritten with the Trial #2 manifest addressable at ba41a3f, and the runner's trial identifier trial-003. Still outstanding: an independent freeze review, Build 8 compile-only evidence, a Trial #3 dispatcher with its own review, and a new owner D-7",
+  "requires": "nothing: superseded by the Trial #3 freeze manifest SOURCE-HASHES.json and kept as provenance. This record grants nothing."
+}

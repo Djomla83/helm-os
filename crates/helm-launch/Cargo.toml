@@ -1,0 +1,85 @@
+[package]
+name = "helm-launch"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+publish = false
+description = "Experimental portable launch-plan and receipt model, Linux x86_64 capability admission, a crate-private Linux x86_64 process-creation backend, and a public Linux x86_64 launch with a deterministic receipt; P1 to P4"
+
+[dependencies]
+serde = "=1.0.228"
+serde_json = "=1.0.149"
+sha2 = "=0.10.9"
+
+# P2 (owner decision 2026-09-18) admits caller-supplied descriptors and P3
+# (owner decision 2026-09-18) creates one direct child, both on the Linux
+# x86_64 cohort only, so the dependencies are gated to exactly that cohort: off
+# it, `src/authority.rs` and `src/backend/` are not compiled and the crate is
+# the portable P1 model.
+#
+# The repository-vetted pin, identical to the one `helm-observe` already uses.
+# `default-features = false` with `std`, `fs`, `process` and `pipe`: `fs`
+# carries `fcntl_getfl`, `fcntl_setfl`, `fstat`, `OFlags`, `FileType` and
+# `Mode`; `process` carries `setpgid`, `waitid`, `WaitId::PidFd` and
+# `pidfd_send_signal`; `pipe` carries `pipe_with`; and `rustix::io`, which
+# carries `read`, `pread`, `fcntl_dupfd_cloexec` and `retry_on_intr`, needs no
+# feature.
+#
+# `event` carries `poll`, `PollFd`, `PollFlags` and `Timespec`, which the P4
+# observation loop of plan section 8.5 needs in order to wait on the status
+# channel, the two streams and the pidfd at once. It is the only feature P4
+# adds, and it is added because that loop genuinely cannot be written without
+# it: P3's two fixed internal bounds used non-blocking reads and a non-blocking
+# `waitid` instead. `time` is NOT enabled — monotonic deadlines use
+# `std::time::Instant`, which is `CLOCK_MONOTONIC` on Linux — and neither are
+# `thread`, `mm`, `net` or `runtime`. The P4 process-group sweep needs no new
+# feature either: safe `rustix::process::kill_process_group` is already in
+# `process`.
+[target.'cfg(all(target_os = "linux", target_arch = "x86_64"))'.dependencies]
+rustix = { version = "=1.1.4", default-features = false, features = ["std", "fs", "process", "pipe", "event"] }
+
+# CONSTANTS ONLY. P3 writes every syscall number, signal number, clone flag and
+# ABI constant as the literal the Linux x86_64 UAPI defines, and then pins each
+# one against the `libc` constant of the same name in a `const` assertion, so a
+# wrong number is a compile error rather than a wrong system call. No `libc`
+# function is called, `libc::syscall` is not used, and no `extern` block exists
+# anywhere in the crate: `tests/p3_boundary.rs` fails on any of those. The pin
+# is the version already locked and vetted for this workspace, so no package
+# and no version enters `Cargo.lock`.
+libc = { version = "=0.2.189", default-features = false }
+
+# The Linux admission and backend tests are the trusted caller: they build
+# fixtures, open descriptors in each mode the contract names, clear
+# close-on-exec so the "admission never inspects that flag" case is a real test,
+# and read the bounded reports of executed fixtures. Same pin, same features,
+# same cohort gate, so no package or version is added.
+[target.'cfg(all(target_os = "linux", target_arch = "x86_64"))'.dev-dependencies]
+rustix = { version = "=1.1.4", default-features = false, features = ["std", "fs", "process", "pipe", "event"] }
+
+# The one non-default feature. It compiles test-only fault injection into the
+# closed child sequence, and only together with `debug_assertions`, so no
+# release build contains injection even if the feature is enabled by accident.
+# It is not public API: nothing it enables is reachable from outside the crate.
+[features]
+test-fault-injection = []
+
+# The workspace lint table is deliberately NOT inherited (productization plan
+# section 7.4, ADR-0024 section E). Cargo cannot combine `workspace = true` with a
+# local table, and the workspace `unsafe_code = "forbid"` could not be relaxed for
+# the scoped Linux backend that a later, separately authorised slice may add.
+# Every workspace lint is therefore restated here, none weaker except the one
+# accepted `unsafe_code` exception, and the unsafe-discipline lints are added.
+#
+# P1 and P2 contain no such code at all: `src/lib.rs` restates this `deny` in
+# source (not `forbid`, for the same reason), and `tests/p2_boundary.rs` fails on
+# any drift of this table or of that attribute.
+[lints.rust]
+unsafe_code = "deny"
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+undocumented_unsafe_blocks = "deny"
+multiple_unsafe_ops_per_block = "deny"

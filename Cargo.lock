@@ -163,6 +163,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "helm-launch"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "rustix",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "helm-observe"
 version = "0.1.0"
 dependencies = [

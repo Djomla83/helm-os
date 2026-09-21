@@ -4,6 +4,7 @@ members = [
     "crates/helm-app-spec",
     "crates/helm-observe",
     "crates/helm-bind",
+    "crates/helm-launch",
 ]
 resolver = "3"
 
