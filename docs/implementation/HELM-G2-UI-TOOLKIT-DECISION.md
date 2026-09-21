@@ -876,4 +876,7 @@ After this decision, and until the owner separately authorises the bounded imple
 [authorised the bounded spike](../DECISIONS.md#g2-gtk-spike-authorised) of section 11 and set its
 API floor at **GTK 4.18 + libadwaita 1.7**. That authorisation is bounded to sections 11.1 to 11.3
 with their hard exclusions and exit criteria: it adds no backend connection, no `helm-launch`
-call and no persistence, and it does **not** lock GTK for production.
+call and no persistence, and it does **not** lock GTK for production. Its execution evidence is
+the [GTK spike record](HELM-G2-GTK-SPIKE.md), which reports the spike **NOT IMPLEMENTED and
+BLOCKED on the environment**, with exit criteria 1 to 6 **NOT_RUN**. No criterion failed, so the
+fallback of 10.2 is **not** triggered.

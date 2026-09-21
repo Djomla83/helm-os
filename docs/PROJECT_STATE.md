@@ -21,7 +21,8 @@ implementation. It does not begin implementation.
 | Evidence branch | `design/g2-visual-kickoff` at `d9e4693cce69fdaebcb46d2f0dddd27b4f4508bf`, **not merged to main** |
 | Spike authorisation | **GRANTED 2026-09-21** — the bounded spike of toolkit decision 11.1 to 11.3 only, API floor **GTK 4.18 + libadwaita 1.7** |
 | Spike API floor status | an implementation floor for the spike **only** — not a distribution support policy, not a packaging policy, not a production lock |
-| Next owner gate | **spike execution, then independent review and the owner manual gates** |
+| **Spike execution** | **BLOCKED on the environment — NOT IMPLEMENTED, exit criteria 1 to 6 NOT_RUN**; see the [spike evidence](implementation/HELM-G2-GTK-SPIKE.md) |
+| Next owner gate | **the owner's environment decision** — no machine reachable from this work carries GTK >= 4.18 with libadwaita >= 1.7 |
 
 **What does not exist.** There is **no HELM GUI**. No GUI source file exists anywhere in the
 repository. **No GTK, gtk-rs or libadwaita dependency exists** in `Cargo.toml` or `Cargo.lock`, and
@@ -41,7 +42,16 @@ Final brand identity and the packaging format stay open.
 The G2 documents are [the visual kickoff](implementation/HELM-G2-VISUAL-KICKOFF.md), which carries
 the accepted product definition and the D1 to D9 gate table, and
 [the UI toolkit decision](implementation/HELM-G2-UI-TOOLKIT-DECISION.md), whose section 13 keeps the
-revision-1 errors and their corrections visible as permanent evidence.
+revision-1 errors and their corrections visible as permanent evidence, and [the GTK spike
+evidence](implementation/HELM-G2-GTK-SPIKE.md).
+
+**The GTK spike is authorised but not implemented.** No prototype source was written, no toolkit
+dependency was added, and exit criteria 1 to 6 are **NOT_RUN**, because no environment reachable
+from this work carries GTK 4.18 with libadwaita 1.7 — the only Linux present is Ubuntu 24.04, whose
+archives top out at GTK 4.14.5 and libadwaita 1.5.0, below the accepted floor, so installing
+packages there would not reach it either. Host package installation was not authorised and was
+not performed, and the floor was not lowered. **This is not an exit-criterion failure**: nothing
+was exercised, so the fallback rule is not triggered and Qt is not started.
 
 ---
 

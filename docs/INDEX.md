@@ -47,6 +47,14 @@ floor of **GTK 4.18 + libadwaita 1.7** — a floor for that spike only, not a di
 policy and not a production lock. Backend integration, `helm-launch`, persistence and a production
 toolkit lock stay unauthorised.
 
+[HELM G2 — GTK implementation spike](implementation/HELM-G2-GTK-SPIKE.md) is the spike's own
+evidence record. The spike is **authorised but NOT IMPLEMENTED and BLOCKED on the environment**:
+no machine reachable from this work carries GTK >= 4.18 with libadwaita >= 1.7, and the only Linux
+present is Ubuntu 24.04, whose archives offer GTK 4.14.5 and libadwaita 1.5.0 — below the accepted
+floor, so package installation there would not reach it. **Exit criteria 1 to 6 are NOT_RUN**, no
+prototype source exists, no toolkit dependency was added, GTK stays a provisional production
+default and Qt is not started. The next gate is the **owner's environment decision**.
+
 ## Odluke i istraživanja
 
 [ADR index](DECISIONS.md): nineteen Proposed records, ADR-0020 Accepted for documentation language,
