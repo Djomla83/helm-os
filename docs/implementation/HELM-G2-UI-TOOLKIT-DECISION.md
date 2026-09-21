@@ -4,16 +4,18 @@
 >
 > **Selected: GTK 4 + gtk-rs, with *selective* libadwaita.**
 >
-> **Second choice, if the fidelity spike fails materially: Qt 6 + QML + CXX-Qt.**
+> **Second choice: Qt 6 + QML + CXX-Qt — architecture fallback only.** The fidelity spike did not
+> fail, so **no Qt spike is required.**
 >
-> The owner accepted the primary recommendation of section 13 and authorised **one bounded native
-> UI fidelity spike** (section 15). This document is the record of that decision and of the
-> analysis behind it.
+> The owner accepted the primary recommendation of section 13 and authorised one bounded native UI
+> fidelity spike (section 15). That spike was **built, reviewed and accepted on 2026-09-21**
+> (section 17), and the owner then authorised the **first real backend-connected G2 vertical**
+> (section 18).
 >
-> **What acceptance does and does not do.** It selects HELM's UI technology and authorises the
-> spike. It does **not** make the GUI production-ready, connect any backend, add any HELM crate
-> dependency, introduce persistence, or start G-1, G-2 or G-3. The next gate is the **owner's
-> visual review of the native fidelity spike**, not production acceptance.
+> **What is and is not open.** The toolkit is settled and the spike is accepted. The real vertical
+> is **authorised and not yet accepted**. Nothing here makes the GUI production-ready, and G-1, G-2
+> and G-3 remain unauthorised. The next gate is the **owner's review of the first real G2 vertical
+> slice**.
 >
 > **Selective, not wholesale.** Section 6.3 is binding: HELM takes libadwaita's infrastructure and
 > refuses its idiom. This decision is **not** a statement that HELM's screens should be built from
@@ -36,9 +38,9 @@ reopened by acceptance** and are preserved as the reasoning of record.
 | G2-D1 to G2-D7 | **ACCEPTED** 2026-09-21, with four recorded clarifications |
 | G2-D8 — visual direction | **ACCEPTED** 2026-09-21, *Record / graphite frame* ([kickoff 8.16](HELM-G2-VISUAL-KICKOFF.md)) |
 | G2-D9 — UI toolkit selection | **ACCEPTED** 2026-09-21 — GTK 4 + gtk-rs with selective libadwaita |
-| Bounded native UI fidelity spike | **AUTHORISED** (section 15) |
-| Production GUI | **NOT ACCEPTED** — the spike answers a fidelity question and nothing more |
-| Backend connection | **NOT AUTHORISED** |
+| Bounded native UI fidelity spike | **ACCEPTED** 2026-09-21 (section 17) |
+| First real backend-connected G2 vertical | **AUTHORISED, NOT YET ACCEPTED** (section 18) |
+| Production GUI | **NOT ACCEPTED** |
 
 What is settled: what HELM G2 does, what it refuses to claim, how it is laid out, how it reads, and
 what it looks like. What is not settled: what draws it.
@@ -938,12 +940,104 @@ toolkit faithfully reproduce the accepted D8 application?* — and hands the ans
 |---|---|
 | G2-D9 | **ACCEPTED** 2026-09-21 |
 | Toolkit selected | **GTK 4 + gtk-rs with selective libadwaita** |
-| Second choice on material spike failure | Qt 6 / QML + CXX-Qt |
-| Bounded fidelity spike | **AUTHORISED** |
+| Second choice | Qt 6 / QML + CXX-Qt — **architecture fallback only**; no Qt spike is required |
+| Bounded fidelity spike | **ACCEPTED** 2026-09-21 (section 17) |
+| First real backend-connected G2 vertical | **AUTHORISED, NOT YET ACCEPTED** (section 18) |
 | Production GUI | **NOT ACCEPTED** |
-| Backend connection | **NOT AUTHORISED** |
 | D8 prototype | unchanged and owner-approved; remains the visual source of truth |
-| Next gate | **Owner visual review of the native GTK fidelity spike** |
+| Next gate | **Owner review of the first real G2 vertical slice** |
+
+---
+
+## 17. GTK fidelity spike — ACCEPTED 2026-09-21
+
+The owner ran the native spike under WSLg and reviewed it. **Verdict: accept.**
+
+What the spike established, and what is therefore no longer an open question:
+
+- GTK reproduces the accepted HELM visual language.
+- The graphite structural frame works.
+- The warm off-white working sheet works.
+- The HELM Burgundy identity works, and stays controlled.
+- Ledger and fact composition works without custom rendering.
+- Normal / Advanced disclosure works without layout instability.
+- Keyboard navigation works, and focus is visibly indicated.
+- **Selective libadwaita does not force HELM into stock GNOME Settings visual composition.** No
+  core screen uses `AdwPreferencesGroup` or `AdwActionRow`.
+
+**No Qt fallback spike is required.** Qt 6 / QML + CXX-Qt remains recorded as an architecture
+fallback only. **D9 is not reopened by this acceptance.**
+
+### 17.1 Nonblocking notes carried from the acceptance
+
+These are carried forward as implementation notes. None blocks the vertical, and none is to be
+"fixed" as unrelated polish.
+
+| # | Note | Standing |
+|---|---|---|
+| A | **Brand fonts are not selected.** The spike uses local fallback stacks | Open; a separate owner decision |
+| B | WSLg emitted libEGL/MESA/Zink warnings while still rendering the native window | A development-environment observation, **not** a HELM UI product finding |
+| C | The development environment runs GTK 4.14.x and libadwaita 1.5.x while D9 evaluated newer versions. The spike working on that older stack is **useful evidence**, not a requirement to freeze those versions | Informational |
+| D | Forced-light visual fidelity is accepted **for the spike** | See `G2-UI-A11Y-01` below |
+
+### 17.2 `G2-UI-A11Y-01` — carried, nonblocking
+
+**Forced-light visual identity versus the system high-contrast and accessibility preference.**
+
+The spike pins the colour scheme so that a host theme cannot repaint an accepted product decision.
+That is right for a fidelity spike. It is **not** settled for production: a person who has asked
+their desktop for high contrast has asked for something HELM currently overrides.
+
+| | |
+|---|---|
+| Status | **NONBLOCKING** |
+| Due | **Before production UI acceptance** |
+| Not due | During the first backend connection |
+
+It is recorded so it cannot be lost, and it is explicitly not solved here.
+
+---
+
+## 18. First real backend-connected G2 vertical — AUTHORISED, NOT YET ACCEPTED
+
+The owner authorised the first real vertical slice on 2026-09-21. It answers one question:
+
+> **Can the accepted native HELM GUI drive the already-accepted `helm-launch` 0.1 product
+> end to end?**
+
+The flow is: choose a local program → real executable admission → choose a working directory →
+real working-directory admission → construct and parse one launch plan → review **real** authority
+facts → authorise one launch → real launch attempt → a real `LaunchOutcome` **or** a pre-child
+`LaunchError` → real result → real captured output prefixes → real receipt and evidence.
+
+**No mock launch result is acceptable in the real vertical.**
+
+### 18.1 What this authorisation does not open
+
+`helm-launch` is **read-only**: no API change, no schema change, no new `EnvironmentMode`, no async
+or session handle, no caller stop or cancel. No durable library, no persistence, no installer, no
+update, repair or rollback backend. No `helm-app-spec`, `helm-bind`, `helm-observe` or
+`helm-evidence` integration. No runtime selection, no Wine, no Proton, no MicroVM. No containment,
+no sandboxing, no custom shell. No graphical subject application support, and no desktop-session
+environment.
+
+**G-1, G-2 and G-3 remain separate and unauthorised.**
+
+### 18.2 Recorded architecture debt
+
+`crates/helm-gui` stays **outside** the root Cargo workspace, with its own `Cargo.lock`, because the
+accepted workspace workflows run on runners that install no GTK or libadwaita development packages.
+Making it a member would break the accepted crates' gates wherever GTK is absent.
+
+This is **temporary architecture debt**, recorded rather than hidden. Workspace integration is a
+later G2 integration decision. The consumer is validated by a dedicated GUI workflow instead.
+
+### 18.3 Status
+
+The vertical is **authorised and not yet accepted**. The next gate is the **owner's review of the
+first real G2 vertical slice**, at which the owner should be able to run the application and see a
+real selected program, real admission, real authority, a real launch attempt, a real result and a
+real receipt.
 
 ### 16.4 Sources
 

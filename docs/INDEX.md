@@ -43,11 +43,18 @@ The [G2 UI toolkit decision](implementation/HELM-G2-UI-TOOLKIT-DECISION.md) eval
 gtk-rs, GTK 4 with selective libadwaita, Qt 6/QML with CXX-Qt, Slint, Iced and a Tauri/webview
 control candidate against the accepted D8 prototype, and records the owner's **G2-D9 acceptance of
 GTK 4 + gtk-rs with selective libadwaita**, with Qt 6/QML + CXX-Qt retained as the second choice
-should the fidelity spike fail materially. *Selective* is binding: HELM takes libadwaita's
-infrastructure — style management, a measured-content clamp, dialogs, high-contrast support and the
-`.numeric` tabular-figures style class — and refuses its GNOME idiom, so the core screens are not
-built from stock preference-row composition. The canonical D8 prototype remains the visual source of
-truth. The next gate is the **owner's visual review of the native GTK fidelity spike**.
+as an architecture fallback. *Selective* is binding: HELM takes libadwaita's infrastructure — style
+management, a measured-content clamp and the `.numeric` tabular-figures style class — and refuses
+its GNOME idiom, so the core screens are not built from stock preference-row composition. The
+canonical D8 prototype remains the visual source of truth.
+
+The **native GTK fidelity spike was accepted on 2026-09-21**, so no Qt spike is required, and the
+owner then authorised the **first real backend-connected G2 vertical** — the GUI driving the
+accepted `helm-launch` 0.1 end to end through its public API. That vertical is **authorised and not
+yet accepted**: it adds no persistence, changes no accepted crate, and starts no G-1, G-2 or G-3.
+`crates/helm-gui` is deliberately **outside the root Cargo workspace** with its own lockfile, which
+is recorded temporary architecture debt, not a hidden exception. The next gate is the **owner's
+review of the first real G2 vertical slice**.
 
 ## Odluke i istraživanja
 
