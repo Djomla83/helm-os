@@ -1,6 +1,6 @@
 # HELM G2 — VISUAL PRODUCT KICKOFF
 
-> **Status: design proposal, awaiting owner review. Docs only.**
+> **Status: G2-D1 to G2-D7 accepted by the owner on 2026-09-21. G2-D8 and G2-D9 pending. Docs only.**
 > This document defines product intent, information architecture, interaction structure and
 > capability labelling for the first visible HELM application. It authorises **no** GUI code, **no**
 > toolkit, **no** backend work and **no** change to any accepted module. It is written in English
@@ -35,9 +35,13 @@ Windows desktop. Trial #4 is not authorised and no execution trial is proposed h
 
 ### 1.4 Status of this document
 
-Design proposal. Nothing in sections 5 to 19 is implementable until the gates in section 20 are
-passed in order. Where this document describes a screen, a state or a flow that current code cannot
-support, it says so explicitly and carries a class label from section 3.2.
+**Accepted in part.** On 2026-09-21 the owner accepted gates G2-D1 to G2-D7 with four clarifications,
+which are applied throughout this revision and summarised in section 20.2. G2-D8 (owner visual
+mockup) and G2-D9 (toolkit selection) remain pending, and **GUI implementation is still not
+authorised**.
+
+Where this document describes a screen, a state or a flow that current code cannot support, it says
+so explicitly and carries a class label from section 3.2.
 
 ---
 
@@ -162,15 +166,24 @@ Five properties of `helm-launch` 0.1 are load-bearing for every screen in this d
 
 1. **No `ExecSucceeded` value exists.** A clean exec-status end-of-file is
    `ExecStatus::Indeterminate(StatusEofWithoutRecord)` and nothing more.
-2. **The environment is empty.** No `DISPLAY`, no `WAYLAND_DISPLAY`, no `HOME`, no `XDG_*`, and
-   every inherited descriptor outside the fixed set is closed. A launched application therefore
-   **cannot reach the host display server**. HELM 0.1 cannot run a graphical application.
-3. **Every launch carries a mandatory run deadline**, at most ten minutes, after which `SIGTERM`,
-   a grace period and `SIGKILL` follow. HELM 0.1 cannot host an open-ended application session.
-4. **`launch` is synchronous.** It returns once, at the end of the attempt. There is no handle, no
-   progress channel, no query API and no way to observe or influence the child while it runs.
+2. **The environment is empty.** `EnvironmentMode` has one value, `Empty`; the `envp` handed to
+   `execveat` is a single null; and every inherited descriptor outside the fixed set is closed. A
+   launched subject therefore receives **no ordinary desktop-session discovery context** — no
+   Wayland or X11 context, no session-bus context, no `HOME`, no `XDG_*`. This is gap **G-3** in
+   section 18.
+3. **Every launch attempt has a bounded lifecycle.** `MAX_TIMEOUT_MS` is 600000, and the accepted
+   total bound is that timeout plus the spawn-confirmation, grace, post-kill and post-exit
+   observation bounds. When the run deadline expires, `SIGTERM`, the grace period and `SIGKILL`
+   follow. This is one half of gap **G-2** in section 18.
+4. **`launch` is synchronous and there is no session handle.** It returns once, at the end of the
+   attempt. There is no handle, no progress channel, no query API, no caller-invoked stop and no way
+   to observe or influence the child while it runs. This is the other half of gap **G-2**.
 5. **There is no containment.** No sandbox, no cgroup, no namespace, no process-tree supervision.
    The process-group sweep is best-effort cleanup only.
+
+Constraints 3 and 4 together (**G-2**) and constraint 2 (**G-3**) are **two distinct blockers** for
+an ordinary graphical desktop subject, and neither substitutes for the other. Section 18 keeps them
+separate. Neither blocks building the HELM GUI itself — see section 16.6.
 
 ### 2.3 Capability matrix
 
@@ -207,11 +220,13 @@ Five properties of `helm-launch` 0.1 are load-bearing for every screen in this d
 
 ### 2.4 What the audit rules out for G2
 
-- A library that remembers applications across restarts requires new code. It is not a backend gap
-  that can be papered over in the view layer.
+- A library that remembers programs across restarts requires new code (**G-1**). It is not a backend
+  gap that can be papered over in the view layer, and no screen may imply that such a library exists.
 - "Install" cannot be honestly offered. Nothing installs.
-- A "Running" screen that reflects live state cannot be built on `launch` as it exists.
-- A launched application cannot draw anything on screen.
+- A "Running" screen that reflects live, confirmed state cannot be built on `launch` as it exists.
+  The GUI can know only that its own call to `launch` has not yet returned.
+- A launched subject cannot draw anything on screen, and could not be given a usable long-lived
+  session even if it could. Two separate gaps, **G-3** and **G-2**.
 - No screen may present a HELM verdict about an application.
 
 ---
@@ -305,9 +320,9 @@ The candidate structure was tested against section 2.3 and reduced. Four areas s
 
 | Area | Kept | Reason |
 |---|---|---|
-| **Library** | yes | the home surface and the return path from everything |
-| **Add** | yes, renamed | "Add to HELM", never "Install" — see section 8.3 |
-| **Application** | yes | one application, with Authority, Result and Evidence as sections inside it |
+| **Library** | yes, **as architecture only** | the home surface and the return path from everything. **It does not imply that a durable library exists today** — see 5.2.1. |
+| **Choose a local program** | yes, renamed | never "Install", and never "Add to HELM" while nothing persists — see 5.2.1 and section 8.3 |
+| **Application** | yes | one program, with Authority, Result and Evidence as sections inside it |
 | **Evidence** | yes, as a leaf | reached from a result, never a top-level destination |
 | Permissions | not top-level | it is a step inside an attempt, never browsable state |
 | Prepare | not a screen in G2 | nothing is prepared; the real work is admission, which belongs to the authority review — see section 8.5 |
@@ -318,13 +333,30 @@ The candidate structure was tested against section 2.3 and reduced. Four areas s
 A "Prepare" screen and a "Settings" screen were both rejected because desktop applications usually
 have them, which is not a reason.
 
+### 5.2.1 The Library implies no persistence (owner clarification 1)
+
+The Library is **accepted as G2 information architecture**. It is the shape the product grows into.
+It is **not** a claim that a durable application library exists, and nothing in G2 may imply one.
+
+| | |
+|---|---|
+| What is accepted | the Library as the home surface, the card model of 8.2, and the return path from every screen |
+| What is **not** established | that anything a person chooses survives the session, the window or a restart |
+| What persistence requires | gap **G-1**, the durable store of section 18. Until G-1 exists, no entry persists. |
+| What a prototype may do | hold selections **in memory for the session only**, provided the interface describes that plainly and in place — not in a footnote, a tooltip or release notes |
+
+The wording follows from this. Where a label would imply that something was *added to HELM* and is
+now *kept by HELM*, the first real slice uses **Choose local program** or **Open local program**
+instead. "Add to HELM" is reserved for the point at which G-1 makes adding mean something, and is
+used nowhere before then.
+
 ### 5.3 Structure
 
 ```text
-Library
+Library  (session-only until G-1; see 5.2.1)
  |- empty state
- |- application card ---> Application
- '- Add to HELM --------> Add (identify executable, identify working directory) --> Application
+ |- chosen-program card ---> Application
+ '- Choose local program --> Choose (identify executable, identify working folder) --> Application
 
 Application
  |- Overview        (what HELM knows, and what it does not)
@@ -344,17 +376,17 @@ Attempt --> Result --> Evidence / Technical details
 The canonical G2 journey. Every transition names the user action, the system action, the visible
 state, cancel and back behaviour, the error route and the implementation class.
 
-### T1 — Library to Add
+### T1 — Library to Choose
 
 | | |
 |---|---|
-| User action | Activates **Add to HELM** |
+| User action | Activates **Choose local program** |
 | System action | Opens the identification step. No filesystem access yet. |
-| Visible state | *Add to HELM* — nothing has been added |
+| Visible state | *Choose local program* — nothing has been chosen |
 | Cancel | Returns to Library. Nothing created. |
 | Back | Same as cancel. |
 | Error route | None possible. |
-| Class | `REAL_NOW` for the step; the Library that holds the result is `REQUIRES_ORCHESTRATION` |
+| Class | `REAL_NOW` for the step; **persisting** the result is `REQUIRES_ORCHESTRATION` (G-1), and until then the step is session-only per 5.2.1 |
 
 ### T2 — Identify the program
 
@@ -368,7 +400,8 @@ state, cancel and back behaviour, the error route and the implementation class.
 | Error route | Admission refusal, section 10.3 — each refusal names its own reason and keeps the person on this step |
 | Class | `REAL_NOW` — `helm_launch::admit_executable` |
 
-**This step is not installation and is never labelled as such.**
+**This step is not installation and is never labelled as such. It is also not persistence**: until
+G-1, the chosen program is held for this session only, and the screen says so.
 
 ### T3 — Identify the working folder
 
@@ -386,13 +419,13 @@ state, cancel and back behaviour, the error route and the implementation class.
 
 | | |
 |---|---|
-| User action | Opens the application entry |
+| User action | Opens the chosen-program entry |
 | System action | None. Displays only what admission established. |
 | Visible state | *Known* — see section 9 |
 | Cancel | Not applicable. |
 | Back | Library. |
 | Error route | None. |
-| Class | `REAL_NOW` for the content; `REQUIRES_ORCHESTRATION` for reaching it from a persisted Library |
+| Class | `REAL_NOW` for the content; `REQUIRES_ORCHESTRATION` (G-1) for reaching it from a **persisted** Library rather than a session-only one |
 
 ### T5 — Authority review
 
@@ -402,7 +435,7 @@ state, cancel and back behaviour, the error route and the implementation class.
 | System action | Builds a launch plan document and calls `parse_launch_plan`; nothing is executed |
 | Visible state | *Authority review* — the four grants and the four non-grants of section 11 |
 | Cancel | Discards the plan. Capabilities remain admitted, nothing ran. |
-| Back | Application overview. |
+| Back | Chosen-program overview. |
 | Error route | Plan rejection, section 10.4 — a HELM preparation error, never the person's fault |
 | Class | `REAL_NOW` — `helm_launch::parse_launch_plan` |
 
@@ -427,11 +460,14 @@ established only that an authorisation exists.
 |---|---|
 | User action | Activates **Attempt launch** |
 | System action | `launch(authorized)` — one child, the accepted observation loop, then a `LaunchOutcome` |
-| Visible state | *Launch attempt active* — the run bound and the deadline that will apply |
+| Visible state | *Launch attempt in progress* — the run bound and the deadline that will apply |
 | Cancel | **Not available in G2, and the control says so before it is pressed.** `launch` is synchronous and exposes no handle. |
 | Back | Unavailable while an attempt is active. |
 | Error route | `LaunchError`, section 10.5 |
-| Class | `REAL_NOW` for the launch; a cancellable or live-updating attempt is `REQUIRES_ORCHESTRATION` |
+| Class | `REAL_NOW` for the launch; a cancellable or live-updating attempt is `REQUIRES_ORCHESTRATION` (G-2) |
+
+The one thing the GUI knows here is that **its own call to `launch` has not yet returned.** That is
+not confirmation that the subject is running. Section 12.8 governs the wording.
 
 ### T8 — Running observation
 
@@ -439,13 +475,14 @@ established only that an authorisation exists.
 |---|---|
 | User action | None. |
 | System action | The parent loop observes the child under the accepted bounds. |
-| Visible state | *Launch attempt active*, with the plan's run deadline shown as a bound, **not** as progress |
+| Visible state | *Launch attempt in progress*, with the plan's run deadline shown as a bound, **not** as progress |
 | Cancel | Unavailable, as T7. |
 | Back | Unavailable. |
 | Error route | Carried into the result. |
-| Class | `PARTIAL` — the observation is real, its live visibility is `REQUIRES_ORCHESTRATION` |
+| Class | `PARTIAL` — the observation is real, its live visibility is `REQUIRES_ORCHESTRATION` (G-2) |
 
-Nothing on this screen may claim the application started. HELM has no such fact.
+Nothing on this screen may claim the subject started. HELM has no such fact, and the GUI's own
+knowledge that a call is outstanding is not one either.
 
 ### T9 — Result
 
@@ -494,18 +531,18 @@ The `helm-evidence verify` CLI is not part of this journey.
 
 ```mermaid
 flowchart TD
-    L[Library] -->|Add to HELM| A1[Add: identify program]
-    L -->|open entry| AP[Application]
+    L[Library] -->|Choose local program| A1[Choose: identify program]
+    L -->|open entry| AP[Chosen program]
     L -.->|no entries| LE[Library: empty state]
-    LE -->|Add to HELM| A1
+    LE -->|Choose local program| A1
 
-    A1 -->|accepted| A2[Add: identify working folder]
-    A1 -.->|admission refused| A1E[Add: refusal]
+    A1 -->|accepted| A2[Choose: identify working folder]
+    A1 -.->|admission refused| A1E[Choose: refusal]
     A1E -->|choose another file| A1
     A1E -->|cancel| L
 
     A2 -->|accepted| AP
-    A2 -.->|refused| A2E[Add: folder refusal]
+    A2 -.->|refused| A2E[Choose: folder refusal]
     A2E -->|choose another folder| A2
     A2E -->|cancel| L
 
@@ -520,7 +557,7 @@ flowchart TD
     AUTH -->|cancel| AP
     PE --> AP
 
-    RDY -->|attempt launch| RUN[Launch attempt active]
+    RDY -->|attempt launch| RUN[Launch attempt in progress]
     RDY -->|back, capabilities consumed| A1
 
     RUN --> RES[Result]
@@ -559,19 +596,23 @@ interaction and product architecture.
 
 | | |
 |---|---|
-| **Purpose** | The home surface: everything HELM currently knows about, and the way to add another |
+| **Purpose** | The home surface: everything HELM currently knows about, and the way to choose another program |
 | **Primary user question** | "What can I do here, and is anything waiting for me?" |
-| **Primary action** | Open an application entry |
-| **Secondary actions** | Add to HELM; switch disclosure mode |
+| **Primary action** | Open a chosen-program entry |
+| **Secondary actions** | Choose local program; switch disclosure mode |
 | **Information shown** | Per entry: the name the person gave it, the program file name, the working folder name, the current state word from section 9, and the time of the last attempt. **Nothing else** — see 8.2. |
-| **States** | Empty; Normal; Attention required; Launch attempt active; Observation indeterminate |
+| **States** | Empty; Normal; Attention required; Launch attempt in progress; Observation indeterminate |
 | **Error states** | An entry whose program or folder can no longer be opened shows *Attention required* with the reason, and its launch action is disabled with that reason stated |
-| **Empty state** | "HELM has nothing added yet." One explanation sentence, one action: *Add to HELM*. It states plainly that adding is not installing. |
+| **Empty state** | "No program is open in HELM." One explanation sentence, one action: *Choose local program*. It states plainly that choosing is neither installing nor keeping. |
 | **Back / cancel** | This is the root. No back. |
 | **Advanced disclosure** | Per entry: the capability identifier of the working directory and the last receipt digest |
-| **Backend classification** | `REQUIRES_ORCHESTRATION` — the entries, their persistence and the last-attempt record all need a store that does not exist |
+| **Backend classification** | `REQUIRES_ORCHESTRATION` (G-1) — the entries, their persistence and the last-attempt record all need a store that does not exist |
 
-### 8.2 The application card
+**Persistence statement.** Until G-1, the Library holds entries **for the current session only**,
+and says so in place: a program chosen now is gone when HELM closes, and HELM has changed nothing on
+disk. The statement is part of the surface, not a disclaimer tucked into Advanced mode.
+
+### 8.2 The chosen-program card
 
 Evaluated against what HELM can actually know.
 
@@ -583,7 +624,7 @@ Evaluated against what HELM can actually know.
 | Source | yes, as the chosen file name | this is a fact the person supplied |
 | Runtime | **no** | nothing selects or resolves a runtime |
 | Environment | **no** | nothing prepares an environment |
-| Last run | yes, once a store exists | `REQUIRES_ORCHESTRATION` |
+| Last run | this session only, until G-1 | `REAL_NOW` within a session; `REQUIRES_ORCHESTRATION` to survive one |
 | State needing attention | yes | see section 9 |
 | Update availability | **no** | no updater exists; the field would always be a lie or always empty |
 | Evidence status | yes, minimally: whether the last attempt produced a receipt | `REAL_NOW` per attempt, `REQUIRES_ORCHESTRATION` to persist |
@@ -591,14 +632,14 @@ Evaluated against what HELM can actually know.
 The Library is a list of things a person can act on. It is not a settings dashboard and carries no
 system-wide counters, health scores or summaries.
 
-### 8.3 Add to HELM
+### 8.3 Choose local program
 
 | | |
 |---|---|
 | **Purpose** | Turn a file and a folder the person chooses into admitted capabilities |
 | **Primary user question** | "Which program, and where should it run?" |
 | **Primary action** | Choose a program file |
-| **Secondary actions** | Choose a working folder; name the entry; cancel |
+| **Secondary actions** | Choose a working folder; name the entry for this session; cancel |
 | **Information shown** | Chosen file path; after admission: exact size in bytes, file mode bits, ELF type. One sentence stating that HELM opened and measured the file and did not run, copy, modify or install anything. |
 | **States** | Nothing chosen; Checking; Accepted; Refused |
 | **Error states** | Each admission refusal is distinct and named — section 10.3 |
@@ -607,19 +648,21 @@ system-wide counters, health scores or summaries.
 | **Advanced disclosure** | The pre-execution measurement digest, the exact mode bits, the ELF type name, and the statement that this is a pre-execution measurement of the pinned object and never the identity of bytes that executed |
 | **Backend classification** | `REAL_NOW` |
 
-**The screen is titled "Add to HELM". The word Install does not appear**, except in one sentence
-that says HELM does not install anything yet and names what that would require (section 18).
+**The screen is titled "Choose local program"**, or "Open local program" where opening reads more
+naturally than choosing. **Neither "Install" nor "Add to HELM" appears** — the first because nothing
+installs, the second because nothing persists (5.2.1). Install is named once, in a sentence saying
+HELM does not install anything yet and what that would require (section 18).
 
-### 8.4 Application
+### 8.4 Chosen program
 
 | | |
 |---|---|
-| **Purpose** | Everything HELM knows about one entry, and the way to attempt a launch |
+| **Purpose** | Everything HELM knows about one chosen program, and the way to attempt a launch |
 | **Primary user question** | "What is this, and what happens if I run it?" |
 | **Primary action** | Review what this will be permitted to use |
-| **Secondary actions** | Open last result; Recovery; rename; remove from HELM |
+| **Secondary actions** | Open last result; Recovery; rename for this session; close |
 | **Information shown** | Six sections — see below |
-| **States** | Known; Launch available; Launch attempt active; Ended; Attention required |
+| **States** | Known; Launch available; Launch attempt in progress; Ended; Attention required |
 | **Error states** | Program or folder no longer openable; last attempt was a HELM error |
 | **Empty state** | Never empty once an entry exists. With no attempt yet, the Result section says "No launch has been attempted." |
 | **Back / cancel** | Back to Library, always. |
@@ -681,24 +724,27 @@ bounded; each shows a discrete phase with its own completion fact.
 | **Advanced disclosure** | Plan identity digest, argument count, environment mode string, stdin mode string, capture bounds per stream, timeout, signal, grace |
 | **Backend classification** | `REAL_NOW` |
 
-### 8.7 Launch attempt active
+### 8.7 Launch attempt in progress
 
 | | |
 |---|---|
 | **Purpose** | Show that an attempt is under way and what bounds apply |
 | **Primary user question** | "Is anything happening, and how long can it take?" |
-| **Primary action** | **None.** The control that was *Attempt launch* becomes a non-interactive status region reading *Launch attempt active*. |
+| **Primary action** | **None.** The control that was *Attempt launch* becomes a non-interactive status region reading *Launch attempt in progress*. |
 | **Secondary actions** | Show technical details |
-| **Information shown** | The attempt is active; the run deadline from the plan; what will happen when it expires, in order: `SIGTERM`, the grace period, then `SIGKILL` |
-| **States** | Active only |
+| **Information shown** | The attempt is in progress; the run deadline from the plan; what will happen when it expires, in order: `SIGTERM`, the grace period, then `SIGKILL` |
+| **States** | In progress only |
 | **Error states** | None here; everything becomes a result |
 | **Empty state** | Not applicable. |
-| **Back / cancel** | **Neither is available, and the screen says why**: `launch` is synchronous and exposes no handle, so HELM cannot stop an attempt it started. Making this possible is `REQUIRES_ORCHESTRATION` and named in section 18. |
+| **Back / cancel** | **Neither is available, and the screen says why**: `launch` is synchronous and exposes no handle, so HELM cannot stop an attempt it started. Making this possible is `REQUIRES_ORCHESTRATION` (G-2) and named in section 18. |
 | **Advanced disclosure** | The full bound arithmetic and the backend identity |
-| **Backend classification** | `PARTIAL` — the attempt is real, live visibility is `REQUIRES_ORCHESTRATION` |
+| **Backend classification** | `PARTIAL` — the attempt is real, live visibility is `REQUIRES_ORCHESTRATION` (G-2) |
 
 The elapsed bound is shown as a bound, not as progress towards success: reaching the deadline is a
 described outcome, not a failure to finish in time.
+
+This screen is governed by section 12.8. It says that a launch attempt call is still in progress. It
+does not say that the subject is running.
 
 ### 8.8 Result
 
@@ -707,7 +753,7 @@ described outcome, not a failure to finish in time.
 | **Purpose** | Present what HELM observed, as facts |
 | **Primary user question** | "What happened?" |
 | **Primary action** | Attempt launch again |
-| **Secondary actions** | Launch details; Recovery; back to the application |
+| **Secondary actions** | Launch details; Recovery; back to the chosen program |
 | **Information shown** | One plain-language summary line from the mapping in section 12, then the facts that qualify it |
 | **States** | Ended; Ended at the run deadline; Observation indeterminate; Attention required; HELM could not start it |
 | **Error states** | Separated by the taxonomy of section 10; an application exit code is never a HELM error |
@@ -760,7 +806,7 @@ No control on this screen is enabled. Nothing suggests a check is in progress or
 | **Purpose** | Offer the actions that exist, by name, instead of a generic "Troubleshoot" |
 | **Primary user question** | "What can I actually try?" |
 | **Primary action** | Attempt launch again |
-| **Secondary actions** | Review authority; view evidence; remove from HELM |
+| **Secondary actions** | Review authority; view evidence; close program |
 | **Information shown** | Section 14.2 |
 | **States** | Actions available; nothing further available |
 | **Error states** | Inherited from the retried action |
@@ -769,8 +815,9 @@ No control on this screen is enabled. Nothing suggests a check is in progress or
 | **Advanced disclosure** | For each unavailable action, the named missing backend |
 | **Backend classification** | Mixed; see the table in 14.2 |
 
-Remove from HELM is destructive to the entry and requires explicit confirmation naming the entry. It
-never deletes anything on disk, and the confirmation says so.
+Close program is destructive to the session entry and requires explicit confirmation naming it. It
+never deletes anything on disk, and the confirmation says so. It is called *Close program*, not
+*Remove from HELM*, because nothing was added to HELM in the first place (5.2.1).
 
 ### 8.12 Advanced details panel
 
@@ -811,9 +858,9 @@ Baseline requirements, deliberately toolkit-independent; implementation detail w
 - Every control and every status region carries a meaningful label for assistive technology. A state
   word is part of the accessible name, not conveyed only by styling.
 - **No state is conveyed by colour alone.** Every state carries its word from section 9.
-- Destructive actions — remove from HELM, and every future destructive recovery action — require an
+- Destructive actions — close program, and every future destructive recovery action — require an
   explicit confirmation that names the target.
-- Entering and leaving *Launch attempt active*, and the arrival of a result, are announced.
+- Entering and leaving *Launch attempt in progress*, and the arrival of a result, are announced.
 - Every technical value is selectable and copyable, individually and in full.
 
 ---
@@ -826,24 +873,27 @@ are **not** part of the vocabulary, because nothing in HELM does any of them.
 
 | State | Means exactly | Shown where | Class |
 |---|---|---|---|
-| **Not added** | HELM knows nothing about this | Add | `REAL_NOW` |
-| **Known** | A program and a folder were admitted; no attempt has been made | Library, Application | `REAL_NOW` |
-| **Launch available** | A single-use authorisation exists | Application, Authority | `REAL_NOW` |
-| **Launch attempt active** | `launch` was called and has not returned | Library, Application, Attempt | `REAL_NOW` |
+| **Not chosen** | HELM knows nothing about this | Choose | `REAL_NOW` |
+| **Known** | A program and a folder were admitted; no attempt has been made | Library, Chosen program | `REAL_NOW` |
+| **Launch available** | A single-use authorisation exists | Chosen program, Authority | `REAL_NOW` |
+| **Launch attempt in progress** | `launch` was called and has not returned. **This is a fact about HELM's own call, not about the subject.** | Library, Chosen program, Attempt | `REAL_NOW` |
 | **Ended** | The direct child was observed to end, by exit or by signal | Result | `REAL_NOW` |
 | **Ended at the run deadline** | The run deadline expired and termination was issued | Result | `REAL_NOW` |
 | **Observation indeterminate** | HELM did not establish what it would have needed to say more | Result | `REAL_NOW` |
-| **Attention required** | Something needs a decision or a correction before another attempt | Library, Application | `REAL_NOW` |
+| **Attention required** | Something needs a decision or a correction before another attempt | Library, Chosen program | `REAL_NOW` |
 | **HELM could not start it** | A `LaunchError`: HELM failed before or during process creation | Result | `REAL_NOW` |
 | **Authority changed** | The admitted objects differ from those of the last attempt | Authority | `REQUIRES_ORCHESTRATION` |
 | **Update available** | reserved; never displayed in G2 | nowhere | `DESIGN_ONLY_FUTURE` |
 | **Repair available** | reserved; never displayed in G2 | nowhere | `DESIGN_ONLY_FUTURE` |
 
-Deliberately absent: *Running*, *Preparing*, *Installing*, *Ready*, *Healthy*, *Failed*, *Succeeded*.
+Deliberately absent: *Running*, *Running confirmed*, *Launched successfully*, *Added*, *Installed*,
+*Preparing*, *Ready*, *Healthy*, *Failed*, *Succeeded*.
 
-- **Running** is absent because HELM never observes that the application is running. It observes a
-  direct child, and a clean exec-status end-of-file is indeterminate. *Launch attempt active*
-  describes what HELM knows: that it is in an attempt.
+- **Running** and **Running confirmed** are absent because HELM never observes that the subject is
+  running. It observes a direct child, and a clean exec-status end-of-file is indeterminate. The
+  strongest available fact is that a `launch` call has not returned, which is what *Launch attempt
+  in progress* says and all it says. See section 12.8.
+- **Added** and **Installed** are absent because nothing persists and nothing installs (5.2.1).
 - **Preparing** is absent because nothing is prepared (section 8.5).
 - **Ready** is absent because the evidence supports only *Launch available*.
 - **Failed** and **Succeeded** are absent because HELM issues no verdicts.
@@ -1059,6 +1109,41 @@ One line, chosen by first match.
 Every line is followed by the qualifying facts, including the exec-status line, which is always
 present and is never omitted because the end looked ordinary.
 
+### 12.8 Launch attempt versus running (owner clarification 2)
+
+`helm-launch` 0.1 is synchronous. That gives the GUI exactly one piece of live knowledge, and it is
+knowledge about the GUI's own call, not about the subject.
+
+| The GUI may know | The GUI may **not** claim |
+|---|---|
+| A launch attempt call is still in progress | HELM has confirmed the subject is running |
+| The run deadline that will apply to it | The application launched successfully |
+| What happens when that deadline expires | The application started, is live, is up, is active, or is working |
+
+**Permitted wording in the first slice:** *Launch attempt in progress*.
+**Prohibited wording, in Normal and Advanced mode alike:** *Running*, *Running confirmed*, *Launched
+successfully*, *Started*, *Application is live*, and every equivalent. The prohibition is not about
+tone. There is no fact behind any of them: a clean exec-status end-of-file is
+`Indeterminate(StatusEofWithoutRecord)`, and no `ExecSucceeded` value exists in the crate.
+
+#### The worker-thread note
+
+A GUI implementation **may** call the synchronous `launch` from a worker thread so that its own
+event loop stays responsive while the attempt runs. That is an ordinary property of the calling
+application and is permitted in the first slice.
+
+It creates **none** of the following, and no screen may behave as though it did:
+
+| Not created by a worker thread | Why |
+|---|---|
+| An asynchronous `helm-launch` API | The crate's public surface is unchanged; one synchronous call is still one synchronous call |
+| A session handle | Nothing is returned until the attempt is over |
+| Cancel capability | There is no handle to cancel, and no caller-invoked stop exists |
+| Live child state | The parent loop's observations are internal to `launch` and reach the caller only in the final `LaunchOutcome` |
+
+A worker thread moves where the GUI waits. It does not change what HELM knows. Any of the four
+items above requires gap **G-2** in section 18.
+
 ---
 
 ## 13. Evidence and technical details UX
@@ -1147,16 +1232,16 @@ Recovery is a set of named actions in context. The word *Troubleshoot* is not us
 | Review authority | yes | `REAL_NOW` | none |
 | View evidence | yes | `REAL_NOW` | none |
 | Choose a different program or folder | yes | `REAL_NOW` | none |
-| Remove from HELM | yes, with confirmation | `REQUIRES_ORCHESTRATION` | the store that holds the entry |
+| Close program | yes, with confirmation | `REAL_NOW` within a session | none; discarding a session entry needs no store |
 | Export diagnostic package | no | `REQUIRES_ORCHESTRATION` | an export format and a redaction decision for output |
 | Re-prepare environment | no | `DESIGN_ONLY_FUTURE` | environment preparation |
 | Repair environment | no | `DESIGN_ONLY_FUTURE` | environment preparation and a known-good reference |
 | Roll back runtime or environment | no | `DESIGN_ONLY_FUTURE` | versioned environment state and a rollback transaction |
 | Reset application environment | no | `DESIGN_ONLY_FUTURE` | environment ownership and a definition of what a reset removes |
 
-Every destructive action — the last four, and Remove from HELM — requires an explicit confirmation
-naming the target and stating exactly what is removed. Remove from HELM states that it deletes
-nothing on disk.
+Every destructive action — the last four, and Close program — requires an explicit confirmation
+naming the target and stating exactly what is removed. Close program states that it deletes nothing
+on disk.
 
 Unavailable actions are listed with their requirement rather than hidden, so a person can see that
 HELM knows the action should exist. They are never enabled and never appear to be in progress.
@@ -1237,11 +1322,17 @@ Every step is `REAL_NOW`. The slice requires no new backend capability, only a c
 
 ### 16.3 What the slice runs
 
-Not Wine, not Proton, not a graphical application. The empty environment and the closed descriptors
-mean the child cannot reach the display server, so the subject must be a **bounded, non-graphical,
-Linux x86_64 ELF executable** — for example a purpose-built local demonstration program that prints
-to stdout and stderr, exits with a chosen code, and can be made to outlive its deadline on request
-so the termination path is visible.
+The subject is explicitly **a bounded, non-graphical, Linux x86_64 ELF purpose-built demonstration
+program** — one that prints to stdout and stderr, exits with a chosen code, and can be made to
+outlive its deadline on request so the termination path is visible.
+
+**This is intentional, not a compromise.** It is what proves the point of the slice: that a GUI can
+drive real accepted HELM backend semantics end to end. A non-graphical bounded subject is exactly the
+kind of subject `helm-launch` 0.1 was accepted for, so the slice tests the product, not a workaround.
+
+Two separate facts make a graphical subject unavailable, and both are recorded as gaps rather than
+worked around: **G-3**, no desktop-session context, and **G-2**, no long-lived interactive session
+lifecycle. Neither is in scope here.
 
 That demonstration program is a fixture of the slice, not a HELM capability, and is labelled as such
 in the interface.
@@ -1251,13 +1342,16 @@ in the interface.
 | Absent | Why |
 |---|---|
 | Install | Nothing installs. Section 8.3. |
-| A persisted library | No store exists. The slice is single-session and says so. |
+| Persistence (**G-1**) | No store exists. The slice is session-only and says so in place, per 5.2.1. |
+| An async or session API (**G-2**) | `launch` is synchronous and exposes no handle. Sections 8.7 and 12.8. |
+| Cancel during an attempt | Same gap: there is no handle to cancel and no caller-invoked stop. |
+| Live, confirmed running state | Same gap. The GUI knows only that its own call is outstanding. |
+| Desktop-session context (**G-3**) | `EnvironmentMode` has one value, `Empty`. Section 16.3. |
+| A graphical subject application | Blocked by **G-3** and, separately, by **G-2**. Section 16.3. |
 | An application specification | `parse_spec` is real, but the slice needs no specification and pretending otherwise would add ceremony without meaning. Supplying one is a natural second increment. |
 | Binding and comparison | `helm_bind` is real but needs a specification, an observation plan and an observation. Second increment. |
 | Observation of the filesystem | `helm_observe` is real but only becomes meaningful alongside a specification. Second increment. |
-| Cancel during an attempt | `launch` is synchronous and exposes no handle. Section 8.7. |
-| Live running state | Same reason. |
-| A graphical subject application | Empty environment, closed descriptors. Section 16.3. |
+| Wine, Proton, an installer, runtime selection, a custom shell | None exist, and the slice needs none of them. |
 | Update, repair, rollback, reset | No backend at all. |
 | Any containment claim | There is no containment. |
 | A verdict of any kind | HELM has none. |
@@ -1267,6 +1361,26 @@ in the interface.
 The slice is a **caller** of accepted modules. It changes no crate, adds no `unsafe`, weakens no
 admission check, and introduces no new authority path. If implementing it appears to require
 changing an accepted crate, that is a finding to bring back to the owner, not a licence to change it.
+
+### 16.6 The HELM GUI is not a HELM subject (owner clarification 4)
+
+A distinction that decides what G-2 and G-3 actually block.
+
+| | |
+|---|---|
+| **The HELM GUI itself** | an ordinary native Linux desktop application, running under the existing desktop environment, started the way any other desktop application is started |
+| **How it is started** | by the desktop environment. **It is not launched through `helm-launch`, and does not need to be.** |
+| **What it uses `helm-launch` for** | launching *subject* programs, as a caller of the accepted API |
+
+Therefore:
+
+- **G-2 and G-3 do not block building the first visible HELM GUI.** The GUI has its own desktop
+  session context and its own lifecycle, because the desktop environment gave it both.
+- **G-2 and G-3 block using `helm-launch` 0.1 as the final launcher for ordinary graphical subject
+  applications.** That is a statement about subjects, not about HELM's own window.
+
+Confusing the two would make the first slice look blocked when it is not. The slice is implementable
+today, on accepted code, once G2-D8 and G2-D9 are passed.
 
 ---
 
@@ -1283,15 +1397,21 @@ Journey, and the gap between it and today:
 
 | Demo step | Today | Needed to reach it |
 |---|---|---|
-| Install / add | Add is real; install does not exist | An installation model: acquisition, placement, an ownership boundary, a transaction with a defined failure state |
+| Install / add | Choosing is real; adding does not persist (**G-1**) and installing does not exist (**G-9**) | A durable store, then an installation model: acquisition, placement, an ownership boundary, a transaction with a defined failure state |
 | Permissions | Real at descriptor level | A permission model above descriptors, and a real containment subsystem before any containment language is permitted |
 | Prepare | Nothing is prepared | Environment preparation: creation, a runtime concept, a resolution step, a reproducible definition of prepared |
-| Launch | Real | Environment passing, so a graphical application can reach the display server, with its own authority review |
-| Running | No live state | An asynchronous launch API exposing a handle, live observation and caller-invoked termination |
-| Result | Real | Durable results, so a result survives the attempt that produced it |
+| Launch of a **graphical** subject | Blocked twice over | **G-3** for desktop-session context, **and separately G-2** for a usable long-lived interactive lifecycle |
+| Running | No live, confirmed state | **G-2**: a session handle, live observation and caller-invoked termination |
+| Result | Real | Durable results, so a result survives the attempt that produced it (**G-1**) |
 | Update / repair / recovery | None | Sections 14.1 and 14.2 |
 
-**No backend work is authorised by this section.** It records the destination and the distance.
+**Both G-2 and G-3 are required before the eventual G2 graphical-application demo can be considered
+representative of the real product.** Neither alone is sufficient: a subject given desktop-session
+context but still bounded by a ten-minute deadline with no stop control is not a desktop application,
+and a subject given an unbounded session but no session context still cannot draw anything.
+
+**No backend work is authorised by this section**, and no solution to either gap is prescribed here.
+It records the destination and the distance.
 
 ---
 
@@ -1302,9 +1422,9 @@ demo in section 17 each unblocks.
 
 | Gap | Name | Class | Unblocks | Note |
 |---|---|---|---|---|
-| G-1 | **Durable application store** — entries, their admitted object paths, last result, disclosure preference | `REQUIRES_ORCHESTRATION` | Library, last result, authority-changed state, remove | The smallest gap with the largest product effect |
-| G-2 | **Asynchronous launch API** — a handle, live observation, caller-invoked termination | `REQUIRES_ORCHESTRATION` | Running state, cancel, stop | Changes the public shape of `helm-launch`; needs its own ADR |
-| G-3 | **Environment passing** — a controlled, reviewable environment instead of `empty` | `REQUIRES_ORCHESTRATION` | Graphical applications | Every variable becomes an authority question and must appear in the authority review |
+| G-1 | **Durable application store** — entries, their admitted object paths, last result, disclosure preference | `REQUIRES_ORCHESTRATION` | A Library that persists; last result; authority-changed state; remove | The smallest gap with the largest product effect. Until it exists, the Library is session-only and says so (5.2.1). |
+| G-2 | **Long-lived / interactive session lifecycle** — see 18.1 | `REQUIRES_ORCHESTRATION` | Confirmed running state, stop, cancel, and any subject meant to outlive a bounded attempt | Changes the public shape of `helm-launch`; needs its own ADR. A worker thread does **not** substitute for it (12.8). |
+| G-3 | **Desktop session context** — see 18.2 | `REQUIRES_ORCHESTRATION` | A graphical subject discovering and connecting to the graphical desktop session | Solution deliberately not prescribed. **Blind inheritance of the parent environment is explicitly not proposed.** |
 | G-4 | **Diagnostic export** — a bundle of receipt, plan, facts and optionally output | `REQUIRES_ORCHESTRATION` | Recovery, support | Needs a redaction decision for output before anything is written |
 | G-5 | **Specification-driven entries** — an entry built from a `helm-app-spec` document | `REQUIRES_ORCHESTRATION` | Version, identity, the second increment | `parse_spec` is real; nothing composes it into a product object |
 | G-6 | **Observation and binding in the product** — plan composition and report presentation | `REQUIRES_ORCHESTRATION` | An honest "what HELM checked" view | Must present ten claim states and two axes, never a tick |
@@ -1315,6 +1435,60 @@ demo in section 17 each unblocks.
 | G-11 | **Update** | `DESIGN_ONLY_FUTURE` | Updates | Four distinct operations, section 14.1 |
 | G-12 | **Containment** | `DESIGN_ONLY_FUTURE` | Any security language at all | Until this exists, the words of section 11.4 stay prohibited |
 | G-13 | **Application identity: display name and icon** | `DESIGN_ONLY_FUTURE` | Recognisable library entries | A specification has an identifier and a version only |
+
+### 18.1 G-2 — long-lived / interactive session lifecycle
+
+**Current facts, from the accepted code.**
+
+- `launch` is synchronous: it returns once, when the attempt is over.
+- No session handle exists. Nothing is returned to the caller before that point.
+- No caller-invoked stop exists. `SIGTERM` and `SIGKILL` are issued by the lifecycle on deadline
+  expiry, never on request.
+- `MAX_TIMEOUT_MS` is 600000.
+- Every launch attempt therefore has a **bounded lifecycle** of at most the accepted timeout plus
+  the termination, grace and observation bounds.
+
+**What follows.** A real, normal desktop application cannot use that as its final lifecycle model. A
+session that ends by construction after a bounded interval, that cannot be stopped on request, and
+whose state is invisible until it is over, is not a desktop application session.
+
+**What this gap is not.** It is not the display problem. A subject could be given complete
+desktop-session context and would still hit this bound. G-2 and G-3 are independent.
+
+**Not prescribed here.** Whether this becomes an asynchronous API, a supervised session, a separate
+long-running execution kind or something else is a future design decision with its own ADR. This
+document records the gap, not the answer.
+
+### 18.2 G-3 — desktop session context / environment
+
+**Current facts, from the accepted code.**
+
+- `EnvironmentMode` has exactly one value, `Empty`.
+- The `envp` handed to `execveat` is a single null: the child's environment is genuinely empty.
+- Unrelated descriptors are closed before `exec`, so nothing is inherited out of band either.
+
+**What follows.** A graphical subject receives **no ordinary desktop-session discovery context** —
+nothing by which it could find a Wayland or X11 display, a session bus, a user runtime directory or
+a home directory. It cannot discover, and therefore cannot connect to, the graphical desktop session.
+
+**Not prescribed here, and one approach explicitly ruled out of the proposal.** This document does
+**not** propose blindly inheriting the parent environment. Handing a subject whatever the HELM
+process happens to hold would make the authority review meaningless: the Authority screen would no
+longer be able to state what the subject is permitted to use, because HELM would not know either.
+
+**The design constraint that does follow.** Desktop-session context must be treated as **explicit
+product authority and policy** — enumerated, reviewable, and stated on the Authority screen before
+it is granted, in the same way the four grants of section 11.2 are. Whatever mechanism is chosen
+must preserve that property.
+
+### 18.3 What G-2 and G-3 do and do not block
+
+| | |
+|---|---|
+| **Both required** | before the eventual G2 graphical-application demo (section 17) can be considered representative of the real product |
+| **G-3 is required for** | a graphical subject to discover and connect to the graphical desktop session |
+| **G-2 is required for** | a usable long-lived interactive desktop application lifecycle |
+| **Neither blocks** | building the first visible HELM GUI, or the first real vertical slice of section 16 — see **16.6** |
 
 ---
 
@@ -1347,20 +1521,37 @@ Evaluation criteria only, in no ranked order:
 
 Sequential. Each is an owner decision recorded in [DECISIONS.md](../DECISIONS.md).
 
-| Gate | Accepts | Evidence |
+### 20.1 Status
+
+| Gate | Accepts | Status | Evidence |
+|---|---|---|---|
+| **G2-D1** | Repository capability audit | **ACCEPTED** 2026-09-21 | Section 2, in particular the matrix in 2.3 and the five constraints in 2.2 |
+| **G2-D2** | Information architecture | **ACCEPTED** 2026-09-21 | Section 5, including 5.2.1 and the rejection of Prepare and Settings as screens |
+| **G2-D3** | Primary user journey | **ACCEPTED** 2026-09-21 | Section 6, including the absence of cancel during an attempt |
+| **G2-D4** | Screen map | **ACCEPTED** 2026-09-21 | Sections 7 and 8 |
+| **G2-D5** | State and error vocabulary | **ACCEPTED** 2026-09-21 | Sections 9 and 10, including the two prohibited collapses and 12.8 |
+| **G2-D6** | Real-versus-future capability labelling | **ACCEPTED** 2026-09-21 | Every `REAL_NOW`, `REQUIRES_ORCHESTRATION` and `DESIGN_ONLY_FUTURE` label in this document |
+| **G2-D7** | First vertical slice | **ACCEPTED** 2026-09-21 | Section 16, including 16.6 |
+| **G2-D8** | Owner visual mockup | **PENDING** | Owner-led; constrained by the visual jobs of 8.14 |
+| **G2-D9** | UI toolkit selected | **PENDING** | Section 19, as its own decision record |
+
+### 20.2 Owner clarifications applied at acceptance
+
+The owner accepted G2-D1 to G2-D7 on 2026-09-21 subject to four clarifications, applied throughout
+this revision.
+
+| # | Clarification | Where applied |
 |---|---|---|
-| **G2-D1** | Repository capability audit | Section 2, in particular the matrix in 2.3 and the five constraints in 2.2 |
-| **G2-D2** | Information architecture | Section 5, including the rejection of Prepare and Settings as screens |
-| **G2-D3** | Primary user journey | Section 6, including the absence of cancel during an attempt |
-| **G2-D4** | Screen map | Sections 7 and 8 |
-| **G2-D5** | State and error vocabulary | Sections 9 and 10, including the two prohibited collapses |
-| **G2-D6** | Real-versus-future capability labelling | Every `REAL_NOW`, `REQUIRES_ORCHESTRATION` and `DESIGN_ONLY_FUTURE` label in this document |
-| **G2-D7** | First vertical slice | Section 16 |
-| **G2-D8** | Owner visual mockup | Owner-led, after G2-D1 to G2-D7; constrained by the visual jobs of 8.14 |
-| **G2-D9** | UI toolkit selected | Section 19, as its own decision record |
+| 1 | The Library is accepted as architecture and **must not imply that a durable library exists today**. G-1 remains required for persistence. The first slice uses *Choose local program* / *Open local program* rather than *Add to HELM*. A prototype may hold selections in memory for the session, clearly described as such. | 5.2.1, 5.2, 5.3, T1–T4, 8.1, 8.2, 8.3, 8.4, section 9 |
+| 2 | A launch attempt call still being in progress is **not** confirmation that the subject is running. The states stay distinct, and no promotion to *Running confirmed* or *Launched successfully* is permitted. A GUI may call synchronous `launch` from a worker thread; that creates no async API, no session handle, no cancel and no live child state. | **12.8**, 8.7, T7, T8, section 9 |
+| 3 | A graphical subject has **two distinct blockers**, recorded separately: **G-2** long-lived / interactive session lifecycle, and **G-3** desktop session context. Neither solution is prescribed, and blind inheritance of the parent environment is explicitly not proposed; desktop-session context must be treated as explicit product authority and policy. | **18.1, 18.2, 18.3**, 2.2, 2.4, 16.3, 17 |
+| 4 | The accepted first vertical slice stands, with a bounded non-graphical ELF demonstration subject, intentionally. The **HELM GUI itself** is an ordinary native Linux desktop application and does not need to be launched through `helm-launch`, so G-2 and G-3 do **not** block building the first visible HELM GUI. | **16.6**, 16.3, 16.4, 18.3 |
+
+### 20.3 What acceptance does and does not authorise
 
 **GUI implementation is authorised only after D1 to D9 are all accepted**, unless the owner
-explicitly changes this process in a recorded decision.
+explicitly changes this process in a recorded decision. D8 and D9 are pending, so **no GUI code is
+authorised by this acceptance**.
 
 Nothing in this document authorises backend work. Sections 17 and 18 describe gaps; they do not
-open them.
+open them. No toolkit is selected. No custom shell is authorised. No execution trial is authorised.

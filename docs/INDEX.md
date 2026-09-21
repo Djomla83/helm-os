@@ -22,11 +22,12 @@ data, carry no authenticity claim, and their digests are recomputable from the p
 
 ## Vizuelni proizvod (G2)
 
-[HELM G2 — visual product kickoff](implementation/HELM-G2-VISUAL-KICKOFF.md) is the design proposal
-for the first visible HELM desktop application: a repository capability audit, the information
-architecture, the primary journey, the screen map and specifications, the state and error
-vocabulary, the first real vertical slice and the G2-D1 to G2-D9 acceptance gates. It is a docs-only
-proposal awaiting owner review; it authorises no GUI code, no toolkit and no backend work.
+[HELM G2 — visual product kickoff](implementation/HELM-G2-VISUAL-KICKOFF.md) defines the first
+visible HELM desktop application: a repository capability audit, the information architecture, the
+primary journey, the screen map and specifications, the state and error vocabulary, the first real
+vertical slice and the G2-D1 to G2-D9 acceptance gates. **Gates G2-D1 to G2-D7 are owner-accepted
+since 2026-09-21** with four recorded clarifications; G2-D8 (owner visual mockup) and G2-D9 (toolkit
+selection) remain pending, so **no GUI code, no toolkit and no backend work is authorised**.
 
 ## Odluke i istraživanja
 
