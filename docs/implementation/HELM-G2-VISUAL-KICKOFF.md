@@ -947,6 +947,35 @@ Progressive disclosure is **local rather than global**: each section offers its 
 detail, one layer deep, rather than a single application-wide Normal/Advanced switch. Disclosure
 follows the focus rules of 8.15.
 
+#### 8.16.7 Integrated interactive prototype (non-product)
+
+The accepted direction is recorded as a clickable HTML prototype so the owner can judge layout,
+density, hierarchy, navigation, progressive disclosure, copy and state differentiation by operating
+it rather than by reading about it.
+
+| Item | Value |
+|---|---|
+| Canonical entry point | [docs/prototypes/g2-html/index.html](../prototypes/g2-html/index.html) |
+| Description and limits | [prototype README](../prototypes/g2-html/README.md) |
+| Canonical direction shown | **Record / graphite frame** |
+| Secondary reference | [alternates/instrument.html](../prototypes/g2-html/alternates/instrument.html) — retained for restraint and spacing comparison only, **non-canonical** |
+
+The prototype is **design evidence and nothing else**. It is a throwaway HTML, CSS and vanilla
+JavaScript artefact with no backend connection, no build step and no network access; every path,
+byte count, digest, exit code and receipt value in it is a fixed constant. It authorises no GUI
+code, no dependency, no `Cargo` change and no backend work, **it selects no toolkit**, and it is not
+an argument that HELM should be a web application.
+
+**This document is authoritative over the prototype.** Where the two disagree, this document wins
+and the prototype is wrong.
+
+**Known coverage gap, carried for owner consideration.** The prototype exposes one result — *ended,
+reported 0*, with exec status indeterminate. It does not yet interactively expose the other accepted
+result states of sections 9 and 12: *ended, reported non-zero*; *run deadline expired* with
+termination facts; *signalled*; *end unobservable*; pre-exec failure; and pre-child `LaunchError`.
+The three admission refusals of 10.3 are demonstrated. Extending this coverage is new prototype work
+and an owner decision; it is recorded here as a follow-up and it blocks nothing.
+
 ---
 
 ## 9. State vocabulary
@@ -1616,7 +1645,7 @@ Sequential. Each is an owner decision recorded in [DECISIONS.md](../DECISIONS.md
 | **G2-D5** | State and error vocabulary | **ACCEPTED** 2026-09-21 | Sections 9 and 10, including the two prohibited collapses and 12.8 |
 | **G2-D6** | Real-versus-future capability labelling | **ACCEPTED** 2026-09-21 | Every `REAL_NOW`, `REQUIRES_ORCHESTRATION` and `DESIGN_ONLY_FUTURE` label in this document |
 | **G2-D7** | First vertical slice | **ACCEPTED** 2026-09-21 | Section 16, including 16.6 |
-| **G2-D8** | Owner visual direction | **ACCEPTED** 2026-09-21 | Section 8.16 — *Record / graphite frame*, owner-led and constrained by the visual jobs of 8.14 |
+| **G2-D8** | Owner visual direction | **ACCEPTED** 2026-09-21 | Section 8.16 — *Record / graphite frame*, owner-led and constrained by the visual jobs of 8.14; recorded as an interactive prototype in 8.16.7 |
 | **G2-D9** | UI toolkit selected | **PENDING** | Section 19, as its own decision record |
 
 ### 20.2 Owner clarifications applied at acceptance

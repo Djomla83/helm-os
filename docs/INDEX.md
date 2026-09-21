@@ -30,6 +30,13 @@ since 2026-09-21** — D1 to D7 with four recorded clarifications, and D8 record
 *Record / graphite frame* visual direction in section 8.16. **G2-D9 (toolkit selection) remains
 pending**, so **no toolkit is selected and no GUI code or backend work is authorised**.
 
+The [G2 non-product interaction prototype](prototypes/g2-html/README.md) is a clickable HTML
+reference for the accepted *Record / graphite frame* direction; its entry point is
+[index.html](prototypes/g2-html/index.html). It is **a NON-PRODUCT INTERACTION PROTOTYPE**: design
+evidence only, with no backend connection, mock and session data only, **no toolkit decision** and
+no implementation authority. It is not production frontend code and not a decision to use web
+technology. The kickoff document is authoritative over it.
+
 ## Odluke i istraživanja
 
 [ADR index](DECISIONS.md): nineteen Proposed records, ADR-0020 Accepted for documentation language,
