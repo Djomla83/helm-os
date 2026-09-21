@@ -25,10 +25,12 @@ data, carry no authenticity claim, and their digests are recomputable from the p
 [HELM G2 — visual product kickoff](implementation/HELM-G2-VISUAL-KICKOFF.md) defines the first
 visible HELM desktop application: a repository capability audit, the information architecture, the
 primary journey, the screen map and specifications, the state and error vocabulary, the first real
-vertical slice and the G2-D1 to G2-D9 acceptance gates. **Gates G2-D1 to G2-D8 are owner-accepted
-since 2026-09-21** — D1 to D7 with four recorded clarifications, and D8 recording the
-*Record / graphite frame* visual direction in section 8.16. **G2-D9 (toolkit selection) remains
-pending**, so **no toolkit is selected and no GUI code or backend work is authorised**.
+vertical slice and the G2-D1 to G2-D9 acceptance gates. **All nine gates, G2-D1 to G2-D9, are
+owner-accepted since 2026-09-21** — D1 to D7 with four recorded clarifications, and D8 recording the
+*Record / graphite frame* visual direction in section 8.16. **G2-D9 (toolkit selection) was accepted
+on 2026-09-21**: the selected technology is **GTK 4 + gtk-rs with selective libadwaita**. That
+acceptance authorises **one bounded native UI fidelity spike with mock state only** — it accepts no
+production GUI, connects no backend and starts no G-1, G-2 or G-3.
 
 The [G2 non-product interaction prototype](prototypes/g2-html/README.md) is a clickable HTML
 reference for the accepted *Record / graphite frame* direction; its entry point is
@@ -37,13 +39,15 @@ evidence only, with no backend connection, mock and session data only, **no tool
 no implementation authority. It is not production frontend code and not a decision to use web
 technology. The kickoff document is authoritative over it.
 
-The [G2 UI toolkit decision dossier](implementation/HELM-G2-UI-TOOLKIT-DECISION.md) evaluates GTK 4
-with gtk-rs, GTK 4 with selective libadwaita, Qt 6/QML with CXX-Qt, Slint, Iced and a
-Tauri/webview control candidate against the accepted D8 prototype. It is **a dossier prepared for
-the owner, not an accepted decision**: **G2-D9 remains pending, no toolkit is selected, no
-dependency is added, no GUI code exists and no implementation spike is authorised.** Its
-recommendation carries no authority until the owner records a decision at the gate in its final
-section.
+The [G2 UI toolkit decision](implementation/HELM-G2-UI-TOOLKIT-DECISION.md) evaluates GTK 4 with
+gtk-rs, GTK 4 with selective libadwaita, Qt 6/QML with CXX-Qt, Slint, Iced and a Tauri/webview
+control candidate against the accepted D8 prototype, and records the owner's **G2-D9 acceptance of
+GTK 4 + gtk-rs with selective libadwaita**, with Qt 6/QML + CXX-Qt retained as the second choice
+should the fidelity spike fail materially. *Selective* is binding: HELM takes libadwaita's
+infrastructure — style management, a measured-content clamp, dialogs, high-contrast support and the
+`.numeric` tabular-figures style class — and refuses its GNOME idiom, so the core screens are not
+built from stock preference-row composition. The canonical D8 prototype remains the visual source of
+truth. The next gate is the **owner's visual review of the native GTK fidelity spike**.
 
 ## Odluke i istraživanja
 

@@ -1,14 +1,31 @@
 # HELM G2 — UI TOOLKIT DECISION
 
-> **THIS IS A DECISION DOSSIER, NOT AN ACCEPTED DECISION.**
+> ## G2-D9 — ACCEPTED 2026-09-21
 >
-> **G2-D9 is PENDING.** No toolkit is selected. Nothing here adds a dependency, creates GUI code,
-> changes `Cargo.toml`, touches any crate or authorises implementation. The recommendation in
-> section 13 is advice to the owner and carries no authority until the owner records a decision at
-> the gate in section 16.
+> **Selected: GTK 4 + gtk-rs, with *selective* libadwaita.**
+>
+> **Second choice, if the fidelity spike fails materially: Qt 6 + QML + CXX-Qt.**
+>
+> The owner accepted the primary recommendation of section 13 and authorised **one bounded native
+> UI fidelity spike** (section 15). This document is the record of that decision and of the
+> analysis behind it.
+>
+> **What acceptance does and does not do.** It selects HELM's UI technology and authorises the
+> spike. It does **not** make the GUI production-ready, connect any backend, add any HELM crate
+> dependency, introduce persistence, or start G-1, G-2 or G-3. The next gate is the **owner's
+> visual review of the native fidelity spike**, not production acceptance.
+>
+> **Selective, not wholesale.** Section 6.3 is binding: HELM takes libadwaita's infrastructure and
+> refuses its idiom. This decision is **not** a statement that HELM's screens should be built from
+> stock libadwaita widgets, and the canonical D8 prototype remains the visual source of truth.
 
 Prepared 2026-09-21, immediately after G2-D8 acceptance and the publication of the canonical
-prototype at `498e1b7798ca2754e69f3900aebde084c8ffc0e8`.
+prototype at `498e1b7798ca2754e69f3900aebde084c8ffc0e8`. Accepted the same day; ecosystem versions
+were re-verified against primary sources at acceptance and the corrections are carried in
+section 4.
+
+Sections 5 to 11 record the comparative analysis as it stood at the decision. **They are not
+reopened by acceptance** and are preserved as the reasoning of record.
 
 ---
 
@@ -18,8 +35,10 @@ prototype at `498e1b7798ca2754e69f3900aebde084c8ffc0e8`.
 |---|---|
 | G2-D1 to G2-D7 | **ACCEPTED** 2026-09-21, with four recorded clarifications |
 | G2-D8 — visual direction | **ACCEPTED** 2026-09-21, *Record / graphite frame* ([kickoff 8.16](HELM-G2-VISUAL-KICKOFF.md)) |
-| G2-D9 — UI toolkit selection | **PENDING** — this document exists to inform it |
-| GUI implementation | **NOT AUTHORISED** |
+| G2-D9 — UI toolkit selection | **ACCEPTED** 2026-09-21 — GTK 4 + gtk-rs with selective libadwaita |
+| Bounded native UI fidelity spike | **AUTHORISED** (section 15) |
+| Production GUI | **NOT ACCEPTED** — the spike answers a fidelity question and nothing more |
+| Backend connection | **NOT AUTHORISED** |
 
 What is settled: what HELM G2 does, what it refuses to claim, how it is laid out, how it reads, and
 what it looks like. What is not settled: what draws it.
@@ -165,12 +184,14 @@ requirement.
 
 ## 4. Candidate inventory
 
-Versions as researched on 2026-09-21 from current sources. Full source list in section 16.4.
+Versions re-verified against primary sources at acceptance on 2026-09-21 — the GNOME GitLab release
+tags for GTK and libadwaita, and the crates.io registry for the Rust bindings. Full source list in
+section 16.4.
 
 | # | Candidate | Current state |
 |---|---|---|
-| A | **GTK 4 + gtk-rs** | GTK 4.22.4 (2026-04-30); `gtk4` crate 0.11.4 (2026-06-29), MSRV 1.83, releases every 1–2 months |
-| B | **GTK 4 + selective libadwaita** | libadwaita 1.8 shipped with GNOME 49; CSS variables and media queries now supported |
+| A | **GTK 4 + gtk-rs** | **GTK 4.24.0 (2026-09-11)**, the series shipped with GNOME 51; 4.22.5 (2026-09-10) is the preceding stable series. `gtk4` crate **0.11.5 (2026-09-20)**, released on a 1–2 month cadence; `glib` 0.22.10 |
+| B | **GTK 4 + selective libadwaita** | **libadwaita 1.10.0 (2026-09-14)**, shipped with **GNOME 51 (2026-09-16)**; `libadwaita` crate **0.9.2 (2026-07-07)**, which pairs with `gtk4 ^0.11` and `glib`/`gio`/`pango ^0.22`. CSS variables and media queries have been supported since 1.8 |
 | C | **Qt 6 / QML + CXX-Qt** | Qt 6.11.2 current; Qt 6.8 LTS supported to 2029-10-08; CXX-Qt 0.7, bridge macro API stabilised, heading to 1.0 |
 | D | **Slint** | 1.18.1 (2026-09-21); triple-licensed GPLv3 / royalty-free / commercial |
 | E | **Iced** | 0.14 (December 2025); self-described experimental; one more release planned before 1.0 |
@@ -258,12 +279,21 @@ CSS rule says both "196 px wide" and "15 px semibold graphite"; in GTK those bec
 Rust and a style rule in CSS. The design survives intact; the authoring experience is less direct,
 and a design change that alters structure requires a code change rather than a stylesheet change.
 
-**One item the spike must settle.** Tabular figures run through the entire ledger design.
-`font-feature-settings` and `font-variant-numeric` are **not** listed among GTK 4's supported CSS
-properties in current documentation. Tabular figures may therefore need to be applied through Pango
-attributes rather than CSS, or obtained by choosing a UI face whose default figures are already
-tabular. This is a small, concrete, answerable question and it is named explicitly in the spike
-scope (section 15) rather than assumed either way.
+**One item this dossier left open, now resolved.** Tabular figures run through the entire ledger
+design, and `font-feature-settings` / `font-variant-numeric` are **not** listed among GTK 4's
+supported CSS properties. The open question was therefore how HELM gets tabular figures at all.
+
+**It is answered by libadwaita.** libadwaita provides a **`.numeric` style class** that makes a
+widget use tabular figures, documented as equivalent to a `PangoAttrFontFeatures` attribute with
+`tnum=1`, and intended for exactly HELM's case — multiple labels vertically aligned, or numbers
+that change while staying aligned. HELM therefore applies `.numeric` to ledger values, byte counts,
+digests, timestamps and the elapsed readout, with a direct Pango `font_features` attribute available
+as the fallback for any widget that style class does not reach.
+
+This is worth stating plainly: **the tabular-figures problem is solved by the support layer, not by
+bare GTK.** It is an independent, concrete argument for selective libadwaita that was not available
+when section 6 was first written. The spike still verifies it in practice (section 15.4) rather than
+taking the documentation's word for it.
 
 ### 5.5 Avoiding a stock GNOME identity
 
@@ -330,6 +360,9 @@ layout manager for a problem libadwaita has already solved.
 **Dialogs and adaptive primitives.** `AdwDialog` and `AdwAlertDialog` give modal presentation with
 correct focus handling and accessibility, replacing the hand-built scrim of the prototype. Adaptive
 navigation primitives exist if HELM ever needs a narrow layout.
+
+**Tabular figures.** The `.numeric` style class delivers `tnum=1` on any widget, which is the one
+typographic demand of section 2.2 that bare GTK CSS cannot express. See section 5.4.
 
 ### 6.2 What libadwaita costs HELM
 
@@ -693,7 +726,7 @@ Descriptive ratings only. No numeric scoring.
 | Risk | Severity | Mitigation |
 |---|---|---|
 | GTK CSS cannot express layout, so structural design changes become code changes | Medium | The spike builds the two hardest layouts — the ledger rows and the clamped column — before anything is committed |
-| Tabular figures may not be reachable from GTK CSS | Low–Medium | Named explicitly in the spike scope; fallbacks are Pango attributes or a tabular-by-default UI face |
+| ~~Tabular figures may not be reachable from GTK CSS~~ | **Closed** | Resolved by libadwaita's `.numeric` style class (`tnum=1`), with Pango `font_features` as fallback. See 5.4; the spike still verifies it in practice |
 | libadwaita idiom pull toward a stock GNOME look | Medium | The explicit take/refuse policy in 6.3; the spike must reach all seven screens without `AdwPreferencesGroup` |
 | The two-family serif/sans pairing may not survive font availability across distributions | Medium | Font selection is deliberately **not** part of D9; the spike uses fallback stacks and records the result, as the prototype already does |
 | GNOME release cadence forces churn; libadwaita deprecations | Low–Medium | Selective use keeps the libadwaita surface small and replaceable |
@@ -845,7 +878,8 @@ remain drawn, since the spike tests visual fidelity, not portal integration.
 
 These are the open items from sections 5 and 12, written as acceptance questions:
 
-- Do tabular figures work, and through which mechanism — CSS, Pango attributes, or font choice?
+- Do tabular figures work in practice, and through which mechanism — libadwaita's `.numeric` style
+  class, a direct Pango `font_features` attribute, or font choice? Record which was used.
 - Can the 196 px / flexible ledger row be built so it reads identically to the prototype?
 - Can the 1000 px clamped, centred column be achieved with `AdwClamp` without importing GNOME idiom?
 - Can the custom thin title bar replace the stock header bar cleanly?
@@ -871,33 +905,45 @@ independently of the toolkit.
 
 ## 16. Owner D9 decision gate
 
-### 16.1 What is being asked
+### 16.1 The decision
 
-Select the production UI technology for HELM G2, or defer.
+On 2026-09-21 the owner selected the primary recommendation of section 13:
 
-| Option | Consequence |
+> **GTK 4 + gtk-rs, with selective libadwaita**, with **Qt 6 / QML + CXX-Qt** retained as the second
+> choice should the fidelity spike fail materially.
+
+The owner additionally authorised **one bounded native UI fidelity spike** to the scope of
+section 15.
+
+### 16.2 What acceptance authorises, and what it does not
+
+| Authorised | Not authorised |
 |---|---|
-| Accept the primary | GTK 4 + gtk-rs with selective libadwaita becomes HELM's UI technology; the spike in section 15 becomes the next authorisable step |
-| Accept the second choice | Qt 6 / QML with CXX-Qt becomes HELM's UI technology; the same spike scope applies |
-| Defer | D9 stays pending; no GUI work is authorised; this dossier stands as the record |
+| GTK 4 + gtk-rs as HELM's UI technology | Production GUI acceptance |
+| Selective libadwaita, under the policy of 6.3 | Wholesale libadwaita idiom adoption |
+| The UI dependencies needed for the spike | Any HELM crate dependency in the UI |
+| One bounded fidelity spike, mock state only | Backend connection of any kind |
+| — | Persistence, a database or a daemon |
+| — | G-1, G-2 or G-3 |
+| — | Wine, Proton, installer, update or recovery work |
+| — | Custom shell or compositor work |
+| — | Merging to `main` |
 
-### 16.2 What acceptance does *not* authorise
-
-Accepting D9 selects a technology. On its own it does **not** authorise writing GUI code, adding a
-dependency to `Cargo.toml`, changing any crate, opening backend work, or connecting HELM state to a
-user interface. The spike of section 15 is a **separate authorisation** the owner grants explicitly,
-and even a completed spike connects no backend.
+A completed spike connects no backend and accepts no GUI. It answers one question — *can this
+toolkit faithfully reproduce the accepted D8 application?* — and hands the answer to the owner.
 
 ### 16.3 Current state of this gate
 
 | | |
 |---|---|
-| G2-D9 | **PENDING** |
-| Toolkit selected | **NONE** |
-| GUI implementation | **NOT AUTHORISED** |
-| Dependency added | **NONE** |
-| Spike authorised | **NO** |
-| D8 prototype | unchanged and owner-approved |
+| G2-D9 | **ACCEPTED** 2026-09-21 |
+| Toolkit selected | **GTK 4 + gtk-rs with selective libadwaita** |
+| Second choice on material spike failure | Qt 6 / QML + CXX-Qt |
+| Bounded fidelity spike | **AUTHORISED** |
+| Production GUI | **NOT ACCEPTED** |
+| Backend connection | **NOT AUTHORISED** |
+| D8 prototype | unchanged and owner-approved; remains the visual source of truth |
+| Next gate | **Owner visual review of the native GTK fidelity spike** |
 
 ### 16.4 Sources
 
@@ -913,9 +959,19 @@ Consulted 2026-09-21. Versions and dates are as reported by these sources on tha
   [gtk4 on crates.io](https://crates.io/crates/gtk4) — binding versions, cadence and MSRV
 - [Relm4](https://relm4.org/) and [relm4 on crates.io](https://crates.io/crates/relm4) — the
   optional architectural layer over gtk4-rs
+- [GTK release tags, GNOME GitLab](https://gitlab.gnome.org/GNOME/gtk/-/tags) and
+  [libadwaita release tags](https://gitlab.gnome.org/GNOME/libadwaita/-/tags) — primary-source
+  version and date verification at acceptance: GTK 4.24.0 (2026-09-11), libadwaita 1.10.0
+  (2026-09-14)
+- [GNOME 51 release notes](https://release.gnome.org/51/) — GNOME 51, 2026-09-16
+- [libadwaita style classes — `.numeric`](https://gnome.pages.gitlab.gnome.org/libadwaita/doc/1-latest/style-classes.html)
+  — the tabular-figures style class, documented as equivalent to `PangoAttrFontFeatures` with
+  `tnum=1`
+- [libadwaita crate on crates.io](https://crates.io/crates/libadwaita) — binding version and the
+  `gtk4 ^0.11` / `glib ^0.22` pairing
 - [libadwaita 1.8 released ahead of GNOME 49, Phoronix](https://www.phoronix.com/news/libadwaita-1.8-Released)
   and [Libadwaita 1.8 arrives alongside GNOME 49, Linuxiac](https://linuxiac.com/libadwaita-1-8-arrives-alongside-gnome-49/)
-  — CSS variables, media queries, typography classes
+  — CSS variables, media queries, typography classes, as introduced
 - [Qt releases](https://doc.qt.io/qt-6/qt-releases.html) and
   [Qt licensing](https://doc.qt.io/qt-6/licensing.html) — current versions, LTS windows, licence
   model

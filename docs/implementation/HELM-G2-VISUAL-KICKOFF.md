@@ -1,6 +1,6 @@
 # HELM G2 — VISUAL PRODUCT KICKOFF
 
-> **Status: G2-D1 to G2-D8 accepted by the owner on 2026-09-21. G2-D9 pending. Docs only.**
+> **Status: G2-D1 to G2-D9 accepted by the owner on 2026-09-21. Docs only.**
 > This document defines product intent, information architecture, interaction structure and
 > capability labelling for the first visible HELM application. It authorises **no** GUI code, **no**
 > toolkit, **no** backend work and **no** change to any accepted module. It is written in English
@@ -38,7 +38,12 @@ Windows desktop. Trial #4 is not authorised and no execution trial is proposed h
 **Accepted in part.** On 2026-09-21 the owner accepted gates G2-D1 to G2-D7 with four clarifications,
 which are applied throughout this revision and summarised in section 20.2. G2-D8 (owner visual
 direction) was accepted on the same date and is recorded in section 8.16. G2-D9 (toolkit selection)
-remains pending, **no toolkit is selected**, and **GUI implementation is still not authorised**.
+was accepted on the same date: the selected technology is **GTK 4 + gtk-rs with selective
+libadwaita**, recorded in the
+[UI toolkit decision](HELM-G2-UI-TOOLKIT-DECISION.md). That acceptance authorises **one bounded
+native UI fidelity spike** with mock state only; it does **not** accept a production GUI, connect
+any backend, add a HELM crate dependency, or start G-1, G-2 or G-3. **This document authorises no
+GUI code**, and remains the product-semantic authority over anything the spike draws.
 
 Where this document describes a screen, a state or a flow that current code cannot support, it says
 so explicitly and carries a class label from section 3.2.
@@ -1659,7 +1664,7 @@ Sequential. Each is an owner decision recorded in [DECISIONS.md](../DECISIONS.md
 | **G2-D6** | Real-versus-future capability labelling | **ACCEPTED** 2026-09-21 | Every `REAL_NOW`, `REQUIRES_ORCHESTRATION` and `DESIGN_ONLY_FUTURE` label in this document |
 | **G2-D7** | First vertical slice | **ACCEPTED** 2026-09-21 | Section 16, including 16.6 |
 | **G2-D8** | Owner visual direction | **ACCEPTED** 2026-09-21 | Section 8.16 — *Record / graphite frame*, owner-led and constrained by the visual jobs of 8.14; recorded as an interactive prototype in 8.16.7 |
-| **G2-D9** | UI toolkit selected | **PENDING** | Section 19, as its own decision record |
+| **G2-D9** | UI toolkit selected | **ACCEPTED** 2026-09-21 | GTK 4 + gtk-rs with selective libadwaita, recorded in the [UI toolkit decision](HELM-G2-UI-TOOLKIT-DECISION.md); authorises one bounded fidelity spike, not a production GUI |
 
 ### 20.2 Owner clarifications applied at acceptance
 
