@@ -85,7 +85,12 @@ accepted, the last of them on 2026-09-21 — see the
 [decision of 2026-09-21](#g2-d9-toolkit-accepted). That gate selects **GTK 4 + gtk-rs for the G2 prototype**, permits libadwaita only through its
 documented public surface, makes GTK a **provisional** production default rather than a lock, names
 **Qt 6 / QML + CXX-Qt** as the fallback, leaves the **GTK and libadwaita version floor OPEN**, and
-**authorises no GUI implementation, no toolkit dependency and no backend work**.
+**authorises no GUI implementation, no toolkit dependency and no backend work**. On the same day
+the owner **authorised the bounded GTK implementation spike** and set its minimum API floor at
+**GTK 4.18 with libadwaita 1.7** — an implementation floor for that spike only, and explicitly not a
+distribution support policy, a packaging policy or a production toolkit lock; see the
+[decision of 2026-09-21](#g2-gtk-spike-authorised). Backend integration, `helm-launch`, persistence
+and a production lock stay unauthorised.
 
 | ID | Odluka | Status |
 |---|---|---|
@@ -3247,3 +3252,84 @@ The next owner gate is **authorisation of the bounded GTK implementation spike**
 exit criteria are already written in sections 11.1, 11.2 and 11.3 of the
 [toolkit decision](implementation/HELM-G2-UI-TOOLKIT-DECISION.md). It is **not** opened by this
 decision.
+
+<a id="g2-gtk-spike-authorised"></a>
+
+### Owner decision 2026-09-21 — **G2 GTK SPIKE AUTHORISED**: API floor GTK 4.18 + libadwaita 1.7; bounded spike only; **no backend, no persistence, no production lock**
+
+**`HELM_G2_GTK_SPIKE_AUTHORISED`.** The repository owner, Djomla83, authorises the bounded GTK
+implementation spike defined in sections 11.1 to 11.3 of the
+[UI toolkit decision](implementation/HELM-G2-UI-TOOLKIT-DECISION.md), and sets the minimum API
+floor that the [G2-D9 decision](#g2-d9-toolkit-accepted) deliberately left open. The owner's
+decision, as given:
+
+> Prihvatam G2 GTK spike: minimalni API floor je GTK 4.18 + libadwaita 1.7; to nije konačna distro
+> support politika. Autorizujem samo bounded implementation spike definisan u
+> HELM-G2-UI-TOOLKIT-DECISION §11.1–11.3, sa svim tamošnjim hard exclusions i exit criteria. Spike
+> ne sme da povezuje backend, helm-launch niti persistence, i ne zaključava GTK kao production
+> toolkit. Ako bilo koji exit criterion padne, ne spuštamo kriterijum nego se vraćamo na G2-D9 i
+> named Qt fallback.
+
+This opens exactly one bounded piece of implementation work. It changes **no** accepted
+architecture, opens **no** backend work, and locks **no** production toolkit.
+
+| Item | Value |
+|---|---|
+| Minimum API floor | **GTK 4.18** and **libadwaita 1.7** |
+| Floor status | **API/implementation floor for this spike only** |
+| Authorised work | **Only** the bounded spike of toolkit decision 11.1 to 11.3, with all its hard exclusions and exit criteria |
+| Backend, `helm-launch`, persistence | **NOT AUTHORISED** — the spike must not connect any of them |
+| Production toolkit lock | **NOT GRANTED** — GTK stays a **provisional** production default |
+| Failure rule | If an accepted exit criterion fails, **do not weaken it** — return to G2-D9 and the named Qt fallback |
+| Host package installation | **NOT AUTHORISED** by this decision |
+
+#### 1. What the API floor is, and what it is not
+
+The floor is **GTK 4.18 with libadwaita 1.7**. It is the minimum API level the spike may compile
+against, expressed in the Rust bindings as the `gtk4` feature `v4_18` and the `libadwaita` feature
+`v1_7`.
+
+The floor is **not**:
+
+* a final distribution support policy;
+* a packaging policy;
+* a minimum released HELM OS image;
+* a production toolkit lock.
+
+**Building or running against newer compatible libraries does not raise the floor.** A machine that
+happens to carry GTK 4.24 may build the spike, but the spike must not use API above the floor, and
+no higher API feature may be enabled silently.
+
+This resolves, for the spike only, the open item recorded in section 2.3 of the
+[toolkit decision](implementation/HELM-G2-UI-TOOLKIT-DECISION.md). The broader distribution-reach
+question that section records stays open, and is a later owner decision.
+
+#### 2. What the spike may be
+
+Exactly the scope of sections 11.1, 11.2 and 11.3 of the toolkit decision: an application shell,
+sidebar navigation across the four surfaces of kickoff 8.16.6, a memory-only Library empty and
+in-session state, a static Authority review, a state-driven Launch attempt, a state-driven Result
+with its Advanced disclosure, and the HELM working token sheet. Its hard exclusions and its six exit
+criteria are accepted unchanged, and the bounded libadwaita rule of section 6.2.1 continues to
+apply in full.
+
+#### 3. What is still not authorised
+
+Backend integration; any call into `helm-launch`; a dependency on any accepted HELM crate from the
+spike; persistence; application discovery; real admission; real measurement; a real receipt; update,
+repair or recovery implementation; **G-1**, **G-2**, **G-3**; **Trial #4**; and any production
+toolkit lock. Host package installation, repository addition and desktop configuration changes are
+also not authorised and remain separate owner acts.
+
+The HELM licence policy stays **Proposed** — [LICENSE-DECISION.md](../LICENSE-DECISION.md) is
+unchanged and this decision accepts no licence.
+
+#### 4. The failure rule
+
+If an accepted exit criterion ultimately fails, it must **not** be weakened, the spike must **not**
+be broadened indefinitely to chase it, and undocumented GTK or libadwaita internals must **not** be
+used to reach it. The response is to return to G2-D9 and its **named Qt fallback** for owner
+disposition.
+
+An ordinary bounded implementation defect inside the spike is a different thing and may simply be
+fixed.

@@ -41,9 +41,11 @@ It carries the [accepted G2-D9 decision](DECISIONS.md#g2-d9-toolkit-accepted) of
 through its documented bounded public surface; **GTK is a provisional production default, not a
 production lock**; **Qt 6 / QML + CXX-Qt is the named fallback** if the spike fails any exit
 criterion; and the **GTK/libadwaita version floor stays OPEN**, to be decided explicitly before any
-version feature flag is adopted. **No toolkit dependency exists, no GUI code exists, and GUI
-implementation is NOT AUTHORISED** — the next owner gate is authorisation of the bounded GTK
-implementation spike.
+version feature flag is adopted. On 2026-09-21 the owner
+[authorised the bounded GTK implementation spike](DECISIONS.md#g2-gtk-spike-authorised) with an API
+floor of **GTK 4.18 + libadwaita 1.7** — a floor for that spike only, not a distribution support
+policy and not a production lock. Backend integration, `helm-launch`, persistence and a production
+toolkit lock stay unauthorised.
 
 ## Odluke i istraživanja
 

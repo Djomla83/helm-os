@@ -151,6 +151,14 @@ from a secondary summary, and that is corrected here from the registry metadata.
 
 #### 2.3.3 This document does not select the floor
 
+> **Superseded in part, 2026-09-21.** The owner later set a **spike** API floor of **GTK 4.18
+> with libadwaita 1.7** when authorising the bounded implementation spike; see the
+> [decision of 2026-09-21](../DECISIONS.md#g2-gtk-spike-authorised). That is an API floor for the
+> spike only. **It is not a distribution support policy, not a packaging policy, not a minimum
+> released image and not a production lock**, and the distribution-reach question this section
+> records stays open. The reasoning below is left as written, because it is why the floor had to
+> be decided explicitly rather than inherited.
+
 **No target-machine package evidence exists in the repository.** The only Linux platform
 recorded anywhere is the `ubuntu-24.04` GitHub Actions runner image used for headless CI. That
 is a build and test environment, not a desktop target, and it would imply a far lower floor —
@@ -801,7 +809,7 @@ GTK is for HELM.
 | Open item | Owner of the answer |
 |---|---|
 | G2-D9 itself | The owner |
-| **The GTK and libadwaita version floor** — broad reach, conservative current, or leading edge (2.3.2) | The owner, by naming the target distribution; otherwise the first recorded decision of the spike. **Not to be adopted silently** |
+| **The distribution support policy** — how far back HELM must run, from the reach evidence of 2.3.1 and 2.3.2 | The owner. **Still open.** The **spike** API floor was set separately at **GTK 4.18 + libadwaita 1.7** on 2026-09-21; it binds the spike and decides no policy |
 | **Whether the production default is locked** — 10.1 gives GTK a *provisional* production standing only | The owner, after the spike exit criteria of 11.3 are evaluated |
 | HELM's licence policy, still **Proposed** | The owner, in an ADR — [LICENSE-DECISION.md](../../LICENSE-DECISION.md) |
 | Final brand identity; the palette of 8.16.2 is explicitly a working set | The owner |
@@ -848,7 +856,7 @@ restated in section 20.5 of the [visual kickoff](HELM-G2-VISUAL-KICKOFF.md), who
 | **Selective libadwaita** | **PERMITTED**, through the documented bounded public surface of 6.2.1 only |
 | **GTK for production** | **PROVISIONAL PRODUCTION DEFAULT** — **not** a production lock; conditional on the exit criteria of 11.3 |
 | **Qt 6 / QML + CXX-Qt** | **NAMED FALLBACK**, on the triggers of 10.2; an exit criterion must not be lowered to retain GTK |
-| **GTK/libadwaita version floor** | **OPEN** — no pair selected; decided before the spike or as its first recorded decision, per 2.3 |
+| **GTK/libadwaita version floor** | At G2-D9: **OPEN**. Set for the **spike only** on 2026-09-21 at **GTK 4.18 + libadwaita 1.7**; the distribution support policy stays open, per 2.3.3 |
 | **GUI implementation** | **NOT AUTHORISED** by this decision |
 
 After this decision, and until the owner separately authorises the bounded implementation spike:
@@ -864,4 +872,8 @@ After this decision, and until the owner separately authorises the bounded imple
   is unchanged and no toolkit choice accepted a licence for HELM;
 - **GUI implementation is NOT AUTHORISED.**
 
-The next owner gate is **authorisation of the bounded GTK implementation spike** of section 11.
+**Update, 2026-09-21.** The owner subsequently
+[authorised the bounded spike](../DECISIONS.md#g2-gtk-spike-authorised) of section 11 and set its
+API floor at **GTK 4.18 + libadwaita 1.7**. That authorisation is bounded to sections 11.1 to 11.3
+with their hard exclusions and exit criteria: it adds no backend connection, no `helm-launch`
+call and no persistence, and it does **not** lock GTK for production.

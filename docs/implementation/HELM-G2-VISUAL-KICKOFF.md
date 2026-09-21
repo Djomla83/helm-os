@@ -1674,10 +1674,13 @@ the design work that had to precede implementation is done; it does not mean imp
 begun, and nothing here says a spike has started. **No GUI code, no toolkit dependency, no toolkit
 installation, no `Cargo` change, no backend connection and no persistence is authorised.**
 
-The next gate is **owner authorisation of the bounded GTK implementation spike**, whose scope,
+The next gate was **owner authorisation of the bounded GTK implementation spike**, whose scope,
 hard exclusions and exit criteria are written in sections 11.1, 11.2 and 11.3 of the
-[UI toolkit decision](HELM-G2-UI-TOOLKIT-DECISION.md). That gate is not opened by this
-acceptance.
+[UI toolkit decision](HELM-G2-UI-TOOLKIT-DECISION.md). That gate was not opened by this
+acceptance. The owner [opened it separately on 2026-09-21](../DECISIONS.md#g2-gtk-spike-authorised),
+with an API floor of **GTK 4.18 + libadwaita 1.7**, and that authorisation is bounded to the
+spike alone: it still connects no backend, calls no `helm-launch`, adds no persistence and locks
+no production toolkit.
 
 Nothing in this document authorises backend work. Sections 17 and 18 describe gaps; they do not
 open them. No toolkit is selected. No custom shell is authorised. No execution trial is authorised.

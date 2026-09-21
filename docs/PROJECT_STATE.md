@@ -19,7 +19,9 @@ implementation. It does not begin implementation.
 | Named fallback | **Qt 6 / QML + CXX-Qt**, if the spike fails any accepted exit criterion |
 | GTK/libadwaita version floor | **OPEN** — no version pair selected |
 | Evidence branch | `design/g2-visual-kickoff` at `d9e4693cce69fdaebcb46d2f0dddd27b4f4508bf`, **not merged to main** |
-| Next owner gate | **authorisation of the bounded GTK implementation spike** |
+| Spike authorisation | **GRANTED 2026-09-21** — the bounded spike of toolkit decision 11.1 to 11.3 only, API floor **GTK 4.18 + libadwaita 1.7** |
+| Spike API floor status | an implementation floor for the spike **only** — not a distribution support policy, not a packaging policy, not a production lock |
+| Next owner gate | **spike execution, then independent review and the owner manual gates** |
 
 **What does not exist.** There is **no HELM GUI**. No GUI source file exists anywhere in the
 repository. **No GTK, gtk-rs or libadwaita dependency exists** in `Cargo.toml` or `Cargo.lock`, and
