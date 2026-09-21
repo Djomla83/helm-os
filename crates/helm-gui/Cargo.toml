@@ -4,7 +4,7 @@ version = "0.0.0"
 edition = "2024"
 rust-version = "1.95"
 publish = false
-description = "EXPERIMENTAL G2-D9 UI FIDELITY SPIKE. Presentation only: mock state, no backend, no HELM crate dependency, no persistence. Not production GUI code and not an accepted HELM surface."
+description = "EXPERIMENTAL G2 first real vertical. The native GTK interface driving the accepted helm-launch 0.1 through its public API. Linux x86_64 only. No persistence, no other HELM crate, not an accepted product surface."
 
 # Deliberately excluded from the product workspace; see the note in the root
 # Cargo.toml. Because it is not a member it cannot inherit workspace lints, so
@@ -32,3 +32,22 @@ panic = "deny"
 [dependencies]
 gtk4 = { version = "=0.11.5", features = ["v4_10"] }
 libadwaita = "=0.9.2"
+
+# The accepted launch module, consumed as an ordinary public caller. This crate
+# adds nothing to it and changes nothing in it. No other HELM crate is a
+# dependency: this vertical touches `helm-evidence`, `helm-app-spec`,
+# `helm-observe` and `helm-bind` not at all.
+helm-launch = { path = "../helm-launch" }
+
+# Builds the one fixed plan document. A selected file name can contain a quote
+# or a backslash, so the document is serialised rather than concatenated; the
+# bytes then go through the accepted parser like any other untrusted input.
+# Same pin the accepted crates already carry.
+serde_json = "=1.0.149"
+
+# The integration test recomputes the receipt digest over the receipt's own
+# exact bytes, so that the digest shown in the interface is proven to be the
+# identity of those bytes and not something the interface was told. Same pin
+# the accepted crates carry.
+[dev-dependencies]
+sha2 = "=0.10.9"

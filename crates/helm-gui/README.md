@@ -1,140 +1,189 @@
-# helm-gui — EXPERIMENTAL G2-D9 UI FIDELITY SPIKE
+# helm-gui — EXPERIMENTAL G2 first real backend-connected vertical
 
-> **THIS IS NOT A HELM PRODUCT SURFACE AND NOT PRODUCTION GUI CODE.**
+> **NOT AN ACCEPTED HELM PRODUCT SURFACE AND NOT PRODUCTION GUI CODE.**
 >
-> It exists to answer one question, and it is finished when the owner has
-> answered it:
+> The accepted G2 interface driving the accepted `helm-launch` 0.1 end to end:
+> a real local file chosen through the desktop file dialog, real executable and
+> working-directory admission, a real parsed plan, a real one-shot
+> authorisation, a real launch on a worker thread, and a real receipt.
 >
-> > Can GTK 4 + gtk-rs with selective libadwaita faithfully reproduce the
-> > accepted HELM G2-D8 application?
+> **There is no mock launch result anywhere.** Everything the Result and
+> Evidence surfaces show comes from a real `LaunchOutcome` or a real
+> `LaunchError`.
 >
-> **No backend. No HELM crate dependency. No persistence. No file access. No
-> process execution.** Every path, byte count, digest, timestamp, exit code and
-> receipt value on screen is a constant in [`src/state.rs`](src/state.rs).
->
-> Authorised by the owner's G2-D9 acceptance on 2026-09-21
-> ([decision](../../docs/implementation/HELM-G2-UI-TOOLKIT-DECISION.md)). That
-> acceptance selects a toolkit and authorises this spike. It does **not** accept
-> a production GUI, connect any backend, or start G-1, G-2 or G-3.
+> Authorised by the owner on 2026-09-21, after the GTK fidelity spike was
+> accepted. The vertical is **authorised and not yet accepted**; the next gate
+> is the owner's review of it.
+
+## What it does not do
+
+No persistence of any kind — no database, no file, no config, no library store.
+No installer, updater, repair or rollback. No `helm-app-spec`, `helm-bind`,
+`helm-observe` or `helm-evidence`. No runtime selection, no Wine, no Proton, no
+MicroVM. No containment, no sandboxing, no custom shell. No graphical subject
+support and no desktop-session environment. No cancel, no stop, no session
+handle.
+
+**G-1, G-2 and G-3 are unauthorised and untouched.** `helm-launch` is consumed
+through its accepted public API and is not modified, extended or wrapped.
 
 ## Authority
 
 | Source | Governs |
 |---|---|
-| [`docs/prototypes/g2-html/index.html`](../../docs/prototypes/g2-html/index.html) | Visual and interaction truth. Where this spike differs, **the prototype is right and this is wrong** |
+| [`docs/prototypes/g2-html/index.html`](../../docs/prototypes/g2-html/index.html) | Visual and interaction truth |
 | [`docs/implementation/HELM-G2-VISUAL-KICKOFF.md`](../../docs/implementation/HELM-G2-VISUAL-KICKOFF.md) | Product semantics: what HELM may and may not claim |
+| [`crates/helm-launch`](../helm-launch/README.md) | Every fact on the Result and Evidence surfaces |
 
 ## Running it
 
-Linux with GTK 4 and libadwaita. On Debian or Ubuntu:
+Linux x86_64, with GTK 4 and libadwaita. On Debian or Ubuntu:
 
 ```sh
 sudo apt install libgtk-4-dev libadwaita-1-dev build-essential pkg-config
 cargo run --manifest-path crates/helm-gui/Cargo.toml
 ```
 
+Choose any bounded, non-graphical local ELF program — `/usr/bin/uname` and
+`/usr/bin/true` are good first subjects — and any ordinary local folder.
+
 **It is not part of the product workspace.** `crates/helm-gui` is in the root
 `Cargo.toml`'s `exclude` list and carries its own `Cargo.lock`, because it needs
 GTK development packages that the accepted crates do not and that the runners
-executing `cargo clippy --workspace` do not have. Excluding it leaves the
-accepted workspace, its lockfile and its gates exactly as they were. Always
-build it with `--manifest-path`.
+executing `cargo clippy --workspace` do not have. This is **recorded temporary
+architecture debt**, not a hidden exception; workspace integration is a later G2
+decision, and meanwhile
+[`.github/workflows/helm-gui.yml`](../../.github/workflows/helm-gui.yml)
+validates this crate on its own.
 
-It does not build on Windows or macOS without a GTK 4 development environment.
+### `--g2-preselect`, a smoke-test affordance
 
-## What it is built from
+```sh
+cargo run --manifest-path crates/helm-gui/Cargo.toml -- \
+  --g2-preselect /usr/bin/uname ~/some-folder
+```
+
+This supplies **exactly the two values the file dialog would have returned**,
+and nothing else. Everything after it is the ordinary real path: the same
+caller-side open, the same accepted admission, the same parsed plan, the same
+authorisation, the same launch. **It is not a demo mode and injects no mock
+value** — there is no result to fake, because results only ever come from a real
+`LaunchOutcome`. It exists because a file dialog cannot be driven from a script.
+Without the flag the interface behaves exactly as it does for any person.
+
+## How the vertical is put together
 
 | File | What it is |
 |---|---|
-| [`src/state.rs`](src/state.rs) | The mock state and every constant. **No GTK dependency**, unit-tested |
-| [`src/theme.rs`](src/theme.rs) | The HELM stylesheet, translated from `styles.css` |
-| [`src/widgets.rs`](src/widgets.rs) | Shared builders that carry the prototype's measurements |
+| [`src/vertical.rs`](src/vertical.rs) | The orchestration adapter: open, admit, plan, authorise, launch, worker threads |
+| [`src/state.rs`](src/state.rs) | Real `helm-launch` facts mapped to the words HELM may say about them |
+| [`src/theme.rs`](src/theme.rs) | The HELM stylesheet |
+| [`src/widgets.rs`](src/widgets.rs) | Shared builders carrying the prototype's measurements |
 | [`src/screens.rs`](src/screens.rs) | The seven accepted surfaces |
-| [`src/main.rs`](src/main.rs) | Window shell, rail, status bar, and one render pass |
+| [`src/main.rs`](src/main.rs) | Session, dialogs, the main-loop tick, one render pass |
+| [`tests/real_launch.rs`](tests/real_launch.rs) | A real launch to a real receipt, with no window |
 
-`state.rs` is deliberately separate and deliberately not an interface. There is
-no trait, no client and no abstraction a backend could be slotted into, so mock
-values cannot be mistaken for integration. Connecting real HELM state would
-**replace** that file, not implement against it.
+`vertical.rs` is deliberately **not** a HELM orchestrator. There is no trait, no
+service, no provider and no manager — nothing a future subsystem could be
+tempted to implement. It does one flow and stops.
 
-Its tests are not UI tests. They pin the product semantics — no running claim,
-no verdict, no install claim, a single-use authorisation, an indeterminate exec
-status, a group sweep that is only ever *issued* — in the one place where drift
-would otherwise be silent.
+### Where authority lives
 
-## Selective libadwaita
+The interface knows the selected paths because a person chose them, and it
+displays them. That is **not** path-based authority: `helm-launch` never
+receives a path. The caller opens the object the person selected and moves the
+owned descriptor in; the accepted admission functions then inspect and pin that
+already-open object, and the descriptor is the only execution authority that
+exists.
 
-`libadwaita` is used for infrastructure only. Its GNOME idiom is refused, per
-section 6.3 of the decision.
+### The fixed policy
 
-| Used | Why |
+There is no plan editor. One visible policy, stated in full on the Authority
+screen and read back off the **validated plan** rather than off the constants
+that produced it:
+
+| | |
 |---|---|
-| `AdwApplication` | Application and style infrastructure |
-| `AdwStyleManager`, forced light | **Theme locking.** HELM's palette is an accepted product decision, so a host theme cannot repaint it |
-| `AdwClamp` | The measured content column |
-| `.numeric` style class | Tabular figures — `tnum=1`, which bare GTK CSS cannot express |
+| Execution kind | `linux_exact_executable` |
+| `argv` | one element: the selected file's own name |
+| Environment | `empty` |
+| Working directory | the admitted capability, identified as `g2-workdir` |
+| Input | `closed_pipe_eof` |
+| Capture per stream | 16 384 bytes, well under the accepted maximum |
+| Run deadline | 30 000 ms |
+| Termination | `SIGTERM`, then 5 000 ms grace |
 
-**Not used, and deliberately:** `AdwPreferencesPage`, `AdwPreferencesGroup`,
-`AdwActionRow`, `AdwStatusPage`, boxed-list style classes, or any other GNOME
-Settings composition. **No core HELM screen depends on preference-row
-composition.** The ledger rows, the graphite rail, the state marks and the
-evidence blocks are HELM's own composition over `GtkBox` and `GtkGrid`.
+The document is built with `serde_json`, never by string concatenation, and then
+goes through the accepted parser like any other untrusted input.
 
-## What the spike answered
+### Threading
 
-Verified by building and running it on GTK 4.14.5 with libadwaita 1.5.0, and
-comparing rendered screens against the prototype.
+`helm_launch::launch` is synchronous and stays that way. It runs on a worker
+thread so the window stays responsive. That is a GUI adaptation and nothing
+more: **it creates no session handle, no stop, no cancel and no live child
+state**, and the Attempt screen carries no controls at all and says why. Only
+inert values cross back to the main thread; no GTK object leaves it. No new
+`unsafe` — the crate forbids it.
 
-| | Question | Answer |
-|---|---|---|
-| A | Graphite frame and warm off-white sheet | **Yes.** Background, radius and the asymmetric inset are direct CSS |
-| B | HELM Burgundy controlled and distinct | **Yes.** `@define-color` tokens, application-priority provider, theme locked |
-| C | Ledger and fact layout without custom rendering | **Yes.** `GtkBox` and `GtkGrid` with size requests; no drawing code anywhere |
-| D | Tabular figures | **Yes**, through libadwaita's `.numeric`. Bare GTK CSS has no `font-variant-numeric` |
-| E | Typography hierarchy | **Approximated.** The serif/sans pairing and the scale hold; the faces are fallbacks |
-| F | Normal/Advanced disclosure without layout instability | **Yes.** Per-section blocks toggle `visible`; nothing reflows around them |
-| G | Keyboard, focus, accessibility | **Yes.** Tab traversal works, the focus ring is clearly visible, every action is a real `GtkButton` |
-| H | Did any core screen need `AdwPreferencesGroup`/`AdwActionRow`? | **No.** None is used anywhere |
+### Single use, and retry
 
-### Things GTK made harder, recorded rather than smoothed over
+An `AuthorizedLaunch` is composed only when a person presses *Authorise this one
+launch*, and is consumed exactly once. **Nothing authority-bearing is cached or
+replayed.** *Attempt launch again* returns through fresh preparation: the paths
+are re-opened and re-admitted from scratch, and a new authorisation is required.
 
-- **CSS cannot do layout.** Every measurement moved from the stylesheet into
-  Rust. The design survives; a structural change is now a code change.
-- **A wrapping `GtkLabel` has no `max-width`.** Its natural width is the whole
-  string, so the prototype's pixel measures become `max-width-chars` and have to
-  be approximated from the font size. `CHARS_PER_PX` in `widgets.rs` is that
-  approximation, calibrated against rendered output.
-- **A size request is a minimum, not a width.** CSS `width: 210px; flex: none`
-  lets text overflow a fixed box; GTK grows the box instead and pushes the next
-  column. The Evidence key column needs explicit wrapping to stay aligned.
-- **Margins sit outside a border; CSS padding sits inside.** Section spacing had
-  to become real CSS padding to put the rules where the prototype puts them.
-- **GTK 4.14 has no CSS custom properties** — those need 4.16 — so the tokens
-  use `@define-color`.
+## Product semantics held
 
-None of these blocked the design. All of them are friction, and they are the
-honest answer to "how much does this toolkit fight the accepted direction".
+- **Session only.** Nothing is written anywhere. Closing the program drops the
+  session and deletes nothing on disk; restarting starts from nothing.
+- **Launch attempt, never running-confirmed.** *Launch attempt in progress*
+  means only that HELM's own call has not returned.
+- **No exec-success claim.** A clean status-channel end-of-file stays
+  `indeterminate · status_eof_without_record`, and the Result screen says HELM
+  did not establish that the program began running — even on an ordinary run
+  that ends by exit reporting 0.
+- **No verdicts.** An exit code is reported and never interpreted.
+- **No containment.** `group_sweep = issued` is stated as best-effort cleanup
+  that does not establish that any descendant received it.
+- **No receipt authenticity.** Unsigned, fabricatable, no provenance, digest is
+  byte identity only. No shield, lock, badge, tick or seal anywhere.
+- **Pre-child refusal is not a result.** When `launch` returns `Err`, no child
+  was created and no receipt exists; Evidence says exactly that rather than
+  inventing one.
+- **Captured output is disclosed honestly.** Non-UTF-8 bytes are announced as
+  such and rendered lossily *with a notice*, never silently replaced.
+  Truncation is stated when true. Output is held in memory for the session only
+  and is part of no receipt.
 
-### Known differences from the prototype
+`src/state.rs` carries unit tests that hold these rules still. They are not UI
+tests: they are the guard that stops backend wiring from quietly acquiring a
+verdict vocabulary.
 
-1. **Fonts.** Neither Instrument Sans nor Newsreader is bundled; no font binary
-   enters the repository and **no HELM brand font is selected here**. Local
-   fallback stacks keep the serif/sans pairing, so text metrics differ.
-2. **Window controls.** The prototype draws three inert dots as a stand-in for
-   window controls. This uses real `GtkWindowControls`, placed at the start
-   edge — the same silhouette, but genuine, accessible controls.
-3. **File chooser.** The prototype draws a modal stand-in for the desktop file
-   dialog. This spike does not build a fake file chooser: the Choose screen
-   offers three labelled stand-in candidates inline, opens no dialog and reads
-   no filesystem. A later, separately authorised backend-connected spike would
-   use `GtkFileDialog`, which routes through the desktop portal.
+## Tests
 
-## Boundaries
+```sh
+cargo test --manifest-path crates/helm-gui/Cargo.toml
+```
 
-No backend connection · no HELM crate dependency · no persistence, database or
-daemon · no G-1, G-2 or G-3 · no Wine or Proton · no installer, update or
-recovery work · no shell or compositor work · no network · no filesystem access
-· no process execution.
+`tests/real_launch.rs` builds a purpose-built ELF fixture as a cargo binary,
+gives it an explicit asserted mode, admits it and a scratch working directory
+through the accepted API, parses the fixed plan, authorises, calls the real
+`helm_launch::launch`, and asserts on the real receipt — including recomputing
+the receipt digest over the receipt's own exact bytes. It requires no display,
+so hosted Linux CI runs it. It also asserts the refusal paths: a non-ELF file, a
+file offered as a working directory, and a directory offered as an executable.
 
-The next gate is the **owner's visual review of this spike**. It is not a
-production GUI and accepting it would be a separate decision.
+**It does not assert `ExecSucceeded`,** because no such value exists.
+
+## Known limitations
+
+- **Brand fonts are not selected.** Local fallback stacks; no font binary is
+  vendored.
+- **`G2-UI-A11Y-01` is open.** The interface pins the colour scheme so a host
+  theme cannot repaint an accepted product decision. System high-contrast
+  preference is **not** reconciled with that, and must be before production UI
+  acceptance.
+- **Local files only.** A `GFile` with no local path is refused, with copy that
+  says so. No remote URI acquisition, and no file manager of HELM's own.
+- **Non-graphical subjects only.** The subject environment is empty by the
+  accepted plan, so a graphical application is not a supported subject here.

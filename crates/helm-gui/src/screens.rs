@@ -1,13 +1,12 @@
-//! The seven accepted D8 surfaces, built natively.
+//! The seven accepted D8 surfaces, populated from **real** `helm-launch` facts.
 //!
-//! Translated from `docs/prototypes/g2-html/index.html`. Copy is reproduced
-//! verbatim from the prototype, because the wording *is* the product decision:
-//! `docs/implementation/HELM-G2-VISUAL-KICKOFF.md` governs what may be said,
-//! and nothing here says more than the prototype already says.
+//! The visual structure is the accepted one and is not rebuilt around backend
+//! internals: the frame, the rail, the ledger rows and the disclosure behaviour
+//! are exactly as the accepted fidelity spike established them. What changed is
+//! where the values come from.
 //!
-//! Each builder returns its root widget plus the handles that `refresh()` in
-//! `main.rs` needs. Buttons report through a dispatcher rather than returning
-//! handles, which keeps the wiring in one place.
+//! Screens whose content varies with real facts expose a container that
+//! `main.rs` clears and refills. Screens that are fixed copy are built once.
 
 use std::rc::Rc;
 
@@ -15,33 +14,39 @@ use gtk::prelude::*;
 use gtk4 as gtk;
 use libadwaita as adw;
 
-use crate::state::{self, Candidate, Screen, State};
 use crate::widgets::{
-    BODY_MEASURE, ITEM_GAP, LABEL_COL, ORDINAL_COL, ROW_GAP, column, fact, fact_advanced,
-    field_body, grouphead, hbox, labelled_row, line, line_numeric, link_button, mark, numbered,
-    numbered_field, primary_button, quiet_button, section_row, selectable_mono, vbox, wrapped,
+    BODY_MEASURE, ITEM_GAP, LABEL_COL, ORDINAL_COL, ROW_GAP, column, field_body, grouphead, hbox,
+    labelled_row, line, line_numeric, link_button, mark, primary_button, quiet_button, section_row,
+    vbox, wrapped,
 };
+use helm_gui::state::Screen;
 
-/// Everything the spike lets a person do. All of it is presentation.
+/// Everything the interface lets a person do. Each one is a real operation.
 #[derive(Clone, Copy, Debug)]
 pub enum Action {
     Go(Screen),
     GoChoose,
     GoProgram,
-    Pick(Candidate),
-    ChooseFolder,
+    /// Open the real GTK file chooser for the program.
+    ChooseProgramFile,
+    /// Open the real GTK folder chooser for the working directory.
+    ChooseWorkingFolder,
+    /// Compose the one-shot authority, at the person's explicit instruction.
     Authorise,
     RefuseAuthority,
+    /// Consume that authority once, on a worker thread.
     StartAttempt,
+    /// Return through fresh authority preparation.
+    AttemptAgain,
     CloseEntry,
     ToggleOutput,
     ToggleDisclosure,
-    CopyBytes,
+    CopyReceiptBytes,
 }
 
 pub type Dispatch = Rc<dyn Fn(Action)>;
 
-fn on(button: &gtk::Button, dispatch: &Dispatch, action: Action) {
+pub fn on(button: &gtk::Button, dispatch: &Dispatch, action: Action) {
     let dispatch = Rc::clone(dispatch);
     button.connect_clicked(move |_| dispatch(action));
 }
@@ -56,7 +61,7 @@ fn screen_page() -> gtk::Box {
     page
 }
 
-fn spaced<W: IsA<gtk::Widget>>(widget: W, top: i32) -> W {
+pub fn spaced<W: IsA<gtk::Widget>>(widget: W, top: i32) -> W {
     widget.as_ref().set_margin_top(top);
     widget
 }
@@ -69,6 +74,14 @@ fn heading(text: &str, large: bool) -> gtk::Label {
     label
 }
 
+/// Empties a container that is refilled from real facts on every render.
+pub fn clear(container: &impl IsA<gtk::Widget>) {
+    let container = container.as_ref();
+    while let Some(child) = container.first_child() {
+        child.unparent();
+    }
+}
+
 // ---------------------------------------------------------------- library
 
 pub struct LibraryUi {
@@ -76,8 +89,11 @@ pub struct LibraryUi {
     pub empty: gtk::Widget,
     pub entry: gtk::Widget,
     pub mark: gtk::Box,
+    pub name: gtk::Label,
+    pub path: gtk::Label,
     pub word: gtk::Label,
     pub note: gtk::Label,
+    pub opened: gtk::Label,
 }
 
 pub fn library(dispatch: &Dispatch) -> LibraryUi {
@@ -99,7 +115,6 @@ pub fn library(dispatch: &Dispatch) -> LibraryUi {
     head.append(&choose);
     page.append(&head);
 
-    // Nothing open.
     let empty = vbox(0);
     empty.add_css_class("rule-strong-top");
     empty.set_margin_top(34);
@@ -117,9 +132,7 @@ pub fn library(dispatch: &Dispatch) -> LibraryUi {
     empty.append(&empty_row);
     page.append(&empty);
 
-    // One session entry, as a ledger.
     let entry = vbox(0);
-
     let header = hbox(20);
     header.add_css_class("rule-strong-bottom");
     header.set_margin_top(34);
@@ -144,21 +157,25 @@ pub fn library(dispatch: &Dispatch) -> LibraryUi {
 
     let name_col = vbox(5);
     name_col.set_hexpand(true);
-    name_col.append(&line(state::PROGRAM_NAME, "helm-entryname"));
-    name_col.append(&line_numeric(state::PROGRAM_PATH, "helm-entrypath"));
+    let name = line("", "helm-entryname");
+    let path = line_numeric("", "helm-entrypath");
+    path.set_ellipsize(gtk::pango::EllipsizeMode::Middle);
+    path.set_max_width_chars(44);
+    name_col.append(&name);
+    name_col.append(&path);
 
     let state_col = vbox(6);
     state_col.set_size_request(520, -1);
     let state_line = hbox(9);
     let entry_mark = mark("mark-known", false);
-    let word = line("Known", "helm-stateword");
+    let word = line("", "helm-stateword");
     state_line.append(&entry_mark);
     state_line.append(&word);
     let note = wrapped("", "helm-statenote", 520);
     state_col.append(&state_line);
     state_col.append(&note);
 
-    let opened = line_numeric(state::OPENED_AT, "helm-entrypath");
+    let opened = line_numeric("", "helm-entrypath");
     opened.set_size_request(84, -1);
     opened.set_xalign(1.0);
     opened.set_halign(gtk::Align::End);
@@ -182,10 +199,8 @@ pub fn library(dispatch: &Dispatch) -> LibraryUi {
     actions.append(&review);
     actions.append(&close);
     entry.append(&actions);
-
     page.append(&entry);
 
-    // The standing non-claim.
     let not_installing = vbox(0);
     not_installing.add_css_class("rule-top");
     not_installing.set_margin_top(40);
@@ -208,8 +223,11 @@ pub fn library(dispatch: &Dispatch) -> LibraryUi {
         empty: empty.upcast(),
         entry: entry.upcast(),
         mark: entry_mark,
+        name,
+        path,
         word,
         note,
+        opened,
     }
 }
 
@@ -218,16 +236,9 @@ pub fn library(dispatch: &Dispatch) -> LibraryUi {
 pub struct ChooseUi {
     pub root: gtk::Widget,
     pub program_phase: gtk::Label,
+    pub program_body: gtk::Box,
     pub folder_phase: gtk::Label,
-    pub none: gtk::Widget,
-    pub admitted: gtk::Widget,
-    pub refused: gtk::Widget,
-    pub refusal_title: gtk::Label,
-    pub refusal_text: gtk::Label,
-    pub refusal_code: gtk::Label,
-    pub advanced: gtk::Widget,
-    pub folder_admitted: gtk::Widget,
-    pub folder_pending: gtk::Widget,
+    pub folder_body: gtk::Box,
     pub continue_button: gtk::Button,
 }
 
@@ -248,171 +259,32 @@ pub fn choose(dispatch: &Dispatch) -> ChooseUi {
         10,
     ));
 
-    // --- the program file -------------------------------------------------
     let program_section = vbox(0);
-    program_section.add_css_class("rule-strong-top");
+    program_section.add_css_class("helm-sec-top-strong");
     program_section.set_margin_top(30);
-
     let program_label = vbox(4);
     program_label.set_size_request(LABEL_COL, -1);
     program_label.append(&column("The program file", "helm-rowlabel", LABEL_COL));
     let program_phase = line("Not checked yet", "helm-rowphase");
     program_label.append(&program_phase);
-
     let program_body = field_body();
-
-    // Not chosen yet. The three candidates stand in for the desktop file
-    // chooser: this spike opens no dialog and reads no filesystem. A later,
-    // separately authorised backend-connected spike uses GtkFileDialog, which
-    // routes through the desktop portal.
-    let none = vbox(0);
-    none.append(&wrapped(
-        "Nothing is chosen. HELM knows nothing about this until a file is opened.",
-        "helm-note",
-        BODY_MEASURE,
-    ));
-    let standin = line(
-        "Stand-in for the desktop file chooser — no dialog is opened and no filesystem is read.",
-        "helm-micro",
-    );
-    standin.set_margin_top(14);
-    none.append(&standin);
-    let picks = vbox(0);
-    picks.set_margin_top(10);
-    for candidate in Candidate::all() {
-        let pick = gtk::Button::new();
-        pick.add_css_class("helm-chooser-item");
-        pick.add_css_class("rule-soft-top");
-        let inner = hbox(16);
-        let name = line(candidate.name(), "helm-chooser-name");
-        name.set_hexpand(true);
-        let size = line_numeric(candidate.size(), "helm-chooser-size");
-        inner.append(&name);
-        inner.append(&size);
-        pick.set_child(Some(&inner));
-        pick.update_property(&[gtk::accessible::Property::Label(&format!(
-            "Choose {}, {}",
-            candidate.name(),
-            candidate.size()
-        ))]);
-        on(&pick, dispatch, Action::Pick(candidate));
-        picks.append(&pick);
-    }
-    picks.add_css_class("rule-soft-bottom");
-    none.append(&picks);
-
-    // Admitted.
-    let admitted = vbox(0);
-    admitted.append(&line(state::PROGRAM_NAME, "helm-fieldtitle"));
-    admitted.append(&spaced(
-        line_numeric(state::PROGRAM_PATH, "helm-entrypath"),
-        5,
-    ));
-    let facts = vbox(0);
-    facts.set_margin_top(16);
-    facts.append(&fact("Kind", "Regular file"));
-    facts.append(&fact("Size", state::SIZE_BYTES));
-    facts.append(&fact("File mode bits", state::MODE_BITS));
-    facts.append(&fact("ELF type", state::ELF_TYPE));
-    admitted.append(&facts);
-    admitted.append(&spaced(
-        wrapped(
-            "HELM opened and measured this file. It did not run, copy, modify or install \
-             anything. This is a pre-execution measurement of the pinned object, never the \
-             identity of bytes that executed.",
-            "helm-micro",
-            560,
-        ),
-        12,
-    ));
-    let choose_advanced = vbox(0);
-    choose_advanced.set_margin_top(12);
-    choose_advanced.append(&fact_advanced(
-        "Measurement digest",
-        "pre_exec_sha256",
-        state::PRE_EXEC_DIGEST,
-    ));
-    admitted.append(&choose_advanced);
-
-    // Refused.
-    let refused = vbox(0);
-    let refusal_head = hbox(9);
-    let refusal_mark = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-    refusal_mark.add_css_class("helm-mark-refused");
-    refusal_mark.set_valign(gtk::Align::Center);
-    refusal_mark.update_state(&[gtk::accessible::State::Hidden(true)]);
-    let refusal_title = line("", "helm-refusal-title");
-    refusal_head.append(&refusal_mark);
-    refusal_head.append(&refusal_title);
-    refused.append(&refusal_head);
-    let refusal_text = wrapped("", "helm-refusal-text", 560);
-    refusal_text.set_margin_top(10);
-    refused.append(&refusal_text);
-    let refusal_code = line_numeric("", "helm-refusal-code");
-    refusal_code.set_margin_top(8);
-    refused.append(&refusal_code);
-    refused.append(&spaced(
-        wrapped(
-            "Nothing was admitted. HELM closed the descriptor it opened and kept nothing.",
-            "helm-micro",
-            560,
-        ),
-        10,
-    ));
-
-    program_body.append(&none);
-    program_body.append(&admitted);
-    program_body.append(&refused);
-
     let program_row = section_row(program_label.upcast_ref::<gtk::Widget>(), &program_body);
-    program_row.set_margin_top(22);
     program_section.append(&program_row);
     page.append(&program_section);
 
-    // --- the working folder ----------------------------------------------
     let folder_section = vbox(0);
-    folder_section.add_css_class("rule-top");
+    folder_section.add_css_class("helm-sec-top");
     folder_section.set_margin_top(26);
-
     let folder_label = vbox(4);
     folder_label.set_size_request(LABEL_COL, -1);
     folder_label.append(&column("The working folder", "helm-rowlabel", LABEL_COL));
     let folder_phase = line("Not checked yet", "helm-rowphase");
     folder_label.append(&folder_phase);
-
     let folder_body = field_body();
-
-    let folder_admitted = vbox(0);
-    folder_admitted.append(&line_numeric(state::PROGRAM_PATH, "helm-fieldpath"));
-    folder_admitted.append(&spaced(
-        wrapped(
-            &format!(
-                "Directory, identifier {}. The program will start here.",
-                state::WORKDIR_ID
-            ),
-            "helm-note",
-            BODY_MEASURE,
-        ),
-        8,
-    ));
-
-    let folder_pending = vbox(0);
-    folder_pending.append(&wrapped("Not chosen yet.", "helm-note", BODY_MEASURE));
-    let pick_folder = quiet_button("Choose a working folder…", true, false);
-    pick_folder.set_margin_top(14);
-    pick_folder.set_halign(gtk::Align::Start);
-    on(&pick_folder, dispatch, Action::ChooseFolder);
-    folder_pending.append(&pick_folder);
-
-    folder_body.append(&folder_admitted);
-    folder_body.append(&folder_pending);
-
     let folder_row = section_row(folder_label.upcast_ref::<gtk::Widget>(), &folder_body);
-    folder_row.set_margin_top(22);
     folder_section.append(&folder_row);
     page.append(&folder_section);
 
-    // --- closing row ------------------------------------------------------
     let footer = hbox(ROW_GAP);
     footer.add_css_class("rule-strong-top");
     footer.set_margin_top(32);
@@ -440,33 +312,77 @@ pub fn choose(dispatch: &Dispatch) -> ChooseUi {
     ChooseUi {
         root: page.upcast(),
         program_phase,
+        program_body,
         folder_phase,
-        none: none.upcast(),
-        admitted: admitted.upcast(),
-        refused: refused.upcast(),
-        refusal_title,
-        refusal_text,
-        refusal_code,
-        advanced: choose_advanced.upcast(),
-        folder_admitted: folder_admitted.upcast(),
-        folder_pending: folder_pending.upcast(),
+        folder_body,
         continue_button,
     }
+}
+
+/// The "nothing chosen yet" body, carrying the real chooser button.
+pub fn choose_prompt(dispatch: &Dispatch, note: &str, label: &str, action: Action) -> gtk::Box {
+    let body = vbox(0);
+    body.append(&wrapped(note, "helm-note", BODY_MEASURE));
+    let button = quiet_button(label, true, false);
+    button.set_margin_top(14);
+    button.set_halign(gtk::Align::Start);
+    on(&button, dispatch, action);
+    body.append(&button);
+    body
+}
+
+/// A real refusal, explained without judging the object.
+pub fn refusal_body(
+    dispatch: &Dispatch,
+    title: &str,
+    text: &str,
+    detail: Option<&str>,
+    retry_label: &str,
+    action: Action,
+) -> gtk::Box {
+    let body = vbox(0);
+    let head = hbox(9);
+    let refusal_mark = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+    refusal_mark.add_css_class("helm-mark-refused");
+    refusal_mark.set_valign(gtk::Align::Center);
+    refusal_mark.update_state(&[gtk::accessible::State::Hidden(true)]);
+    head.append(&refusal_mark);
+    head.append(&line(title, "helm-refusal-title"));
+    body.append(&head);
+    body.append(&spaced(wrapped(text, "helm-refusal-text", 560), 10));
+    if let Some(detail) = detail {
+        body.append(&spaced(line_numeric(detail, "helm-refusal-code"), 8));
+    }
+    body.append(&spaced(
+        wrapped(
+            "Nothing was admitted. HELM closed the descriptor it opened and kept nothing.",
+            "helm-micro",
+            560,
+        ),
+        10,
+    ));
+    let retry = quiet_button(retry_label, true, false);
+    retry.set_margin_top(14);
+    retry.set_halign(gtk::Align::Start);
+    on(&retry, dispatch, action);
+    body.append(&retry);
+    body
 }
 
 // ---------------------------------------------------------------- program
 
 pub struct ProgramUi {
     pub root: gtk::Widget,
+    pub title: gtk::Label,
     pub mark: gtk::Box,
     pub word: gtk::Label,
     pub note: gtk::Label,
     pub authorise: gtk::Button,
     pub attempt: gtk::Button,
     pub available: gtk::Widget,
-    pub has_result: gtk::Widget,
-    pub no_result: gtk::Widget,
-    pub advanced: gtk::Widget,
+    pub overview: gtk::Box,
+    pub runtime_advanced: gtk::Box,
+    pub result_body: gtk::Box,
 }
 
 pub fn program(dispatch: &Dispatch) -> ProgramUi {
@@ -477,13 +393,13 @@ pub fn program(dispatch: &Dispatch) -> ProgramUi {
     head.add_css_class("helm-pagehead");
     head.set_margin_top(12);
     head.set_valign(gtk::Align::End);
-
     let head_left = vbox(12);
     head_left.set_hexpand(true);
-    head_left.append(&heading(state::PROGRAM_NAME, false));
+    let title = heading("", false);
+    head_left.append(&title);
     let state_line = hbox(9);
     let program_mark = mark("mark-known", false);
-    let word = line("Known", "helm-stateword-lg");
+    let word = line("", "helm-stateword-lg");
     let note = wrapped("", "helm-statedash", 420);
     state_line.append(&program_mark);
     state_line.append(&word);
@@ -498,12 +414,10 @@ pub fn program(dispatch: &Dispatch) -> ProgramUi {
     on(&attempt, dispatch, Action::StartAttempt);
     head_actions.append(&authorise);
     head_actions.append(&attempt);
-
     head.append(&head_left);
     head.append(&head_actions);
     page.append(&head);
 
-    // Launch available.
     let available = vbox(0);
     available.add_css_class("rule-bottom");
     let available_row = section_row(
@@ -521,13 +435,9 @@ pub fn program(dispatch: &Dispatch) -> ProgramUi {
     available.append(&available_row);
     page.append(&available);
 
-    // Overview.
     let overview_body = field_body();
-    let facts = vbox(0);
-    facts.append(&fact("Program file", state::PROGRAM_PATH));
-    facts.append(&fact("Working folder", state::PROGRAM_PATH));
-    facts.append(&fact("Measured", state::MEASURED_SUMMARY));
-    overview_body.append(&facts);
+    let overview = vbox(0);
+    overview_body.append(&overview);
     overview_body.append(&spaced(
         wrapped(
             "HELM has no application identity, version or icon for this program. Those would come \
@@ -537,11 +447,10 @@ pub fn program(dispatch: &Dispatch) -> ProgramUi {
         ),
         10,
     ));
-    let overview = labelled_row("Overview", &overview_body);
-    overview.add_css_class("helm-sec-bottom");
-    page.append(&overview);
+    let overview_row = labelled_row("Overview", &overview_body);
+    overview_row.add_css_class("helm-sec-bottom");
+    page.append(&overview_row);
 
-    // Runtime.
     let runtime_body = field_body();
     runtime_body.append(&wrapped(
         "HELM runs this program directly on this computer.",
@@ -550,11 +459,6 @@ pub fn program(dispatch: &Dispatch) -> ProgramUi {
     ));
     let runtime_advanced = vbox(0);
     runtime_advanced.set_margin_top(10);
-    runtime_advanced.append(&fact_advanced(
-        "Backend identity",
-        "backend",
-        state::BACKEND_IDENTITY,
-    ));
     runtime_body.append(&runtime_advanced);
     runtime_body.append(&spaced(
         wrapped(
@@ -569,31 +473,11 @@ pub fn program(dispatch: &Dispatch) -> ProgramUi {
     runtime.add_css_class("helm-sec-bottom");
     page.append(&runtime);
 
-    // Result.
     let result_body = field_body();
-    let has_result = vbox(0);
-    has_result.append(&wrapped(
-        "The program ended and reported 0. HELM does not interpret what that number means.",
-        "helm-note-ink",
-        BODY_MEASURE,
-    ));
-    let result_actions = hbox(20);
-    result_actions.set_margin_top(12);
-    let open_result = quiet_button("Open last result", true, false);
-    on(&open_result, dispatch, Action::Go(Screen::Result));
-    let details = link_button("Launch details", false);
-    on(&details, dispatch, Action::Go(Screen::Evidence));
-    result_actions.append(&open_result);
-    result_actions.append(&details);
-    has_result.append(&result_actions);
-    let no_result = wrapped("No launch has been attempted.", "helm-note", BODY_MEASURE);
-    result_body.append(&has_result);
-    result_body.append(&no_result);
-    let result = labelled_row("Result", &result_body);
-    result.add_css_class("helm-sec-bottom");
-    page.append(&result);
+    let result_row = labelled_row("Result", &result_body);
+    result_row.add_css_class("helm-sec-bottom");
+    page.append(&result_row);
 
-    // Updates.
     let updates = labelled_row(
         "Updates",
         &wrapped(
@@ -606,7 +490,6 @@ pub fn program(dispatch: &Dispatch) -> ProgramUi {
     updates.add_css_class("helm-sec-bottom");
     page.append(&updates);
 
-    // Recovery. Only what HELM can actually do.
     let recovery_body = field_body();
     let chips = hbox(10);
     let review = quiet_button("Review authority", false, true);
@@ -636,15 +519,16 @@ pub fn program(dispatch: &Dispatch) -> ProgramUi {
 
     ProgramUi {
         root: page.upcast(),
+        title,
         mark: program_mark,
         word,
         note,
         authorise,
         attempt,
         available: available.upcast(),
-        has_result: has_result.upcast(),
-        no_result: no_result.upcast(),
-        advanced: runtime_advanced.upcast(),
+        overview,
+        runtime_advanced,
+        result_body,
     }
 }
 
@@ -652,7 +536,11 @@ pub fn program(dispatch: &Dispatch) -> ProgramUi {
 
 pub struct AuthorityUi {
     pub root: gtk::Widget,
-    pub advanced: gtk::Widget,
+    pub title: gtk::Label,
+    pub ledger: gtk::Box,
+    pub advanced: gtk::Box,
+    pub detail_grid: gtk::Box,
+    pub authorise: gtk::Button,
 }
 
 pub fn authority(dispatch: &Dispatch) -> AuthorityUi {
@@ -662,11 +550,7 @@ pub fn authority(dispatch: &Dispatch) -> AuthorityUi {
     let head = hbox(32);
     head.add_css_class("helm-pagehead");
     head.set_valign(gtk::Align::End);
-    let title = wrapped(
-        &format!("Authorise one launch of {}?", state::PROGRAM_NAME),
-        "helm-h1",
-        620,
-    );
+    let title = wrapped("", "helm-h1", 620);
     title.set_hexpand(true);
     let meta = line("Authority review\nSingle use", "helm-pagemeta");
     meta.set_xalign(1.0);
@@ -676,92 +560,11 @@ pub fn authority(dispatch: &Dispatch) -> AuthorityUi {
     head.append(&meta);
     page.append(&head);
 
-    let permits = grouphead("What HELM will permit for this one attempt");
-    permits.set_margin_top(20);
-    permits.set_margin_bottom(8);
-    page.append(&permits);
+    // Chosen, checked, permitted and not-done are all real, so the whole
+    // ledger is rebuilt from facts on every render.
+    let ledger = vbox(0);
+    page.append(&ledger);
 
-    let grants = vbox(0);
-    grants.append(&numbered(
-        "01",
-        "The program",
-        "HELM will run exactly this file — the one it inspected, not a file found by name later.",
-        150,
-        false,
-        false,
-    ));
-    grants.append(&numbered(
-        "02",
-        "The folder",
-        &format!("It will start in {}.", state::PROGRAM_PATH),
-        150,
-        false,
-        false,
-    ));
-    grants.append(&numbered(
-        "03",
-        "The input",
-        "It will receive no input. Anything it reads from input ends immediately.",
-        150,
-        false,
-        false,
-    ));
-    grants.append(&numbered(
-        "04",
-        "The time",
-        "It may run for at most 30 seconds. After that HELM asks it to stop, waits 5 seconds, \
-         then forces it.",
-        150,
-        false,
-        false,
-    ));
-    page.append(&grants);
-
-    let refuses = grouphead("What HELM does not do");
-    refuses.set_margin_top(24);
-    refuses.set_margin_bottom(8);
-    page.append(&refuses);
-
-    let non_grants = vbox(0);
-    non_grants.append(&numbered(
-        "05",
-        "No settings",
-        "HELM passes no environment settings at all — not your home folder, not your display, not \
-         your language.",
-        150,
-        false,
-        false,
-    ));
-    non_grants.append(&numbered(
-        "06",
-        "No inheritance",
-        "It inherits no open files or connections from HELM beyond its own input and output.",
-        150,
-        false,
-        false,
-    ));
-    non_grants.append(&numbered(
-        "07",
-        "No new privileges",
-        "It cannot gain additional privileges while starting.",
-        150,
-        false,
-        false,
-    ));
-    let last = numbered(
-        "08",
-        "Everything else",
-        "Beyond those, this program runs with the same access you have. HELM does not restrict \
-         what it can read or change on this computer.",
-        150,
-        false,
-        false,
-    );
-    last.add_css_class("rule-bottom");
-    non_grants.append(&last);
-    page.append(&non_grants);
-
-    // The non-containment statement, in plain language.
     let pull = wrapped(
         "HELM does not contain this program. It starts it and watches it. It does not restrict \
          which files it can open, what it can change or what it can reach on the network.",
@@ -773,38 +576,14 @@ pub fn authority(dispatch: &Dispatch) -> AuthorityUi {
     pull.set_margin_bottom(24);
     page.append(&pull);
 
-    // Technical detail, one layer deep.
     let advanced = vbox(0);
     advanced.set_margin_start(ORDINAL_COL + ITEM_GAP);
     advanced.set_margin_bottom(24);
     let detail_head = line("Technical detail", "helm-grouphead");
     detail_head.set_margin_bottom(8);
     advanced.append(&detail_head);
-    let grid = gtk::Grid::new();
-    grid.set_column_spacing(44);
-    grid.set_column_homogeneous(true);
-    let details = [
-        ("Environment settings", "environment_mode", "empty"),
-        ("Input", "stdin_mode", "closed_pipe_eof"),
-        ("Run deadline", "timeout_ms", "30000 ms"),
-        ("Grace period", "grace_ms", "5000 ms"),
-        ("Arguments", "argv_len", "1"),
-        ("Plan identity", "plan_sha256", state::PLAN_DIGEST),
-    ];
-    let mut row = 0_i32;
-    let mut col = 0_i32;
-    for (label, field, value) in details {
-        let cell = fact_advanced(label, field, value);
-        cell.remove_css_class("rule-soft-top");
-        cell.add_css_class("rule-soft-bottom");
-        grid.attach(&cell, col, row, 1, 1);
-        col += 1;
-        if col == 2 {
-            col = 0;
-            row += 1;
-        }
-    }
-    advanced.append(&grid);
+    let detail_grid = vbox(0);
+    advanced.append(&detail_grid);
     page.append(&advanced);
 
     let footer = hbox(ROW_GAP);
@@ -833,7 +612,11 @@ pub fn authority(dispatch: &Dispatch) -> AuthorityUi {
 
     AuthorityUi {
         root: page.upcast(),
-        advanced: advanced.upcast(),
+        title,
+        ledger,
+        advanced,
+        detail_grid,
+        authorise,
     }
 }
 
@@ -841,19 +624,20 @@ pub fn authority(dispatch: &Dispatch) -> AuthorityUi {
 
 pub struct AttemptUi {
     pub root: gtk::Widget,
+    pub crumb: gtk::Label,
     pub elapsed: gtk::Label,
     pub meter: gtk::ProgressBar,
+    pub deadline_note: gtk::Label,
 }
 
 /// The attempt screen carries **no controls at all**. `launch` is synchronous
 /// and returns no handle, so there is nothing to cancel and nothing to observe
-/// live. The screen says so instead of offering a button that would lie.
+/// live. Running it on a worker thread does not change that, and the screen
+/// says so rather than offering a button that would lie.
 pub fn attempt() -> AttemptUi {
     let page = screen_page();
-    page.append(&line(
-        &format!("{} · Attempt", state::PROGRAM_NAME),
-        "helm-crumb",
-    ));
+    let crumb = line("", "helm-crumb");
+    page.append(&crumb);
 
     let title_row = hbox(12);
     title_row.set_margin_top(14);
@@ -876,19 +660,19 @@ pub fn attempt() -> AttemptUi {
     ));
 
     let elapsed_body = field_body();
-    let elapsed = line_numeric("0.0 s of at most 30 s", "helm-elapsed");
+    let elapsed = line_numeric("", "helm-elapsed");
     elapsed_body.append(&elapsed);
     let meter = gtk::ProgressBar::new();
     meter.add_css_class("helm-meter");
     meter.set_margin_top(14);
     meter.set_fraction(0.0);
-    // The bound is announced as text beside it; the bar is its picture.
     meter.update_state(&[gtk::accessible::State::Hidden(true)]);
     elapsed_body.append(&meter);
     elapsed_body.append(&spaced(
         wrapped(
             "This is a bound, not progress towards success. Reaching the deadline is a described \
-             outcome, not a failure to finish in time.",
+             outcome, not a failure to finish in time. The count is the interface's own clock and \
+             is part of no receipt.",
             "helm-micro",
             BODY_MEASURE,
         ),
@@ -900,21 +684,8 @@ pub fn attempt() -> AttemptUi {
     page.append(&elapsed_row);
 
     let steps_body = field_body();
-    for (ordinal, text) in [
-        ("01", "HELM asks the program to stop."),
-        ("02", "It waits 5 seconds."),
-        ("03", "It forces the program to stop."),
-    ] {
-        let step = hbox(ITEM_GAP);
-        step.add_css_class("rule-soft-bottom");
-        step.set_margin_top(10);
-        step.set_margin_bottom(10);
-        let n = line_numeric(ordinal, "helm-itemn");
-        n.set_size_request(ORDINAL_COL, -1);
-        step.append(&n);
-        step.append(&wrapped(text, "helm-note-sm", BODY_MEASURE));
-        steps_body.append(&step);
-    }
+    let deadline_note = wrapped("", "helm-note-sm", BODY_MEASURE);
+    steps_body.append(&deadline_note);
     let steps = labelled_row("When the deadline expires", &steps_body);
     steps.add_css_class("helm-sec-top");
     steps.set_margin_top(24);
@@ -924,8 +695,9 @@ pub fn attempt() -> AttemptUi {
         "No cancel",
         &wrapped(
             "HELM cannot stop an attempt it started. The launch call is synchronous and returns \
-             no handle, so there is nothing to cancel and nothing to observe live. Making that \
-             possible needs orchestration HELM does not have.",
+             no handle, so there is nothing to cancel and nothing to observe live. Running it off \
+             the interface's thread keeps this window responsive; it creates no session, no stop \
+             and no cancel.",
             "helm-note-sm",
             BODY_MEASURE,
         ),
@@ -936,8 +708,10 @@ pub fn attempt() -> AttemptUi {
 
     AttemptUi {
         root: page.upcast(),
+        crumb,
         elapsed,
         meter,
+        deadline_note,
     }
 }
 
@@ -945,16 +719,22 @@ pub fn attempt() -> AttemptUi {
 
 pub struct ResultUi {
     pub root: gtk::Widget,
-    pub output_toggle: gtk::Button,
-    pub output_panel: gtk::Widget,
+    pub crumb: gtk::Label,
+    pub mark: gtk::Box,
+    pub state_word: gtk::Label,
+    pub headline: gtk::Label,
+    pub subtitle: gtk::Label,
+    pub details_link: gtk::Button,
+    pub facts_head: gtk::Label,
+    pub facts: gtk::Box,
+    pub output_row: gtk::Widget,
+    pub output_body: gtk::Box,
 }
 
 pub fn result(dispatch: &Dispatch) -> ResultUi {
     let page = screen_page();
-    page.append(&line(
-        &format!("{} · Result", state::PROGRAM_NAME),
-        "helm-crumb",
-    ));
+    let crumb = line("", "helm-crumb");
+    page.append(&crumb);
 
     let head = hbox(32);
     head.add_css_class("helm-pagehead");
@@ -964,31 +744,25 @@ pub fn result(dispatch: &Dispatch) -> ResultUi {
     let head_left = vbox(0);
     head_left.set_hexpand(true);
     let state_line = hbox(10);
-    state_line.append(&mark("mark-ended", false));
-    state_line.append(&line("Ended", "helm-stateword-lg"));
+    let result_mark = mark("mark-ended", false);
+    let state_word = line("Ended", "helm-stateword-lg");
+    state_line.append(&result_mark);
+    state_line.append(&state_word);
     head_left.append(&state_line);
-    let title = wrapped("The program ended and reported 0.", "helm-h1", 660);
-    title.set_margin_top(12);
-    head_left.append(&title);
-    head_left.append(&spaced(
-        wrapped(
-            "HELM does not interpret what that number means. The program is the authority on its \
-             own exit codes.",
-            "helm-lede",
-            600,
-        ),
-        10,
-    ));
+    let headline = wrapped("", "helm-h1", 660);
+    headline.set_margin_top(12);
+    head_left.append(&headline);
+    let subtitle = spaced(wrapped("", "helm-lede", 600), 10);
+    head_left.append(&subtitle);
 
     let head_actions = hbox(20);
     head_actions.set_valign(gtk::Align::End);
-    let details = link_button("Launch details", false);
-    on(&details, dispatch, Action::Go(Screen::Evidence));
+    let details_link = link_button("Launch details", false);
+    on(&details_link, dispatch, Action::Go(Screen::Evidence));
     let again = primary_button("Attempt launch again");
-    on(&again, dispatch, Action::Go(Screen::Authority));
-    head_actions.append(&details);
+    on(&again, dispatch, Action::AttemptAgain);
+    head_actions.append(&details_link);
     head_actions.append(&again);
-
     head.append(&head_left);
     head.append(&head_actions);
     page.append(&head);
@@ -997,92 +771,15 @@ pub fn result(dispatch: &Dispatch) -> ResultUi {
     facts_head.set_margin_top(20);
     facts_head.set_margin_bottom(8);
     page.append(&facts_head);
-
     let facts = vbox(0);
-    facts.append(&numbered(
-        "01",
-        "Start-up report",
-        "HELM received no start-up failure report. It did not establish that the program began \
-         running.",
-        170,
-        false,
-        false,
-    ));
-    facts.append(&numbered(
-        "02",
-        "How it ended",
-        "The direct child was observed to end by exit, reporting 0.",
-        170,
-        false,
-        false,
-    ));
-    facts.append(&numbered(
-        "03",
-        "Run deadline",
-        "The deadline did not expire. HELM issued no stop and no force.",
-        170,
-        false,
-        false,
-    ));
-    facts.append(&numbered(
-        "04",
-        "Group cleanup",
-        "Group cleanup was issued. That is not containment: a descendant that left the group \
-         survives it.",
-        170,
-        false,
-        false,
-    ));
-    let last = numbered(
-        "05",
-        "What was read",
-        "Output and errors were drained to the end of file. Nothing was cut short.",
-        170,
-        false,
-        false,
-    );
-    last.add_css_class("rule-bottom");
-    facts.append(&last);
     page.append(&facts);
 
-    // Program output.
     let output_body = field_body();
-    let counts = vbox(0);
-    counts.append(&fact("Output", state::STDOUT_BYTES));
-    counts.append(&fact("Errors and messages", state::STDERR_BYTES));
-    output_body.append(&counts);
-
-    let output_actions = hbox(20);
-    output_actions.set_margin_top(12);
-    let output_toggle = quiet_button("Show what was printed", false, true);
-    on(&output_toggle, dispatch, Action::ToggleOutput);
-    output_actions.append(&output_toggle);
-    output_actions.append(&line("Kept in memory for this session only", "helm-micro"));
-    output_body.append(&output_actions);
-
-    let output_panel = vbox(0);
-    output_panel.add_css_class("rule-soft-top");
-    output_panel.set_margin_top(12);
-    let printed = selectable_mono(state::PROGRAM_OUTPUT, "helm-mono");
-    printed.set_margin_top(12);
-    output_panel.append(&printed);
-    output_panel.append(&spaced(
-        wrapped(
-            "Output can contain anything the program printed, including paths. It is never \
-             included in an export without a separate, explicit opt-in.",
-            "helm-micro",
-            BODY_MEASURE,
-        ),
-        10,
-    ));
-    output_body.append(&output_panel);
-
     let output_row = labelled_row("Program output", &output_body);
     output_row.add_css_class("helm-sec-top");
     output_row.set_margin_top(28);
     page.append(&output_row);
 
-    // What is next.
     let next_body = field_body();
     let chips = hbox(10);
     let back = quiet_button("Back to the program", false, true);
@@ -1102,8 +799,16 @@ pub fn result(dispatch: &Dispatch) -> ResultUi {
 
     ResultUi {
         root: page.upcast(),
-        output_toggle,
-        output_panel: output_panel.upcast(),
+        crumb,
+        mark: result_mark,
+        state_word,
+        headline,
+        subtitle,
+        details_link,
+        facts_head,
+        facts,
+        output_row: output_row.upcast(),
+        output_body,
     }
 }
 
@@ -1111,15 +816,16 @@ pub fn result(dispatch: &Dispatch) -> ResultUi {
 
 pub struct EvidenceUi {
     pub root: gtk::Widget,
+    pub crumb: gtk::Label,
     pub copy: gtk::Button,
+    pub lede: gtk::Label,
+    pub body: gtk::Box,
 }
 
 pub fn evidence(dispatch: &Dispatch) -> EvidenceUi {
     let page = screen_page();
-    page.append(&line(
-        &format!("{} · Result · Launch details", state::PROGRAM_NAME),
-        "helm-crumb",
-    ));
+    let crumb = line("", "helm-crumb");
+    page.append(&crumb);
 
     let head = hbox(32);
     head.add_css_class("helm-pagehead");
@@ -1128,97 +834,19 @@ pub fn evidence(dispatch: &Dispatch) -> EvidenceUi {
     let title = heading("What exactly was recorded", false);
     title.set_hexpand(true);
     let copy = primary_button("Copy the exact receipt bytes");
-    on(&copy, dispatch, Action::CopyBytes);
+    on(&copy, dispatch, Action::CopyReceiptBytes);
     head.append(&title);
     head.append(&copy);
     page.append(&head);
 
-    // The receipt non-claim. No shield, no lock, no seal, no badge.
-    let lede = wrapped(
-        "This receipt is data. It records what HELM observed. It is not signed, carries no proof \
-         of origin, and grants no permission to run anything. Anyone can write bytes that look \
-         like it. Its digest identifies exactly these bytes and nothing else.",
-        "helm-pull-plain",
-        700,
-    );
+    let lede = wrapped("", "helm-pull-plain", 700);
     lede.set_margin_start(ORDINAL_COL + ITEM_GAP);
     lede.set_margin_top(22);
     lede.set_margin_bottom(24);
     page.append(&lede);
 
-    let facts_head = grouphead("Receipt facts");
-    facts_head.set_margin_bottom(8);
-    page.append(&facts_head);
-
-    let facts = vbox(0);
-    let rows = [
-        (
-            "01",
-            "Exec status",
-            "exec_status",
-            "indeterminate · status_eof_without_record",
-        ),
-        ("02", "Child end", "child_end", "exited · code 0"),
-        (
-            "03",
-            "Termination",
-            "sigterm_sent · sigkill_sent · group_sweep",
-            "false · false · issued",
-        ),
-        (
-            "04",
-            "Output stream",
-            "stdout · drained · completeness",
-            "1 284 bytes · complete_at_eof",
-        ),
-        (
-            "05",
-            "Error stream",
-            "stderr · drained · completeness",
-            "0 bytes · complete_at_eof",
-        ),
-        (
-            "06",
-            "Pre-execution measurement",
-            "size · sha256 · mode_bits · elf_type",
-            "41 984 · sha256:9d41…c7e0 · 0o755 · EXEC",
-        ),
-        ("07", "Plan identity", "plan_sha256", state::PLAN_DIGEST),
-        ("08", "Backend identity", "backend", state::BACKEND_IDENTITY),
-    ];
-    let last_ordinal = "08";
-    for (ordinal, key, field, value) in rows {
-        let row = numbered_field(ordinal, key, field, value);
-        if ordinal == last_ordinal {
-            row.add_css_class("rule-bottom");
-        }
-        facts.append(&row);
-    }
-    page.append(&facts);
-
-    // The digest of the exact bytes. Selectable, and carrying no badge.
-    let digest_body = field_body();
-    digest_body.append(&selectable_mono(state::RECEIPT_DIGEST, "helm-digest"));
-    digest_body.append(&spaced(
-        wrapped(
-            "Reformatting a receipt changes its bytes and therefore its digest. Copying copies the \
-             exact bytes, unreformatted.",
-            "helm-micro",
-            BODY_MEASURE,
-        ),
-        10,
-    ));
-    let digest = labelled_row("SHA-256 of the exact receipt bytes", &digest_body);
-    digest.add_css_class("helm-sec-top");
-    digest.set_margin_top(28);
-    page.append(&digest);
-
-    let bytes_body = field_body();
-    bytes_body.append(&selectable_mono(state::RECEIPT_BYTES, "helm-bytes"));
-    let bytes = labelled_row("Exact bytes", &bytes_body);
-    bytes.add_css_class("helm-sec-top");
-    bytes.set_margin_top(24);
-    page.append(&bytes);
+    let body = vbox(0);
+    page.append(&body);
 
     let footer = hbox(22);
     footer.add_css_class("rule-strong-top");
@@ -1238,11 +866,14 @@ pub fn evidence(dispatch: &Dispatch) -> EvidenceUi {
 
     EvidenceUi {
         root: page.upcast(),
+        crumb,
         copy,
+        lede,
+        body,
     }
 }
 
-/// Wraps a screen in the measured content column and a scroller.
+/// Wraps a screen in the measured content column.
 pub fn clamped(child: &impl IsA<gtk::Widget>) -> gtk::Widget {
     let clamp = adw::Clamp::builder()
         .maximum_size(1096)
@@ -1250,12 +881,4 @@ pub fn clamped(child: &impl IsA<gtk::Widget>) -> gtk::Widget {
         .build();
     clamp.set_child(Some(child));
     clamp.upcast()
-}
-
-/// Hides `advanced` blocks in Normal disclosure. Kept next to the screens so
-/// that adding a block and forgetting to gate it is visible in one file.
-pub fn apply_disclosure(state: &State, blocks: &[&gtk::Widget]) {
-    for block in blocks {
-        block.set_visible(state.advanced());
-    }
 }
