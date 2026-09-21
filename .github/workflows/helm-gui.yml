@@ -1,0 +1,106 @@
+name: helm-gui G2 real vertical
+
+# `crates/helm-gui` is the G2 interface driving the accepted `helm-launch` 0.1.
+# It is deliberately NOT a member of the product workspace, because it needs GTK
+# and libadwaita development packages that the accepted crates do not and that
+# the workspace runners do not install. Making it a member would make every
+# accepted crate unbuildable wherever GTK is absent.
+#
+# That exclusion is recorded temporary architecture debt, so the consumer needs
+# its own gate: this workflow is it. It installs the system packages, then runs
+# the same checks the accepted crates get.
+#
+# It adds a gate and weakens none. `helm-launch.yml` and `helm-evidence.yml` are
+# untouched by it.
+#
+# **No GUI runtime or display test runs here.** Opening a window in hosted CI
+# would prove nothing this workflow does not already prove, so there is no
+# virtual display and no screenshot step. The real launch is exercised by
+# `tests/real_launch.rs`, which creates a real ELF subject, admits it, launches
+# it and asserts on a real receipt — all without a display.
+
+on:
+  pull_request:
+    paths:
+      # The consumer itself.
+      - 'crates/helm-gui/**'
+      # `helm-gui` depends on `helm-launch` by path, so a change there has to
+      # revalidate the consumer: a public-API change would break this crate
+      # without any file under `crates/helm-gui/` changing.
+      - 'crates/helm-launch/**'
+      - '.github/workflows/helm-gui.yml'
+  push:
+    paths:
+      - 'crates/helm-gui/**'
+      - 'crates/helm-launch/**'
+      - '.github/workflows/helm-gui.yml'
+
+  # Re-test an exact branch or ref on purpose, without a no-op source commit.
+  workflow_dispatch:
+
+# A newer run for the same workflow and ref makes an older, still-running one
+# stale, so cancel it instead of consuming runners for a result nobody reads.
+# This cancels only overlapping runs; it never relaxes a check or a failure.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  vertical:
+    # Linux only for this first vertical. `helm-launch`'s admission,
+    # authorisation and launch exist on the Linux x86_64 cohort alone, and this
+    # crate drives them directly, so there is nothing to test elsewhere.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: Install the GTK and libadwaita development packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            pkg-config \
+            libgtk-4-dev \
+            libadwaita-1-dev
+
+      - name: Install Rust 1.95.0
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal --component rustfmt,clippy
+          rustup default 1.95.0
+
+      - name: Record the runner
+        run: |
+          rustc -vV
+          cargo -V
+          pkg-config --modversion gtk4
+          pkg-config --modversion libadwaita-1
+
+      - run: cargo fmt --manifest-path crates/helm-gui/Cargo.toml --check
+      - run: cargo clippy --manifest-path crates/helm-gui/Cargo.toml --all-targets --locked -- -D warnings
+      - run: cargo test --manifest-path crates/helm-gui/Cargo.toml --locked
+      - run: cargo build --manifest-path crates/helm-gui/Cargo.toml --locked
+
+      # The load-bearing one, named so a failure here is unmistakable: a real
+      # ELF subject, real admission, a real plan, real authorisation, a real
+      # `helm_launch::launch`, and a real receipt whose digest is recomputed
+      # from its own exact bytes. It also holds the exec-status nonclaim: a
+      # clean run stays indeterminate and is never spelled as success.
+      - name: Real launch to a real receipt, without a display
+        run: cargo test --manifest-path crates/helm-gui/Cargo.toml --locked --test real_launch -- --nocapture
+
+      # The accepted product workspace must be entirely unaffected by the
+      # presence of this crate. If `helm-gui` ever leaks into the workspace
+      # lockfile or membership, this fails.
+      - name: The product workspace is untouched by the GUI
+        run: |
+          if cargo metadata --no-deps --format-version 1 | grep -q '"name":"helm-gui"'; then
+            echo "helm-gui must not be a member of the product workspace"
+            exit 1
+          fi
+          git diff --exit-code -- Cargo.lock
