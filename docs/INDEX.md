@@ -37,6 +37,14 @@ evidence only, with no backend connection, mock and session data only, **no tool
 no implementation authority. It is not production frontend code and not a decision to use web
 technology. The kickoff document is authoritative over it.
 
+The [G2 UI toolkit decision dossier](implementation/HELM-G2-UI-TOOLKIT-DECISION.md) evaluates GTK 4
+with gtk-rs, GTK 4 with selective libadwaita, Qt 6/QML with CXX-Qt, Slint, Iced and a
+Tauri/webview control candidate against the accepted D8 prototype. It is **a dossier prepared for
+the owner, not an accepted decision**: **G2-D9 remains pending, no toolkit is selected, no
+dependency is added, no GUI code exists and no implementation spike is authorised.** Its
+recommendation carries no authority until the owner records a decision at the gate in its final
+section.
+
 ## Odluke i istraživanja
 
 [ADR index](DECISIONS.md): nineteen Proposed records, ADR-0020 Accepted for documentation language,
