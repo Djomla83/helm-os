@@ -1716,10 +1716,18 @@ The owner accepted **G2-D9** on 2026-09-21 on the terms below, recorded in full 
 | 2 | **Selective libadwaita is permitted only through its documented bounded public surface**: public widgets, documented properties, signals and methods, documented style classes, documented CSS variables, and `AdwStyleManager` for system preferences. Undocumented internal CSS nodes, internal widget composition, copying or forking the Adwaita stylesheet, and any dependence on undocumented internals for the HELM identity are **not** an accepted styling strategy. | Toolkit decision 6.2.1 |
 | 3 | **GTK is the PROVISIONAL PRODUCTION DEFAULT, not a production lock.** | Toolkit decision 10.1 |
 | 4 | **Qt 6 / QML + CXX-Qt is the NAMED FALLBACK**, taken if the spike fails any accepted exit criterion — visual and design cost, accessibility, virtualised evidence-table behaviour, keyboard and focus behaviour, or the maintenance and public-styling-surface requirement. **An exit criterion must not be silently lowered to retain GTK.** | Toolkit decision 10.2, 10.3, 11.3 |
-| 5 | **The GTK and libadwaita version floor remains OPEN.** No version pair is selected. It must be decided explicitly before the spike starts, or as the first recorded decision inside it, and in either case before any dependency or version feature flag is adopted. The packages installed on the first development machine must not select it silently. | Toolkit decision 2.3 |
+| 5 | **The GTK and libadwaita version floor remains OPEN.** No version pair is selected. It must be decided explicitly before the spike starts, or as the first recorded decision inside it, and in either case before any dependency or version feature flag is adopted. The packages installed on the first development machine must not select it silently. **Superseded in part on 2026-09-21**: the owner set the **spike** API floor at **GTK 4.18 + libadwaita 1.7** when [authorising the bounded spike](../DECISIONS.md#g2-gtk-spike-authorised). The **distribution support policy stays OPEN**. | Toolkit decision 2.3; spike floor in the [spike record](HELM-G2-GTK-SPIKE.md) |
 | 6 | **This decision by itself does not authorise GUI implementation.** | 20.3 |
 
 **What G2-D9 does not authorise.** No GUI code, no toolkit dependency, no `Cargo` change, no
 toolkit installation, no backend connection, no `helm-launch` integration and no persistence. It
 does not lock production, does not decide the version floor, does not open G-1, G-2 or G-3, and
 accepts no licence for HELM.
+
+**What the later spike authorisation adds, and only that.** On the same day the owner
+[authorised the bounded GTK spike](../DECISIONS.md#g2-gtk-spike-authorised) of toolkit decision
+11.1 to 11.3, with a spike API floor of **GTK 4.18 + libadwaita 1.7**. That authorisation covers
+**that spike alone**: it grants no backend connection, no `helm-launch` integration, no
+persistence, no production implementation authority and no production toolkit lock, and it leaves
+the distribution support policy open. **The spike is not implemented** — it is blocked on the
+environment, as recorded in the [GTK spike record](HELM-G2-GTK-SPIKE.md).

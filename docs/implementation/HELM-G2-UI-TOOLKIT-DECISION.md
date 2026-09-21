@@ -1,7 +1,10 @@
 # HELM G2 — UI TOOLKIT DECISION
 
-> **Status: G2-D9 ACCEPTED by the owner on 2026-09-21. Docs only — acceptance selects a
-> toolkit and authorises no implementation.**
+> **Status: G2-D9 ACCEPTED by the owner on 2026-09-21.** Accepting D9 selected a toolkit and
+> authorised no implementation. The owner **separately authorised the bounded GTK spike** later the
+> same day, with a **spike API floor of GTK 4.18 + libadwaita 1.7**; the **distribution support**
+> **and packaging floor stays open**. **The prototype does not exist**: implementation is currently
+> **BLOCKED on the environment** — see the [GTK spike record](HELM-G2-GTK-SPIKE.md). Docs only.
 > **Revision 2, 2026-09-21 — corrected under HELM-G2-D9-EVIDENCE-C** before the decision was
 > taken. Five factual and decision-scope corrections were applied to revision 1; each is listed
 > with its before and after in section 13, which is permanent evidence and is not rewritten.
@@ -24,8 +27,11 @@
 | Prototype toolkit | **GTK 4 + gtk-rs**, selected for the G2 prototype |
 | Production standing | **PROVISIONAL GTK DEFAULT** — not a production lock |
 | Named fallback | **Qt 6 / QML + CXX-Qt** |
-| GTK/libadwaita version floor | **OPEN** — no version pair selected |
-| GUI implementation | **NOT AUTHORISED** — D9 selects a toolkit, it does not open implementation |
+| Version floor, **at G2-D9** | **OPEN** — no version pair selected |
+| **Spike API floor, currently** | **DECIDED — GTK 4.18 + libadwaita 1.7**, binding on the spike only |
+| **Distribution support policy** | **OPEN** — not decided by the spike floor |
+| GUI implementation, **at G2-D9** | **NOT AUTHORISED** — D9 selected a toolkit and did not open implementation |
+| GUI implementation, **currently** | The bounded spike of section 11 is [**authorised**](../DECISIONS.md#g2-gtk-spike-authorised) but **not implemented and BLOCKED on the environment**; nothing beyond that spike is authorised |
 | Backend work | **NOT AUTHORISED**; `helm-launch` 0.1 is product-accepted and unchanged |
 | Toolkit dependency in the workspace | **NONE**, and none is added by this document |
 

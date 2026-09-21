@@ -2,11 +2,16 @@
 
 <a id="g2-design-gates-accepted"></a>
 
-## G2 DESIGN GATES COMPLETE, 2026-09-21 — G2-D1 to G2-D9 accepted; GTK 4 + gtk-rs selected for the prototype; **no GUI exists and none is authorised**
+## G2 DESIGN GATES COMPLETE AND GTK SPIKE AUTHORISED, 2026-09-21 — G2-D1 to G2-D9 accepted; GTK 4 + gtk-rs selected for the prototype; **the bounded spike is authorised, not implemented, and blocked on the environment**
 
 The owner [accepted G2-D9](DECISIONS.md#g2-d9-toolkit-accepted), the last of the nine G2 design
-gates. **G2-D1 through G2-D9 are accepted.** This completes the design work that had to precede
-implementation. It does not begin implementation.
+gates, and then separately
+[authorised the bounded GTK implementation spike](DECISIONS.md#g2-gtk-spike-authorised) with an API
+floor of **GTK 4.18 + libadwaita 1.7**. **G2-D1 through G2-D9 are accepted** and **the
+bounded spike is authorised**.
+
+**No HELM GUI or prototype implementation exists.** The spike is authorised but **not implemented**
+and **blocked on the build and runtime environment**; its exit criteria 1 to 6 are **NOT_RUN**.
 
 | Item | State |
 |---|---|
@@ -17,20 +22,24 @@ implementation. It does not begin implementation.
 | libadwaita | **permitted, bounded** — documented public surface only |
 | Production standing | **PROVISIONAL GTK DEFAULT — not a production lock** |
 | Named fallback | **Qt 6 / QML + CXX-Qt**, if the spike fails any accepted exit criterion |
-| GTK/libadwaita version floor | **OPEN** — no version pair selected |
-| Evidence branch | `design/g2-visual-kickoff` at `d9e4693cce69fdaebcb46d2f0dddd27b4f4508bf`, **not merged to main** |
+| **Spike API floor** | **DECIDED 2026-09-21 — GTK 4.18 + libadwaita 1.7**, binding on the spike |
+| **Distribution support policy** | **OPEN** — how far back HELM must run is undecided and is a separate owner question |
+| G2 design line | **integrated into `main`** by fast-forward at `8b29243b57a24f77b205da298c2bc075653dfe5f` |
 | Spike authorisation | **GRANTED 2026-09-21** — the bounded spike of toolkit decision 11.1 to 11.3 only, API floor **GTK 4.18 + libadwaita 1.7** |
-| Spike API floor status | an implementation floor for the spike **only** — not a distribution support policy, not a packaging policy, not a production lock |
+| Spike API floor status | an implementation floor for the spike **only** — not a distribution support policy, not a packaging policy, not a minimum released image, not a production lock |
 | **Spike execution** | **BLOCKED on the environment — NOT IMPLEMENTED, exit criteria 1 to 6 NOT_RUN**; see the [spike evidence](implementation/HELM-G2-GTK-SPIKE.md) |
-| Next owner gate | **the owner's environment decision** — no machine reachable from this work carries GTK >= 4.18 with libadwaita >= 1.7 |
+| Next owner gate | **the owner's environment decision** — no environment probed for this work met the spike floor |
 
-**What does not exist.** There is **no HELM GUI**. No GUI source file exists anywhere in the
-repository. **No GTK, gtk-rs or libadwaita dependency exists** in `Cargo.toml` or `Cargo.lock`, and
-no toolkit is installed by this record. **No version floor exists** — the GTK and libadwaita
-generations HELM will target are undecided, and section 2.3 of the
-[toolkit decision](implementation/HELM-G2-UI-TOOLKIT-DECISION.md) records why that must be decided
-explicitly rather than inherited from whatever a development machine happens to have installed.
-No implementation spike has started.
+**What does not exist.** There is **no HELM GUI and no prototype implementation**. No GUI source
+file exists anywhere in the repository, no `prototypes/` directory exists, and **no GTK, gtk-rs or
+libadwaita dependency exists** in `Cargo.toml` or `Cargo.lock`. No toolkit is installed by this
+record, and the root workspace membership is unchanged.
+
+**What is decided, and what is not.** The **spike API floor is decided**: GTK 4.18 with
+libadwaita 1.7, binding on the authorised spike. The **distribution support policy stays open** —
+how far back a released HELM must run is a separate owner question, and section 2.3 of the
+[toolkit decision](implementation/HELM-G2-UI-TOOLKIT-DECISION.md) records the reach evidence behind
+it. The two must not be conflated: deciding the spike floor decided no policy.
 
 **What is unchanged.** `helm-launch` 0.1 stays product-accepted at reviewed head
 `dd92a85fcf0cc35306123ef2dc39adb148ddc616`; no backend work is opened. The recorded gaps **G-1**
@@ -46,12 +55,16 @@ revision-1 errors and their corrections visible as permanent evidence, and [the 
 evidence](implementation/HELM-G2-GTK-SPIKE.md).
 
 **The GTK spike is authorised but not implemented.** No prototype source was written, no toolkit
-dependency was added, and exit criteria 1 to 6 are **NOT_RUN**, because no environment reachable
-from this work carries GTK 4.18 with libadwaita 1.7 — the only Linux present is Ubuntu 24.04, whose
-archives top out at GTK 4.14.5 and libadwaita 1.5.0, below the accepted floor, so installing
-packages there would not reach it either. Host package installation was not authorised and was
-not performed, and the floor was not lowered. **This is not an exit-criterion failure**: nothing
-was exercised, so the fallback rule is not triggered and Qt is not started.
+dependency was added, and exit criteria 1 to 6 are **NOT_RUN**, because **no environment probed for
+that work met the spike floor**: the Windows host carries no GTK and no `pkg-config`, and the two
+WSL distributions that were probed carry no GTK, no libadwaita and no `pkg-config`, with the
+`Ubuntu` distribution at 24.04.4 LTS whose archives top out at GTK 4.14.5 and libadwaita 1.5.0 —
+below the floor, so installing packages there would not reach it either. Two further registered
+distributions were deliberately **not probed** and no claim is made about their package state; the
+reason is recorded in the [spike evidence](implementation/HELM-G2-GTK-SPIKE.md). Host package
+installation was not authorised and was not performed, and the floor was not lowered.
+**This is not an exit-criterion failure**: nothing was exercised, so the fallback rule is not
+triggered and Qt is not started. GTK production standing stays **provisional**.
 
 ---
 

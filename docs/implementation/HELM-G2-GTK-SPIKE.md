@@ -2,10 +2,13 @@
 
 > **Status: AUTHORISED, NOT IMPLEMENTED. BLOCKED on the build and runtime environment.**
 > The owner authorised the bounded GTK spike on 2026-09-21 with an API floor of **GTK 4.18 +
-> libadwaita 1.7**. **No environment available to this work can build or run at that floor**, and
-> the batch was explicitly forbidden from installing host packages, adding repositories or lowering
-> the floor. Exit criteria 1 to 6 are therefore **NOT_RUN**, no prototype source was written, and
-> **GTK is not accepted, not rejected and not production-locked**. Written in English under
+> libadwaita 1.7**. **No environment probed for this batch met that floor**, and the batch was
+> explicitly forbidden from installing host packages, adding repositories or lowering the floor.
+> Two registered WSL distributions were deliberately not probed, for the recorded reason in 3.2,
+> and no claim is made about them. Exit criteria 1 to 6 are **NOT_RUN**, no prototype source was
+> written, and **GTK is not accepted, not rejected and not production-locked**. The **spike API
+> floor is decided** at GTK 4.18 + libadwaita 1.7; the **distribution support policy stays open**.
+> Written in English under
 > [ADR-0020](../adr/ADR-0020-documentation-language.md).
 
 ---
@@ -45,11 +48,16 @@ owner's own wording, at [DECISIONS.md](../DECISIONS.md#g2-gtk-spike-authorised).
 
 ## 3. The blocker
 
-**RESULT: the spike cannot be built or run on any environment reachable from this work.**
+**RESULT: no environment probed for this batch can build or run the spike at the accepted floor.**
 
-The cause is not a defect in the spike, in GTK, or in the accepted floor. It is that no environment
-here carries GTK 4.18 or libadwaita 1.7, and the one Linux environment present **cannot reach that
-floor from its own archives at all**.
+The cause is not a defect in the spike, in GTK, or in the accepted floor. It is that none of the
+environments probed here carries GTK 4.18 or libadwaita 1.7, and the general-purpose Linux
+environment among them **cannot reach that floor from its own archives at all**.
+
+**Scope of the claim.** This RESULT is stated over the environments actually probed, listed in
+3.1 and 3.2. It is **not** a claim about every environment that exists on the machine: two
+registered WSL distributions were deliberately not probed, for the recorded reason below, and no
+claim is made about their package state.
 
 ### 3.1 Host
 
@@ -78,13 +86,31 @@ The pkg-config command could not be found.
 The failure is in the `glib-sys` build script for target `x86_64-pc-windows-msvc`. It is reached
 before any HELM code, so nothing about the spike's own source is being tested by it.
 
-### 3.2 The only Linux environment present
+### 3.2 The Linux environments that were probed, and the two that were not
 
-**FACT.** Four WSL 2 distributions are registered: `Ubuntu` (default), `helm-lab-g0`,
-`helm-lab-g0-staging`, `helm-lab-g0-proton`. `Ubuntu` and `helm-lab-g0` were probed read-only. No
-distribution was started for any purpose other than inspection, and none was modified.
+**FACT.** Four WSL 2 distributions are registered on this machine:
 
-| Probe, in `Ubuntu` and in `helm-lab-g0` | Output |
+| Distribution | Probed for this batch | Claim made about its package state |
+|---|---|---|
+| `Ubuntu` (default) | **YES**, read-only | Yes — recorded below |
+| `helm-lab-g0` | **YES**, read-only | Yes — recorded below |
+| `helm-lab-g0-staging` | **NO** | **NONE** |
+| `helm-lab-g0-proton` | **NO** | **NONE** |
+
+**FACT — why the other two were not probed.** They are not general-purpose environments. The
+[Gate 0 report](../experiments/EXP-009-GATE0-REPORT.md) records them as *"two owner-authorised
+clones ... derived from its quiesced VHD export"*, and the
+[Gate 0 lab runbook](../experiments/LAB-G0-RUNBOOK.md) records the authority behind them exactly:
+*"The owner permits these two extra distributions solely to avoid modifying the vanilla runtime."*
+That is a bounded, purpose-specific owner permission for the Gate 0 completion arms. Using them as
+a build environment for unrelated G2 work is outside it, so they were left alone. This reason is
+cited from the existing record; it was not invented for this document.
+
+**FACT.** All four distributions were `Stopped` before this batch and `Stopped` after it. The two
+probed distributions were started only to run read-only version queries and were not modified; no
+package was installed, no configuration was changed, and no global `wsl --shutdown` was used.
+
+| Probe, in the two probed distributions `Ubuntu` and `helm-lab-g0` | Output |
 |---|---|
 | `pkg-config` | `MISSING` |
 | `pkg-config --modversion gtk4` | `NOT_INSTALLED` |
@@ -99,10 +125,11 @@ libgtk-4-dev:       Installed: (none)   Candidate: 4.14.5+ds-0ubuntu0.10
 libadwaita-1-dev:   Installed: (none)   Candidate: 1.5.0-1ubuntu2
 ```
 
-**RESULT.** **Authorising `apt install` would not unblock this spike.** The best version Ubuntu
-24.04 can offer is **GTK 4.14.5 with libadwaita 1.5.0**, which is below the accepted floor of GTK
-4.18 + libadwaita 1.7 on both libraries. Reaching the floor requires a *different* environment, not
-a package installation in this one.
+**RESULT.** **Authorising `apt install` in this distribution would not unblock the spike.** The best
+version Ubuntu 24.04 can offer is **GTK 4.14.5 with libadwaita 1.5.0**, below the accepted floor of
+GTK 4.18 + libadwaita 1.7 on both libraries. Reaching the floor requires a *different* environment,
+not a package installation in this one. The blocker therefore stands on what was probed, and does
+not depend on any assumption about the two unprobed distributions.
 
 This is exactly the reach evidence already recorded in section 2.3.1 of the
 [toolkit decision](HELM-G2-UI-TOOLKIT-DECISION.md), now confirmed on the actual machine.
@@ -283,6 +310,8 @@ same gap: that runner cannot reach the accepted floor either.
 | Item | State |
 |---|---|
 | G2 GTK spike | **AUTHORISED, NOT IMPLEMENTED, BLOCKED on environment** |
+| Spike API floor | **DECIDED — GTK 4.18 + libadwaita 1.7** |
+| Distribution support policy | **OPEN**, and not decided by the spike floor |
 | Exit criteria 1 to 6 | **NOT_RUN** |
 | Prototype source | **NOT WRITTEN** |
 | Toolkit dependency in the repository | **NONE** — root `Cargo.toml` and `Cargo.lock` untouched, workspace membership unchanged |
@@ -299,5 +328,5 @@ same gap: that runner cannot reach the accepted floor either.
 authorisation — return to G2-D9 and the named Qt fallback — is **not** triggered, and Qt must not
 be started. The spike is paused on an environment decision, not on a toolkit finding.
 
-**Next gate: the owner's environment decision in section 11.** Once an environment at the floor
-exists, the spike resumes at section 11.1 of the toolkit decision with nothing else changed.
+**Next gate: the owner's environment decision in section 11.** Once an environment at the floor is
+available, the spike resumes at section 11.1 of the toolkit decision with nothing else changed.
