@@ -1,6 +1,10 @@
 # HELM G2 — UI TOOLKIT DECISION
 
 > **Status: dossier prepared for the owner. G2-D9 is PENDING. Docs only.**
+> **Revision 2, 2026-09-21 — corrected under HELM-G2-D9-EVIDENCE-C.** Five factual and
+> decision-scope corrections were applied to revision 1; each is listed with its before and
+> after in section 13. G2-D8 is untouched, D1 to D7 are untouched, and no product semantics
+> changed.
 > This document evaluates candidate toolkits for the first HELM graphical application and ends in a
 > recommendation. It **selects nothing**, authorises **no** GUI code, adds **no** dependency,
 > changes **no** crate and touches **no** backend. G2-D9 is an owner decision and is recorded in
@@ -61,9 +65,10 @@ All rows were read on **2026-09-21**. Dates are publication dates of the named v
 
 | Component | Version | Date | Source of the figure |
 |---|---|---|---|
-| GTK | 4.22.4 stable | 2026-04-30 | [gtk.org](https://www.gtk.org/) release series; 4.23 is the development series |
+| GTK | **4.24.0** stable | **2026-09-11** | Upstream `NEWS` on `main`; 4.22.5 is the head of the previous stable branch. See 2.3 |
 | `gtk4` crate (gtk4-rs) | 0.11.5 | 2026-09-20 | crates.io registry API |
-| libadwaita | 1.10 | with GNOME 51 | [GNOME 51 developer notes](https://release.gnome.org/51/developers/index.html); 1.9 shipped with GNOME 50 |
+| libadwaita | **1.10.0**, requires **GTK >= 4.23.1** | with GNOME 51 | Upstream `meson.build` of the `libadwaita-1-10` branch; [GNOME 51 developer notes](https://release.gnome.org/51/developers/index.html). See 2.3 |
+| libadwaita, previous | **1.9.4**, requires **GTK >= 4.21.1** | with GNOME 50 | Upstream `meson.build` of the `libadwaita-1-9` branch. See 2.3 |
 | `libadwaita` crate | 0.9.2 | 2026-07-07 | crates.io registry API |
 | Qt | 6.10 current, 6.8 LTS | 6.8 LTS supported to 2029 | [Qt releases](https://doc.qt.io/qt-6/qt-releases.html) |
 | CXX-Qt | 0.10.0 | 2026-08-24 | crates.io registry API; [KDAB/cxx-qt](https://github.com/KDAB/cxx-qt) |
@@ -81,6 +86,76 @@ Two observations follow from the table itself and are worth stating before any o
 - **`accesskit`, `ashpd` and `rfd` are listed deliberately.** They are the components a toolkit
   without native Linux desktop integration must bolt on, and their presence or absence in a
   candidate's dependency graph is evidence, not opinion.
+
+### 2.3 GTK and libadwaita version floor — not selected here
+
+Build-time compatibility between GTK and libadwaita is a hard constraint, not a preference:
+**libadwaita declares a GTK minimum in its own build definition.** Read from the upstream
+`meson.build` of each stable branch on 2026-09-21:
+
+| libadwaita branch | Version | Declared `gtk_min_version` |
+|---|---|---|
+| `libadwaita-1-8` | 1.8.8 | `>= 4.19.4` |
+| `libadwaita-1-9` | 1.9.4 | `>= 4.21.1` |
+| `libadwaita-1-10` | 1.10.0 | **`>= 4.23.1`** |
+
+GTK numbers odd minor versions as development series, so `>= 4.21.1` is satisfied in practice
+by the **4.22.x** stable series and `>= 4.23.1` by the **4.24.x** stable series.
+
+**Consequence, stated plainly: GTK 4.22.x and libadwaita 1.10 are not a compatible pair.**
+libadwaita 1.10 does not build against GTK 4.22.x. Revision 1 of this document presented
+GTK 4.22.4 and libadwaita 1.10 together as an unquestioned production pair without checking
+that constraint. That is corrected here.
+
+#### 2.3.1 What is actually shipped
+
+Read on 2026-09-21 from the Debian sources API and the Launchpad publishing API. These are
+**distribution archives**, which is what determines whether a user can run the application,
+rather than upstream release pages, which only say what exists.
+
+| Distribution | GTK 4 | libadwaita |
+|---|---|---|
+| Debian 12 bookworm, oldstable | 4.8.3 | 1.2.2 |
+| Debian 13 trixie, **current stable** | 4.18.6 | 1.7.6 |
+| Debian forky, testing | 4.22.4 | 1.9.2 |
+| Debian sid, unstable | 4.24.0 | 1.9.2 |
+| Ubuntu 24.04 LTS noble | 4.14.5 | 1.5.0 |
+| Ubuntu 25.04 plucky | 4.18.5 | 1.7.0 |
+| Ubuntu 25.10 questing | 4.20.1 | 1.8.0 |
+| Ubuntu 26.04 LTS resolute | 4.22.4 | 1.9.1 |
+| Ubuntu 26.10 stonking | 4.24.0 | 1.10.0 |
+
+**libadwaita 1.10 is shipped by exactly one archive in that table** — Ubuntu 26.10, a
+development release. Debian sid already carries GTK 4.24.0 but is still on libadwaita 1.9.2.
+Targeting libadwaita 1.10 today means targeting a stack that is not yet generally installed
+anywhere.
+
+#### 2.3.2 The three candidate floors
+
+| Option | Pair | Reach today | What it costs |
+|---|---|---|---|
+| **Broad reach** | GTK **4.18** + libadwaita **1.7** | Debian 13 stable, Ubuntu 25.04 and later | No `AdwSidebar`, which arrived in 1.9; no `AdwCssClassBinding`, which arrived in 1.10. HELM writes its own sidebar |
+| **Conservative current** | GTK **4.22** + libadwaita **1.9** | Ubuntu 26.04 LTS, Debian forky and sid | `AdwSidebar` available; no `AdwCssClassBinding` |
+| **Leading edge** | GTK **4.24** + libadwaita **1.10** | Ubuntu 26.10 only | Newest API, and effectively unavailable to most users until the next distribution cycle |
+
+The Rust bindings do not constrain the choice. `gtk4` 0.11.5 carries feature flags from `v4_2`
+to `v4_24`, and the `libadwaita` crate 0.9.2 carries `v1_1` to `v1_10` alongside `gtk_v4_2` to
+`gtk_v4_24`; the floor is selected by which feature flags the application enables at build
+time. `gtk4` 0.11.5 declares a **minimum Rust version of 1.92** — revision 1 said 1.83, taken
+from a secondary summary, and that is corrected here from the registry metadata.
+
+#### 2.3.3 This document does not select the floor
+
+**No target-machine package evidence exists in the repository.** The only Linux platform
+recorded anywhere is the `ubuntu-24.04` GitHub Actions runner image used for headless CI. That
+is a build and test environment, not a desktop target, and it would imply a far lower floor —
+GTK 4.14 with libadwaita 1.5 — than any option above. It does not resolve the question and is
+not treated as if it did.
+
+The floor is therefore an **open decision**, carried in section 12. It must be made
+explicitly: either the owner names the target distribution, or it becomes the first recorded
+decision of the implementation spike, with the evidence recorded beside it. **It must not be
+adopted silently by whatever happens to be installed on the first machine that builds it.**
 
 ---
 
@@ -165,8 +240,9 @@ Electron is the webview case of section 8 with a larger footprint. The list is n
 
 ### 6.1 GTK 4 + gtk-rs
 
-GTK 4.22.4 stable, `gtk4` crate 0.11.5, minimum Rust 1.83. LGPL-2.1-or-later for GTK; the gtk-rs
-bindings are MIT.
+GTK 4.24.0 stable, published 2026-09-11; `gtk4` crate 0.11.5, minimum Rust **1.92**.
+LGPL-2.1-or-later for GTK; the gtk-rs bindings are MIT. The version floor actually adopted is
+an open decision — see **2.3**, which is not settled by this assessment.
 
 **Strengths.** Present on essentially every Linux desktop already installed. Accessibility is
 native and structural: GTK 4 exposes **AT-SPI on Linux and BSD** through the `GtkAccessible`
@@ -201,8 +277,11 @@ comfortable portability off Linux.
 
 ### 6.2 GTK 4 + selective libadwaita
 
-Assessed separately, as the owner required. libadwaita 1.10 ships with GNOME 51; the `libadwaita`
-crate is 0.9.2.
+Assessed separately, as the owner required. libadwaita 1.10.0 ships with GNOME 51 and
+**requires GTK >= 4.23.1**; libadwaita 1.9.4 requires GTK >= 4.21.1. The `libadwaita` crate is
+0.9.2 and exposes `v1_1` to `v1_10`. **Which generation HELM targets is unresolved and is not
+decided here — see 2.3.** Everything below holds for any of the three candidate floors unless
+a specific version is named.
 
 libadwaita is **not** a different toolkit. It is a widget and style layer on top of GTK 4, so every
 GTK finding above still holds. What changes is the visual contract and the structural vocabulary.
@@ -219,16 +298,62 @@ handled automatically, which serves 8.15 rather than fighting it.
 CSS variables instead of hardcoded colors"* and to *"use accent color variables and the `.accent`
 style class"* rather than to impose a bespoke palette, per the
 [libadwaita styles documentation](https://gnome.pages.gitlab.gnome.org/libadwaita/doc/main/styles-and-appearance.html).
-Its behaviour is to follow the **system** accent; an application that overrides the accent must then
-handle foreground colours itself, and `AdwStyleManager` continues to report the system colour rather
-than the override. A HELM-burgundy identity is therefore something libadwaita permits but does not
-help with.
 
-**Material risks.** The decisive one: **the libadwaita stylesheet is not a stable public API.** A
-HELM identity built by overriding its internal styling is exposed to breakage at every GNOME cycle —
-two releases a year — and the breakage surfaces as visual regressions, which are exactly the
-regressions no test catches. The second risk is drift: the more Adwaita widgets are used unmodified,
-the more HELM looks like a GNOME application, which section 8.16.4 explicitly rejects.
+The accent behaviour is stated precisely here, because revision 1 stated it loosely:
+
+- libadwaita **follows the system accent by default**;
+- an application **can override the accent through documented, public CSS variables**.
+  `--accent-bg-color`, `--accent-fg-color` and `--accent-color` are documented, and the
+  [CSS variables reference](https://gnome.pages.gitlab.gnome.org/libadwaita/doc/main/css-variables.html)
+  states that *"applications can override these colors by re-declaring them"*, giving
+  `:root { --accent-bg-color: #e01b24; }` as its own example;
+- **`AdwStyleManager` still reports the system accent.** Its `accent-color` and
+  `accent-color-rgba` properties are documented as *"the current system accent color"*, and a
+  CSS override does not change what that API returns;
+- overriding a background accent also requires overriding the matching standalone colour, per
+  the same reference, so that contrast stays correct.
+
+**HELM Burgundy is therefore ownable through public, documented API.** Revision 1 implied that a
+HELM identity was something libadwaita *"permits but does not help with"*; that understated the
+documented support and is corrected. What HELM must not rely on is anything **undocumented**.
+
+**Material risks.** Restated to match the corrected finding above. The concern is **not** that the
+HELM identity cannot be owned — it can, through public API. The concern is **dependence on
+internal styling structure.** libadwaita's public surface — widgets, properties, style classes and
+the documented CSS variables — is versioned and supported. Its internal widget composition and CSS
+node structure are not, and an identity built by targeting those nodes breaks at GNOME cycles,
+twice a year, as silent visual regressions that no test catches.
+
+The second risk is drift: the more Adwaita widgets are used unmodified, the more HELM looks like a
+GNOME application, which section 8.16.4 explicitly rejects.
+
+The third risk is the version floor of 2.3, which is a packaging and reach question rather than a
+visual one, and which is still open.
+
+#### 6.2.1 Bounded selective-libadwaita rule
+
+Binding if libadwaita is adopted. The boundary is **documented surface**, not "how much Adwaita".
+
+**Permitted — public and documented:**
+
+- libadwaita widgets with their documented properties, signals and methods;
+- documented style classes;
+- documented CSS variables, including the accent variables, redeclared at `:root`, with the
+  matching standalone colours overridden alongside them;
+- `AdwStyleManager` for reading system preferences, understanding that it reports the **system**
+  accent and not a HELM override;
+- automatic light, dark and high-contrast handling, which is kept rather than defeated.
+
+**Not permitted — undocumented:**
+
+- targeting libadwaita's internal CSS node names or a widget's internal composition;
+- depending on the internal structure of any Adwaita widget template;
+- copying or re-implementing the Adwaita stylesheet to reach an effect.
+
+**Rule of resolution.** Where the HELM identity cannot be expressed through the permitted
+surface, the correct response is to write a HELM-owned widget with HELM-owned CSS — never to
+reach into libadwaita's internals. Every libadwaita widget is wrapped behind a thin HELM layer so
+that dropping one later is a local change.
 
 **What HELM gains.** Substantially less structural UI code, correct light/dark/high-contrast
 behaviour, and a proven sidebar-and-content architecture.
@@ -310,17 +435,59 @@ list views. For a product whose Advanced mode is *made of* long lists and tables
 not a footnote. There is no in-toolkit portal file chooser: H4 requires `rfd` or `ashpd` as a
 separate dialog stack.
 
-**Material risks.** **Licensing is the governing risk.** Slint is GPLv3, or a paid royalty-free or
-enterprise subscription. For any HELM that is not itself GPLv3, a commercial subscription becomes a
-permanent operating dependency of an OS-facing product. As with Qt, this pre-empts an owner decision
-that has not been made — but more sharply, because the alternative to the copyleft branch is a
-recurring commercial relationship with a single vendor rather than a one-time compliance posture.
-The second risk is ecosystem concentration: Slint is open-core from one company.
+#### 6.4.1 Licensing, corrected
 
-**What HELM gains.** Rust-native ergonomics, total visual freedom, a small fast binary.
+Slint 1.18.1 declares the SPDX expression
+`GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0` — a
+**tri-licence**. Revision 1 described it as *"GPLv3, or a paid royalty-free or enterprise
+subscription"*. That was wrong: the royalty-free branch is **not** a paid tier, and the error is
+corrected here.
+
+For a HELM desktop application the relevant branch is the **Slint Royalty-free Desktop, Mobile,
+and Web Applications License, version 2.0**, which grants a *"world-wide, royalty-free,
+non-exclusive license to use, reproduce, make available, modify, display, perform, distribute the
+Software as part of a Desktop, Mobile, or Web Application"* — that is, **proprietary desktop use
+at no cost**. Its conditions are specific and checkable:
+
+| Condition in the royalty-free licence | Effect on HELM |
+|---|---|
+| Attribution: either an `AboutSlint` widget reachable from the top-level menu, or the Slint badge on a public download page | A **product** requirement, not an abstraction — it lands on a HELM screen and has to be designed for |
+| No use within an **Embedded System** | Irrelevant while HELM is a desktop application; relevant if HELM ever ships as a device image |
+| The Software may not be distributed alone, outside an Application | Not a constraint for HELM |
+| An Application may not expose Slint's APIs | Not a constraint for HELM |
+| Licence notices may not be removed or altered | Ordinary |
+
+`LicenseRef-Slint-Software-3.0` is the paid commercial branch, needed for embedded use or to
+drop the attribution condition. `GPL-3.0-only` remains available for a copyleft HELM.
+
+**Net effect: materially better than revision 1 recorded.** Slint's criterion N rating is
+corrected from WEAK to **GOOD**. What remains is a vendor-specific licence reference rather than
+a standard OSI licence, a standing attribution obligation with a visible product consequence, and
+an embedded carve-out that would matter if HELM ever became a device image. That is not as clean
+as MIT or LGPL-2.1-or-later, but it does **not** force a subscription and it does **not** pre-empt
+the owner's licence policy the way revision 1 claimed.
+
+#### 6.4.2 Material risks, after the licence correction
+
+**The governing risk is technical, not legal, and the disposition does not change.** The licence
+correction removes an argument that should never have been made; it does not remove the
+accessibility and performance evidence, which is what DEFER rests on:
+
+- AccessKit's own repository states that its adapters do not yet support all UI element types or
+  all schema properties;
+- Slint's tracker carries open accessibility work on text-input widgets;
+- Slint reports that it cannot yet use newer AccessKit capabilities such as list views;
+- the accessibility feature is reported to have a significant performance cost on large list
+  views — which is the exact shape of HELM's Advanced mode.
+
+Against H1, H2 and H6 that is sufficient on its own. The secondary risk is ecosystem
+concentration: Slint is open-core from one company.
+
+**What HELM gains.** Rust-native ergonomics, total visual freedom, a small fast binary, and a
+no-cost proprietary desktop licence.
 
 **What HELM gives up.** Mature desktop accessibility today, native portal integration, distro
-presence, and licence neutrality.
+presence, and a standard OSI licence with no attribution obligation.
 
 ### 6.5 iced
 
@@ -370,7 +537,7 @@ Ratings are **for HELM's accepted requirements**, not general quality. Gating cr
 | K | Long-term maintenance | STRONG | STRONG | MIXED | MIXED | MIXED | MIXED |
 | L | Performance / startup / memory | STRONG | STRONG | MIXED | STRONG | STRONG | WEAK |
 | M | Dependency footprint | MIXED | MIXED | WEAK | GOOD | GOOD | WEAK |
-| N | Licensing implications | STRONG | STRONG | MIXED | WEAK | STRONG | GOOD |
+| N | Licensing implications | STRONG | STRONG | MIXED | GOOD | STRONG | GOOD |
 | O | Developer tooling | GOOD | GOOD | STRONG | GOOD | GOOD | STRONG |
 | P | Progressive-disclosure UI | STRONG | STRONG | STRONG | GOOD | GOOD | GOOD |
 | **Q** | **Evidence-heavy screens (gating)** | **STRONG** | **STRONG** | **STRONG** | **MIXED** | **MIXED** | **GOOD** |
@@ -397,13 +564,16 @@ is a mature accessibility model and WebKitGTK bridges it to AT-SPI. The objectio
    macOS. HELM's entire product culture is that a claim is recorded with the thing that produced it.
    An interface whose rendering and layout engine varies per machine, and which HELM neither pins
    nor validates, is at odds with that culture for no capability HELM needs.
-2. **An uncontrolled transformation stage over bytes that must not be transformed.** Section 13.3 of
-   the accepted definition requires that copying a receipt copies the **exact bytes**,
-   unreformatted, because reformatting changes the digest. A webview architecture places a JSON and JavaScript
-   marshalling boundary between `helm-launch` receipts and the screen. Every value HELM shows would
-   round-trip through a serialisation layer whose normalisation behaviour HELM does not own. This is
-   the strongest single objection: it is not a performance complaint, it is a correctness hazard in
-   exactly the part of the product that must be literal.
+2. **A byte-fidelity burden that the architecture adds rather than removes — corrected.**
+   Revision 1 claimed that receipt bytes would *necessarily* cross a JSON boundary and that this
+   made exact-byte copying impossible. **That claim was wrong and is withdrawn.** Tauri
+   supports raw byte payloads in both directions: `InvokeResponseBody::Raw(Vec<u8>)` for command
+   responses and `InvokeBody::Raw(Vec<u8>)` for request bodies, so exact receipt bytes can cross
+   the IPC boundary unchanged. What is true, and weaker, is this: the **default** path is the
+   `serde` path to `InvokeResponseBody::Json`, so byte fidelity becomes a property the application
+   must deliberately preserve and test at every hop — Rust, IPC, JavaScript, DOM, clipboard —
+   rather than a property it inherits. That is a cost, not a barrier, and **it is not on its own a
+   reason to reject Tauri.**
 3. **Footprint against the actual workload.** HELM's GUI is idle almost all of the time and busy
    rarely. WebKitGTK is among the heaviest dependency trees on a Linux desktop and runs a
    multi-process engine per window. The cost is paid continuously for a benefit HELM does not use.
@@ -412,6 +582,24 @@ is a mature accessibility model and WebKitGTK bridges it to AT-SPI. The objectio
    OS-facing product, and maintaining them alongside Rust for the life of the product.
 5. **No native integration advantage.** File dialogs still route through a portal plugin, so H4 is
    no easier than it is for Slint or iced.
+
+### 8.1 The rejection basis, restated
+
+With objection 2 corrected, the rejection rests on the remaining, HELM-specific constraints — and
+not on any impossible-exact-bytes claim:
+
+1. **Webview rendering and version variability.** The engine is WebKitGTK at whatever version
+   the distribution ships, it differs from the engine used on other platforms, and HELM neither
+   pins nor validates it. For a product whose culture is to record a claim together with the
+   thing that produced it, an unpinned and unvalidated rendering surface is the wrong default.
+2. **An extra browser and webview surface acquired permanently.** A web engine, a JavaScript
+   toolchain, an npm supply chain and a front-end framework lifecycle become standing
+   dependencies of an OS-facing product, maintained alongside Rust for its whole life.
+3. **Mismatch with the desired native, deterministic UI path.** The accepted direction is a
+   calm native Linux desktop application with portal integration, native accessibility and
+   predictable behaviour. A webview reaches the same destination through more layers, each of
+   which HELM would have to own, for no capability HELM needs.
+4. **Footprint against the actual workload**, as in objection 3 above.
 
 **Verdict: REJECT for both the G2 prototype and the G2 production application.** HELM should not
 become a web application accidentally, and here it would not even be a favourable accident.
@@ -444,26 +632,45 @@ does not move the recommendation.
 **GTK 4 with gtk-rs, using libadwaita selectively and under a bounded rule, with the HELM identity
 expressed as a HELM-owned style layer.**
 
-**Suitable for: the G2 prototype and the G2 production application — both.** This matters. It means
-the spike is not throwaway work and the prototype is the first increment of the product rather than
-a rehearsal for it.
+**Recommended disposition — conditional, not unconditional:**
+
+| Scope | Disposition |
+|---|---|
+| **G2 prototype** | **SELECTED FOR G2 PROTOTYPE** |
+| **G2 production application** | **PROVISIONAL PRODUCTION DEFAULT** — not locked |
+
+**The production lock is conditional on the spike.** GTK becomes the production toolkit only
+when the implementation spike of section 11 passes the exit criteria already defined there:
+design cost, accessibility, virtualisation, keyboard and focus, and maintenance. Until those
+criteria are met on something that actually runs, production standing is **provisional and
+reversible**.
+
+This wording is deliberate. Revision 1 recommended GTK for prototype and production
+unconditionally, which asserted a production outcome that nothing in this document supports,
+because nothing has been built. A dossier can rank candidates on evidence; it cannot lock a
+production toolkit before a line of the interface exists.
+
+**Qt 6 / QML + CXX-Qt is the named fallback**, not a candidate to be re-weighed from scratch.
+If the spike fails any exit criterion, the fallback is taken and G2-D9 is re-opened. The spike
+is not repaired by lowering a criterion.
 
 **The major reason, stated plainly:** GTK is the only candidate that satisfies all five gating
-requirements today, from a stack already installed on the target machine, under a licence that
+requirements today, from a stack that every mainstream Linux distribution already packages — see
+2.3, noting that the **version floor** within that stack is still open — under a licence that
 leaves the owner's unadopted licence policy untouched. Accessibility, portal file choosing,
 virtualised evidence tables and faithful copy are not features HELM would be adding to GTK — they
 are what GTK already is. The criteria GTK loses on — design ceiling, UI automation, portability off
 Linux — are real costs, but each is a cost HELM can absorb or mitigate, whereas an accessibility
 gap or a licence pre-commitment is not.
 
-**The bounded libadwaita rule.** Adopt libadwaita for **structure and behaviour**: navigation split
-views, status pages, toasts, dialogs, rows and expander rows. Do **not** build the HELM identity by
-overriding libadwaita's internal CSS nodes, because that stylesheet is not a stable API and the
-breakage it produces is visual, silent and untested. Express the identity through GTK CSS custom
-properties, a HELM token sheet, and a small number of HELM-owned custom widgets where the identity
-genuinely demands one. Wrap libadwaita widgets behind a thin HELM layer so that dropping any one of
-them later is a local change. If the design and the stylesheet come into direct conflict, the
-correct response is to write a HELM widget, not to fight Adwaita's cascade.
+**The bounded libadwaita rule** is defined normatively in **6.2.1** and is part of this
+recommendation. In short: adopt libadwaita for **structure and behaviour**, and build the HELM
+identity only on its **public, documented surface** — widgets, properties, style classes and the
+documented CSS variables, including the accent variables, which HELM may legitimately redeclare.
+Do **not** target undocumented CSS nodes or internal widget composition. Where the identity cannot
+be expressed through the permitted surface, write a HELM-owned widget rather than fight Adwaita's
+cascade, and keep every libadwaita widget behind a thin HELM layer so that dropping one later is a
+local change.
 
 **Honest statement of what this costs the owner.** GTK's design ceiling is lower than QML's, and the
 owner is a graphic designer. HELM will be able to look like HELM in GTK — warm off-white, graphite
@@ -472,13 +679,25 @@ will cost more effort in GTK than in QML, and some of that effort lands in GObje
 rather than in design. That is the trade being recommended, and it should be accepted with open
 eyes rather than discovered later.
 
-### 10.2 Second choice
+### 10.2 Second choice — the named fallback
 
 **Qt 6 / QML with a Rust domain layer behind CXX-Qt.**
 
-**Suitable for: the G2 prototype and the G2 production application — both**, subject to two
-conditions being accepted rather than deferred: the pre-1.0 status of CXX-Qt as a load-bearing
-boundary, and the LGPLv3 obligations against an unadopted HELM licence policy.
+**Recommended disposition: EXPLICIT FALLBACK.** Qt is the named destination if the GTK spike
+fails, for the prototype and the production application alike, subject to two conditions being
+accepted rather than deferred: the pre-1.0 status of CXX-Qt as a load-bearing boundary, and the
+LGPLv3 obligations against an unadopted HELM licence policy.
+
+The fallback triggers are exactly the spike exit criteria, and they are enumerated so that
+taking the fallback is a recorded decision rather than an argument:
+
+| Failed exit criterion | Fallback trigger |
+|---|---|
+| Design cost | The HELM identity is unreachable through GTK's public styling surface, or reaching it requires an amount of stylesheet code the owner judges unmaintainable |
+| Accessibility | A screen reader does not read every control and status region, or state changes are not announced |
+| Virtualisation | The Advanced table does not stay responsive over several thousand rows, or values cannot be selected and copied exactly |
+| Keyboard and focus | Any screen is not fully operable from the keyboard, or focus does not enter and return correctly across disclosures |
+| Maintenance | Holding the identity requires depending on undocumented libadwaita or GTK internals, contrary to 6.2.1 |
 
 Qt wins outright on design freedom, animation, developer tooling and testability, and its Rust
 boundary is architecturally clean — the accepted crates stay Rust, QML stays presentation, and no
@@ -492,6 +711,7 @@ Recorded now so that a later change is a decision rather than a drift.
 
 | If this becomes true | Then |
 |---|---|
+| The spike fails any exit criterion of 11.3 | Take the named fallback in 10.2, re-open G2-D9, and record it — the provisional production default does not become permanent by default |
 | The HELM identity proves to be materially damaged by GTK's styling model in the spike | Re-open G2-D9 and move to Qt / QML, rather than fighting the cascade or shipping a diluted identity |
 | The owner adopts a licence policy compatible with LGPLv3 and accepts the footprint | Qt becomes a genuine co-primary rather than a second choice |
 | CXX-Qt reaches 1.0 with a stability commitment | The largest technical objection to Qt is removed |
@@ -502,16 +722,19 @@ Recorded now so that a later change is a decision rather than a drift.
 
 | Candidate | Disposition | Reason |
 |---|---|---|
-| **Tauri / webview** | **REJECT** for prototype and production | Section 8: non-deterministic rendering surface, a marshalling layer over bytes that must stay literal, footprint against an idle workload, and a second platform acquired permanently |
+| **Tauri / webview** | **REJECT** for prototype and production | Section 8.1: webview rendering and version variability that HELM neither pins nor validates, an extra browser and webview surface acquired permanently, mismatch with the desired native deterministic UI path, and footprint against an idle workload. **Not** rejected on byte fidelity — that objection was withdrawn in section 8 |
 | **iced** | **REJECT for production; DEFER as re-evaluable** | No accessibility tree and no screen-reader support today, so H1 and H2 cannot be met and section 8.15 cannot be satisfied. Excellent on licence and testability; worth re-evaluating if AccessKit integration ships and matures |
-| **Slint** | **DEFER** | Strong Rust ergonomics and visual freedom, but AT-SPI coverage is incomplete via AccessKit, accessibility has a reported cost on large lists — the exact shape of HELM's Advanced mode — there is no in-toolkit portal chooser, and GPLv3-or-subscription pre-empts an owner licence decision. Re-evaluate if the licence question is settled and accessibility matures |
+| **Slint** | **DEFER**, unchanged | **Technical grounds only**, per 6.4.2: AT-SPI coverage via AccessKit is incomplete, text-input accessibility is open, newer AccessKit capabilities are not yet used, accessibility has a reported cost on large lists — the exact shape of HELM's Advanced mode — and there is no in-toolkit portal chooser. The licence objection of revision 1 is **withdrawn**: the royalty-free branch permits proprietary desktop use at no cost (6.4.1). Re-evaluate when the accessibility and large-list performance evidence changes |
 | **libadwaita as a visual strategy** | **REJECT as a strategy; ACCEPT as a bounded library** | Adopting GNOME's visual language wholesale contradicts section 8.16.4. Adopting its structural widgets behind a HELM layer does not |
 | **Qt Widgets instead of QML** | **DEFER** | Viable and lighter than QML, but weaker precisely on criterion F, which is the criterion that would make anyone choose Qt over GTK in the first place |
 
 ### 10.5 What this recommendation is not
 
-It is not a selection. **G2-D9 is PENDING and remains an owner decision.** Nothing here authorises
-a dependency, a crate, a spike or a line of GUI code.
+It is not the decision. **G2-D9 is PENDING and remains an owner decision.** The dispositions in
+10.1 and 10.2 are this document's *recommendation* to the owner, not a gate outcome, and
+"SELECTED FOR G2 PROTOTYPE" describes the recommended disposition of the prototype scope — it
+takes effect only when the owner decides G2-D9. Nothing here authorises a dependency, a crate, a
+spike or a line of GUI code.
 
 ---
 
@@ -570,6 +793,8 @@ GTK is for HELM.
 | Open item | Owner of the answer |
 |---|---|
 | G2-D9 itself | The owner |
+| **The GTK and libadwaita version floor** — broad reach, conservative current, or leading edge (2.3.2) | The owner, by naming the target distribution; otherwise the first recorded decision of the spike. **Not to be adopted silently** |
+| **Whether the production default is locked** — 10.1 gives GTK a *provisional* production standing only | The owner, after the spike exit criteria of 11.3 are evaluated |
 | HELM's licence policy, still **Proposed** | The owner, in an ADR — [LICENSE-DECISION.md](../../LICENSE-DECISION.md) |
 | Final brand identity; the palette of 8.16.2 is explicitly a working set | The owner |
 | Packaging and distribution format | A later gate; not decided by the toolkit |
@@ -578,7 +803,30 @@ GTK is for HELM.
 
 ---
 
-## 13. Decision record
+## 13. Correction record — HELM-G2-D9-EVIDENCE-C
+
+Revision 1 of this document was committed on 2026-09-21 and corrected the same day, before the
+owner decided G2-D9. Nothing was rewritten silently: each correction is stated with what revision
+1 said and what the evidence actually shows.
+
+| # | Revision 1 said | Corrected to | Evidence |
+|---|---|---|---|
+| **C1** | GTK 4.22.4 and libadwaita 1.10 presented together as a production pair; GTK minimum Rust 1.83 | The pair is **incompatible** — libadwaita 1.10.0 declares `gtk_min_version >= 4.23.1`. Three candidate floors are recorded and **none is selected**. `gtk4` 0.11.5 requires Rust **1.92** | Upstream `meson.build` of the `libadwaita-1-8/-1-9/-1-10` branches; GTK `NEWS` (4.24.0, 2026-09-11); Debian sources API; Launchpad API; crates.io registry — **2.3** |
+| **C2** | libadwaita *"follows the system accent"*, and a HELM identity is something it *"permits but does not help with"* | Follows the system accent **by default**; the accent **can be overridden through documented CSS variables**; `AdwStyleManager` **still reports the system accent**. HELM Burgundy is ownable through public API. The maintenance concern is **dependence on internal styling structure**, not inability to own the accent | libadwaita CSS variables reference and `AdwStyleManager` documentation — **6.2**, with the bounded rule in **6.2.1** |
+| **C3** | Slint is *"GPLv3, or a paid royalty-free or enterprise subscription"*; criterion N rated **WEAK** | Slint is **tri-licensed**: `GPL-3.0-only OR LicenseRef-Slint-Royalty-free-2.0 OR LicenseRef-Slint-Software-3.0`. The royalty-free branch permits **proprietary desktop use at no cost**, with an attribution condition and an embedded carve-out. Criterion N corrected to **GOOD**. **DEFER is unchanged**, now resting on technical evidence alone | crates.io SPDX for slint 1.18.1; upstream `LicenseRef-Slint-Royalty-free-2.0.md` — **6.4.1**, **6.4.2** |
+| **C4** | Receipt bytes *necessarily* cross a JSON boundary in a webview, making exact-byte copying impossible | **Withdrawn.** Tauri supports raw payloads both ways — `InvokeResponseBody::Raw(Vec<u8>)` and `InvokeBody::Raw(Vec<u8>)` — so exact bytes can cross unchanged. What remains is that the **default** path serialises, so byte fidelity must be deliberately preserved and tested. **REJECT is unchanged**, now resting on rendering and version variability, the extra webview surface, the mismatch with a native deterministic UI path, and footprint | Tauri `ipc::InvokeResponseBody` and `ipc::InvokeBody` documentation — **8**, **8.1** |
+| **C5** | GTK recommended for *"the G2 prototype and the G2 production application — both"*, unconditionally | **SELECTED FOR G2 PROTOTYPE**; **PROVISIONAL PRODUCTION DEFAULT**, with the production lock conditional on the spike exit criteria of 11.3. **Qt 6 / QML + CXX-Qt is the named fallback**, with enumerated triggers | **10.1**, **10.2**, **10.3**, **12** |
+
+**What this round did not touch.** G2-D8 and the visual language are unchanged; D1 to D7 are
+unchanged; no product semantics changed; the hard requirements H1 to H10 are unchanged; the
+candidate list is unchanged; and the ranking order — GTK primary, Qt fallback, Tauri rejected,
+iced rejected for production, Slint deferred — is unchanged. Two dispositions were **re-grounded
+without being reversed**: Slint's DEFER and Tauri's REJECT now rest only on arguments that survive
+the evidence.
+
+---
+
+## 14. Decision record
 
 **G2-D9 is PENDING.** When the owner decides, the decision is recorded in
 [DECISIONS.md](../DECISIONS.md) and the gate table in the
@@ -586,4 +834,6 @@ GTK is for HELM.
 
 - no toolkit is selected;
 - no dependency exists;
+- the GTK and libadwaita version floor is **not** selected;
+- the production default is **provisional**, not locked;
 - **GUI implementation is NOT AUTHORISED.**
