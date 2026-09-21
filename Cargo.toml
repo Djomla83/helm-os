@@ -6,6 +6,20 @@ members = [
     "crates/helm-bind",
     "crates/helm-launch",
 ]
+
+# `helm-gui` is the bounded G2-D9 UI fidelity spike. It is deliberately NOT a
+# workspace member and carries its own `Cargo.lock`.
+#
+# It needs `libgtk-4-dev` and `libadwaita-1-dev` at build time. The accepted
+# product workspace does not, and `cargo clippy --workspace` /
+# `cargo test --workspace` run on runners that have neither. Making the spike a
+# member would therefore make every accepted crate unbuildable wherever GTK is
+# absent, and would put GTK into the product `Cargo.lock`. Excluding it keeps
+# the accepted workspace, its lockfile and its gates exactly as they were, which
+# is also the honest description of the thing: a spike, not product code.
+#
+# Build it explicitly:  cargo build --manifest-path crates/helm-gui/Cargo.toml
+exclude = ["crates/helm-gui"]
 resolver = "3"
 
 [workspace.lints.rust]
