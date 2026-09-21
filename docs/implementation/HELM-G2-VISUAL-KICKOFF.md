@@ -1,6 +1,6 @@
 # HELM G2 — VISUAL PRODUCT KICKOFF
 
-> **Status: G2-D1 to G2-D7 accepted by the owner on 2026-09-21. G2-D8 and G2-D9 pending. Docs only.**
+> **Status: G2-D1 to G2-D8 accepted by the owner on 2026-09-21. G2-D9 pending. Docs only.**
 > This document defines product intent, information architecture, interaction structure and
 > capability labelling for the first visible HELM application. It authorises **no** GUI code, **no**
 > toolkit, **no** backend work and **no** change to any accepted module. It is written in English
@@ -36,8 +36,11 @@ Windows desktop. Trial #4 is not authorised and no execution trial is proposed h
 ### 1.4 Status of this document
 
 **Accepted in part.** On 2026-09-21 the owner accepted gates G2-D1 to G2-D7 with four clarifications,
-which are applied throughout this revision and summarised in section 20.2. G2-D8 (owner visual
-mockup) and G2-D9 (toolkit selection) remain pending, and **GUI implementation is still not
+which are applied throughout this revision and summarised in section 20.2. On the same day the owner
+accepted **G2-D8** as a visual system direction, on the terms recorded in section 20.4 and applied
+in section 8.16. **G2-D9 (toolkit selection) remains pending**, its dossier is open for owner
+decision in the
+[UI toolkit decision](HELM-G2-UI-TOOLKIT-DECISION.md), and **GUI implementation is still not
 authorised**.
 
 Where this document describes a screen, a state or a flow that current code cannot support, it says
@@ -863,6 +866,106 @@ Baseline requirements, deliberately toolkit-independent; implementation detail w
 - Entering and leaving *Launch attempt in progress*, and the arrival of a result, are announced.
 - Every technical value is selectable and copyable, individually and in full.
 
+### 8.16 Accepted visual direction (G2-D8)
+
+**ACCEPTED 2026-09-21.** The owner accepted a **visual system direction**. The acceptance settles
+character, density, a reference hierarchy and a working token set. It settles no pixel, no copy and
+no product semantics, and it is **not** a statement that any generated mockup is pixel-accurate or
+semantically authoritative.
+
+Where a conceptual image and the accepted product definition of sections 5 to 15 disagree, **the
+product definition wins**.
+
+#### 8.16.1 Reference hierarchy
+
+Two owner-supplied conceptual references were accepted, each for a bounded purpose. Neither is a
+specification, and neither is stored in this repository.
+
+| Reference | Authoritative for |
+|---|---|
+| Grayscale concept | Information hierarchy; calm desktop-application structure; sidebar-plus-content organisation; card and panel density; progressive disclosure; the Library / Authority / Attempt / Result composition |
+| Colour concept | Restrained burgundy identity; mostly neutral surfaces; dark graphite support; warm off-white background; muted secondary accent use |
+
+Generated concepts are authoritative for **nothing else**. They carry no authority over exact copy,
+logos, slogans, icons, example applications, any named subject application such as a browser,
+environment inheritance, cancellation, live *Running* claims, security claims, persistence claims,
+or install and update functionality. Where a concept image appears to show one of these, it is an
+artefact of image generation and **must not be read as product semantics**. Sections 2.4, 5.2.1,
+11.3, 12.8 and 14 remain the only authority on those subjects.
+
+#### 8.16.2 Working palette
+
+A **working** token set, recorded so that design and a future implementation share one vocabulary.
+It is explicitly **not** a final brand identity, and adopting it closes no branding question.
+
+| Token | Value | Role |
+|---|---|---|
+| HELM Burgundy | `#7A1F3D` | The single distinctive accent |
+| Graphite | `#1F2937` | Restrained dark navigation and support surfaces |
+| Warm Off-White | `#F8F6F4` | Primary background |
+| Muted Rose | `#D7A8B4` | Muted secondary accent |
+| Cool Gray | `#CBD0D6` | Borders, separators, inactive structure |
+
+HELM Burgundy is used for the primary action, active navigation, the selected state, focus and
+emphasis, small identity elements, and meaningful accent lines or highlights.
+
+HELM Burgundy must **not** automatically mean *success*, *safe*, *verified*, *compatible*,
+*running* or *trusted*. It is an identity accent, not a verdict. Not every button is burgundy, and
+most of the interface stays neutral.
+
+#### 8.16.3 Status colour rule
+
+Binding, and an extension of the baseline in 8.15. **Product semantics are never defined by colour
+alone.** Every important state carries, at minimum:
+
+1. its word from the closed vocabulary of section 9;
+2. an icon, symbol or shape distinct from the words it must not be confused with;
+3. colour, optionally, and only as reinforcement.
+
+Four visual collapses are prohibited outright. Each restates, in visual terms, a rule already
+accepted elsewhere in this document.
+
+| Prohibited visual collapse | Recorded at |
+|---|---|
+| *Observation indeterminate* styled so that it reads as failure | 8.14 Indeterminacy, 10.2, 12.2 |
+| Exit code `0` styled so that it reads as HELM success | 10.2, 12.1, 12.7 |
+| *Group cleanup issued* styled so that it implies containment | 11.4, 12.5 |
+| Receipt presence styled so that it implies trust or authenticity | 8.14 Technical disclosure, 13.3 |
+
+#### 8.16.4 Character
+
+The intended HELM character is **calm, precise, local, capable, non-coercive, and technical when
+asked**.
+
+Explicitly avoided: gaming and cyberpunk aesthetics; the security-dashboard aesthetic; a Windows,
+GNOME or Apple clone; a terminal-first aesthetic; glass everywhere; excessive gradients; neon; and
+constant status badges. The security-dashboard aesthetic is rejected for a product reason as well as
+a visual one — HELM makes no security claim, and section 11.4 forbids the vocabulary that aesthetic
+carries.
+
+#### 8.16.5 Density
+
+**Medium information density**, consistent with the Normal and Advanced split of section 15.
+
+- Normal mode presents one clear primary question or action per screen.
+- Technical detail is exactly one disclosure layer away, never further.
+- HELM is not made sparse to the point of hiding state; section 9 states are always present.
+- Kernel and process evidence is never exposed by default; section 15 governs what is shown where.
+
+#### 8.16.6 First visual surfaces
+
+When implementation is authorised, the first coded visual work concentrates on four surfaces:
+
+1. Library / session home — 8.1, 8.2
+2. Choose local program, and Authority review — 8.3, 8.4, 8.6
+3. Launch attempt in progress — 8.7
+4. Result, with technical details and evidence — 8.8, 8.9
+
+Updates, repair and recovery — 8.10 and 8.11 — remain in the accepted architecture and are not
+removed, but they do not need to dominate the first coded visual slice. This ordering is a visual
+priority only. It authorises no code, and it does not alter the first vertical slice accepted at
+G2-D7 in section 16.
+
 ---
 
 ## 9. State vocabulary
@@ -1501,6 +1604,11 @@ A later decision gate, **G2 UI TOOLKIT SELECTION**, records the choice. It happe
 information architecture and interaction model are accepted, so that the structure constrains the
 toolkit rather than the other way round.
 
+The criteria below are the originally accepted set. They are expanded into a full candidate
+evaluation, with current primary-source evidence, in the
+[UI toolkit decision](HELM-G2-UI-TOOLKIT-DECISION.md). That document is a **dossier prepared for the
+owner**: it recommends, and it selects nothing. G2-D9 is still **PENDING**.
+
 Evaluation criteria only, in no ranked order:
 
 | Criterion | What is assessed |
@@ -1532,8 +1640,8 @@ Sequential. Each is an owner decision recorded in [DECISIONS.md](../DECISIONS.md
 | **G2-D5** | State and error vocabulary | **ACCEPTED** 2026-09-21 | Sections 9 and 10, including the two prohibited collapses and 12.8 |
 | **G2-D6** | Real-versus-future capability labelling | **ACCEPTED** 2026-09-21 | Every `REAL_NOW`, `REQUIRES_ORCHESTRATION` and `DESIGN_ONLY_FUTURE` label in this document |
 | **G2-D7** | First vertical slice | **ACCEPTED** 2026-09-21 | Section 16, including 16.6 |
-| **G2-D8** | Owner visual mockup | **PENDING** | Owner-led; constrained by the visual jobs of 8.14 |
-| **G2-D9** | UI toolkit selected | **PENDING** | Section 19, as its own decision record |
+| **G2-D8** | Owner visual direction | **ACCEPTED** 2026-09-21 | Section 8.16, on the terms of 20.4; constrained by the visual jobs of 8.14 and the baseline of 8.15 |
+| **G2-D9** | UI toolkit selected | **PENDING** | Section 19 and the [UI toolkit decision](HELM-G2-UI-TOOLKIT-DECISION.md), as its own decision record |
 
 ### 20.2 Owner clarifications applied at acceptance
 
@@ -1550,8 +1658,27 @@ this revision.
 ### 20.3 What acceptance does and does not authorise
 
 **GUI implementation is authorised only after D1 to D9 are all accepted**, unless the owner
-explicitly changes this process in a recorded decision. D8 and D9 are pending, so **no GUI code is
+explicitly changes this process in a recorded decision. D9 is pending, so **no GUI code is
 authorised by this acceptance**.
 
 Nothing in this document authorises backend work. Sections 17 and 18 describe gaps; they do not
 open them. No toolkit is selected. No custom shell is authorised. No execution trial is authorised.
+
+### 20.4 Owner terms recorded at G2-D8 acceptance
+
+The owner accepted G2-D8 on 2026-09-21 as a **visual system direction**, subject to the terms below.
+
+| # | Term | Where applied |
+|---|---|---|
+| 1 | The acceptance is a direction, not a claim that any generated mockup is pixel-accurate or semantically authoritative. The interaction and product definition stays authoritative over every image. | 8.16 |
+| 2 | Two conceptual references are accepted for bounded purposes — grayscale for structure and hierarchy, colour for identity — and for nothing else. Unsupported product semantics must not be copied out of a generated image. | 8.16.1 |
+| 3 | The palette is a **working** token set, not a final brand identity. HELM Burgundy is an identity accent and never means *success*, *safe*, *verified*, *compatible*, *running* or *trusted*. | 8.16.2 |
+| 4 | No product semantics by colour alone. Four named visual collapses are prohibited. | 8.16.3, and 8.15 |
+| 5 | The character is calm, precise, local, capable, non-coercive and technical when asked; the listed aesthetics are excluded. | 8.16.4 |
+| 6 | Medium information density: one primary question per screen in Normal mode, technical detail one disclosure layer away, and no hiding of state. | 8.16.5 |
+| 7 | The first coded visual work concentrates on four surfaces. Update, repair and recovery stay in the accepted architecture and are not removed. | 8.16.6 |
+
+**What G2-D8 does not authorise.** It authorises no GUI code, no toolkit, no dependency, no backend
+work, no branding decision and no change to any accepted module. It does not move G2-D9, and it does
+not alter the first vertical slice accepted at G2-D7. **GUI implementation remains NOT AUTHORISED
+until the owner decides G2-D9.**
