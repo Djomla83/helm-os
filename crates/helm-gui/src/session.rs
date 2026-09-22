@@ -374,7 +374,14 @@ impl Session {
     }
 
     /// The chooser returned something with no local filesystem path.
+    ///
+    /// Refused while an attempt is outstanding, for the same reason the other
+    /// two are: this is still an answer from a chooser, and a chooser's answer
+    /// may not change what the running attempt's entry says about itself.
     pub fn refuse_non_local(&mut self, folder: bool) {
+        if self.attempt_running() {
+            return;
+        }
         if folder {
             self.workdir_refusal = Some(Refusal::NotLocal);
             self.working_directory = None;
