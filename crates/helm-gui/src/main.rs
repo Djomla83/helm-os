@@ -23,7 +23,7 @@ use std::cell::{Cell, RefCell};
 use std::path::PathBuf;
 use std::rc::{Rc, Weak};
 use std::sync::mpsc::{Receiver, Sender, channel};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use gtk::gdk;
 use gtk::gio;
@@ -32,14 +32,10 @@ use gtk::prelude::*;
 use gtk4 as gtk;
 use libadwaita as adw;
 
-use helm_gui::state::{
-    self, Disclosure, Phase, PlanFacts, ProgramFacts, Screen, StreamView, bytes_label,
-};
+use helm_gui::session::Session;
+use helm_gui::state::{self, Disclosure, Phase, Screen, StreamView, bytes_label};
 use helm_gui::vertical::{self, Message, Refusal};
-use helm_launch::{
-    AuthorizedLaunch, Backend, ExecutableCapability, LaunchError, LaunchOutcome, Stream,
-    ValidatedLaunchPlan, WorkingDirectoryCapability,
-};
+use helm_launch::{Backend, Stream};
 use screens::{Action, Dispatch, clear, spaced};
 use widgets::{
     BODY_MEASURE, fact, fact_advanced, hbox, line, line_numeric, numbered, numbered_field,
@@ -51,169 +47,6 @@ const APP_ID: &str = "dev.helm.G2Vertical";
 /// How often the main loop drains the worker channel and advances the ephemeral
 /// elapsed readout.
 const TICK: Duration = Duration::from_millis(100);
-
-// ---------------------------------------------------------------------------
-// Session
-//
-// Everything here lives for this process only. There is no store, no file, no
-// database and no config: closing the window ends it, and starting again starts
-// from nothing. That is intentional, and G-1 remains unauthorised.
-// ---------------------------------------------------------------------------
-
-struct Session {
-    screen: Screen,
-    disclosure: Disclosure,
-    output_open: bool,
-
-    /// The paths a person selected. The interface knows them and shows them;
-    /// `helm-launch` never receives them.
-    exec_path: Option<PathBuf>,
-    workdir_path: Option<PathBuf>,
-    opened_at: Option<String>,
-
-    exec_pending: bool,
-    workdir_pending: bool,
-
-    executable: Option<ExecutableCapability>,
-    exec_refusal: Option<Refusal>,
-    program: Option<ProgramFacts>,
-
-    working_directory: Option<WorkingDirectoryCapability>,
-    workdir_refusal: Option<Refusal>,
-
-    plan: Option<ValidatedLaunchPlan>,
-    plan_facts: Option<PlanFacts>,
-    plan_refusal: Option<String>,
-
-    /// The one-shot authority. Composed only at the person's explicit
-    /// instruction, and consumed exactly once.
-    authorized: Option<AuthorizedLaunch>,
-
-    attempting: bool,
-    attempt_started: Option<Instant>,
-    outcome: Option<LaunchOutcome>,
-    launch_error: Option<LaunchError>,
-
-    copy_label: String,
-}
-
-impl Session {
-    fn new() -> Self {
-        Self {
-            screen: Screen::Library,
-            disclosure: Disclosure::Advanced,
-            output_open: false,
-            exec_path: None,
-            workdir_path: None,
-            opened_at: None,
-            exec_pending: false,
-            workdir_pending: false,
-            executable: None,
-            exec_refusal: None,
-            program: None,
-            working_directory: None,
-            workdir_refusal: None,
-            plan: None,
-            plan_facts: None,
-            plan_refusal: None,
-            authorized: None,
-            attempting: false,
-            attempt_started: None,
-            outcome: None,
-            launch_error: None,
-            copy_label: "Copy the exact receipt bytes".to_owned(),
-        }
-    }
-
-    /// Derived, never stored, so it cannot drift out of step with what the
-    /// session actually holds.
-    fn phase(&self) -> Phase {
-        if self.attempting {
-            Phase::Attempting
-        } else if self.outcome.is_some() {
-            Phase::Ended
-        } else if self.launch_error.is_some() {
-            Phase::CouldNotBegin
-        } else if self.authorized.is_some() {
-            Phase::Authorised
-        } else if self.exec_pending || self.workdir_pending {
-            Phase::Inspecting
-        } else if self.admitted() {
-            Phase::Admitted
-        } else {
-            Phase::Nothing
-        }
-    }
-
-    fn admitted(&self) -> bool {
-        self.executable.is_some() && self.working_directory.is_some() && self.plan.is_some()
-    }
-
-    fn advanced(&self) -> bool {
-        matches!(self.disclosure, Disclosure::Advanced)
-    }
-
-    fn program_name(&self) -> String {
-        self.program
-            .as_ref()
-            .map_or_else(|| "No program open".to_owned(), |facts| facts.name.clone())
-    }
-
-    /// Parses the fixed plan once both objects are admitted. The parse is fast
-    /// and pure, so it stays on the main thread.
-    fn parse_plan_if_ready(&mut self) {
-        if self.plan.is_some() || self.executable.is_none() || self.working_directory.is_none() {
-            return;
-        }
-        let Some(path) = self.exec_path.clone() else {
-            return;
-        };
-        let argv0 = vertical::argv0_for(&path);
-        match vertical::parse_plan(&argv0) {
-            Ok(plan) => {
-                self.plan_facts = Some(PlanFacts::from_plan(&plan));
-                self.plan = Some(plan);
-                self.plan_refusal = None;
-            }
-            Err(errors) => {
-                let codes: Vec<String> = errors
-                    .as_slice()
-                    .iter()
-                    .map(|e| format!("{} at {}", e.code().as_str(), e.locator()))
-                    .collect();
-                self.plan_refusal = Some(codes.join(" · "));
-            }
-        }
-    }
-
-    /// Everything that depends on a particular admission is dropped, so a new
-    /// attempt genuinely re-opens and re-admits. Capabilities drop here, which
-    /// closes their descriptors.
-    fn clear_admission(&mut self) {
-        self.executable = None;
-        self.working_directory = None;
-        self.exec_refusal = None;
-        self.workdir_refusal = None;
-        self.program = None;
-        self.plan = None;
-        self.plan_facts = None;
-        self.plan_refusal = None;
-        self.authorized = None;
-    }
-
-    fn close(&mut self) {
-        self.clear_admission();
-        self.exec_path = None;
-        self.workdir_path = None;
-        self.opened_at = None;
-        self.outcome = None;
-        self.launch_error = None;
-        self.attempt_started = None;
-        self.attempting = false;
-        self.output_open = false;
-        self.screen = Screen::Library;
-    }
-}
 
 // ---------------------------------------------------------------------------
 // Ui
@@ -341,9 +174,9 @@ fn render_library(ui: &Rc<Ui>, session: &Session, phase: Phase) {
 
 fn render_choose(ui: &Rc<Ui>, session: &Session, dispatch: &Dispatch) {
     // --- the program file -------------------------------------------------
-    ui.choose.program_phase.set_text(if session.exec_pending {
+    ui.choose.program_phase.set_text(if session.exec_pending() {
         "Inspecting…"
-    } else if session.executable.is_some() {
+    } else if session.has_executable() {
         "Admitted"
     } else if session.exec_refusal.is_some() {
         "Refused"
@@ -352,7 +185,7 @@ fn render_choose(ui: &Rc<Ui>, session: &Session, dispatch: &Dispatch) {
     });
 
     clear(&ui.choose.program_body);
-    if session.exec_pending {
+    if session.exec_pending() {
         ui.choose.program_body.append(&wrapped(
             "HELM is opening the file and measuring it. It is not running it.",
             "helm-note",
@@ -422,24 +255,26 @@ fn render_choose(ui: &Rc<Ui>, session: &Session, dispatch: &Dispatch) {
     }
 
     // --- the working folder ----------------------------------------------
-    ui.choose.folder_phase.set_text(if session.workdir_pending {
-        "Checking…"
-    } else if session.working_directory.is_some() {
-        "Admitted"
-    } else if session.workdir_refusal.is_some() {
-        "Refused"
-    } else {
-        "Not checked yet"
-    });
+    ui.choose
+        .folder_phase
+        .set_text(if session.workdir_pending() {
+            "Checking…"
+        } else if session.has_working_directory() {
+            "Admitted"
+        } else if session.workdir_refusal.is_some() {
+            "Refused"
+        } else {
+            "Not checked yet"
+        });
 
     clear(&ui.choose.folder_body);
-    if session.workdir_pending {
+    if session.workdir_pending() {
         ui.choose.folder_body.append(&wrapped(
             "HELM is opening the folder you chose.",
             "helm-note",
             BODY_MEASURE,
         ));
-    } else if session.working_directory.is_some() {
+    } else if session.has_working_directory() {
         let path = line_numeric(
             &session
                 .workdir_path
@@ -581,7 +416,7 @@ fn render_program(ui: &Rc<Ui>, session: &Session, phase: Phase, dispatch: &Dispa
     ));
 
     clear(&ui.program.result_body);
-    if let Some(outcome) = session.outcome.as_ref() {
+    if let Some(outcome) = session.outcome() {
         let end = outcome.receipt().record().child_end();
         ui.program.result_body.append(&wrapped(
             &format!(
@@ -601,7 +436,7 @@ fn render_program(ui: &Rc<Ui>, session: &Session, phase: Phase, dispatch: &Dispa
         actions.append(&open);
         actions.append(&details);
         ui.program.result_body.append(&actions);
-    } else if let Some(error) = session.launch_error.as_ref() {
+    } else if let Some(error) = session.launch_error() {
         ui.program.result_body.append(&wrapped(
             state::launch_error_normal(error.code()),
             "helm-note-ink",
@@ -629,7 +464,7 @@ fn render_authority(ui: &Rc<Ui>, session: &Session) {
     ));
     ui.authority
         .authorise
-        .set_sensitive(session.admitted() && session.authorized.is_none());
+        .set_sensitive(session.admitted() && !session.has_authority());
 
     clear(&ui.authority.ledger);
     let Some(plan) = session.plan_facts.as_ref() else {
@@ -852,7 +687,7 @@ fn render_attempt(ui: &Rc<Ui>, session: &Session) {
         .set_text(&format!("{} · Attempt", session.program_name()));
     let bound = f64::from(vertical::TIMEOUT_MS) / 1000.0;
     let elapsed = session
-        .attempt_started
+        .attempt_started()
         .map_or(0.0, |start| start.elapsed().as_secs_f64())
         .min(bound);
     ui.attempt
@@ -877,7 +712,7 @@ fn render_result(ui: &Rc<Ui>, session: &Session, dispatch: &Dispatch) {
     clear(&ui.result.facts);
     clear(&ui.result.output_body);
 
-    let Some(outcome) = session.outcome.as_ref() else {
+    let Some(outcome) = session.outcome() else {
         // A pre-child refusal. No child was created and no receipt exists, so
         // this is shaped as a result but never dressed as one.
         set_mark(&ui.result.mark, state::Mark::FilledSquare.css_class());
@@ -885,7 +720,7 @@ fn render_result(ui: &Rc<Ui>, session: &Session, dispatch: &Dispatch) {
         ui.result.details_link.set_visible(false);
         ui.result.output_row.set_visible(false);
         ui.result.facts_head.set_text("What HELM can say");
-        if let Some(error) = session.launch_error.as_ref() {
+        if let Some(error) = session.launch_error() {
             ui.result
                 .headline
                 .set_text(state::launch_error_normal(error.code()));
@@ -1061,13 +896,13 @@ fn render_evidence(ui: &Rc<Ui>, session: &Session) {
     ui.evidence.copy.set_label(&session.copy_label);
     clear(&ui.evidence.body);
 
-    let Some(outcome) = session.outcome.as_ref() else {
+    let Some(outcome) = session.outcome() else {
         ui.evidence.copy.set_visible(false);
         ui.evidence.lede.set_text(
             "No receipt was produced, because no direct child attempt was created. A receipt \
              records what HELM observed of a child; there was none to observe.",
         );
-        if session.launch_error.is_some() {
+        if session.launch_error().is_some() {
             ui.evidence.body.append(&wrapped(
                 "HELM refused before creating anything. There is nothing further to disclose, \
                  and HELM does not invent a receipt to fill the space.",
@@ -1162,13 +997,11 @@ fn handle(ui: &Rc<Ui>, action: Action) {
         let mut session = ui.session.borrow_mut();
         match action {
             Action::Go(screen) => session.screen = screen,
-            Action::GoChoose => {
-                session.clear_admission();
-                session.screen = Screen::Choose;
-            }
+            Action::GoChoose => session.go_choose(),
             Action::GoProgram => session.screen = Screen::Program,
             Action::RefuseAuthority => session.screen = Screen::Program,
             Action::CloseEntry => session.close(),
+            Action::Authorise => session.authorise(),
             Action::ToggleOutput => session.output_open = !session.output_open,
             Action::ToggleDisclosure => {
                 session.disclosure = match session.disclosure {
@@ -1181,7 +1014,6 @@ fn handle(ui: &Rc<Ui>, action: Action) {
     }
 
     match action {
-        Action::Authorise => authorise(ui),
         Action::StartAttempt => start_attempt(ui),
         Action::AttemptAgain => attempt_again(ui),
         _ => {}
@@ -1214,16 +1046,7 @@ fn open_file_dialog(ui: &Rc<Ui>, folder: bool) {
         // A `GFile` with no local path is a remote or virtual location. This
         // slice opens local files only, and says so rather than pretending.
         let Some(path) = file.path() else {
-            let mut session = ui.session.borrow_mut();
-            if folder {
-                session.workdir_refusal = Some(Refusal::NotLocal);
-                session.working_directory = None;
-            } else {
-                session.exec_refusal = Some(Refusal::NotLocal);
-                session.executable = None;
-                session.program = None;
-            }
-            drop(session);
+            ui.session.borrow_mut().refuse_non_local(folder);
             refresh(&ui);
             return;
         };
@@ -1237,31 +1060,18 @@ fn open_file_dialog(ui: &Rc<Ui>, folder: bool) {
     }
 }
 
+/// The moment a selection is recorded and its worker starts. The session
+/// decides what the selection invalidates; this function only supplies the
+/// wall-clock text the session cannot produce and starts the worker.
 fn begin_admission(ui: &Rc<Ui>, path: PathBuf, folder: bool) {
-    {
+    let path = {
         let mut session = ui.session.borrow_mut();
-        // A new selection invalidates any authority and any previous plan.
-        session.authorized = None;
-        session.plan = None;
-        session.plan_facts = None;
-        session.plan_refusal = None;
         if folder {
-            session.workdir_path = Some(path.clone());
-            session.working_directory = None;
-            session.workdir_refusal = None;
-            session.workdir_pending = true;
+            session.begin_working_directory(path)
         } else {
-            session.exec_path = Some(path.clone());
-            session.executable = None;
-            session.exec_refusal = None;
-            session.program = None;
-            session.exec_pending = true;
-            session.opened_at = glib::DateTime::now_local()
-                .ok()
-                .and_then(|now| now.format("%H:%M:%S").ok())
-                .map(|text| text.to_string());
+            session.begin_executable(path, local_time_of_day())
         }
-    }
+    };
     if folder {
         vertical::spawn_admit_working_directory(path, ui.tx.clone());
     } else {
@@ -1270,51 +1080,19 @@ fn begin_admission(ui: &Rc<Ui>, path: PathBuf, folder: bool) {
     refresh(ui);
 }
 
-/// Composes the one-shot authority. This is the only place it happens, and it
-/// happens only because a person pressed the button that says so.
-fn authorise(ui: &Rc<Ui>) {
-    let mut session = ui.session.borrow_mut();
-    if !session.admitted() {
-        return;
-    }
-    let (Some(plan), Some(executable), Some(working_directory)) = (
-        session.plan.take(),
-        session.executable.take(),
-        session.working_directory.take(),
-    ) else {
-        return;
-    };
-    match vertical::authorise(plan, executable, working_directory) {
-        Ok(authorized) => {
-            session.authorized = Some(authorized);
-            session.screen = Screen::Program;
-        }
-        Err(refusal) => {
-            // The capabilities were consumed by the refusal, so the session
-            // genuinely has to re-admit before it can try again.
-            session.plan_refusal = Some(format!(
-                "authorisation refused · {}",
-                refusal.code().as_str()
-            ));
-            session.screen = Screen::Choose;
-        }
-    }
+/// The "opened at" text in the Library row. Ephemeral, local, and written
+/// nowhere: it exists so a person can tell two selections apart in one sitting.
+fn local_time_of_day() -> Option<String> {
+    glib::DateTime::now_local()
+        .ok()
+        .and_then(|now| now.format("%H:%M:%S").ok())
+        .map(|text| text.to_string())
 }
 
 /// Consumes the authority exactly once, on a worker thread.
 fn start_attempt(ui: &Rc<Ui>) {
-    let authorized = {
-        let mut session = ui.session.borrow_mut();
-        let Some(authorized) = session.authorized.take() else {
-            return;
-        };
-        session.attempting = true;
-        session.attempt_started = Some(Instant::now());
-        session.outcome = None;
-        session.launch_error = None;
-        session.output_open = false;
-        session.screen = Screen::Attempt;
-        authorized
+    let Some(authorized) = ui.session.borrow_mut().start_attempt() else {
+        return;
     };
     vertical::spawn_launch(authorized, ui.tx.clone());
 }
@@ -1323,18 +1101,11 @@ fn start_attempt(ui: &Rc<Ui>) {
 /// previous authority was consumed and nothing about it is replayed. The paths
 /// are re-opened and re-admitted from scratch.
 fn attempt_again(ui: &Rc<Ui>) {
-    let (exec_path, workdir_path) = {
-        let mut session = ui.session.borrow_mut();
-        session.clear_admission();
-        session.screen = Screen::Authority;
-        (session.exec_path.clone(), session.workdir_path.clone())
-    };
+    let (exec_path, workdir_path) = ui.session.borrow_mut().attempt_again();
     if let Some(path) = exec_path {
-        ui.session.borrow_mut().exec_pending = true;
         vertical::spawn_admit_executable(path, ui.tx.clone());
     }
     if let Some(path) = workdir_path {
-        ui.session.borrow_mut().workdir_pending = true;
         vertical::spawn_admit_working_directory(path, ui.tx.clone());
     }
 }
@@ -1343,7 +1114,7 @@ fn attempt_again(ui: &Rc<Ui>) {
 fn copy_receipt_bytes(ui: &Rc<Ui>) {
     let label = {
         let session = ui.session.borrow();
-        let Some(outcome) = session.outcome.as_ref() else {
+        let Some(outcome) = session.outcome() else {
             return;
         };
         let bytes = outcome.receipt().exact_bytes();
@@ -1384,80 +1155,15 @@ fn install_tick(ui: &Rc<Ui>) {
             let Ok(message) = message else {
                 break;
             };
-            apply_message(&ui, message);
+            ui.session.borrow_mut().apply(message);
             changed = true;
         }
-        let attempting = ui.session.borrow().attempting;
+        let attempting = ui.session.borrow().attempting();
         if changed || attempting {
             refresh(&ui);
         }
         glib::ControlFlow::Continue
     });
-}
-
-fn apply_message(ui: &Rc<Ui>, message: Message) {
-    let mut session = ui.session.borrow_mut();
-    match message {
-        Message::Executable(result) => {
-            session.exec_pending = false;
-            match result {
-                Ok(capability) => {
-                    let name = session
-                        .exec_path
-                        .as_ref()
-                        .and_then(|p| p.file_name())
-                        .and_then(|n| n.to_str())
-                        .unwrap_or("program")
-                        .to_owned();
-                    let path = session
-                        .exec_path
-                        .as_ref()
-                        .map(|p| p.display().to_string())
-                        .unwrap_or_default();
-                    session.program = Some(ProgramFacts::from_measurement(
-                        &name,
-                        &path,
-                        &capability.measurement(),
-                    ));
-                    session.executable = Some(capability);
-                    session.exec_refusal = None;
-                }
-                Err(refusal) => {
-                    session.exec_refusal = Some(refusal);
-                    session.executable = None;
-                    session.program = None;
-                }
-            }
-        }
-        Message::WorkingDirectory(result) => {
-            session.workdir_pending = false;
-            match result {
-                Ok(capability) => {
-                    session.working_directory = Some(capability);
-                    session.workdir_refusal = None;
-                }
-                Err(refusal) => {
-                    session.workdir_refusal = Some(refusal);
-                    session.working_directory = None;
-                }
-            }
-        }
-        Message::Launched(result) => {
-            session.attempting = false;
-            match *result {
-                Ok(outcome) => {
-                    session.outcome = Some(outcome);
-                    session.launch_error = None;
-                }
-                Err(error) => {
-                    session.launch_error = Some(error);
-                    session.outcome = None;
-                }
-            }
-            session.screen = Screen::Result;
-        }
-    }
-    session.parse_plan_if_ready();
 }
 
 // ---------------------------------------------------------------------------
