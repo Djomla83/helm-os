@@ -40,10 +40,10 @@ which are applied throughout this revision and summarised in section 20.2. G2-D8
 direction) was accepted on the same date and is recorded in section 8.16. G2-D9 (toolkit selection)
 was accepted on the same date: the selected technology is **GTK 4 + gtk-rs with selective
 libadwaita**, recorded in the [UI toolkit decision](HELM-G2-UI-TOOLKIT-DECISION.md). Its bounded
-fidelity spike was built and **accepted** on 2026-09-21, and the owner then authorised the **first
-real backend-connected G2 vertical**, which is **authorised and not yet accepted**. That vertical
-drives the already-accepted `helm-launch` 0.1 through its public API only; it accepts no production
-GUI, adds no persistence, and starts no G-1, G-2 or G-3. **This document remains the
+fidelity spike was built and **accepted** on 2026-09-21. The owner then authorised the **first
+real backend-connected G2 vertical**, which was **accepted on 2026-09-22 and integrated into
+`main`**. That vertical drives the already-accepted `helm-launch` 0.1 through its public API only;
+its acceptance does not accept a production GUI, adds no persistence, and starts no G-1, G-2 or G-3. **This document remains the
 product-semantic authority over anything the GUI draws.**
 
 Where this document describes a screen, a state or a flow that current code cannot support, it says

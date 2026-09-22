@@ -175,6 +175,24 @@ file offered as a working directory, and a directory offered as an executable.
 
 **It does not assert `ExecSucceeded`,** because no such value exists.
 
+## Post-G2 review findings
+
+The [post-G2 product review](../../docs/implementation/HELM-POST-G2-PRODUCT-REVIEW.md)
+records two code-review findings that require bounded reproduction before the next
+capability is authorised:
+
+- **`PGR-01` — asynchronous result/context binding.** Worker messages carry a result
+  kind but no operation/generation identity. A stale-result scenario must be tested
+  before claiming that a delayed admission or launch result can never attach to newer
+  session context.
+- **`PGR-02` — caller-side open can precede admission by an unbounded wait.**
+  `File::open` occurs before `helm-launch` can classify the descriptor. A special-file
+  reproduction test is required. This is a GUI-adapter finding, not a reason to change
+  the accepted `helm-launch` API.
+
+Neither finding is currently classified as a reproduced product defect. No production
+claim is promoted, and G-1 remains unauthorised while their disposition is pending.
+
 ## Known limitations
 
 - **Brand fonts are not selected.** Local fallback stacks; no font binary is

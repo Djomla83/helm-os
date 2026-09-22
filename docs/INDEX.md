@@ -70,6 +70,16 @@ execution success, and the owner smoke's child exit code 0 does not change that.
 is recorded temporary architecture debt, not a hidden exception. **G-1, G-2 and G-3 are not started
 and not authorised**, and the next gate is the **owner's choice of the next product capability**.
 
+### Post-G2 product review and next capability
+
+[HELM post-G2 product review](implementation/HELM-POST-G2-PRODUCT-REVIEW.md) is the current
+**PROPOSED / REVIEW** planning record after acceptance of the first real vertical. It does not
+authorise implementation. It records two bounded verification-required GUI findings
+(`PGR-01`, asynchronous result/context binding; `PGR-02`, caller-side open before admission),
+defines the proposed G-1 durable-Library contract, records cross-module cohort boundaries, and
+captures the proposed reliability/evidence/recovery product direction. The next proposed gate is
+to reproduce or dismiss those two findings before an owner decision on G-1.
+
 ## Odluke i istraživanja
 
 [ADR index](DECISIONS.md): nineteen Proposed records, ADR-0020 Accepted for documentation language,

@@ -6,16 +6,20 @@ HELM OS je radni naziv projekta besplatnog, otvorenog desktop sistema zasnovanog
 na Linux ekosistemu, sa fokusom na kvalitet svakodnevnih aplikacija, korisničku
 kontrolu i proverljivu podršku za odabrani Windows softver.
 
-> **Trenutni status: dokumentacija i planiranje eksperimenata.** Ovde nema gotovog
-> OS-a, instalacionog ISO-a, implementiranog App Forge-a, SDK-a ili novog jezika.
-> Cilj od 95% kompatibilnosti nije postignut niti izmeren.
+> **Trenutni status: eksperimentalni proizvodni moduli i prihvaćena prva realna GUI vertikala.**
+> Ovo još nije gotov OS niti produkciono izdanje: nema instalacionog ISO-a, produkciono prihvaćenog
+> GUI-ja, App Forge-a, Wine/Proton integracije, SDK-a ili novog jezika. Cilj od 95% kompatibilnosti
+> nije postignut niti izmeren.
 
-**Implementation update, 2026-09-08:** [helm-evidence](crates/helm-evidence/README.md)
-is the first bounded Rust module, an offline, read-only evidence-bundle verifier.
-It checks declared evidence requirements, not general application compatibility.
-A0-7ZIP's experimental FAIL remains preserved; the larger Evidence Loop PoC and
-other product subsystems are not authorised. See the
-[implementation review](docs/implementation/HELM-EVIDENCE-REVIEW.md).
+**Implementation update, 2026-09-22:** bounded Rust modules
+[helm-evidence](crates/helm-evidence/README.md), [helm-app-spec](crates/helm-app-spec/README.md),
+[helm-observe](crates/helm-observe/README.md), [helm-bind](crates/helm-bind/README.md) and the
+product-accepted [helm-launch 0.1](crates/helm-launch/README.md) are present in the repository.
+The first real native GTK backend-connected G2 vertical is owner-accepted and integrated into
+`main`; it remains an experimental vertical, not a production GUI. Current G2 status and limits
+are summarised in the [documentation index](docs/INDEX.md). The
+[post-G2 product review](docs/implementation/HELM-POST-G2-PRODUCT-REVIEW.md) records proposed next
+gates and review findings; it authorises no implementation by itself.
 
 ## Počnite ovde
 
@@ -56,10 +60,12 @@ Windows aplikacija, sandbox ili performanse OS-a.**
 ## Doprinosi i objavljivanje
 
 Pročitajte [CONTRIBUTING.md](CONTRIBUTING.md). Za novi predlog koristite RFC,
-a za usvajanje značajnog izbora ADR. Trenutni ADR-ovi su nacrti `Proposed`.
+a za usvajanje značajnog izbora ADR. Važeći statusi odluka, uključujući prihvaćene ADR-ove,
+nalaze se u [indeksu odluka](docs/DECISIONS.md).
 
-[Postupak objavljivanja](docs/runbooks/PUBLISH.md) opisuje kreiranje javnog GitHub
-repozitorijuma. Dokument ne potvrđuje da je udaljeni repo već napravljen.
+[Postupak objavljivanja](docs/runbooks/PUBLISH.md) čuva operativni proces objavljivanja.
+Autoritativni udaljeni repozitorijum ovog radnog stabla je `Djomla83/helm-os`; istorijski
+tekstovi koji prethode njegovom kreiranju ostaju istorijski zapisi.
 
 ## Licenca i naziv
 

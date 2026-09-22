@@ -1,5 +1,30 @@
 # Stanje projekta
 
+## Current post-G2 snapshot, 2026-09-22
+
+This section is a current-state pointer. Historical acceptance records below are intentionally left
+as written.
+
+| Item | Current state |
+|---|---|
+| Repository `main` | `a4c6d719b13da84c854d7a203bc896f95bc0a4c7` |
+| First real backend-connected G2 vertical | **OWNER-ACCEPTED / INTEGRATED** |
+| Production GUI | **NOT ACCEPTED** |
+| G-1 durable Library | **NOT STARTED / NOT AUTHORISED** |
+| G-2 long-lived session lifecycle | **NOT STARTED / NOT AUTHORISED** |
+| G-3 desktop-session environment authority | **NOT STARTED / NOT AUTHORISED** |
+| Post-G2 engineering review | [HELM-POST-G2-PRODUCT-REVIEW](implementation/HELM-POST-G2-PRODUCT-REVIEW.md) |
+| `PGR-01` async result/context binding | **REVIEW FINDING — VERIFICATION REQUIRED** |
+| `PGR-02` caller-side open before admission | **REVIEW FINDING — VERIFICATION REQUIRED** |
+| Next proposed gate | bounded reproduction/disposition of `PGR-01` and `PGR-02`, then owner decision on G-1 |
+
+The two `PGR` entries are **not reproduced product defects at this point**. They are reachable
+code-review hypotheses that affect context integrity or bounded interaction if confirmed, so they
+must be tested before the next capability is authorised. They do not modify or reopen the accepted
+`helm-launch` 0.1 contract.
+
+---
+
 <a id="helm-launch-0-1-product-accepted"></a>
 
 ## HELM-LAUNCH 0.1 PRODUCT-ACCEPTED, 2026-09-21 — P5 accepted, milestone integrated into main
