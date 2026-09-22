@@ -29,8 +29,9 @@ vertical slice and the G2-D1 to G2-D9 acceptance gates. **All nine gates, G2-D1 
 owner-accepted since 2026-09-21** — D1 to D7 with four recorded clarifications, and D8 recording the
 *Record / graphite frame* visual direction in section 8.16. **G2-D9 (toolkit selection) was accepted
 on 2026-09-21**: the selected technology is **GTK 4 + gtk-rs with selective libadwaita**. That
-acceptance authorises **one bounded native UI fidelity spike with mock state only** — it accepts no
-production GUI, connects no backend and starts no G-1, G-2 or G-3.
+acceptance authorised **one bounded native UI fidelity spike with mock state only**; the spike and
+then the first real backend-connected vertical have since been accepted, and neither accepts a
+production GUI nor starts G-1, G-2 or G-3.
 
 The [G2 non-product interaction prototype](prototypes/g2-html/README.md) is a clickable HTML
 reference for the accepted *Record / graphite frame* direction; its entry point is
@@ -50,11 +51,24 @@ canonical D8 prototype remains the visual source of truth.
 
 The **native GTK fidelity spike was accepted on 2026-09-21**, so no Qt spike is required, and the
 owner then authorised the **first real backend-connected G2 vertical** — the GUI driving the
-accepted `helm-launch` 0.1 end to end through its public API. That vertical is **authorised and not
-yet accepted**: it adds no persistence, changes no accepted crate, and starts no G-1, G-2 or G-3.
+accepted `helm-launch` 0.1 end to end through its public API. That vertical was **accepted on
+2026-09-22 and integrated into `main`** by fast-forward to `a40ae8e`, with no merge commit. The
+accepted native GUI selects a real local executable, drives real `helm-launch` admission of it and
+of a local working directory, builds and parses the bounded fixed launch plan, shows real authority
+facts, creates single-use authority, performs the real synchronous launch on a worker while staying
+responsive, and shows the real child-end facts, output prefixes, receipt and digest. The acceptance
+evidence is the owner's real `GtkFileDialog` smoke run **without** the `--g2-preselect` developer
+helper, plus first-natural hosted CI on the branch and on `main`.
+
+**That acceptance closes the first vertical and nothing else.** There is no persistence and no
+durable Library, no long-lived session or process handle, no desktop-session environment authority,
+no graphical subject support, no Wine or Proton, no App Forge, no installer, update or repair, no
+containment or sandbox claim, no receipt authenticity or provenance, and **no production GUI
+acceptance**. `helm-launch` is unmodified. `Indeterminate(StatusEofWithoutRecord)` is still **not**
+execution success, and the owner smoke's child exit code 0 does not change that.
 `crates/helm-gui` is deliberately **outside the root Cargo workspace** with its own lockfile, which
-is recorded temporary architecture debt, not a hidden exception. The next gate is the **owner's
-review of the first real G2 vertical slice**.
+is recorded temporary architecture debt, not a hidden exception. **G-1, G-2 and G-3 are not started
+and not authorised**, and the next gate is the **owner's choice of the next product capability**.
 
 ## Odluke i istraživanja
 

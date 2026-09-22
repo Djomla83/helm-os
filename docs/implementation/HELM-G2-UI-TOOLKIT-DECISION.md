@@ -9,13 +9,15 @@
 >
 > The owner accepted the primary recommendation of section 13 and authorised one bounded native UI
 > fidelity spike (section 15). That spike was **built, reviewed and accepted on 2026-09-21**
-> (section 17), and the owner then authorised the **first real backend-connected G2 vertical**
-> (section 18).
+> (section 17), and the owner then authorised the **first real backend-connected G2 vertical**.
+> That vertical was **accepted on 2026-09-22 and integrated into `main`** (section 18).
 >
-> **What is and is not open.** The toolkit is settled and the spike is accepted. The real vertical
-> is **authorised and not yet accepted**. Nothing here makes the GUI production-ready, and G-1, G-2
-> and G-3 remain unauthorised. The next gate is the **owner's review of the first real G2 vertical
-> slice**.
+> **What is and is not open.** The toolkit is settled, the spike is accepted, and the first real
+> backend-connected vertical is accepted: the native GUI drives the accepted `helm-launch` 0.1 end
+> to end, through its public API, to a real receipt. **That acceptance closes the first vertical and
+> nothing else.** It adds no persistence, modifies no accepted crate, makes the GUI **in no way**
+> production-ready, and starts no G-1, G-2 or G-3 — all three remain unauthorised. The next gate is
+> the **owner's choice of the next product capability**.
 >
 > **Selective, not wholesale.** Section 6.3 is binding: HELM takes libadwaita's infrastructure and
 > refuses its idiom. This decision is **not** a statement that HELM's screens should be built from
@@ -39,7 +41,7 @@ reopened by acceptance** and are preserved as the reasoning of record.
 | G2-D8 — visual direction | **ACCEPTED** 2026-09-21, *Record / graphite frame* ([kickoff 8.16](HELM-G2-VISUAL-KICKOFF.md)) |
 | G2-D9 — UI toolkit selection | **ACCEPTED** 2026-09-21 — GTK 4 + gtk-rs with selective libadwaita |
 | Bounded native UI fidelity spike | **ACCEPTED** 2026-09-21 (section 17) |
-| First real backend-connected G2 vertical | **AUTHORISED, NOT YET ACCEPTED** (section 18) |
+| First real backend-connected G2 vertical | **ACCEPTED** 2026-09-22, integrated into `main` (section 18) |
 | Production GUI | **NOT ACCEPTED** |
 
 What is settled: what HELM G2 does, what it refuses to claim, how it is laid out, how it reads, and
@@ -942,10 +944,10 @@ toolkit faithfully reproduce the accepted D8 application?* — and hands the ans
 | Toolkit selected | **GTK 4 + gtk-rs with selective libadwaita** |
 | Second choice | Qt 6 / QML + CXX-Qt — **architecture fallback only**; no Qt spike is required |
 | Bounded fidelity spike | **ACCEPTED** 2026-09-21 (section 17) |
-| First real backend-connected G2 vertical | **AUTHORISED, NOT YET ACCEPTED** (section 18) |
+| First real backend-connected G2 vertical | **ACCEPTED** 2026-09-22, integrated into `main` (section 18) |
 | Production GUI | **NOT ACCEPTED** |
 | D8 prototype | unchanged and owner-approved; remains the visual source of truth |
-| Next gate | **Owner review of the first real G2 vertical slice** |
+| Next gate | **Owner choice of the next product capability** |
 
 ---
 
@@ -998,46 +1000,244 @@ It is recorded so it cannot be lost, and it is explicitly not solved here.
 
 ---
 
-## 18. First real backend-connected G2 vertical — AUTHORISED, NOT YET ACCEPTED
+## 18. First real backend-connected G2 vertical — ACCEPTED 2026-09-22
 
-The owner authorised the first real vertical slice on 2026-09-21. It answers one question:
+The owner authorised the first real vertical slice on 2026-09-21 and **accepted it on 2026-09-22**.
+It answered one question:
 
 > **Can the accepted native HELM GUI drive the already-accepted `helm-launch` 0.1 product
 > end to end?**
 
-The flow is: choose a local program → real executable admission → choose a working directory →
-real working-directory admission → construct and parse one launch plan → review **real** authority
-facts → authorise one launch → real launch attempt → a real `LaunchOutcome` **or** a pre-child
-`LaunchError` → real result → real captured output prefixes → real receipt and evidence.
+**It can.** The flow is: choose a local program → real executable admission → choose a working
+directory → real working-directory admission → construct and parse one launch plan → review **real**
+authority facts → authorise one launch → real launch attempt → a real `LaunchOutcome` **or** a
+pre-child `LaunchError` → real result → real captured output prefixes → real receipt and evidence.
 
-**No mock launch result is acceptable in the real vertical.**
+**No mock launch result was accepted anywhere in the real vertical.**
 
-### 18.1 What this authorisation does not open
+### 18.1 Evidence chain of record
 
-`helm-launch` is **read-only**: no API change, no schema change, no new `EnvironmentMode`, no async
-or session handle, no caller stop or cancel. No durable library, no persistence, no installer, no
-update, repair or rollback backend. No `helm-app-spec`, `helm-bind`, `helm-observe` or
-`helm-evidence` integration. No runtime selection, no Wine, no Proton, no MicroVM. No containment,
-no sandboxing, no custom shell. No graphical subject application support, and no desktop-session
-environment.
+Acceptance rests on eight links, in order. Each is a distinct gate, and none substitutes for
+another.
 
-**G-1, G-2 and G-3 remain separate and unauthorised.**
+| # | Link | State |
+|---|---|---|
+| 1 | G2-D8 visual direction — *Record / graphite frame* | **OWNER ACCEPTED** 2026-09-21 |
+| 2 | G2-D9 GTK toolkit decision | **OWNER ACCEPTED** 2026-09-21 |
+| 3 | Native GTK fidelity spike (section 17) | **OWNER ACCEPTED** 2026-09-21 |
+| 4 | Real backend vertical implemented against the **accepted `helm-launch` public API only** | Implemented; `helm-launch` unmodified |
+| 5 | Independent host-fact verification of the admitted subject | **PASSED** |
+| 6 | Dedicated branch hosted CI, `implementation/g2-ui-spike` | **PASSED** — `helm-gui G2 real vertical` run `35701563421`, attempt 1, first natural run |
+| 7 | Real `GtkFileDialog` owner smoke, **without `--g2-preselect`** | **PASSED** 2026-09-22 |
+| 8 | Main integration, first natural hosted CI at `a40ae8ef1ac40b5c314fa3077cbf572c9757f000` | **PASSED** — four workflows, all attempt 1 |
 
-### 18.2 Recorded architecture debt
+#### 18.1.1 The owner gate, in detail — `G2V-G1`
+
+The owner ran the ordinary native application under WSLg **without `--g2-preselect`**. The real GTK
+chooser opened, and through it the owner selected `/usr/bin/uname`. HELM then displayed and admitted
+the real executable facts:
+
+| Fact | Value |
+|---|---|
+| path | `/usr/bin/uname` |
+| size | 35336 bytes |
+| mode | `0o755` |
+| ELF type | `ET_DYN` |
+| pre-exec SHA-256 | `c6e023b172383fae5318c600e6f2f3a153513df62bf06ad6c9269296d2a78e89` |
+
+These match the earlier independent host verification exactly. The owner then used the **real**
+working-directory chooser to select a local working folder, and continued through the real flow —
+Choose → admission → Authority → *Authorise this one launch* → Attempt → Result → Evidence —
+reaching a real `LaunchReceipt`.
+
+The host path of the working folder is deliberately **not** recorded here. The receipt does not
+retain it, and no canonical value was established.
+
+Receipt facts from the owner smoke:
+
+| Receipt field | Value |
+|---|---|
+| schema | `helm-launch-receipt` |
+| version | `0.1` |
+| backend | `linux_x86_64_clone3_pidfd_execveat` |
+| plan SHA-256 | `f5ff8610543274da8352e566c2796b979b535ba8ba5e9f45ccea0f590485942f` |
+| working directory id | `g2-workdir` |
+| pre-exec body size | 35336 |
+| pre-exec body SHA-256 | `c6e023b172383fae5318c600e6f2f3a153513df62bf06ad6c9269296d2a78e89` |
+| pre-exec mode bits | 493 |
+| ELF type | `et_dyn` |
+| argument count | 1 |
+| environment mode | `empty` |
+| exec status | **`indeterminate` / `status_eof_without_record`** |
+| child end | `exited`, code 0 |
+| run deadline expired | `false` |
+| `SIGTERM` sent | `false` |
+| `SIGKILL` sent | `false` |
+| group sweep | `issued` |
+| stdout | 6 bytes, `complete_at_eof`, SHA-256 `533e1007b450ba293f5e2cb35b768cf963d0a74c6943558059086eda254939c2` |
+| stderr | 0 bytes, `complete_at_eof`, SHA-256 `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+
+`G2V-G1` is therefore **RESOLVED / PASSED**.
+
+#### 18.1.2 Main integration evidence
+
+The candidate head `a40ae8ef1ac40b5c314fa3077cbf572c9757f000` was integrated into `main` by
+**fast-forward from `91030d9f68625df4c4bf69273619efcb94f392b7`**, with no merge commit, no tag, no
+force and no history rewrite. The push carried the whole G2 delta — root `Cargo.toml`,
+`crates/helm-gui/**`, `.github/workflows/helm-gui.yml`, and the G2 documents and prototype — so four
+workflows triggered naturally, not one. **Every one passed on its first natural run, attempt 1:**
+
+| Workflow | Path | Run | # | Attempt | Event | Conclusion |
+|---|---|---|---|---|---|---|
+| `helm-gui G2 real vertical` | `.github/workflows/helm-gui.yml` | `35734030200` | 2 | 1 | `push` | **SUCCESS** |
+| `HELM Rust workspace Linux` | `.github/workflows/helm-evidence.yml` | `35734030187` | 44 | 1 | `push` | **SUCCESS** |
+| `helm-bind cross-platform purity` | `.github/workflows/helm-bind.yml` | `35734030230` | 14 | 1 | `push` | **SUCCESS** |
+| `helm-launch portable model, Linux capability admission, Linux backend and public launch` | `.github/workflows/helm-launch.yml` | `35734030248` | 13 | 1 | `push` | **SUCCESS** |
+
+The three accepted-workspace workflows fired because the root `Cargo.toml` changed — the
+`exclude = ["crates/helm-gui"]` entry of section 18.6. They are load-bearing here precisely because
+that exclusion is the mechanism by which the GUI is kept out of the accepted workspace: their
+passing is the evidence that the accepted crates, their lockfile and their gates are unchanged.
+
+`helm-gui` job `106766530786` re-established every gate on `main`:
+
+| Gate | Result |
+|---|---|
+| `cargo fmt --check` | **PASS** |
+| `cargo clippy --all-targets --locked -- -D warnings` | **PASS** |
+| `cargo test --locked` — 21 tests (16 unit + 5 real-launch integration) | **PASS** |
+| `cargo build --locked` | **PASS** |
+| Real launch to a real receipt, without a display | **PASS** |
+| The product workspace is untouched by the GUI | **PASS** |
+
+### 18.2 What this acceptance means
+
+The accepted native HELM GUI can:
+
+- select a real local executable;
+- open it and drive real `helm-launch` executable admission;
+- select and admit a local working directory;
+- construct and parse the bounded fixed launch plan;
+- show real authority facts;
+- create single-use authority;
+- perform the real synchronous launch on a worker;
+- remain UI-responsive while it does;
+- show real child-end and output-prefix facts;
+- expose the exact real receipt and its digest.
+
+### 18.3 What this acceptance does **not** mean
+
+It is a first vertical, not a product. None of the following is accepted, authorised or implied:
+
+- **no** durable Library or persistence of any kind;
+- **no** G-1;
+- **no** long-lived session or process handle;
+- **no** G-2;
+- **no** desktop-session environment authority;
+- **no** G-3;
+- **no** graphical subject application support through `helm-launch`;
+- **no** Wine and no Proton;
+- **no** App Forge;
+- **no** installer, update or repair;
+- **no** containment or sandbox claim;
+- **no** receipt authenticity or provenance;
+- **no** production GUI acceptance;
+- **no** custom shell.
+
+`helm-launch` remains **read-only** to this work: no API change, no schema change, no new
+`EnvironmentMode`, no async or session handle, no caller stop or cancel. No `helm-app-spec`,
+`helm-bind`, `helm-observe` or `helm-evidence` integration. **G-1, G-2 and G-3 remain separate and
+unauthorised.**
+
+#### 18.3.1 The semantic limit is preserved exactly
+
+> **`Indeterminate(StatusEofWithoutRecord)` is not execution success.**
+
+The owner smoke's child ended `exited` with code 0. **That does not alter the rule.** A clean status
+EOF without a record stays indeterminate; there is no `ExecSucceeded` state; a child exit code is a
+child-end fact and not an exec-status fact. The GUI displays both and conflates neither. Likewise
+the group sweep stays **best-effort cleanup, never containment**, and a `LaunchReceipt` stays data
+only — fabricatable, unsigned, with no authenticity and no provenance.
+
+### 18.4 Findings at acceptance
+
+| Finding | Standing |
+|---|---|
+| `G2V-G1` — real `GtkFileDialog` manual smoke | **RESOLVED / PASSED** 2026-09-22 (section 18.1.1) |
+| `G2V-FD-01` — intermittent WSLg / GTK file-chooser abort observed once | **NONBLOCKING**, carried (section 18.5) |
+| `G2V-M1` — `--g2-preselect` developer helper | **NONBLOCKING**; due **before production UI acceptance** |
+| `G2-UI-A11Y-01` — forced-light versus system accessibility preference | **NONBLOCKING**; due **before production UI acceptance** (section 17.2) |
+| `crates/helm-gui` outside the root workspace | **TEMPORARY ARCHITECTURE DEBT** (section 18.6) |
+| Brand fonts not selected | **OPEN DESIGN ITEM** (section 17.1 note A) |
+| WSLg Mesa/Zink warnings | **DEVELOPMENT-ENVIRONMENT OBSERVATION** (section 17.1 note B) |
+
+No finding is closed without evidence. `G2V-G1` is the only one closed, and section 18.1.1 is its
+evidence.
+
+#### `G2V-M1` — the `--g2-preselect` developer helper
+
+`--g2-preselect <program> <folder>` supplies the two values the choosers otherwise collect, so a
+smoke run can be driven without a file dialog. **It was not used in the owner gate**, and the gate
+is valid precisely because it was not. It remains a developer affordance on the ordinary product
+surface, which is acceptable in a first vertical and is not acceptable in a production GUI. Before
+production UI acceptance it must be **reviewed, feature-gated or removed**.
+
+### 18.5 `G2V-FD-01` — carried, nonblocking
+
+**Intermittent WSLg / GTK file-chooser abort, observed once.**
+
+An earlier owner run produced `free(): invalid pointer` followed by `Aborted`. An extensive bounded
+diagnostic was performed. It found:
+
+- **no** `xdg-desktop-portal` installed in the WSL Ubuntu development environment, so `GtkFileDialog`
+  used GTK's in-process chooser fallback rather than a portal;
+- **no** HELM Rust ownership or lifetime defect;
+- **no** HELM `unsafe` or FFI code;
+- popup and remap stress **did not** reproduce the abort;
+- minimal chooser stress **did not** reproduce it;
+- real HELM automated chooser stress **did not** reproduce it;
+- the exact abort root cause **remained unresolved**;
+- the later real owner manual smoke (section 18.1.1) **completed successfully**.
+
+| | |
+|---|---|
+| Standing | **NONBLOCKING DEVELOPMENT-ENVIRONMENT OBSERVATION** |
+| Reason | The abort was real but was not reproducible under diagnostic isolation, and was not reproduced in the successful owner gate. **No HELM defect was established.** |
+
+**This is not a claim that it is fixed**, and **not a claim that GTK or WSLg was proven to be the
+root cause.** Neither is established. It is recorded as an unresolved, unreproduced observation in a
+development environment.
+
+Reopen and escalate if any of the following occurs:
+
+- it recurs during normal development;
+- it reproduces on the controlled HELM OS desktop stack;
+- a backtrace establishes a HELM, gtk-rs or GTK defect relevant to the product.
+
+### 18.6 Recorded architecture debt
 
 `crates/helm-gui` stays **outside** the root Cargo workspace, with its own `Cargo.lock`, because the
 accepted workspace workflows run on runners that install no GTK or libadwaita development packages.
 Making it a member would break the accepted crates' gates wherever GTK is absent.
 
-This is **temporary architecture debt**, recorded rather than hidden. Workspace integration is a
-later G2 integration decision. The consumer is validated by a dedicated GUI workflow instead.
+This is **temporary architecture debt**, recorded rather than hidden, and it is **not closed by this
+acceptance**. Workspace integration is a later G2 integration decision. The consumer is validated by
+a dedicated GUI workflow instead, and the main integration of section 18.1.2 is the evidence that
+the exclusion leaves the accepted workspace gates intact.
 
-### 18.3 Status
+### 18.7 Status
 
-The vertical is **authorised and not yet accepted**. The next gate is the **owner's review of the
-first real G2 vertical slice**, at which the owner should be able to run the application and see a
-real selected program, real admission, real authority, a real launch attempt, a real result and a
-real receipt.
+| | |
+|---|---|
+| First real backend-connected G2 vertical | **ACCEPTED** 2026-09-22 |
+| Integrated into `main` | **YES** — fast-forward to `a40ae8ef1ac40b5c314fa3077cbf572c9757f000`, no merge commit |
+| Production GUI | **NOT ACCEPTED** |
+| G-1 / G-2 / G-3 | **NOT STARTED**, **NOT AUTHORISED** |
+| Next gate | **Owner choice of the next product capability** |
+
+This acceptance closes the first real G2 vertical and **nothing else**. It authorises no next
+capability. The next owner decision is which product capability to open; until that decision is
+recorded, no further G2 implementation is authorised.
 
 ### 16.4 Sources
 
