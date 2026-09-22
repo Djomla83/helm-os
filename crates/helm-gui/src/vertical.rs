@@ -23,6 +23,7 @@
 use std::fs::File;
 use std::io;
 use std::os::fd::OwnedFd;
+use std::os::unix::fs::OpenOptionsExt as _;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::Sender;
 use std::thread;
@@ -136,15 +137,53 @@ impl Refusal {
 // Caller-side opening
 // ---------------------------------------------------------------------------
 
+/// `O_NONBLOCK`, which `std` exposes no constant for. This crate takes no
+/// `libc` dependency, so the value is written out; the assertion below makes a
+/// target where it would be wrong a compile error rather than a silent
+/// mistake. The crate is Linux x86_64 only in any case — `helm-launch`'s
+/// admission, authorisation and launch exist on that cohort alone.
+const O_NONBLOCK: i32 = 0o4000;
+
+#[cfg(not(all(target_os = "linux", target_arch = "x86_64")))]
+compile_error!("helm-gui's caller-side open uses the Linux x86_64 value of O_NONBLOCK");
+
 /// Opens a local object read-only as the caller and hands back the owned
 /// descriptor.
 ///
-/// `File::open` is `O_RDONLY`, which is the one access mode the accepted
-/// executable admission will take. Nothing here inspects the object: judging
-/// it is `helm-launch`'s job, and this adapter does not pre-empt it by looking
-/// at an extension, a name or a magic number.
+/// Read-only is the one access mode the accepted admission will take: it
+/// inspects the descriptor with `F_GETFL` and refuses `O_PATH`, `O_WRONLY` and
+/// `O_RDWR`. `O_NONBLOCK` is not part of the access mode and does not affect
+/// that check.
+///
+/// **Why nonblocking (`PGR-02`).** A person can select any filename the file
+/// chooser will show, including a special file. Opening a FIFO with no writer
+/// read-only blocks in open(2) until a writer appears, so the operation never
+/// reached `helm-launch` and the person was never told anything. `O_NONBLOCK`
+/// makes that open return, and admission then refuses the object through its
+/// own vocabulary — `NotRegularFile` or `NotDirectory` — which is the right
+/// place for that judgement. The same applies to a device that would otherwise
+/// wait on open.
+///
+/// **What this does not make bounded.** Only the open, and only for objects
+/// whose open is what was waiting. `O_NONBLOCK` has no effect on reads of a
+/// regular file, and a network filesystem, a failing device or a pathological
+/// mount can still hold an open or a read for as long as the kernel does.
+/// There is no timeout here and none is claimed.
+///
+/// The flag stays set on the descriptor that is moved into admission. That is
+/// harmless for every use the accepted crate makes of it: positional reads of
+/// a regular file ignore it, and so do `execveat` and `fchdir`.
+///
+/// Nothing here inspects the object. Judging it is `helm-launch`'s job, and
+/// this adapter does not pre-empt it by looking at an extension, a name, a
+/// magic number — or at what the object was before it was opened.
 fn open_read_only(path: &Path) -> Result<OwnedFd, Refusal> {
-    File::open(path).map(OwnedFd::from).map_err(Refusal::Open)
+    File::options()
+        .read(true)
+        .custom_flags(O_NONBLOCK)
+        .open(path)
+        .map(OwnedFd::from)
+        .map_err(Refusal::Open)
 }
 
 /// Opens and admits one executable. Blocking: it measures the whole body, so

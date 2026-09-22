@@ -163,6 +163,9 @@ where
     match rx.recv_timeout(BOUND) {
         Ok(answer) => {
             worker.join().expect("the worker finished");
+            // Visible under `-- --nocapture`, so a run reports what it measured
+            // rather than only that it was under the bound.
+            println!("reached {:?} in {:?}", answer.1, answer.0);
             answer
         }
         Err(RecvTimeoutError::Timeout) => {
