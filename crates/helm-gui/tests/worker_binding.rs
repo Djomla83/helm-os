@@ -32,7 +32,7 @@ use std::path::{Path, PathBuf};
 
 use helm_gui::session::Session;
 use helm_gui::state::Phase;
-use helm_gui::vertical::{self, Message, Refusal};
+use helm_gui::vertical::{self, Message, OperationId, Refusal};
 use helm_launch::{AuthorizedLaunch, ExecutableCapability, WorkingDirectoryCapability};
 use sha2::{Digest as _, Sha256};
 
@@ -51,55 +51,81 @@ const BETA: &str = "beta-subject";
 // be.
 // ---------------------------------------------------------------------------
 
-struct ExecTicket;
-struct WorkdirTicket;
-struct LaunchTicket;
+struct ExecTicket(OperationId);
+struct WorkdirTicket(OperationId);
+struct LaunchTicket(OperationId);
 
-fn begin_exec(session: &mut Session, path: &Path) -> ExecTicket {
-    let started = session.begin_executable(path.to_path_buf(), None);
+/// `None` when the session refused the selection, which it does while an
+/// attempt is outstanding.
+fn begin_exec(session: &mut Session, path: &Path) -> Option<ExecTicket> {
+    let (op, started) = session.begin_executable(path.to_path_buf(), None)?;
     assert_eq!(
         started, path,
         "the worker is given the path that was chosen"
     );
-    ExecTicket
+    Some(ExecTicket(op))
 }
 
-fn begin_workdir(session: &mut Session, path: &Path) -> WorkdirTicket {
-    let started = session.begin_working_directory(path.to_path_buf());
+fn begin_workdir(session: &mut Session, path: &Path) -> Option<WorkdirTicket> {
+    let (op, started) = session.begin_working_directory(path.to_path_buf())?;
     assert_eq!(
         started, path,
         "the worker is given the path that was chosen"
     );
-    WorkdirTicket
+    Some(WorkdirTicket(op))
+}
+
+/// For the sequences where nothing should refuse the selection.
+fn begin_exec_now(session: &mut Session, path: &Path) -> ExecTicket {
+    match begin_exec(session, path) {
+        Some(ticket) => ticket,
+        None => panic!("the session refused a selection it had no reason to refuse"),
+    }
+}
+
+fn begin_workdir_now(session: &mut Session, path: &Path) -> WorkdirTicket {
+    match begin_workdir(session, path) {
+        Some(ticket) => ticket,
+        None => panic!("the session refused a selection it had no reason to refuse"),
+    }
 }
 
 fn deliver_exec(
     session: &mut Session,
-    _ticket: &ExecTicket,
+    ticket: &ExecTicket,
     result: Result<ExecutableCapability, Refusal>,
 ) {
-    session.apply(Message::Executable(result));
+    session.apply(Message::Executable {
+        op: ticket.0,
+        result,
+    });
 }
 
 fn deliver_workdir(
     session: &mut Session,
-    _ticket: &WorkdirTicket,
+    ticket: &WorkdirTicket,
     result: Result<WorkingDirectoryCapability, Refusal>,
 ) {
-    session.apply(Message::WorkingDirectory(result));
+    session.apply(Message::WorkingDirectory {
+        op: ticket.0,
+        result,
+    });
 }
 
 fn deliver_launch(
     session: &mut Session,
-    _ticket: &LaunchTicket,
+    ticket: &LaunchTicket,
     result: Result<helm_launch::LaunchOutcome, helm_launch::LaunchError>,
 ) {
-    session.apply(Message::Launched(Box::new(result)));
+    session.apply(Message::Launched {
+        op: ticket.0,
+        result: Box::new(result),
+    });
 }
 
 fn start_attempt(session: &mut Session) -> (LaunchTicket, AuthorizedLaunch) {
     match session.start_attempt() {
-        Some(authorized) => (LaunchTicket, authorized),
+        Some((op, authorized)) => (LaunchTicket(op), authorized),
         None => panic!("the session held no authority to consume"),
     }
 }
@@ -107,7 +133,9 @@ fn start_attempt(session: &mut Session) -> (LaunchTicket, AuthorizedLaunch) {
 fn attempt_again(session: &mut Session) -> (ExecTicket, WorkdirTicket) {
     let (exec, workdir) = session.attempt_again();
     match (exec, workdir) {
-        (Some(_), Some(_)) => (ExecTicket, WorkdirTicket),
+        (Some((exec_op, _)), Some((workdir_op, _))) => {
+            (ExecTicket(exec_op), WorkdirTicket(workdir_op))
+        }
         _ => panic!("attempt again must re-open and re-admit both objects"),
     }
 }
@@ -185,9 +213,9 @@ fn admit_workdir(path: &Path) -> WorkingDirectoryCapability {
 
 /// Everything the Choose surface does before an authority can exist.
 fn admit_both(session: &mut Session, subject: &Path, workdir: &Path) {
-    let exec = begin_exec(session, subject);
+    let exec = begin_exec_now(session, subject);
     deliver_exec(session, &exec, Ok(admit_exec(subject)));
-    let dir = begin_workdir(session, workdir);
+    let dir = begin_workdir_now(session, workdir);
     deliver_workdir(session, &dir, Ok(admit_workdir(workdir)));
     assert!(
         session.admitted(),
@@ -211,9 +239,9 @@ fn t1_a_stale_executable_result_must_not_populate_a_newer_selection() {
 
     let mut session = Session::new();
     // Operation A begins on alpha.
-    let a = begin_exec(&mut session, &alpha);
+    let a = begin_exec_now(&mut session, &alpha);
     // The selection moves to beta before A returns. B is now the subject.
-    let _b = begin_exec(&mut session, &beta);
+    let _b = begin_exec_now(&mut session, &beta);
     // A's worker returns late.
     deliver_exec(&mut session, &a, Ok(alpha_capability));
 
@@ -252,8 +280,8 @@ fn t2_a_stale_working_directory_result_must_not_satisfy_a_newer_selection() {
     let first_capability = admit_workdir(&first);
 
     let mut session = Session::new();
-    let a = begin_workdir(&mut session, &first);
-    let _b = begin_workdir(&mut session, &second);
+    let a = begin_workdir_now(&mut session, &first);
+    let _b = begin_workdir_now(&mut session, &second);
     deliver_workdir(&mut session, &a, Ok(first_capability));
 
     assert!(
@@ -284,7 +312,7 @@ fn t3_closing_the_entry_must_not_be_undone_by_a_late_executable_result() {
     let capability = admit_exec(&alpha);
 
     let mut session = Session::new();
-    let a = begin_exec(&mut session, &alpha);
+    let a = begin_exec_now(&mut session, &alpha);
     session.close();
     deliver_exec(&mut session, &a, Ok(capability));
 
@@ -314,7 +342,7 @@ fn t3_closing_the_entry_must_not_be_undone_by_a_late_working_directory_result() 
     let capability = admit_workdir(&workdir);
 
     let mut session = Session::new();
-    let a = begin_workdir(&mut session, &workdir);
+    let a = begin_workdir_now(&mut session, &workdir);
     session.close();
     deliver_workdir(&mut session, &a, Ok(capability));
 
@@ -352,7 +380,7 @@ fn t3_closing_the_entry_must_not_be_undone_by_a_late_launch_result() {
         "a closed entry must not be given a result"
     );
     assert!(session.launch_error().is_none());
-    assert!(!session.attempting());
+    assert!(!session.attempt_running());
     assert_eq!(
         session.phase(),
         Phase::Nothing,
@@ -387,14 +415,18 @@ fn t4_a_launch_result_must_not_be_reported_under_a_later_subject() {
     assert!(outcome.is_ok(), "the fixture subject launches");
 
     // While alpha's attempt is outstanding the person goes back to the chooser
-    // and opens a different program, which is admitted before alpha returns.
+    // and tries to open a different program. There are two honest answers: the
+    // session may refuse to replace the program an attempt is running, or it
+    // may accept and keep the result bound to the subject that produced it.
+    // What it may not do is report alpha's result as beta's.
     session.go_choose();
-    admit_both(&mut session, &beta, &other);
-    assert_eq!(
-        session.program.as_ref().map(|f| f.name.as_str()),
-        Some(BETA),
-        "beta is the open subject now"
-    );
+    let replaced = begin_exec(&mut session, &beta);
+    if let Some(ticket) = replaced.as_ref() {
+        deliver_exec(&mut session, ticket, Ok(admit_exec(&beta)));
+        if let Some(dir) = begin_workdir(&mut session, &other) {
+            deliver_workdir(&mut session, &dir, Ok(admit_workdir(&other)));
+        }
+    }
 
     // Alpha's launch finally returns.
     deliver_launch(&mut session, &ticket, outcome);
@@ -412,6 +444,32 @@ fn t4_a_launch_result_must_not_be_reported_under_a_later_subject() {
                 .as_ref()
                 .is_some_and(|f| f.path == beta.display().to_string())),
         "an ended attempt was labelled with beta's path"
+    );
+
+    // And whatever the interface draws for that attempt, it draws alpha: the
+    // attempt owns the subject and the plan it was authorised from.
+    let attempt = session.attempt().expect("the attempt HELM last authorised");
+    assert_eq!(
+        attempt.subject().name,
+        ALPHA,
+        "the attempt's subject is the program that ran"
+    );
+    assert_eq!(
+        attempt.subject().sha256_hex,
+        digest_of(&alpha),
+        "the attempt's subject carries the measurement that was authorised"
+    );
+    assert_eq!(attempt.workdir_path(), Some(workdir.as_path()));
+    assert!(
+        attempt.outcome().is_some(),
+        "the real result is recorded against the attempt that produced it"
+    );
+
+    // Under the state machine as corrected, the program an attempt is running
+    // cannot be replaced at all, so the sequence is closed at both ends.
+    assert!(
+        replaced.is_none(),
+        "the open program must not be replaceable while its attempt is outstanding"
     );
 }
 
@@ -440,6 +498,11 @@ fn t5_an_earlier_admission_must_not_satisfy_a_later_attempt_again_generation() {
 
     // Generation two, then generation three before generation two returns.
     let (exec_two, dir_two) = attempt_again(&mut session);
+    assert_eq!(
+        session.phase(),
+        Phase::Inspecting,
+        "while the entry is being re-opened and re-admitted it is being inspected, not ended"
+    );
     let (exec_three, dir_three) = attempt_again(&mut session);
 
     // Generation two's results arrive late.
@@ -487,10 +550,10 @@ fn t6_out_of_order_admission_results_must_not_overwrite_the_current_generation()
 
     let mut session = Session::new();
 
-    let exec_n = begin_exec(&mut session, &alpha);
-    let exec_next = begin_exec(&mut session, &beta);
-    let dir_n = begin_workdir(&mut session, &first);
-    let dir_next = begin_workdir(&mut session, &second);
+    let exec_n = begin_exec_now(&mut session, &alpha);
+    let exec_next = begin_exec_now(&mut session, &beta);
+    let dir_n = begin_workdir_now(&mut session, &first);
+    let dir_next = begin_workdir_now(&mut session, &second);
 
     // N+1 completes first for both resources.
     deliver_exec(&mut session, &exec_next, Ok(admit_exec(&beta)));

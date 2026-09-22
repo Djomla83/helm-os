@@ -94,6 +94,18 @@ fn set_mark(shape: &gtk::Box, class: &str) {
     shape.add_css_class(class);
 }
 
+/// The subject the Attempt, Result and Evidence surfaces describe.
+///
+/// It is the attempt's **own** subject — the program that was measured and
+/// authorised for that attempt — and never whatever happens to be open when
+/// the result arrives. That is the whole of `PGR-01` at the drawing end.
+fn attempt_subject(session: &Session) -> String {
+    session.attempt().map_or_else(
+        || session.program_name(),
+        |attempt| attempt.subject().name.clone(),
+    )
+}
+
 // ---------------------------------------------------------------------------
 // Render
 // ---------------------------------------------------------------------------
@@ -684,17 +696,23 @@ fn render_authority(ui: &Rc<Ui>, session: &Session) {
 fn render_attempt(ui: &Rc<Ui>, session: &Session) {
     ui.attempt
         .crumb
-        .set_text(&format!("{} · Attempt", session.program_name()));
+        .set_text(&format!("{} · Attempt", attempt_subject(session)));
     let bound = f64::from(vertical::TIMEOUT_MS) / 1000.0;
     let elapsed = session
-        .attempt_started()
-        .map_or(0.0, |start| start.elapsed().as_secs_f64())
+        .attempt()
+        .map_or(0.0, |attempt| attempt.started().elapsed().as_secs_f64())
         .min(bound);
     ui.attempt
         .elapsed
         .set_text(&format!("{elapsed:.1} s of at most {bound:.0} s"));
     ui.attempt.meter.set_fraction(elapsed / bound);
-    if let Some(plan) = session.plan_facts.as_ref() {
+    // The attempt's own validated plan, not a plan parsed for something the
+    // person selected afterwards.
+    let plan = session
+        .attempt()
+        .map(helm_gui::session::Attempt::plan)
+        .or(session.plan_facts.as_ref());
+    if let Some(plan) = plan {
         ui.attempt.deadline_note.set_text(&format!(
             "HELM asks the program to stop, waits {} seconds, then forces it. Those are the \
              plan's own values: {} ms and {} ms.",
@@ -708,7 +726,7 @@ fn render_attempt(ui: &Rc<Ui>, session: &Session) {
 fn render_result(ui: &Rc<Ui>, session: &Session, dispatch: &Dispatch) {
     ui.result
         .crumb
-        .set_text(&format!("{} · Result", session.program_name()));
+        .set_text(&format!("{} · Result", attempt_subject(session)));
     clear(&ui.result.facts);
     clear(&ui.result.output_body);
 
@@ -891,7 +909,7 @@ fn render_result(ui: &Rc<Ui>, session: &Session, dispatch: &Dispatch) {
 fn render_evidence(ui: &Rc<Ui>, session: &Session) {
     ui.evidence.crumb.set_text(&format!(
         "{} · Result · Launch details",
-        session.program_name()
+        attempt_subject(session)
     ));
     ui.evidence.copy.set_label(&session.copy_label);
     clear(&ui.evidence.body);
@@ -975,6 +993,18 @@ fn render_evidence(ui: &Rc<Ui>, session: &Session) {
 
 fn handle(ui: &Rc<Ui>, action: Action) {
     if ui.updating.get() {
+        return;
+    }
+    // While an attempt is outstanding the open program cannot be replaced.
+    // The session refuses it in any case; this only avoids opening a chooser
+    // whose answer would have to be discarded. Correctness is the session's,
+    // not this check's.
+    if ui.session.borrow().attempt_running()
+        && matches!(
+            action,
+            Action::ChooseProgramFile | Action::ChooseWorkingFolder | Action::GoChoose
+        )
+    {
         return;
     }
     match action {
@@ -1064,7 +1094,7 @@ fn open_file_dialog(ui: &Rc<Ui>, folder: bool) {
 /// decides what the selection invalidates; this function only supplies the
 /// wall-clock text the session cannot produce and starts the worker.
 fn begin_admission(ui: &Rc<Ui>, path: PathBuf, folder: bool) {
-    let path = {
+    let started = {
         let mut session = ui.session.borrow_mut();
         if folder {
             session.begin_working_directory(path)
@@ -1072,10 +1102,15 @@ fn begin_admission(ui: &Rc<Ui>, path: PathBuf, folder: bool) {
             session.begin_executable(path, local_time_of_day())
         }
     };
+    // `None` means the session refused the selection, which it does while an
+    // attempt is outstanding. Nothing was recorded, so nothing is started.
+    let Some((op, path)) = started else {
+        return;
+    };
     if folder {
-        vertical::spawn_admit_working_directory(path, ui.tx.clone());
+        vertical::spawn_admit_working_directory(op, path, ui.tx.clone());
     } else {
-        vertical::spawn_admit_executable(path, ui.tx.clone());
+        vertical::spawn_admit_executable(op, path, ui.tx.clone());
     }
     refresh(ui);
 }
@@ -1091,22 +1126,22 @@ fn local_time_of_day() -> Option<String> {
 
 /// Consumes the authority exactly once, on a worker thread.
 fn start_attempt(ui: &Rc<Ui>) {
-    let Some(authorized) = ui.session.borrow_mut().start_attempt() else {
+    let Some((op, authorized)) = ui.session.borrow_mut().start_attempt() else {
         return;
     };
-    vertical::spawn_launch(authorized, ui.tx.clone());
+    vertical::spawn_launch(op, authorized, ui.tx.clone());
 }
 
 /// "Attempt launch again" returns through fresh authority preparation: the
 /// previous authority was consumed and nothing about it is replayed. The paths
 /// are re-opened and re-admitted from scratch.
 fn attempt_again(ui: &Rc<Ui>) {
-    let (exec_path, workdir_path) = ui.session.borrow_mut().attempt_again();
-    if let Some(path) = exec_path {
-        vertical::spawn_admit_executable(path, ui.tx.clone());
+    let (executable, working_directory) = ui.session.borrow_mut().attempt_again();
+    if let Some((op, path)) = executable {
+        vertical::spawn_admit_executable(op, path, ui.tx.clone());
     }
-    if let Some(path) = workdir_path {
-        vertical::spawn_admit_working_directory(path, ui.tx.clone());
+    if let Some((op, path)) = working_directory {
+        vertical::spawn_admit_working_directory(op, path, ui.tx.clone());
     }
 }
 
@@ -1158,7 +1193,7 @@ fn install_tick(ui: &Rc<Ui>) {
             ui.session.borrow_mut().apply(message);
             changed = true;
         }
-        let attempting = ui.session.borrow().attempting();
+        let attempting = ui.session.borrow().attempt_running();
         if changed || attempting {
             refresh(&ui);
         }

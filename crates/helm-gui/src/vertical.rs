@@ -195,36 +195,71 @@ pub fn authorise(
 // none of those. Only inert values cross back, never a GTK object.
 // ---------------------------------------------------------------------------
 
+/// The identity of one asynchronous operation.
+///
+/// It is minted before the worker starts, moves with the request, and comes
+/// back attached to the result. The main thread then compares it against the
+/// operation that is currently allowed to change that piece of state, and a
+/// result whose operation is no longer that one is dropped.
+///
+/// It is **opaque and inert**: it names nothing, resolves nothing, authorises
+/// nothing and outlives no process. It is not a session handle, not a process
+/// handle and not a durable identity — G-1 and G-2 remain unauthorised. Its
+/// only use is that comparison.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct OperationId(u64);
+
+impl OperationId {
+    /// Minted by the session, which owns the only counter.
+    pub(crate) const fn from_raw(value: u64) -> Self {
+        Self(value)
+    }
+}
+
 /// What a worker hands back to the main thread.
+///
+/// Every variant carries the identity of the operation that produced it. The
+/// kind of result is not enough: two admissions of the same kind are told
+/// apart by their operation, never by their arrival order.
 pub enum Message {
     /// Executable admission finished.
-    Executable(Result<ExecutableCapability, Refusal>),
+    Executable {
+        op: OperationId,
+        result: Result<ExecutableCapability, Refusal>,
+    },
     /// Working-directory admission finished.
-    WorkingDirectory(Result<WorkingDirectoryCapability, Refusal>),
+    WorkingDirectory {
+        op: OperationId,
+        result: Result<WorkingDirectoryCapability, Refusal>,
+    },
     /// The synchronous launch call returned.
-    Launched(Box<Result<LaunchOutcome, LaunchError>>),
+    Launched {
+        op: OperationId,
+        result: Box<Result<LaunchOutcome, LaunchError>>,
+    },
 }
 
 /// Admits an executable off the GTK thread.
 ///
 /// Measuring a large executable reads and hashes the whole body, so doing this
 /// on the main loop would freeze the window.
-pub fn spawn_admit_executable(path: PathBuf, tx: Sender<Message>) {
+pub fn spawn_admit_executable(op: OperationId, path: PathBuf, tx: Sender<Message>) {
     thread::spawn(move || {
         let result = admit_executable_at(&path);
         // A closed receiver means the window went away; there is nothing to
         // report to and nothing to clean up but the capability, which drops
-        // here and closes its descriptor.
-        drop(tx.send(Message::Executable(result)));
+        // here and closes its descriptor. The same is true of a result the
+        // main thread drops as stale.
+        drop(tx.send(Message::Executable { op, result }));
     });
 }
 
 /// Admits a working directory off the GTK thread, for symmetry and because a
 /// directory on a slow mount can still block.
-pub fn spawn_admit_working_directory(path: PathBuf, tx: Sender<Message>) {
+pub fn spawn_admit_working_directory(op: OperationId, path: PathBuf, tx: Sender<Message>) {
     thread::spawn(move || {
         let result = admit_working_directory_at(&path);
-        drop(tx.send(Message::WorkingDirectory(result)));
+        drop(tx.send(Message::WorkingDirectory { op, result }));
     });
 }
 
@@ -232,9 +267,12 @@ pub fn spawn_admit_working_directory(path: PathBuf, tx: Sender<Message>) {
 ///
 /// The authority is moved in and consumed exactly once. Nothing is returned
 /// that could launch again.
-pub fn spawn_launch(authorized: AuthorizedLaunch, tx: Sender<Message>) {
+pub fn spawn_launch(op: OperationId, authorized: AuthorizedLaunch, tx: Sender<Message>) {
     thread::spawn(move || {
         let result = launch(authorized);
-        drop(tx.send(Message::Launched(Box::new(result))));
+        drop(tx.send(Message::Launched {
+            op,
+            result: Box::new(result),
+        }));
     });
 }
