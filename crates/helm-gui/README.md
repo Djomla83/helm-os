@@ -11,9 +11,10 @@
 > Evidence surfaces show comes from a real `LaunchOutcome` or a real
 > `LaunchError`.
 >
-> Authorised by the owner on 2026-09-21, after the GTK fidelity spike was
-> accepted. The vertical is **authorised and not yet accepted**; the next gate
-> is the owner's review of it.
+> Authorised by the owner on 2026-09-21 after the GTK fidelity spike was
+> accepted, then **owner-accepted on 2026-09-22 and integrated into `main`**.
+> That acceptance applies to this bounded first real vertical only. It does
+> **not** accept a production GUI, persistence, G-1, G-2 or G-3.
 
 ## What it does not do
 
