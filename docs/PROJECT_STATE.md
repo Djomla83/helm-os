@@ -7,17 +7,20 @@ as written.
 
 | Item | Current state |
 |---|---|
-| Repository `main` | `a4c6d719b13da84c854d7a203bc896f95bc0a4c7` |
+| `main` when this record was written | `a4c6d719b13da84c854d7a203bc896f95bc0a4c7` — hardening branch not yet integrated |
 | First real backend-connected G2 vertical | **OWNER-ACCEPTED / INTEGRATED** |
+| Post-G2 hardening | **`HELM_POST_G2_HARDENING_ACCEPTED`** 2026-09-22 — owner-accepted at `f4179cd90ce40e7b8a7d92842c1bd516c86129ff` |
 | Production GUI | **NOT ACCEPTED** |
 | G-1 durable Library | **NOT STARTED / NOT AUTHORISED** |
 | G-2 long-lived session lifecycle | **NOT STARTED / NOT AUTHORISED** |
 | G-3 desktop-session environment authority | **NOT STARTED / NOT AUTHORISED** |
 | Post-G2 engineering review | [HELM-POST-G2-PRODUCT-REVIEW](implementation/HELM-POST-G2-PRODUCT-REVIEW.md) |
-| `PGR-01` async result/context binding | **CONFIRMED / FIXED / REGRESSION ADDED** — on `planning/post-g2-product-review`, awaiting owner review |
-| `PGR-02` caller-side open before admission | **CONFIRMED / FIXED / REGRESSION ADDED** — same branch, awaiting owner review |
+| `PGR-01` async result/context binding | CONFIRMED / FIXED / REGRESSION ADDED → **OWNER-ACCEPTED RESOLVED** 2026-09-22 |
+| `PGR-02` caller-side open before admission | CONFIRMED / FIXED / REGRESSION ADDED → **OWNER-ACCEPTED RESOLVED** 2026-09-22 |
+| Hosted CI at the accepted head | `helm-gui G2 real vertical` run `35756196671`, attempt 1, **SUCCESS** — 33 tests |
+| Owner real-GUI smoke at the accepted head | **PASSED** for the properties exercised — `/usr/bin/uname` normal flow; `/usr/bin/yes` deadline path, program chooser unavailable during the attempt |
 | `helm-launch` 0.1 | **UNMODIFIED** by the hardening gate — no source, API, schema or semantic change |
-| Next gate | **OWNER DECISION ON G-1 DURABLE LIBRARY** |
+| Next gate | **Integration into `main` and its first natural hosted CI; then the owner decision on G-1 DURABLE LIBRARY** |
 
 Both `PGR` entries began as code-review hypotheses and were then **reproduced**: deterministic
 tests failed against the accepted code before either was corrected, and each regression is committed
@@ -26,9 +29,18 @@ including reporting one program's launch result as an ended attempt of another, 
 entry the person had closed. `PGR-02` let a selected FIFO with no writer park the operation in
 `open(2)` so it never reached a HELM refusal at all. Both were corrected in `crates/helm-gui` alone.
 
-The corrections are **not owner-accepted**; they sit on `planning/post-g2-product-review` for
-review. Nothing about them accepts a production GUI, and **G-1 remains unauthorised**: the next gate
-is the owner's decision on it, not its start.
+The owner **accepted both corrections on 2026-09-22** after hosted CI and a real manual GUI smoke on
+the exact corrected head, without `--g2-preselect`. The smoke ran the normal flow with
+`/usr/bin/uname`, and a real `/usr/bin/yes` attempt that ended by its deadline and `SIGTERM`, during
+which the program chooser would not open. The owner did **not** manually run the
+close-then-late-result sequence; that case rests on the deterministic regression and hosted CI. The
+WSLg libEGL/Mesa/Zink warnings and one GTK minimum-width critical appeared and are carried, not
+fixed; there was no `free(): invalid pointer`, abort, panic or observed crash. The full record,
+including every carried finding, is [section 3.4 of the review](implementation/HELM-POST-G2-PRODUCT-REVIEW.md#34-owner-acceptance-of-the-hardening--2026-09-22).
+
+Nothing about this acceptance accepts a production GUI, and **G-1 remains unauthorised**. The next
+step is integration into `main` and its first natural hosted CI; the owner's decision on G-1 follows
+only once that result is known.
 
 ---
 

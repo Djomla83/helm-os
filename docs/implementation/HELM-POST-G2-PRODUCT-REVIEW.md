@@ -2,7 +2,8 @@
 
 > **Status: PROPOSED / REVIEW.** The product sequence below is a proposal.
 >
-> Date: 2026-09-22. Section 3 updated the same day with the findings' dispositions.
+> Date: 2026-09-22. Section 3 updated the same day with the findings' dispositions, and section 3.4
+> with the owner's acceptance of the hardening.
 >
 > Repository baseline: `a4c6d719b13da84c854d7a203bc896f95bc0a4c7`
 >
@@ -13,8 +14,9 @@
 >
 > **Section 3 is no longer a proposal.** Both findings were reproduced and corrected in
 > `helm-gui` under the bounded hardening gate; section 3 now records what was reproduced, what was
-> changed and what was not. Everything from section 5 onwards remains **PROPOSED and
-> unauthorised**.
+> changed and what was not. **Both corrections are owner-accepted since 2026-09-22** — `PGR-01` and
+> `PGR-02` are **OWNER-ACCEPTED RESOLVED**, classification `HELM_POST_G2_HARDENING_ACCEPTED`
+> (section 3.4). Everything from section 5 onwards remains **PROPOSED and unauthorised**.
 
 ---
 
@@ -65,7 +67,8 @@ paragraph.
 
 ### 3.1 `PGR-01` — asynchronous result/context binding
 
-**Status: CONFIRMED / FIXED / REGRESSION ADDED.**
+**Status: CONFIRMED / FIXED / REGRESSION ADDED — OWNER-ACCEPTED RESOLVED 2026-09-22**
+(section 3.4).
 
 The GUI worker channel distinguished executable admission, working-directory admission and launch
 completion by message variant, but a message carried no request, generation or attempt identity and
@@ -114,7 +117,8 @@ A re-admission in flight now precedes a previous result.
 
 ### 3.2 `PGR-02` — caller-side open can precede admission by an unbounded wait
 
-**Status: CONFIRMED / FIXED / REGRESSION ADDED.**
+**Status: CONFIRMED / FIXED / REGRESSION ADDED — OWNER-ACCEPTED RESOLVED 2026-09-22**
+(section 3.4).
 
 The GUI adapter opened a selected local object with `File::open` before handing the owned descriptor
 to `helm-launch` admission. Admission refuses anything that is not a regular file or a directory,
@@ -159,6 +163,197 @@ a relocation of the existing state machine, not a new abstraction.
 **No production GUI acceptance follows.** The vertical remains the accepted experimental vertical it
 was, now with two defects corrected.
 
+### 3.4 Owner acceptance of the hardening — 2026-09-22
+
+**Classification: `HELM_POST_G2_HARDENING_ACCEPTED`.** The owner accepted both corrections on
+2026-09-22, after independent engineering verification and a real manual GUI smoke on the exact
+corrected head.
+
+#### 3.4.1 Evidence chain of record
+
+| # | Link | State |
+|---|---|---|
+| 1 | Deterministic reproduction against the accepted code, each regression committed before its fix | `PGR-01`: eight state-level regressions, all failing (`45c4a67`). `PGR-02`: two FIFO regressions, both timing out (`0786f64`) |
+| 2 | Correction confined to `crates/helm-gui` | `PGR-01`: `7fc2a9f`, and `0e0bc36` from self-review. `PGR-02`: `141423c`. `helm-launch` unmodified |
+| 3 | Full crate suite after correction | 33 tests pass: the ten regressions, the two admission pins of section 3.2, and the 21 previously accepted tests |
+| 4 | First natural hosted CI at the corrected head `f4179cd90ce40e7b8a7d92842c1bd516c86129ff` | **PASSED** — `helm-gui G2 real vertical` run `35756196671`, run number 5, `push`, attempt 1 |
+| 5 | Owner real-GUI smoke on that exact head, without `--g2-preselect` | **PASSED** for the properties exercised (section 3.4.2) |
+| 6 | Owner acceptance | **ACCEPTED** 2026-09-22 |
+| 7 | Integration into `main` and its first natural hosted CI | **PENDING** when this record was written |
+
+Hosted job `106842459308` on the corrected head:
+
+| Gate | Result |
+|---|---|
+| `cargo fmt --check` | **PASS** |
+| `cargo clippy --all-targets --locked -- -D warnings` | **PASS** |
+| `cargo test --locked` — 33 tests: 16 unit, 4 bounded-admission, 5 real-launch, 8 worker-binding | **PASS** |
+| `cargo build --locked` | **PASS** |
+| Real launch to a real receipt, without a display | **PASS** |
+| The product workspace is untouched by the GUI | **PASS** |
+
+The refactor `b503149`, which moved the session state machine from the binary into the library so it
+could be driven without a window, is accepted with the corrections as part of this bounded hardening.
+
+#### 3.4.2 Owner manual smoke
+
+The owner ran the ordinary GUI on the exact corrected head
+`f4179cd90ce40e7b8a7d92842c1bd516c86129ff`:
+
+```bash
+cargo run --manifest-path crates/helm-gui/Cargo.toml --locked --bin helm-gui
+```
+
+`--g2-preselect` was **not** used. Every program and folder was chosen through the real GTK
+chooser.
+
+**Smoke A — the normal real flow: PASS.**
+
+The owner chose `/usr/bin/uname`, and as working directory a local folder in the owner's home
+directory. As in section 18.1.1 of the [toolkit decision](HELM-G2-UI-TOOLKIT-DECISION.md), the host
+path of the working folder is not recorded here; the receipt does not retain it. HELM displayed:
+
+| Fact | Displayed |
+|---|---|
+| program | `uname` |
+| path | `/usr/bin/uname` |
+| kind | regular file |
+| size | 35 336 bytes |
+| mode | `0o755` |
+| ELF | `ET_DYN` |
+| measurement digest, short form as displayed | `sha256:c6e0…8e89` |
+
+The owner went through Choose → Chosen program → Authority → *Authorise this one launch* → Attempt →
+Result → Evidence.
+
+Result: the direct child ended by exit with code 0, and HELM said explicitly that it does not
+interpret that as proof of execution; the run deadline did not expire; no `SIGTERM` and no `SIGKILL`
+were sent; the best-effort group sweep was issued; stdout 6 bytes, stderr 0 bytes; the displayed
+output was `Linux`.
+
+| Evidence field | Displayed |
+|---|---|
+| exec status | `indeterminate` / `status_eof_without_record` |
+| child end | `exited` / code 0 |
+| termination | `false` / `false` / `issued` |
+| stdout | 6 bytes / `complete_at_eof` |
+| stderr | 0 bytes / `complete_at_eof` |
+| pre-exec measurement | 35 336 / `sha256:c6e0…8e89` / `0o755` / `et_dyn` |
+
+The receipt was shown as inert unsigned data, with no proof of origin and no authority.
+
+**Smoke B — a long-running attempt, and `PGR-01` as a person meets it: PASS for the properties
+exercised.**
+
+The owner chose `/usr/bin/yes` with the same working folder, authorised, and started a real
+attempt. While that attempt was counting toward its 30-second deadline, the owner navigated to
+Library and tried *Choose local program*. **The program chooser did not open while the attempt was
+outstanding.** After the attempt completed, choosing a program was available again.
+
+That is the owner-visible face of the running-attempt replacement guard of section 3.1, at the layer
+a person can reach: the interface declines to open a chooser whose answer would have to be refused.
+The state-machine refusal behind it, which holds even if a chooser answer did arrive, is what
+`t4_a_launch_result_must_not_be_reported_under_a_later_subject` asserts.
+
+The attempt ended through the accepted deadline lifecycle. From the receipt the owner recorded for
+one `yes` attempt:
+
+| Receipt field | Value |
+|---|---|
+| run deadline expired | `true` |
+| child end | signal 15, `core_dumped: false` |
+| `SIGTERM` sent | `true` |
+| `SIGKILL` sent | `false` |
+| group sweep | `issued` |
+| exec status | `indeterminate` / `status_eof_without_record` |
+| executable body size | 35208 |
+| executable SHA-256 | `f7bee5c97e510592cc16f088ecfb6a2af84d61ad5821abfb2628b43850e9551e` |
+| ELF type | `et_dyn` |
+| mode bits | 493 |
+| stderr | 0 bytes |
+| stdout drained in that run | `1463033856` bytes |
+
+Stdout was very large, as expected of `yes`, while the GUI's capture stayed bounded. A later Result
+screen showed the same lifecycle class: the direct child observed to end after signal 15, the
+deadline expired, HELM asked the program to stop, and no success verdict.
+
+**What the smoke did not exercise.** The owner did **not** manually run the separate sequence of
+closing the program while an attempt is outstanding and then waiting for its late result. That case
+is covered by the deterministic regression
+`t3_closing_the_entry_must_not_be_undone_by_a_late_launch_result` in
+[`worker_binding.rs`](../../crates/helm-gui/tests/worker_binding.rs) and by the hosted CI above —
+**not** by the manual smoke.
+
+What the smoke adds, and nothing more: the refactored GUI still performs the accepted normal flow;
+the real long-running attempt path works; the real interface does not let the open program be
+replaced while its attempt is outstanding; the deadline and `SIGTERM` path still works; and no crash
+occurred.
+
+A separate read-only host check, not part of the owner smoke, on the development machine's default
+WSL distribution (kernel `6.6.87.2-microsoft-standard-WSL2`, coreutils `9.4-3ubuntu6.3`) found
+`/usr/bin/uname` at 35336 bytes, mode `0755`, SHA-256
+`c6e023b172383fae5318c600e6f2f3a153513df62bf06ad6c9269296d2a78e89` — the full value recorded in
+section 18.1.1 of the toolkit decision, consistent with the short form displayed in smoke A — and
+`/usr/bin/yes` at 35208 bytes, mode `0755`, SHA-256 equal to the value in the owner-recorded
+receipt. It describes those files at check time, not the objects measured during the smoke.
+
+#### 3.4.3 Development-environment output during the smoke
+
+The owner's terminal showed:
+
+- `libEGL warning: failed to get driver name`;
+- Mesa loader device-information warnings;
+- `MESA: error: ZINK: failed to choose pdev`;
+- `egl: failed to create dri2 screen`;
+- one GTK critical: `GtkBox … reports a minimum width … Expect overlapping widgets`.
+
+The first four are the libEGL/Mesa/Zink output already carried as a WSLg development-environment
+observation (toolkit decision, section 17.1 note B). The GTK critical is carried with them; this is
+its first written record in the repository. Its cause was not investigated here and it is not
+attributed to WSLg or to anything else.
+
+During this smoke there was **no** `free(): invalid pointer`, **no** `Aborted`, **no** Rust panic and
+no crash the owner observed. That is one more run without a recurrence of `G2V-FD-01`, **not** a
+closure of it. Nothing here establishes a root cause, and nothing here claims any of these warnings
+is fixed.
+
+#### 3.4.4 Owner decision
+
+| Finding | Status | Basis |
+|---|---|---|
+| `PGR-01` | **OWNER-ACCEPTED RESOLVED** | Deterministic reproduction before the fix; correction confined to `helm-gui`; regression suite; natural hosted CI success; owner real-GUI smoke on the exact corrected head |
+| `PGR-02` | **OWNER-ACCEPTED RESOLVED** | Deterministic FIFO reproduction before the fix; caller-side correction with no TOCTOU path pre-check; regression suite; natural hosted CI success; the normal owner GUI flow still works on the exact corrected head |
+
+Overall: **`HELM_POST_G2_HARDENING_ACCEPTED`**.
+
+This acceptance means that `PGR-01` and `PGR-02` are corrected and accepted, that the refactored
+session state machine is accepted as part of this bounded hardening, and that once this branch is
+integrated the current first real G2 vertical includes these corrections.
+
+It does **not** mean a production GUI; G-1 implemented or authorised; G-2 or G-3 started; sandboxing
+or containment; Wine or Proton; an installer, updater or recovery; general compatibility; receipt
+authenticity; or exec success. `Indeterminate(StatusEofWithoutRecord)` is still not execution
+success, and smoke A's exit code 0 does not change that.
+
+#### 3.4.5 Findings carried, not closed
+
+Only `PGR-01` and `PGR-02` are closed. Everything else stands as it was:
+
+| Finding | Standing |
+|---|---|
+| `G2V-FD-01` — WSLg / GTK file-chooser abort observed once | **NONBLOCKING**, carried; did not recur in this smoke; not closed |
+| `G2V-M1` — `--g2-preselect` developer helper | **NONBLOCKING**; due before production UI acceptance |
+| `G2-UI-A11Y-01` — forced-light versus system accessibility preference | **NONBLOCKING**; due before production UI acceptance |
+| `crates/helm-gui` outside the root workspace | **TEMPORARY ARCHITECTURE DEBT** |
+| Brand fonts not selected | **OPEN DESIGN ITEM** |
+| WSLg libEGL/Mesa/Zink warnings | **DEVELOPMENT-ENVIRONMENT OBSERVATION**; seen again; not fixed |
+| GTK `GtkBox` minimum-width critical | **OBSERVATION**, carried; cause not established |
+| Pre-existing WSL2 `helm-launch` local-test observation | Carried unchanged |
+| Root `Cargo.toml` comment still calls `helm-gui` "the bounded G2-D9 UI fidelity spike" | **STALE COMMENT**, cosmetic; carried, not corrected here |
+| *Attempt launch again* title behaviour | **COSMETIC**, carried; not re-examined by this documentation-only record |
+| `Phase::Inspecting` note reads "the file you chose" while a folder is being inspected | **COSMETIC**, carried; still present at the corrected head |
+| `helm-launch` 0.1 nonblocking MINOR and BACKLOG findings | Carried unchanged ([acceptance decision](../DECISIONS.md#helm-launch-0-1-product-accepted)) |
+
 ## 4. Immediate gate sequence
 
 1. ~~**G2 hardening verification:** reproduce or dismiss `PGR-01` and `PGR-02`.~~ **Done** — both
@@ -166,13 +361,16 @@ was, now with two defects corrected.
 2. ~~**If reproduced, GUI-only correction:** smallest patch plus regression tests; accepted
    `helm-launch` remains read-only.~~ **Done** — both corrected in `helm-gui`; `helm-launch`
    unmodified.
-3. **Owner disposition:** close each finding with evidence. The evidence is section 3 and the
-   regressions it names; the closure itself is the owner's.
-4. **Owner decision on G-1:** only then authorise or reject the durable-Library milestone.
-5. **G-1 implementation:** persistence only; do not smuggle G-2 or G-3 into it.
-6. **Later owner decisions:** G-2 long-lived session lifecycle and G-3 desktop-session authority
+3. ~~**Owner disposition:** close each finding with evidence.~~ **Done** — both
+   **OWNER-ACCEPTED RESOLVED** on 2026-09-22 (section 3.4).
+4. **Integration:** fast-forward `planning/post-g2-product-review` into `main` and observe the
+   first natural hosted CI there. Pending when section 3.4 was written.
+5. **Owner decision on G-1:** only after that CI result is known, authorise or reject the
+   durable-Library milestone.
+6. **G-1 implementation:** persistence only; do not smuggle G-2 or G-3 into it.
+7. **Later owner decisions:** G-2 long-lived session lifecycle and G-3 desktop-session authority
    remain separate architecture gates.
-7. **First complete desktop workflow:** prove useful application work, not merely that a window
+8. **First complete desktop workflow:** prove useful application work, not merely that a window
    appeared.
 
 ## 5. Proposed G-1 contract — durable Library
@@ -385,9 +583,11 @@ No new capability is authorised by this review.
 
 The previous proposed gate — a bounded post-G2 hardening verification for `PGR-01` and `PGR-02` —
 has been carried out. Both findings were reproduced and corrected in `helm-gui`, each with
-regressions committed before its correction, and section 3 records the evidence.
+regressions committed before its correction, and section 3 records the evidence. The owner accepted
+both corrections on 2026-09-22 (section 3.4): **`HELM_POST_G2_HARDENING_ACCEPTED`**.
 
-The next owner decision is therefore:
+The next step is integration, not a decision: fast-forward this branch into `main` and observe the
+first natural hosted CI there. Only once that result is known is the next owner decision:
 
 > **Whether to authorise G-1 DURABLE LIBRARY under section 5, without G-2 and without G-3.**
 

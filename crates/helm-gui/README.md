@@ -257,9 +257,11 @@ a worker, so the window was not frozen — the operation simply never finished.
 
 ### What still does not follow
 
-These corrections are **not owner-accepted**; they sit on `planning/post-g2-product-review`
-for review. No production claim is promoted, no production GUI is accepted, and **G-1
-remains unauthorised**.
+Both corrections are **owner-accepted since 2026-09-22** — `PGR-01` and `PGR-02` are
+**OWNER-ACCEPTED RESOLVED** — after hosted CI and a real owner GUI smoke on the corrected
+head; section 3.4 of the review records that smoke, what it did and did not exercise, and
+every finding still carried. No production claim is promoted, no production GUI is
+accepted, and **G-1 remains unauthorised**.
 
 ## Known limitations
 

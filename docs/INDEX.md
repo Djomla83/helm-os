@@ -82,9 +82,13 @@ binding, and `PGR-02`, caller-side open before admission — were **reproduced a
 durable-Library contract, the cross-module cohort boundaries and the reliability/evidence/recovery
 direction, remains **PROPOSED and unauthorised**.
 
-Those corrections are on `planning/post-g2-product-review` and are **not owner-accepted**. They
-accept no production GUI and start no G-1. The **current next gate is the owner's decision on G-1
-DURABLE LIBRARY**, under section 5 of that document, without G-2 and without G-3.
+Those corrections are **owner-accepted since 2026-09-22**: `PGR-01` and `PGR-02` are
+**OWNER-ACCEPTED RESOLVED**, classification `HELM_POST_G2_HARDENING_ACCEPTED`, on the evidence of
+the regressions, first-natural hosted CI and a real owner GUI smoke on the exact corrected head,
+recorded with every carried finding in section 3.4 of that document. They accept no production GUI
+and start no G-1. The **current next gate is integration into `main` and its first natural hosted
+CI**; only after that result is known comes the **owner's decision on G-1 DURABLE LIBRARY**, under
+section 5 of that document, without G-2 and without G-3.
 
 ## Odluke i istraživanja
 
