@@ -68,17 +68,23 @@ acceptance**. `helm-launch` is unmodified. `Indeterminate(StatusEofWithoutRecord
 execution success, and the owner smoke's child exit code 0 does not change that.
 `crates/helm-gui` is deliberately **outside the root Cargo workspace** with its own lockfile, which
 is recorded temporary architecture debt, not a hidden exception. **G-1, G-2 and G-3 are not started
-and not authorised**, and the next gate is the **owner's choice of the next product capability**.
+and not authorised.** That acceptance's own next gate was the owner's choice of the next product
+capability; the current next gate is recorded below.
 
-### Post-G2 product review and next capability
+### Post-G2 product review, hardening, and the next capability
 
-[HELM post-G2 product review](implementation/HELM-POST-G2-PRODUCT-REVIEW.md) is the current
-**PROPOSED / REVIEW** planning record after acceptance of the first real vertical. It does not
-authorise implementation. It records two bounded verification-required GUI findings
-(`PGR-01`, asynchronous result/context binding; `PGR-02`, caller-side open before admission),
-defines the proposed G-1 durable-Library contract, records cross-module cohort boundaries, and
-captures the proposed reliability/evidence/recovery product direction. The next proposed gate is
-to reproduce or dismiss those two findings before an owner decision on G-1.
+[HELM post-G2 product review](implementation/HELM-POST-G2-PRODUCT-REVIEW.md) is the planning record
+after acceptance of the first real vertical. **It authorises no implementation.** Its section 3 is
+now a record rather than a proposal: two GUI findings — `PGR-01`, asynchronous result/context
+binding, and `PGR-02`, caller-side open before admission — were **reproduced and corrected in
+`crates/helm-gui`**, each with deterministic regressions committed before its correction.
+`helm-launch` was not modified. Everything from section 5 onwards, including the proposed G-1
+durable-Library contract, the cross-module cohort boundaries and the reliability/evidence/recovery
+direction, remains **PROPOSED and unauthorised**.
+
+Those corrections are on `planning/post-g2-product-review` and are **not owner-accepted**. They
+accept no production GUI and start no G-1. The **current next gate is the owner's decision on G-1
+DURABLE LIBRARY**, under section 5 of that document, without G-2 and without G-3.
 
 ## Odluke i istraživanja
 

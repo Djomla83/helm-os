@@ -43,8 +43,8 @@ libadwaita**, recorded in the [UI toolkit decision](HELM-G2-UI-TOOLKIT-DECISION.
 fidelity spike was built and **accepted** on 2026-09-21. The owner then authorised the **first
 real backend-connected G2 vertical**, which was **accepted on 2026-09-22 and integrated into
 `main`**. That vertical drives the already-accepted `helm-launch` 0.1 through its public API only;
-its acceptance does not accept a production GUI, adds no persistence, and starts no G-1, G-2 or G-3. **This document remains the
-product-semantic authority over anything the GUI draws.**
+it accepts no production GUI, adds no persistence, and starts no G-1, G-2 or G-3. **This document
+remains the product-semantic authority over anything the GUI draws.**
 
 Where this document describes a screen, a state or a flow that current code cannot support, it says
 so explicitly and carries a class label from section 3.2.

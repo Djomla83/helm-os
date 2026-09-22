@@ -14,14 +14,21 @@ as written.
 | G-2 long-lived session lifecycle | **NOT STARTED / NOT AUTHORISED** |
 | G-3 desktop-session environment authority | **NOT STARTED / NOT AUTHORISED** |
 | Post-G2 engineering review | [HELM-POST-G2-PRODUCT-REVIEW](implementation/HELM-POST-G2-PRODUCT-REVIEW.md) |
-| `PGR-01` async result/context binding | **REVIEW FINDING — VERIFICATION REQUIRED** |
-| `PGR-02` caller-side open before admission | **REVIEW FINDING — VERIFICATION REQUIRED** |
-| Next proposed gate | bounded reproduction/disposition of `PGR-01` and `PGR-02`, then owner decision on G-1 |
+| `PGR-01` async result/context binding | **CONFIRMED / FIXED / REGRESSION ADDED** — on `planning/post-g2-product-review`, awaiting owner review |
+| `PGR-02` caller-side open before admission | **CONFIRMED / FIXED / REGRESSION ADDED** — same branch, awaiting owner review |
+| `helm-launch` 0.1 | **UNMODIFIED** by the hardening gate — no source, API, schema or semantic change |
+| Next gate | **OWNER DECISION ON G-1 DURABLE LIBRARY** |
 
-The two `PGR` entries are **not reproduced product defects at this point**. They are reachable
-code-review hypotheses that affect context integrity or bounded interaction if confirmed, so they
-must be tested before the next capability is authorised. They do not modify or reopen the accepted
-`helm-launch` 0.1 contract.
+Both `PGR` entries began as code-review hypotheses and were then **reproduced**: deterministic
+tests failed against the accepted code before either was corrected, and each regression is committed
+before its fix. `PGR-01` let a worker result change state that belonged to a different operation —
+including reporting one program's launch result as an ended attempt of another, and restoring an
+entry the person had closed. `PGR-02` let a selected FIFO with no writer park the operation in
+`open(2)` so it never reached a HELM refusal at all. Both were corrected in `crates/helm-gui` alone.
+
+The corrections are **not owner-accepted**; they sit on `planning/post-g2-product-review` for
+review. Nothing about them accepts a production GUI, and **G-1 remains unauthorised**: the next gate
+is the owner's decision on it, not its start.
 
 ---
 

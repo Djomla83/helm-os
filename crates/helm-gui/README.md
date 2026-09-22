@@ -77,16 +77,26 @@ Without the flag the interface behaves exactly as it does for any person.
 | File | What it is |
 |---|---|
 | [`src/vertical.rs`](src/vertical.rs) | The orchestration adapter: open, admit, plan, authorise, launch, worker threads |
+| [`src/session.rs`](src/session.rs) | The session state machine, and the rule for which worker result may change what |
 | [`src/state.rs`](src/state.rs) | Real `helm-launch` facts mapped to the words HELM may say about them |
 | [`src/theme.rs`](src/theme.rs) | The HELM stylesheet |
 | [`src/widgets.rs`](src/widgets.rs) | Shared builders carrying the prototype's measurements |
 | [`src/screens.rs`](src/screens.rs) | The seven accepted surfaces |
-| [`src/main.rs`](src/main.rs) | Session, dialogs, the main-loop tick, one render pass |
+| [`src/main.rs`](src/main.rs) | Dialogs, the main-loop tick, one render pass |
 | [`tests/real_launch.rs`](tests/real_launch.rs) | A real launch to a real receipt, with no window |
+| [`tests/worker_binding.rs`](tests/worker_binding.rs) | Worker results delivered out of order, against the real state machine |
+| [`tests/bounded_admission.rs`](tests/bounded_admission.rs) | A special file must reach a HELM refusal, not wait forever |
 
 `vertical.rs` is deliberately **not** a HELM orchestrator. There is no trait, no
 service, no provider and no manager — nothing a future subsystem could be
 tempted to implement. It does one flow and stops.
+
+`session.rs` is the same state machine the window has always run. It lives in the
+library rather than the binary so a test can drive it without opening a window,
+and in particular so worker results can be delivered in orders a person cannot
+reliably produce by hand. It is **not** a framework: one concrete session, the
+transitions the seven surfaces actually offer, and the rule for applying a worker
+result. Nothing in it draws anything.
 
 ### Where authority lives
 
@@ -133,6 +143,15 @@ launch*, and is consumed exactly once. **Nothing authority-bearing is cached or
 replayed.** *Attempt launch again* returns through fresh preparation: the paths
 are re-opened and re-admitted from scratch, and a new authorisation is required.
 
+**While an attempt is outstanding the open program cannot be replaced.** The
+session refuses a new program or folder selection until the attempt returns, so
+one attempt's facts cannot be drawn against another program's entry. Closing the
+program is still available, and does what it says: the entry ends, and the result
+of an attempt that returns afterwards is discarded rather than reported against
+an entry that no longer exists. The launch itself is synchronous and has no
+cancel — by design, since G-2 is unauthorised — so it runs to completion on its
+worker; what closing changes is only what HELM will say about it.
+
 ## Product semantics held
 
 - **Session only.** Nothing is written anywhere. Closing the program drops the
@@ -176,23 +195,71 @@ file offered as a working directory, and a directory offered as an executable.
 
 **It does not assert `ExecSucceeded`,** because no such value exists.
 
-## Post-G2 review findings
+## Post-G2 hardening: both findings reproduced and corrected
 
 The [post-G2 product review](../../docs/implementation/HELM-POST-G2-PRODUCT-REVIEW.md)
-records two code-review findings that require bounded reproduction before the next
-capability is authorised:
+raised two code-review findings about this crate. Both **reproduced**, and both were
+corrected here — `helm-launch` was not touched. Section 3 of that document carries the
+detail; this is what changed in the crate.
 
-- **`PGR-01` — asynchronous result/context binding.** Worker messages carry a result
-  kind but no operation/generation identity. A stale-result scenario must be tested
-  before claiming that a delayed admission or launch result can never attach to newer
-  session context.
-- **`PGR-02` — caller-side open can precede admission by an unbounded wait.**
-  `File::open` occurs before `helm-launch` can classify the descriptor. A special-file
-  reproduction test is required. This is a GUI-adapter finding, not a reason to change
-  the accepted `helm-launch` API.
+### `PGR-01` — asynchronous result/context binding
 
-Neither finding is currently classified as a reproduced product defect. No production
-claim is promoted, and G-1 remains unauthorised while their disposition is pending.
+**CONFIRMED / FIXED / REGRESSION ADDED.** A worker message said what *kind* of result it
+was and nothing about *which operation* produced it, so a result could change state that
+belonged to a different operation. Three of the eight reproduced sequences are reachable
+through the controls as drawn: closing the entry while work was outstanding was undone by
+the late result; a launch result was reported as an ended attempt of a program selected
+afterwards; and a second *Attempt launch again* was satisfied by the first generation.
+
+[`tests/worker_binding.rs`](tests/worker_binding.rs) drives the real session state machine
+with real capabilities and one real launch outcome, delivering results in orders a person
+cannot reliably produce by hand. All eight failed before the correction.
+
+The correction is in [`src/session.rs`](src/session.rs): a `vertical::OperationId` is
+minted before each worker starts, travels with the request and returns with the result, and
+only the operation currently allowed to change a piece of state may change it. Anything
+else is dropped — a capability closing its descriptor as it goes, a `LaunchOutcome`
+discarded as data and never relabelled. Display facts and `argv[0]` come from the path that
+operation measured. An attempt owns immutable copies of the subject and plan it was
+authorised from, and the Attempt, Result and Evidence surfaces draw from those, so a result
+cannot be drawn under a subject that did not produce it. As defence in depth the open
+program cannot be replaced while its attempt is outstanding — refused in the state machine,
+not by a disabled button.
+
+**The token is inert.** It names nothing, resolves nothing, authorises nothing and ends
+with the process. It is **not** a session handle, a process handle or a durable identity;
+G-1 and G-2 remain unauthorised.
+
+### `PGR-02` — caller-side open before admission
+
+**CONFIRMED / FIXED / REGRESSION ADDED.** The adapter opened the selected object before
+`helm-launch` could classify it, and opening a FIFO with no writer read-only blocks in
+`open(2)` until a writer appears — so the operation never reached a HELM refusal at all.
+
+[`tests/bounded_admission.rs`](tests/bounded_admission.rs) drives the adapter on a worker
+against a harmless local FIFO and waits five seconds. Both cases timed out before the
+correction; the harness then opens the FIFO for writing, which releases the worker at once
+and is the evidence for the mechanism.
+
+The caller-side open is now `O_RDONLY | O_NONBLOCK`. The same FIFO reaches the accepted
+refusal in **20.6 µs** as a program (`NotRegularFile`) and **16.1 µs** as a folder
+(`NotDirectory`). Nothing stats a path and then opens it, so no path-check/path-open race
+exists and the descriptor-authority model is exactly as accepted; only the flags of the
+single open changed. `O_NONBLOCK` is neither part of the access mode nor `O_PATH`, so the
+accepted `F_GETFL` gate still sees `O_RDONLY`, and two tests pin that a real ELF and a real
+directory are still admitted.
+
+**This does not make filesystem I/O bounded, and does not claim to.** Only the open, and
+only where the open was the thing waiting. A network filesystem, a failing device or a
+pathological mount can still hold an open or a read for as long as the kernel does. There
+is no timeout here. It was never a claim about the window either: admission already ran on
+a worker, so the window was not frozen — the operation simply never finished.
+
+### What still does not follow
+
+These corrections are **not owner-accepted**; they sit on `planning/post-g2-product-review`
+for review. No production claim is promoted, no production GUI is accepted, and **G-1
+remains unauthorised**.
 
 ## Known limitations
 
